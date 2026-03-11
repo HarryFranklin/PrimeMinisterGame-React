@@ -1,40 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { 
-  ScatterChart, Scatter, 
-  BarChart, Bar, 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-} from "recharts";
 import { Respondent, AxisVariable, Policy } from "./utils/types";
 import { loadPopulation } from "./utils/dataLoader";
 import { WelfareMetrics } from "./utils/WelfareMetrics";
 import { availablePolicies } from "./data/policies";
 import { PolicyEngine } from "./utils/PolicyEngine";
+import D3Chart from "./components/D3Chart";
 
 const totalTurns = 20;
-
-const getAxisDomain = (axisType: AxisVariable): [number, number] => {
-  switch (axisType) {
-    case AxisVariable.LifeSatisfaction: return [0, 10];
-    case AxisVariable.PersonalUtility:
-    case AxisVariable.SocietalFairness: return [0, 1];
-    case AxisVariable.DeltaPersonalUtility:
-    case AxisVariable.DeltaSocietalFairness: return [-1, 1];
-    default: return [0, 1];
-  }
-};
-
-const getTicks = (axisType: AxisVariable) => {
-  switch (axisType) {
-    case AxisVariable.LifeSatisfaction: return [0, 2.5, 5, 7.5, 10];
-    case AxisVariable.PersonalUtility:
-    case AxisVariable.SocietalFairness: return [0, 0.25, 0.5, 0.75, 1];
-    case AxisVariable.DeltaPersonalUtility:
-    case AxisVariable.DeltaSocietalFairness: return [-1, -0.5, 0, 0.5, 1];
-    default: return undefined;
-  }
-};
 
 export default function Home() {
   // --- STATE ---
@@ -72,25 +46,22 @@ export default function Home() {
           return WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
         return 0;
       };
+      
       return { id: r.id, x: getValue(xAxisType), y: getValue(yAxisType) };
     });
   }, [previewPopulation, xAxisType, yAxisType]);
 
+  // NEW: Binning logic rounded to the nearest whole number
   const histogramData = useMemo(() => {
     if (previewPopulation.length === 0) return [];
-    
+
     const allLS = previewPopulation.map(p => p.currentLS);
     const isLS = xAxisType === AxisVariable.LifeSatisfaction;
-    
-    // 40 bins: size of 0.25 for Life Satisfaction, 0.025 for Utilities
-    const numBins = 40;
-    const maxVal = isLS ? 10 : 1;
-    const binSize = maxVal / numBins;
 
+    // Create 11 bins (0 through 10)
+    const numBins = 11;
     const bins = Array(numBins).fill(0).map((_, i) => ({
-      binStart: i * binSize,
-      binEnd: (i + 1) * binSize,
-      name: Number((i * binSize).toFixed(3)), // Assign the numerical start value
+      name: isLS ? i : (i / 10).toFixed(1), // i.e., '7' for LS, '0.7' for Utility
       count: 0
     }));
 
@@ -100,10 +71,17 @@ export default function Home() {
       else if (xAxisType === AxisVariable.PersonalUtility) val = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
       else if (xAxisType === AxisVariable.SocietalFairness) val = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
 
-      const binIndex = Math.min(Math.floor(val / binSize), numBins - 1);
-      if (binIndex >= 0 && binIndex < numBins) {
-        bins[binIndex].count++;
+      // Round to the nearest whole bin
+      let binIndex = 0;
+      if (isLS) {
+        binIndex = Math.round(val);
+      } else {
+        binIndex = Math.round(val * 10);
       }
+
+      // Clamp to ensure we don't exceed array bounds on extreme edge cases
+      binIndex = Math.max(0, Math.min(binIndex, 10));
+      bins[binIndex].count++;
     });
 
     return bins;
@@ -201,85 +179,14 @@ export default function Home() {
         </div>
         
         {/* The Graph Rendering */}
-        <div className="flex-1 bg-white rounded-xl border border-zinc-200 p-6 shadow-inner relative">
-          <ResponsiveContainer width="100%" height="100%">
-            {plotType === '1D' ? (
-              <BarChart data={histogramData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              
-              <XAxis 
-                dataKey="name" 
-                stroke="#a1a1aa" 
-                interval={0} // Evaluates every column
-                tickLine={false} // Removes the cluttered minor tick lines
-                tickFormatter={(value) => {
-                  // For LS: only print whole numbers
-                  if (xAxisType === AxisVariable.LifeSatisfaction) {
-                    return Number.isInteger(value) ? value : '';
-                  } 
-                  // For Utilities: only print quarters
-                  else {
-                    return [0, 0.25, 0.5, 0.75, 1].includes(value) ? value : '';
-                  }
-                }}
-                tick={{ fontSize: 11, fill: '#71717a', dy: 4 }}
-              />
-              
-              <YAxis 
-                allowDecimals={false} 
-                stroke="#a1a1aa" 
-                tick={{ fontSize: 11, fill: '#71717a' }} 
-                label={{ value: 'Number of People', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#71717a', fontSize: 12 } }}
-              />
-              
-              <Tooltip 
-                cursor={{ fill: '#f4f4f5' }}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                formatter={(value: any) => [value, 'Respondents']}
-                labelFormatter={(label: number) => {
-                  // Reconstruct the range string for the hover menu
-                  const binSize = xAxisType === AxisVariable.LifeSatisfaction ? 0.25 : 0.025;
-                  return `${label.toFixed(2)} - ${(label + binSize).toFixed(2)}`;
-                }}
-              />
-              
-              <Bar dataKey="count" fill="#ec4899" radius={[2, 2, 0, 0]} isAnimationActive={false} />
-            </BarChart>
-            ) : (
-              <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#f0f0f0" />
-                <XAxis 
-                  type="number" 
-                  dataKey="x" 
-                  domain={getAxisDomain(xAxisType)} 
-                  ticks={getTicks(xAxisType)}
-                  interval={0}
-                  stroke="#a1a1aa"
-                  tick={{ fontSize: 11, fill: '#71717a' }}
-                />
-                <YAxis 
-                  type="number" 
-                  dataKey="y" 
-                  domain={getAxisDomain(yAxisType)} 
-                  ticks={getTicks(yAxisType)}
-                  interval={0}
-                  stroke="#a1a1aa"
-                  tick={{ fontSize: 11, fill: '#71717a' }}
-                />
-                <Tooltip 
-                  cursor={{ strokeDasharray: '3 3' }} 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Scatter 
-                  name="Population" 
-                  data={chartData} 
-                  fill="#ec4899" 
-                  fillOpacity={0.6}
-                  isAnimationActive={false}
-                />
-              </ScatterChart>
-            )}
-          </ResponsiveContainer>
+        <div className="flex-1 bg-white rounded-xl border border-zinc-200 p-6 shadow-inner relative flex items-center justify-center">
+           <D3Chart 
+             plotType={plotType} 
+             chartData={chartData} 
+             histogramData={histogramData} // Added this prop back in
+             xAxisType={xAxisType} 
+             yAxisType={yAxisType} 
+           />
         </div>
       </main>
 
