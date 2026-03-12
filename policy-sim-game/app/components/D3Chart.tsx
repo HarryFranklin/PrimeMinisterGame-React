@@ -10,7 +10,6 @@ interface D3ChartProps {
   yAxisType: AxisVariable;
 }
 
-// --- HELPER FUNCTIONS ---
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
   switch (axisType) {
     case AxisVariable.LifeSatisfaction: return [0, 10];
@@ -33,7 +32,6 @@ const getTicks = (axisType: AxisVariable) => {
   }
 };
 
-// Translates the enum into a readable, friendly label
 const getAxisLabel = (axisType: AxisVariable): string => {
   switch (axisType) {
     case AxisVariable.LifeSatisfaction: return "Life Satisfaction";
@@ -48,175 +46,137 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 export default function D3Chart({ plotType, chartData, histogramData, xAxisType, yAxisType }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const prevPlotType = useRef<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    // 1. Setup Dimensions (Increased bottom & left margins for permanent labels)
     const margin = { top: 20, right: 30, bottom: 60, left: 70 };
     const width = containerRef.current.clientWidth - margin.left - margin.right;
     const height = containerRef.current.clientHeight - margin.top - margin.bottom;
 
-    // 2. Clear previous renders
     const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
 
-    const chart = svg
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+    // Only wipe the entire SVG if we are switching between 1D and 2D views
+    if (prevPlotType.current !== plotType) {
+      svg.selectAll("*").remove();
+      
+      const chart = svg
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("class", "main-group")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // --- REUSABLE STYLING FUNCTIONS ---
-    // Makes the axis lines thicker, softer in colour, and rounds the edges
-    const styleFriendlyAxis = (selection: d3.Selection<SVGGElement, any, null, undefined>) => {
-      selection.select(".domain")
-        .attr("stroke", "#d4d4d8") // zinc-300
-        .attr("stroke-width", 3)
-        .attr("stroke-linecap", "round");
+      // Create permanent containers for axes and data so they can be updated smoothly
+      chart.append("g").attr("class", "grid-x");
+      chart.append("g").attr("class", "grid-y");
+      chart.append("g").attr("class", "axis-x").attr("transform", `translate(0,${height})`);
+      chart.append("g").attr("class", "axis-y");
+      chart.append("text").attr("class", "label-x");
+      chart.append("text").attr("class", "label-y").attr("transform", "rotate(-90)");
+      chart.append("g").attr("class", "data-layer");
+      
+      prevPlotType.current = plotType;
+    }
 
-      selection.selectAll(".tick line")
-        .attr("stroke", "#d4d4d8")
-        .attr("stroke-width", 2);
+    const chart = svg.select(".main-group");
+    const dataLayer = chart.select(".data-layer");
 
-      selection.selectAll("text")
-        .attr("fill", "#52525b") // zinc-600
-        .style("font-size", "13px")
-        .style("font-weight", "600")
-        .style("font-family", "inherit");
+    const styleFriendlyAxis = (selection: any) => {
+      selection.select(".domain").attr("stroke", "#d4d4d8").attr("stroke-width", 3).attr("stroke-linecap", "round");
+      selection.selectAll(".tick line").attr("stroke", "#d4d4d8").attr("stroke-width", 2);
+      selection.selectAll("text").attr("fill", "#52525b").style("font-size", "13px").style("font-weight", "600").style("font-family", "inherit");
     };
 
-    // Softens the background grid so it doesn't distract from the data
-    const styleFriendlyGrid = (selection: d3.Selection<SVGGElement, any, null, undefined>) => {
-      selection.selectAll(".tick line")
-        .attr("stroke", "#e4e4e7") // zinc-200
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "4 4");
-      selection.select(".domain").remove(); // Hide the solid line
+    const styleFriendlyGrid = (selection: any) => {
+      selection.selectAll(".tick line").attr("stroke", "#e4e4e7").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+      selection.select(".domain").remove();
     };
 
-    // --- 1D HISTOGRAM RENDER ---
+    // --- 1D HISTOGRAM RENDER (Animated) ---
     if (plotType === '1D') {
       if (!histogramData || histogramData.length === 0) return;
 
       const xDomain = histogramData.map(d => d.name.toString());
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
-      
       const maxCount = d3.max(histogramData, d => d.count) || 10;
       const yScale = d3.scaleLinear().domain([0, maxCount]).nice().range([height, 0]);
 
-      // Add X Axis
-      const xAxis = chart.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(xScale).tickSizeOuter(0).tickPadding(10));
-      styleFriendlyAxis(xAxis);
+      chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale).tickSizeOuter(0).tickPadding(10) as any).call(styleFriendlyAxis);
+      chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).ticks(5).tickSizeOuter(0).tickPadding(10) as any).call(styleFriendlyAxis);
 
-      // Add Y Axis
-      const yAxis = chart.append("g")
-        .call(d3.axisLeft(yScale).ticks(5).tickSizeOuter(0).tickPadding(10));
-      styleFriendlyAxis(yAxis);
+      chart.select(".label-x").attr("x", width / 2).attr("y", height + 50).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(xAxisType));
+      chart.select(".label-y").attr("y", -50).attr("x", -(height / 2)).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text("Number of People");
 
-      // X Axis Label
-      chart.append("text")
-        .attr("x", width / 2)
-        .attr("y", height + 50)
-        .attr("fill", "#3f3f46") // zinc-700
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .style("font-size", "14px")
-        .text(getAxisLabel(xAxisType));
-
-      // Y Axis Label
-      chart.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", -50)
-        .attr("x", -(height / 2))
-        .attr("fill", "#3f3f46") // zinc-700
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .style("font-size", "14px")
-        .text("Number of People");
-
-      // Draw Bars
-      chart.selectAll("rect")
-        .data(histogramData)
-        .enter()
+      // Bind data and animate bars
+      const bars = dataLayer.selectAll<SVGRectElement, any>("rect.bar").data(histogramData, d => d.name);
+      
+      const barsEnter = bars.enter()
         .append("rect")
+        .attr("class", "bar")
+        .attr("x", d => xScale(d.name.toString()) || 0)
+        .attr("y", height) // Start from the bottom
+        .attr("width", xScale.bandwidth())
+        .attr("height", 0) // Start with 0 height
+        .attr("fill", "#ec4899")
+        .attr("rx", 4).attr("ry", 4);
+
+      barsEnter.append("title");
+
+      bars.merge(barsEnter)
+        .transition().duration(500) // 500ms smooth animation
         .attr("x", d => xScale(d.name.toString()) || 0)
         .attr("y", d => yScale(d.count))
         .attr("width", xScale.bandwidth())
-        .attr("height", d => height - yScale(d.count))
-        .attr("fill", "#ec4899")
-        .attr("rx", 4) // Friendlier rounded tops
-        .attr("ry", 4)
-        .append("title")
-        .text(d => `Value: ${d.name}\nPeople: ${d.count}`);
+        .attr("height", d => height - yScale(d.count));
+
+      // Update tooltips
+      dataLayer.selectAll("rect.bar title").data(histogramData, (d: any) => d.name).text((d: any) => `Value: ${d.name}\nPeople: ${d.count}`);
+      
+      bars.exit().remove();
     } 
     
-    // --- 2D SCATTER RENDER ---
+    // --- 2D SCATTER RENDER (Animated) ---
     else {
       if (!chartData || chartData.length === 0) return;
 
       const [xMin, xMax] = getAxisDomain(xAxisType);
       const xScale = d3.scaleLinear().domain([xMin, xMax]).range([0, width]);
-
       const [yMin, yMax] = getAxisDomain(yAxisType);
       const yScale = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
 
-      // Add Gridlines FIRST so they sit behind the dots
-      chart.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)).tickSize(-height).tickFormat(() => ""))
-        .call(styleFriendlyGrid);
+      chart.select(".grid-x").transition().duration(500).call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)).tickSize(-height).tickFormat(() => "") as any).call(styleFriendlyGrid);
+      chart.select(".grid-y").transition().duration(500).call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)).tickSize(-width).tickFormat(() => "") as any).call(styleFriendlyGrid);
 
-      chart.append("g")
-        .call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)).tickSize(-width).tickFormat(() => ""))
-        .call(styleFriendlyGrid);
+      chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)).tickPadding(10) as any).call(styleFriendlyAxis);
+      chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)).tickPadding(10) as any).call(styleFriendlyAxis);
 
-      // Add X Axis
-      const xAxis = chart.append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)).tickPadding(10));
-      styleFriendlyAxis(xAxis);
+      chart.select(".label-x").attr("x", width / 2).attr("y", height + 50).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(xAxisType));
+      chart.select(".label-y").attr("y", -50).attr("x", -(height / 2)).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(yAxisType));
 
-      // Add Y Axis
-      const yAxis = chart.append("g")
-        .call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)).tickPadding(10));
-      styleFriendlyAxis(yAxis);
+      // Bind data and animate dots
+      const circles = dataLayer.selectAll<SVGCircleElement, any>("circle.dot").data(chartData, (d: any) => d.id);
 
-      // X Axis Label
-      chart.append("text")
-        .attr("x", width / 2)
-        .attr("y", height + 50)
-        .attr("fill", "#3f3f46")
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .style("font-size", "14px")
-        .text(getAxisLabel(xAxisType));
-
-      // Y Axis Label
-      chart.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("y", -50)
-        .attr("x", -(height / 2))
-        .attr("fill", "#3f3f46")
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .style("font-size", "14px")
-        .text(getAxisLabel(yAxisType));
-
-      // Draw Scatter Points
-      chart.selectAll("circle")
-        .data(chartData)
-        .enter()
+      const circlesEnter = circles.enter()
         .append("circle")
+        .attr("class", "dot")
         .attr("cx", d => xScale(d.x))
         .attr("cy", d => yScale(d.y))
-        .attr("r", 5) // Slightly larger, friendlier dots
+        .attr("r", 5)
         .style("fill", "#ec4899")
-        .style("opacity", 0.7)
-        .append("title")
-        .text(d => `Respondent ID: ${d.id}\nX: ${d.x.toFixed(2)}\nY: ${d.y.toFixed(2)}`);
+        .style("opacity", 0.7);
+
+      circlesEnter.append("title");
+
+      circles.merge(circlesEnter)
+        .transition().duration(500) // Smooth floating animation for dots
+        .attr("cx", d => xScale(d.x))
+        .attr("cy", d => yScale(d.y));
+
+      dataLayer.selectAll("circle.dot title").data(chartData, (d: any) => d.id).text((d: any) => `Respondent ID: ${d.id}\nX: ${d.x.toFixed(2)}\nY: ${d.y.toFixed(2)}`);
+
+      circles.exit().remove();
     }
   }, [plotType, chartData, histogramData, xAxisType, yAxisType]);
 
