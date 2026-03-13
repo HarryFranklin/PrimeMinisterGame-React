@@ -508,7 +508,7 @@ export default function Home() {
               <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex flex-col">
                 <div className="flex justify-between items-end mb-6 shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Wealth Distribution</h3>
-                  <p className="text-[10px] font-bold uppercase text-zinc-400">Faded bar = Turn 1</p>
+                  <p className="text-[10px] font-bold uppercase text-zinc-400">Compared to the start of your term</p>                
                 </div>
                 <div className="flex-1 space-y-6 flex flex-col justify-center">
                   {[
@@ -546,12 +546,14 @@ export default function Home() {
                   ].map((item, i) => (
                     <div 
                       key={i} 
-                      onClick={() => setSelectedHistoryGroup({ label: item.label, category: 'age', key: item.key })}
-                      className="group p-2 -mx-2 rounded-lg hover:bg-zinc-50 cursor-pointer transition-colors relative"
+                      onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'age', key: item.key }) : null}
+                      className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
                     >
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
+                        {currentTurn >= 5 ? '⤢' : '🔒'}
+                      </div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-bold text-zinc-700 group-hover:text-pink-600 transition-colors">{item.label}</span>
+                        <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
                         <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -578,12 +580,14 @@ export default function Home() {
                 ].map((item, i) => (
                   <div 
                     key={i} 
-                    onClick={() => setSelectedHistoryGroup({ label: item.label, category: 'traits', key: item.key })}
-                    className="p-4 bg-zinc-50 rounded-lg border border-zinc-100 flex flex-col items-center text-center justify-center cursor-pointer hover:border-pink-300 hover:shadow-md hover:bg-white transition-all group relative"
+                    onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'traits', key: item.key }) : null}
+                    className={`p-4 bg-zinc-50 rounded-lg border border-zinc-100 flex flex-col items-center text-center justify-center transition-all group relative ${currentTurn >= 5 ? 'cursor-pointer hover:border-pink-300 hover:shadow-md hover:bg-white' : 'cursor-not-allowed opacity-90'}`}
                   >
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
-                    <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{item.icon}</span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 group-hover:text-pink-600 transition-colors">{item.label}</span>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
+                      {currentTurn >= 5 ? '⤢' : '🔒'}
+                    </div>
+                    <span className={`text-2xl mb-2 transition-transform ${currentTurn >= 5 ? 'group-hover:scale-110' : ''}`}>{item.icon}</span>
+                    <span className={`text-xs font-bold uppercase tracking-wider text-zinc-500 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
                     <span className="text-2xl font-black text-zinc-800 my-1">{item.data.pct}%</span>
                     <span className="text-xs text-zinc-500">Avg LS: <strong className="text-pink-600">{item.data.ls}</strong></span>
                   </div>
@@ -605,22 +609,24 @@ export default function Home() {
 
              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0">
                 {ministers.map((m, i) => (
-                   <div key={i} className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full overflow-hidden">
+                   <div key={i} className="bg-white p-4 lg:p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full overflow-hidden">
                       <div className="flex items-center gap-4 mb-4 shrink-0">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${m.color} text-2xl shrink-0`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${m.color} text-2xl shrink-0`}>
                            {m.status === 'happy' && '😊'}
                            {m.status === 'neutral' && '😐'}
                            {m.status === 'angry' && '😠'}
                         </div>
                         <div>
-                          <h4 className="font-bold text-zinc-800 text-lg">Min. for {m.name}</h4>
+                          {/* Changed Min. to Minister */}
+                          <h4 className="font-bold text-zinc-800 text-lg">Minister for {m.name}</h4>
                           <p className="text-xs uppercase tracking-widest text-zinc-400 font-bold">
                             Status: <span className={m.status === 'angry' ? 'text-red-500' : ''}>{m.status}</span>
                           </p>
                         </div>
                       </div>
                       
-                      <p className="text-zinc-600 text-sm italic border-l-2 border-zinc-200 pl-3 py-1 mb-6">
+                      {/* Added line-clamp-3 to strictly prevent multi-line overflow */}
+                      <p className="text-zinc-600 text-sm italic border-l-2 border-zinc-200 pl-3 py-1 mb-4 line-clamp-3">
                         "{m.quote}"
                       </p>
 
@@ -984,44 +990,62 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Custom SVG Line Graph */}
-            <div className="w-full h-64 relative bg-zinc-50 rounded-lg border border-zinc-100 p-4">
-              <svg viewBox={`0 0 ${Math.max(20, history.length - 1)} 10`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+            {/* Custom SVG Line Graph (Percentage-based coordinate mapping to fix circle distortion) */}
+            <div className="w-full h-80 relative bg-zinc-50 rounded-lg border border-zinc-100 p-4">
+              <svg className="w-full h-full overflow-visible">
                 {/* Gridlines */}
                 {[0, 2, 4, 6, 8, 10].map(y => (
-                  <line key={y} x1="0" y1={10 - y} x2={Math.max(20, history.length - 1)} y2={10 - y} stroke="#e4e4e7" strokeWidth="0.05" />
+                  <line key={y} x1="0%" y1={`${((10 - y) / 10) * 100}%`} x2="100%" y2={`${((10 - y) / 10) * 100}%`} stroke="#e4e4e7" strokeWidth="1" />
                 ))}
 
-                {/* The Line */}
-                <polyline
-                  fill="none"
-                  stroke="#ec4899"
-                  strokeWidth="0.15"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  points={history.map(h => {
-                    // @ts-ignore
-                    const ls = h.lsAverages[selectedHistoryGroup.category][selectedHistoryGroup.key];
-                    return `${h.turn},${10 - ls}`;
-                  }).join(' ')}
-                />
+                {/* The Line (Drawn segment by segment to use percentages) */}
+                {history.map((h, i) => {
+                  if (i === 0) return null;
+                  const prev = history[i - 1];
+                  const maxTurns = Math.max(20, history.length - 1);
+                  
+                  // @ts-ignore
+                  const prevLs = prev.lsAverages[selectedHistoryGroup.category][selectedHistoryGroup.key];
+                  // @ts-ignore
+                  const currentLs = h.lsAverages[selectedHistoryGroup.category][selectedHistoryGroup.key];
+
+                  return (
+                    <line
+                      key={`line-${i}`}
+                      x1={`${(prev.turn / maxTurns) * 100}%`}
+                      y1={`${((10 - prevLs) / 10) * 100}%`}
+                      x2={`${(h.turn / maxTurns) * 100}%`}
+                      y2={`${((10 - currentLs) / 10) * 100}%`}
+                      stroke="#ec4899"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
 
                 {/* Data Points (Interactive) */}
                 {history.map((h, i) => {
+                  const maxTurns = Math.max(20, history.length - 1);
                   // @ts-ignore
                   const ls = h.lsAverages[selectedHistoryGroup.category][selectedHistoryGroup.key];
+                  const xPos = `${(h.turn / maxTurns) * 100}%`;
+                  const yPos = `${((10 - ls) / 10) * 100}%`;
+
                   return (
-                    <g key={i} className="group/point cursor-crosshair">
-                      <circle cx={h.turn} cy={10 - ls} r="0.25" fill="#ffffff" stroke="#ec4899" strokeWidth="0.1" className="group-hover/point:stroke-[#be185d] transition-colors" />
+                    <g key={`point-${i}`} className="group/point cursor-crosshair">
+                      <circle cx={xPos} cy={yPos} r="5" fill="#ffffff" stroke="#ec4899" strokeWidth="2" className="group-hover/point:stroke-[#be185d] transition-colors" />
                       
                       {/* Tooltip (Hover) */}
-                      <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none">
-                        <rect x={h.turn - 4} y={10 - ls - 3.5} width="8" height="3" rx="0.5" fill="#27272a" className="shadow-lg" />
-                        <text x={h.turn} y={10 - ls - 2.2} fill="#ffffff" fontSize="0.7" textAnchor="middle" fontWeight="bold">Turn {h.turn}</text>
-                        <text x={h.turn} y={10 - ls - 1.2} fill="#a1a1aa" fontSize="0.5" textAnchor="middle">Avg LS: {ls.toFixed(2)}</text>
-                        {h.enactedPolicyName && (
-                          <text x={h.turn} y={10 - ls - 0.7} fill="#f472b6" fontSize="0.4" textAnchor="middle">"{h.enactedPolicyName}"</text>
-                        )}
+                      <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none z-50">
+                        {/* Adjust tooltip position based on turn to prevent clipping off edges */}
+                        <g transform={`translate(${h.turn > 15 ? -60 : h.turn < 5 ? 10 : -40}, -50)`}>
+                           <rect x="0" y="0" width="100" height="40" rx="4" fill="#27272a" className="shadow-lg" />
+                           <text x="50" y="14" fill="#ffffff" fontSize="10" textAnchor="middle" fontWeight="bold">Turn {h.turn}</text>
+                           <text x="50" y="26" fill="#a1a1aa" fontSize="9" textAnchor="middle">Avg LS: {ls.toFixed(2)}</text>
+                           {h.enactedPolicyName && (
+                             <text x="50" y="36" fill="#f472b6" fontSize="8" textAnchor="middle">"{h.enactedPolicyName}"</text>
+                           )}
+                        </g>
                       </g>
                     </g>
                   );
