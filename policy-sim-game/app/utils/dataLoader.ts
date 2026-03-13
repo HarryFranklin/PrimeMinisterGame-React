@@ -37,18 +37,21 @@ function getDemographics(id: number): Demographics {
   else if (r2 > 0.767) age = 'Elderly'; // Top 23.3%
 
   // 3. Sub-traits
-  // Estimated 30% of the 18-29 bracket are students
   const isStudent = age === 'Youth' && r3 < 0.30;
-  
-  // UK average: ~42.3% of families have dependent children
   const isParent = age === 'Adult' && r3 < 0.423;
 
-  // Environmentalists: ~20% of the electorate
-  const isEnvironmentalist = seededRandom(id + 40) < 0.20;
+  // Environmentalists: Weighted towards Youth and Students
+  let enviroChance = 0.15; // Base chance
+  if (isStudent) enviroChance = 0.45;
+  else if (age === 'Youth') enviroChance = 0.35;
+  else if (age === 'Elderly') enviroChance = 0.05;
+  const isEnvironmentalist = seededRandom(id + 40) < enviroChance;
 
-  // Commuters: ~54% of working-age population. Elderly drop significantly.
-  let commChance = 0.54;
-  if (age === 'Elderly') commChance = 0.05;
+  // Commuters: Standardised heavily to working adults
+  let commChance = 0.54; // National average proxy
+  if (age === 'Elderly') commChance = 0.02; // Rarely commute
+  else if (age === 'Adult') commChance = 0.75; // Primary working block
+  else if (isStudent) commChance = 0.25; // Students commute less often than full-time workers
   const isCommuter = seededRandom(id + 50) < commChance;
 
   return {

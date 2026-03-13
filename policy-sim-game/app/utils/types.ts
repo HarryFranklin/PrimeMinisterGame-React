@@ -1,5 +1,3 @@
-// app/utils/types.ts
-
 export enum AxisVariable {
   LifeSatisfaction,
   PersonalUtility,
@@ -22,7 +20,7 @@ export interface Respondent {
   personalUtilities: number[]; 
   societalUtilities: number[]; 
   currentLS: number;
-  demographics: Demographics; // Added demographic traits
+  demographics: Demographics;
 }
 
 export interface PolicyRule {
@@ -32,7 +30,7 @@ export interface PolicyRule {
   affectEveryone?: boolean;
   proportion: number;
   impact: number;
-  targetDemographic?: Partial<Demographics>; // Allows for highly targeted policies later
+  targetDemographic?: Partial<Demographics>;
 }
 
 export interface Policy {
@@ -43,9 +41,22 @@ export interface Policy {
   politicalCost: number;
 }
 
-// Personal, Societal, PlayerChoice Mechanics
 export enum ElectionCycle {
   Utilitarian,
   Empathetic,
   PlayerChoice
+}
+
+export interface DemographicAverages {
+  national: number;
+  wealth: { poor: number; middle: number; wealthy: number };
+  age: { youth: number; adult: number; elderly: number };
+  traits: { students: number; parents: number; commuters: number; environmentalists: number };
+}
+
+export interface TurnHistory {
+  turn: number;
+  enactedPolicyId: string | null;
+  enactedPolicyName: string | null;
+  lsAverages: DemographicAverages;
 }
