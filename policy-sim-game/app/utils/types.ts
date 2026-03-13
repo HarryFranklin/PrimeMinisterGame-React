@@ -43,6 +43,7 @@ export interface Policy {
   politicalCost: number;
 }
 
+// Personal, Societal, PlayerChoice Mechanics
 export enum ElectionCycle {
   Utilitarian,
   Empathetic,

@@ -28,7 +28,7 @@ export default function Home() {
   const [usedPolicies, setUsedPolicies] = useState<Set<string>>(new Set());
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
 
-  // --- NEW: INDEPENDENT GRAPH STATES ---
+  // --- INDEPENDENT GRAPH STATES ---
   const [g1PlotType, setG1PlotType] = useState<'1D' | '2D'>('1D');
   const [g1XAxis, setG1XAxis] = useState<AxisVariable>(AxisVariable.LifeSatisfaction);
   const [g1YAxis, setG1YAxis] = useState<AxisVariable>(AxisVariable.PersonalUtility);
@@ -49,11 +49,13 @@ export default function Home() {
     const med = available.filter(p => p.politicalCost > 10 && p.politicalCost <= 15);
     const high = available.filter(p => p.politicalCost > 15);
 
+    // Pick random policies and add to deck
     const pickRandom = (arr: Policy[]) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
 
     const deck: Policy[] = [];
     const add = (p: Policy | null) => { if (p && !deck.find(d => d.id === p.id)) deck.push(p); };
 
+    // Pick austerity, low, med and high policies
     add(pickRandom(austerity));
     add(pickRandom(low));
     add(pickRandom(med));
@@ -101,7 +103,7 @@ export default function Home() {
   }, [previewPopulation]);
 
 
-  // --- DYNAMIC DATA GENERATION FOR GRAPHS TAB ---
+  // --- DATA GENERATION FOR GRAPHS TAB ---
   const getAxisValue = useCallback((r: Respondent, axis: AxisVariable, allLS: number[]) => {
     if (axis === AxisVariable.LifeSatisfaction) return r.currentLS;
     if (axis === AxisVariable.PersonalUtility) return WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
@@ -137,6 +139,7 @@ export default function Home() {
     return bins;
   }, [previewPopulation, getAxisValue]);
 
+  // 2 Graphs that are shown
   const g1ChartData = useMemo(() => generateChartData(g1XAxis, g1YAxis), [generateChartData, g1XAxis, g1YAxis]);
   const g1HistogramData = useMemo(() => generateHistogramData(g1XAxis), [generateHistogramData, g1XAxis]);
   
@@ -200,6 +203,7 @@ export default function Home() {
       let happyThreshold = 0.85;
       let neutralThreshold = 0.70;
       
+      // Different thresholds for equality and environment
       if (ministerName === "Equality" || ministerName === "Environment") {
         happyThreshold = 0.88;
         neutralThreshold = 0.75;
@@ -223,9 +227,12 @@ export default function Home() {
       let supportLevel = 'neutral';
       const prePolicyScore = getGroupUtility(population, allCurrentLS, filterFn);
       const policyDelta = projScore - prePolicyScore;
+      
+      // Threshold for deltas
       if (policyDelta > 0.005) supportLevel = 'supports';
       if (policyDelta < -0.005) supportLevel = 'opposes';
 
+      // Create response strings based on status
       let dynamicQuote = "";
       if (currentStatus === 'happy') {
         dynamicQuote = `${name} demographics are highly satisfied with our trajectory.`;
@@ -256,11 +263,22 @@ export default function Home() {
     };
 
     return [
+      // Economy is middle-class and wealthy
       evaluateMinister("Economy", r => r.demographics.wealth === 'Middle' || r.demographics.wealth === 'Wealthy'),
+
+      // Equality is poor
       evaluateMinister("Equality", r => r.demographics.wealth === 'Poor'),
+
+      // Youth is young people, students, parents
       evaluateMinister("Youth", r => r.demographics.age === 'Youth' || r.demographics.isStudent || r.demographics.isParent),
+
+      // Health is elderly and people of LS < 4
       evaluateMinister("Health", r => r.demographics.age === 'Elderly' || r.currentLS < 4),
+
+      // Environment is environmentalists
       evaluateMinister("Environment", r => r.demographics.isEnvironmentalist),
+
+      // Transport is commuters
       evaluateMinister("Transport", r => r.demographics.isCommuter)
     ];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
@@ -330,6 +348,7 @@ export default function Home() {
     setShowElection(false);
   };
 
+  // #region VISUALS
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
       
@@ -515,7 +534,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* VIEW 3: GRAPHS TAB (SIDE-BY-SIDE SANDBOX, NO SCROLLING) */}
+        {/* VIEW 3: GRAPHS TAB (SIDE-BY-SIDE) */}
         {activeTab === 'graphs' && (
           <div className="flex gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
              
