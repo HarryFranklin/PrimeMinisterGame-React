@@ -837,7 +837,7 @@ export default function Home() {
                         Min. for<br/>{minister.name}
                       </p>
 
-                               Only shows if a policy is actively selected, hiding the clutter otherwise */}
+                      {/*Only shows if a policy is actively selected, hiding the clutter otherwise */}
                       <div className="h-6 flex items-center justify-center mt-1">
                         {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
                           <span className={`text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
@@ -991,7 +991,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Custom SVG Line Graph (Percentage-based coordinate mapping to fix circle distortion) */}
             {/* Custom SVG Line Graph */}
             <div className="w-full h-80 relative bg-zinc-50 rounded-lg border border-zinc-100 p-4">
               <svg className="w-full h-full overflow-visible">
