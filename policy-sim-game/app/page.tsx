@@ -324,7 +324,6 @@ export default function Home() {
         }
       }
 
-      // FIX: Upgraded colours to solid bold values so they jump out clearly
       return {
         name,
         status: currentStatus,
@@ -500,7 +499,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
-              {/* WEALTH DISTRIBUTION (With Ghost Bars) */}
+              {/* WEALTH DISTRIBUTION (With Multi-State Graphical Extensions) */}
               <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex flex-col">
                 <div className="flex justify-between items-end mb-6 shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Wealth Distribution</h3>
@@ -511,29 +510,68 @@ export default function Home() {
                     { label: 'Wealthy (Top 10%)', key: 'wealthy', data: demoStats.wealth.wealthy, initData: initialDemoStats.wealth.wealthy, color: 'bg-emerald-500' },
                     { label: 'Middle Class', key: 'middle', data: demoStats.wealth.middle, initData: initialDemoStats.wealth.middle, color: 'bg-blue-500' },
                     { label: 'Poor (Relative Poverty)', key: 'poor', data: demoStats.wealth.poor, initData: initialDemoStats.wealth.poor, color: 'bg-red-500' }
-                  ].map((item, i) => (
-                    <div 
-                      key={i}
-                      // FIX: Made wealth items clickable to display in history graph
-                      onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'wealth', key: item.key }) : null}
-                      className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
-                    >
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
-                        {currentTurn >= 5 ? '⤢' : '🔒'}
-                      </div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
-                        <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1 h-3 bg-zinc-100 rounded-full overflow-hidden">
-                          <div className={`absolute top-0 left-0 h-full ${item.color} opacity-30`} style={{ width: `${item.initData.pct}%` }} />
-                          <div className={`absolute top-0 left-0 h-full ${item.color} shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]`} style={{ width: `${item.data.pct}%` }} />
+                  ].map((item, i) => {
+                    // 1. Calculate the values as a percentage of the total possible Life Satisfaction (10)
+                    const initLs = parseFloat(item.initData.ls);
+                    const currentLs = parseFloat(item.data.ls);
+                    const initWidth = (initLs / 10) * 100;
+                    const currentWidth = (currentLs / 10) * 100;
+                    
+                    // 2. Identify trajectory
+                    const hasGoneDown = currentLs < initLs;
+                    const hasGoneUp = currentLs > initLs;
+
+                    return (
+                      <div 
+                        key={i}
+                        onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'wealth', key: item.key }) : null}
+                        className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
+                      >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
+                          {currentTurn >= 5 ? '⤢' : '🔒'}
                         </div>
-                        <span className="text-xs font-bold w-12 text-right mr-4">{item.data.pct}%</span>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
+                          <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex-1 h-3 bg-zinc-200 rounded-full overflow-hidden">
+                            
+                            {/* The Base Bar (Fills up to the minimum shared value) */}
+                            <div 
+                              className={`absolute top-0 left-0 h-full ${item.color} shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] transition-all duration-500`} 
+                              style={{ width: `${Math.min(initWidth, currentWidth)}%` }} 
+                            />
+                            
+                            {/* The Ghost Line (If it has gone down, display the lost portion as faded) */}
+                            {hasGoneDown && (
+                              <div 
+                                className={`absolute top-0 h-full ${item.color} opacity-20 transition-all duration-500`}
+                                style={{ left: `${currentWidth}%`, width: `${initWidth - currentWidth}%` }}
+                              />
+                            )}
+
+                            {/* The Growth Graphic (If it has gone up, display a distinct striped extension) */}
+                            {hasGoneUp && (
+                              <div 
+                                className={`absolute top-0 h-full ${item.color} border-l-2 border-white brightness-125 transition-all duration-500`}
+                                style={{ 
+                                  left: `${initWidth}%`, 
+                                  width: `${currentWidth - initWidth}%`,
+                                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.3) 4px, rgba(255,255,255,0.3) 8px)'
+                                }}
+                              />
+                            )}
+
+                          </div>
+                          
+                          {/* Demographic percentage strictly isolated as a label */}
+                          <span className="text-xs font-bold w-12 text-right mr-4 text-zinc-400" title="Population Share">{item.data.pct}%</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
