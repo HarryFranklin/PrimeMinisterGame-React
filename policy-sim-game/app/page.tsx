@@ -1066,7 +1066,6 @@ export default function Home() {
                 })}
 
                 {/* Data Points (Interactive) */}
-                {/* Data Points */}
                 {history.map((h, i) => {
                   const maxTurns = Math.max(20, history.length - 1);
                   // @ts-ignore
@@ -1079,16 +1078,20 @@ export default function Home() {
                       <circle cx={xPos} cy={yPos} r="5" fill="#ffffff" stroke="#ec4899" strokeWidth="2" className="group-hover/point:stroke-[#be185d] transition-colors" />
                       
                       {/* Tooltip (Hover) */}
-                      <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none z-50">
-                        <g transform={`translate(${h.turn > 15 ? -60 : h.turn < 5 ? 10 : -40}, -50)`}>
-                           <rect x="0" y="0" width="100" height="40" rx="4" fill="#27272a" className="shadow-lg" />
+                      <svg 
+                        x={xPos} 
+                        y={yPos} 
+                        className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none z-50 overflow-visible"
+                      >
+                        <g transform={`translate(${h.turn > 15 ? -100 : h.turn < 5 ? 10 : -50}, -60)`}>
+                           <rect x="0" y="0" width="100" height="45" rx="4" fill="#27272a" className="shadow-lg" />
                            <text x="50" y="14" fill="#ffffff" fontSize="10" textAnchor="middle" fontWeight="bold">Turn {h.turn}</text>
                            <text x="50" y="26" fill="#a1a1aa" fontSize="9" textAnchor="middle">Avg LS: {ls.toFixed(2)}</text>
                            {h.enactedPolicyName && (
-                             <text x="50" y="36" fill="#f472b6" fontSize="8" textAnchor="middle">"{h.enactedPolicyName}"</text>
+                             <text x="50" y="38" fill="#f472b6" fontSize="8" textAnchor="middle">"{h.enactedPolicyName}"</text>
                            )}
                         </g>
-                      </g>
+                      </svg>
                     </g>
                   );
                 })}
