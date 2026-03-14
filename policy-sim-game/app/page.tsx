@@ -13,6 +13,7 @@ import DashboardTab from "./components/tabs/DashboardTab";
 import DemographicsTab from "./components/tabs/DemographicsTab";
 import MinistersTab from "./components/tabs/MinistersTab";
 import GraphsTab from "./components/tabs/GraphsTab";
+import ElectorateTab from "./components/tabs/ElectorateTab";
 
 const totalTurns = 20;
 
@@ -63,9 +64,7 @@ export default function Home() {
 
   const [history, setHistory] = useState<TurnHistory[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs'>('dashboard');
-  const [selectedMinister, setSelectedMinister] = useState<any | null>(null);
-
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs' | 'electorate'>('dashboard');  const [selectedMinister, setSelectedMinister] = useState<any | null>(null);
   const [usedPolicies, setUsedPolicies] = useState<Set<string>>(new Set());
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
 
@@ -408,7 +407,7 @@ export default function Home() {
     setShowElection(false);
   };
 
-  const tabs = ['dashboard', 'demographics', 'ministers', 'graphs'];
+  const tabs = ['dashboard', 'demographics', 'electorate', 'ministers', 'graphs'];
   const activeTabIndex = tabs.indexOf(activeTab);
 
   return (
@@ -487,6 +486,13 @@ export default function Home() {
             g1Preset={g1Preset} g1PlotType={g1PlotType} g1XAxis={g1XAxis} g1YAxis={g1YAxis} g1ChartData={g1ChartData} g1HistogramData={g1HistogramData}
             g2Preset={g2Preset} g2PlotType={g2PlotType} g2XAxis={g2XAxis} g2YAxis={g2YAxis} g2ChartData={g2ChartData} g2HistogramData={g2HistogramData}
             handleGraphChange={handleGraphChange} GRAPH_PRESETS={GRAPH_PRESETS}
+          />
+        )}
+        {activeTab === 'electorate' && (
+          <ElectorateTab 
+            initialPopulation={initialPopulation}
+            previewPopulation={previewPopulation}
+            currentCycle={currentCycle}
           />
         )}
       </main>
