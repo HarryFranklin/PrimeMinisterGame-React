@@ -245,7 +245,7 @@ export default function Home() {
       const multiplier = delta < 0 ? 2.5 : 1.2;
       const perceivedScore = currentUtil + (delta * multiplier);
 
-      if (perceivedScore >= 0.65) {
+      if (perceivedScore >= 0.90) {
         approvingVoters++;
       }
     });
@@ -609,30 +609,31 @@ export default function Home() {
                 </div>
              </div>
 
-             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+             <div className="grid grid-cols-2 lg:grid-cols-3 grid-rows-2 gap-6 flex-1 min-h-0 pb-2">
                 {ministers.map((m, i) => (
-                   <div key={i} className="bg-white p-4 lg:p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full overflow-hidden">
+                   <div key={i} className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full">
                       <div className="flex items-center gap-4 mb-4 shrink-0">
-                        {/* FIX: Larger, solid color faces for Ministers */}
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${m.color} border-4 border-white shadow-md text-3xl shrink-0`}>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${m.color} border-2 border-white shadow-sm text-2xl shrink-0`}>
                            {m.status === 'happy' && '😊'}
                            {m.status === 'neutral' && '😐'}
                            {m.status === 'angry' && '😠'}
                         </div>
-                        <div>
-                          {/* Changed Min. to Minister */}
-                          <h4 className="font-bold text-zinc-800 text-lg">Minister for {m.name}</h4>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-zinc-800 text-lg truncate">Minister for {m.name}</h4>
                           <p className="text-xs uppercase tracking-widest text-zinc-400 font-bold">
                             Status: <span className={m.status === 'angry' ? 'text-red-500' : ''}>{m.status}</span>
                           </p>
                         </div>
                       </div>
                       
-                      <p className="text-zinc-600 text-sm italic border-l-2 border-zinc-200 pl-3 py-1 mb-4 line-clamp-3">
-                        "{m.quote}"
-                      </p>
+                      {/* Flex-1 wrapper naturally centers the quote in the remaining vertical space */}
+                      <div className="flex-1 flex items-center mb-5 min-h-0">
+                        <p className="text-zinc-600 text-sm leading-relaxed italic border-l-2 border-zinc-200 pl-3 py-1 line-clamp-4">
+                          "{m.quote}"
+                        </p>
+                      </div>
 
-                      <div className="bg-zinc-50 rounded-lg border border-zinc-100 p-4 space-y-2 text-sm shrink-0 mt-auto">
+                      <div className="bg-zinc-50 rounded-lg border border-zinc-100 p-4 space-y-2 text-sm shrink-0">
                          <div className="flex justify-between">
                            <span className="text-zinc-500">Base Utility (Turn 1):</span>
                            <span className="font-mono text-zinc-700">{m.baseScore.toFixed(3)}</span>
@@ -642,8 +643,8 @@ export default function Home() {
                            <span className="font-mono text-zinc-700">{m.projScore.toFixed(3)}</span>
                          </div>
                          <div className="w-full h-px bg-zinc-200 my-1" />
-                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-zinc-700">Trajectory (Since Turn 1):</span>
+                         <div className="flex justify-between items-center pt-1">
+                           <span className="font-bold text-zinc-700">Trajectory (Δ):</span>
                            <span className={`font-black ${m.delta < -0.0001 ? 'text-red-500' : m.delta > 0.0001 ? 'text-emerald-500' : 'text-zinc-500'}`}>
                              {m.delta > 0.0001 ? '+' : ''}{(m.delta * 100).toFixed(2)}%
                            </span>
@@ -819,28 +820,29 @@ export default function Home() {
                   </div>
                   <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none mt-1">↗</span>
                 </div>
-                <div className="p-4 grid grid-cols-3 gap-4 flex-1 content-start relative overflow-y-auto custom-scrollbar">
+                
+                <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-3 lg:gap-4 flex-1 min-h-0">
                   {ministers.map((minister, i) => (
                     <div 
                       key={i} 
                       onClick={(e) => { e.stopPropagation(); setSelectedMinister(minister); }}
-                      className="flex flex-col items-center justify-center p-3 rounded-lg border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister"
+                      className="flex flex-col items-center justify-between p-2 rounded-lg border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full"
                     >
                       <div className="absolute top-1 left-1.5 opacity-0 group-hover/minister:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
 
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${minister.color} border-4 border-white shadow-md text-3xl transition-colors`}>
+                      <h4 className="text-[10px] lg:text-[11px] font-black text-zinc-800 uppercase tracking-widest leading-none mt-1 mb-1 lg:mb-2 text-center">
+                        {minister.name}
+                      </h4>
+
+                      <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center ${minister.color} border-2 lg:border-4 border-white shadow-md text-2xl lg:text-3xl transition-colors shrink-0`}>
                          {minister.status === 'happy' && '😊'}
                          {minister.status === 'neutral' && '😐'}
                          {minister.status === 'angry' && '😠'}
                       </div>
-                      <p className="text-[11px] font-bold text-zinc-800 uppercase text-center leading-tight mt-2">
-                        Min. for<br/>{minister.name}
-                      </p>
 
-                      {/*Only shows if a policy is actively selected, hiding the clutter otherwise */}
-                      <div className="h-6 flex items-center justify-center mt-1">
+                      <div className="h-5 lg:h-6 flex items-center justify-center mt-1 lg:mt-2 shrink-0">
                         {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
-                          <span className={`text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                          <span className={`text-[10px] lg:text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                             {minister.policyDelta > 0 ? '↑' : '↓'} {(Math.abs(minister.policyDelta) * 100).toFixed(1)}%
                           </span>
                         ) : null}
