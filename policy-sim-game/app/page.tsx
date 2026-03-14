@@ -6,12 +6,16 @@ import { loadPopulation } from "./utils/dataLoader";
 import { WelfareMetrics } from "./utils/WelfareMetrics";
 import { availablePolicies } from "./data/policies";
 import { PolicyEngine } from "./utils/PolicyEngine";
-import D3Chart from "./components/D3Chart";
 import ElectionModal from "./components/ElectionModal";
+
+// Tab Imports
+import DashboardTab from "./components/tabs/DashboardTab";
+import DemographicsTab from "./components/tabs/DemographicsTab";
+import MinistersTab from "./components/tabs/MinistersTab";
+import GraphsTab from "./components/tabs/GraphsTab";
 
 const totalTurns = 20;
 
-// Helper to extract averages at a given point in time
 const calculateAverages = (pop: Respondent[]): DemographicAverages => {
   const getAvg = (filterFn?: (r: Respondent) => boolean) => {
     const group = filterFn ? pop.filter(filterFn) : pop;
@@ -57,7 +61,6 @@ export default function Home() {
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Utilitarian);
   const [showElection, setShowElection] = useState(false);
 
-  // --- History State ---
   const [history, setHistory] = useState<TurnHistory[]>([]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs'>('dashboard');
@@ -66,7 +69,6 @@ export default function Home() {
   const [usedPolicies, setUsedPolicies] = useState<Set<string>>(new Set());
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
 
-  // --- INDEPENDENT GRAPH STATES ---
   const [g1Preset, setG1Preset] = useState<string>('Life Satisfaction Distribution');
   const [g1PlotType, setG1PlotType] = useState<'1D' | '2D'>('1D');
   const [g1XAxis, setG1XAxis] = useState<AxisVariable>(AxisVariable.LifeSatisfaction);
@@ -77,38 +79,25 @@ export default function Home() {
   const [g2XAxis, setG2XAxis] = useState<AxisVariable>(AxisVariable.LifeSatisfaction);
   const [g2YAxis, setG2YAxis] = useState<AxisVariable>(AxisVariable.PersonalUtility);
 
-  // Handlers to link presets and custom fallbacks
-  const handleG1Change = (type: 'preset'|'plot'|'x'|'y', val: any) => {
-    if (type === 'preset') {
-      setG1Preset(val);
-      const preset = GRAPH_PRESETS.find(p => p.label === val);
-      if (preset && val !== 'Custom') {
-        setG1PlotType(preset.plotType as any);
-        setG1XAxis(preset.xAxis);
-        setG1YAxis(preset.yAxis);
-      }
-    } else {
-      setG1Preset('Custom');
-      if (type === 'plot') setG1PlotType(val);
-      if (type === 'x') setG1XAxis(val);
-      if (type === 'y') setG1YAxis(val);
-    }
-  };
+  const handleGraphChange = (graphNum: 1 | 2, type: 'preset'|'plot'|'x'|'y', val: any) => {
+    const setPreset = graphNum === 1 ? setG1Preset : setG2Preset;
+    const setPlot = graphNum === 1 ? setG1PlotType : setG2PlotType;
+    const setX = graphNum === 1 ? setG1XAxis : setG2XAxis;
+    const setY = graphNum === 1 ? setG1YAxis : setG2YAxis;
 
-  const handleG2Change = (type: 'preset'|'plot'|'x'|'y', val: any) => {
     if (type === 'preset') {
-      setG2Preset(val);
+      setPreset(val);
       const preset = GRAPH_PRESETS.find(p => p.label === val);
       if (preset && val !== 'Custom') {
-        setG2PlotType(preset.plotType as any);
-        setG2XAxis(preset.xAxis);
-        setG2YAxis(preset.yAxis);
+        setPlot(preset.plotType as any);
+        setX(preset.xAxis);
+        setY(preset.yAxis);
       }
     } else {
-      setG2Preset('Custom');
-      if (type === 'plot') setG2PlotType(val);
-      if (type === 'x') setG2XAxis(val);
-      if (type === 'y') setG2YAxis(val);
+      setPreset('Custom');
+      if (type === 'plot') setPlot(val);
+      if (type === 'x') setX(val);
+      if (type === 'y') setY(val);
     }
   };
 
@@ -124,13 +113,10 @@ export default function Home() {
     const med = available.filter(p => p.politicalCost > 10 && p.politicalCost <= 15);
     const high = available.filter(p => p.politicalCost > 15);
 
-    // Pick random policies and add to deck
     const pickRandom = (arr: Policy[]) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
-
     const deck: Policy[] = [];
     const add = (p: Policy | null) => { if (p && !deck.find(d => d.id === p.id)) deck.push(p); };
 
-    // Pick austerity, low, med and high policies
     add(pickRandom(austerity));
     add(pickRandom(low));
     add(pickRandom(med));
@@ -155,7 +141,6 @@ export default function Home() {
     return PolicyEngine.applyPolicy(population, selectedPolicy);
   }, [population, selectedPolicy]);
 
-  // --- DATA FOR MAIN DASHBOARD ---
   const dashboardChartData = useMemo(() => {
     if (previewPopulation.length === 0) return [];
     const allLS = previewPopulation.map(p => p.currentLS);
@@ -178,7 +163,6 @@ export default function Home() {
     return bins;
   }, [previewPopulation]);
 
-  // --- DATA GENERATION FOR GRAPHS TAB ---
   const getAxisValue = useCallback((r: Respondent, axis: AxisVariable, allLS: number[]) => {
     if (axis === AxisVariable.LifeSatisfaction) return r.currentLS;
     if (axis === AxisVariable.PersonalUtility) return WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
@@ -214,14 +198,12 @@ export default function Home() {
     return bins;
   }, [previewPopulation, getAxisValue]);
 
-  // 2 Graphs that are shown
   const g1ChartData = useMemo(() => generateChartData(g1XAxis, g1YAxis), [generateChartData, g1XAxis, g1YAxis]);
   const g1HistogramData = useMemo(() => generateHistogramData(g1XAxis), [generateHistogramData, g1XAxis]);
   
   const g2ChartData = useMemo(() => generateChartData(g2XAxis, g2YAxis), [generateChartData, g2XAxis, g2YAxis]);
   const g2HistogramData = useMemo(() => generateHistogramData(g2XAxis), [generateHistogramData, g2XAxis]);
 
-  // --- APPROVAL & DEMOGRAPHICS ---
   const currentApproval = useMemo(() => {
     if (previewPopulation.length === 0 || initialPopulation.length === 0) return 0;
     const allInitialLS = initialPopulation.map(p => p.currentLS);
@@ -277,7 +259,6 @@ export default function Home() {
       let happyThreshold = 0.85;
       let neutralThreshold = 0.70;
       
-      // Different thresholds for equality and environment
       if (ministerName === "Equality" || ministerName === "Environment") {
         happyThreshold = 0.88;
         neutralThreshold = 0.75;
@@ -302,11 +283,9 @@ export default function Home() {
       const prePolicyScore = getGroupUtility(population, allCurrentLS, filterFn);
       const policyDelta = projScore - prePolicyScore;
       
-      // Threshold for deltas
       if (policyDelta > 0.005) supportLevel = 'supports';
       if (policyDelta < -0.005) supportLevel = 'opposes';
 
-      // Create response strings based on status
       let dynamicQuote = "";
       if (currentStatus === 'happy') {
         dynamicQuote = `${name} demographics are highly satisfied with our trajectory.`;
@@ -429,15 +408,11 @@ export default function Home() {
     setShowElection(false);
   };
 
-  // --- TAB NAVIGATION HELPERS ---
   const tabs = ['dashboard', 'demographics', 'ministers', 'graphs'];
   const activeTabIndex = tabs.indexOf(activeTab);
 
-  // #region VISUALS
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      
-      {/* TOP NAVIGATION BAR */}
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-8">
           <div>
@@ -481,474 +456,38 @@ export default function Home() {
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-hidden p-6 flex flex-col">
-        
-        {/* VIEW 1: DEMOGRAPHICS */}
-        {activeTab === 'demographics' && demoStats && initialDemoStats && (
-          <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
-            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0">
-              <div>
-                <h2 className="text-xl font-bold text-zinc-800">National Demographics</h2>
-                <p className="text-sm text-zinc-500">Breakdown of the electorate and their current average Life Satisfaction (LS).</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Total Population</p>
-                <p className="text-3xl font-black text-pink-600">{demoStats.total.toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
-              {/* WEALTH DISTRIBUTION (With Multi-State Graphical Extensions) */}
-              <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex flex-col">
-                <div className="flex justify-between items-end mb-6 shrink-0">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Wealth Distribution</h3>
-                  <p className="text-[10px] font-bold uppercase text-zinc-400">Compared to the start of your term</p>                
-                </div>
-                <div className="flex-1 space-y-6 flex flex-col justify-center">
-                  {[
-                    { label: 'Wealthy (Top 10%)', key: 'wealthy', data: demoStats.wealth.wealthy, initData: initialDemoStats.wealth.wealthy, color: 'bg-emerald-500' },
-                    { label: 'Middle Class', key: 'middle', data: demoStats.wealth.middle, initData: initialDemoStats.wealth.middle, color: 'bg-blue-500' },
-                    { label: 'Poor (Relative Poverty)', key: 'poor', data: demoStats.wealth.poor, initData: initialDemoStats.wealth.poor, color: 'bg-red-500' }
-                  ].map((item, i) => {
-                    // 1. Calculate the values as a percentage of the total possible Life Satisfaction (10)
-                    const initLs = parseFloat(item.initData.ls);
-                    const currentLs = parseFloat(item.data.ls);
-                    const initWidth = (initLs / 10) * 100;
-                    const currentWidth = (currentLs / 10) * 100;
-                    
-                    // 2. Identify trajectory
-                    const hasGoneDown = currentLs < initLs;
-                    const hasGoneUp = currentLs > initLs;
-
-                    return (
-                      <div 
-                        key={i}
-                        onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'wealth', key: item.key }) : null}
-                        className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
-                      >
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
-                          {currentTurn >= 5 ? '⤢' : '🔒'}
-                        </div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
-                          <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
-                        </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="relative flex-1 h-3 bg-zinc-200 rounded-full overflow-hidden">
-                            
-                            {/* The Base Bar (Fills up to the minimum shared value) */}
-                            <div 
-                              className={`absolute top-0 left-0 h-full ${item.color} shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)] transition-all duration-500`} 
-                              style={{ width: `${Math.min(initWidth, currentWidth)}%` }} 
-                            />
-                            
-                            {/* The Ghost Line (If it has gone down, display the lost portion as faded) */}
-                            {hasGoneDown && (
-                              <div 
-                                className={`absolute top-0 h-full ${item.color} opacity-20 transition-all duration-500`}
-                                style={{ left: `${currentWidth}%`, width: `${initWidth - currentWidth}%` }}
-                              />
-                            )}
-
-                            {/* The Growth Graphic (If it has gone up, display a distinct striped extension) */}
-                            {hasGoneUp && (
-                              <div 
-                                className={`absolute top-0 h-full ${item.color} border-l-2 border-white brightness-125 transition-all duration-500`}
-                                style={{ 
-                                  left: `${initWidth}%`, 
-                                  width: `${currentWidth - initWidth}%`,
-                                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.3) 4px, rgba(255,255,255,0.3) 8px)'
-                                }}
-                              />
-                            )}
-
-                          </div>
-                          
-                          {/* Demographic percentage strictly isolated as a label */}
-                          <span className="text-xs font-bold w-12 text-right mr-4 text-zinc-400" title="Population Share">{item.data.pct}%</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* AGE DISTRIBUTION (Clickable) */}
-              <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex flex-col">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 mb-6 shrink-0">Age Distribution (18+)</h3>
-                <div className="flex-1 space-y-4 flex flex-col justify-center">
-                  {[
-                    { label: 'Elderly (65+)', key: 'elderly', data: demoStats.age.elderly, color: 'bg-indigo-500' },
-                    { label: 'Adults (30-64)', key: 'adult', data: demoStats.age.adult, color: 'bg-violet-500' },
-                    { label: 'Youth (18-29)', key: 'youth', data: demoStats.age.youth, color: 'bg-fuchsia-500' }
-                  ].map((item, i) => (
-                    <div 
-                      key={i} 
-                      onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'age', key: item.key }) : null}
-                      className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
-                    >
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
-                        {currentTurn >= 5 ? '⤢' : '🔒'}
-                      </div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
-                        <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-3 bg-zinc-100 rounded-full overflow-hidden">
-                          <div className={`h-full ${item.color}`} style={{ width: `${item.data.pct}%` }} />
-                        </div>
-                        <span className="text-xs font-bold w-12 text-right mr-4">{item.data.pct}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* KEY VOTING BLOCKS (Clickable) */}
-            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 mb-6">Key Voting Blocks</h3>
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { label: 'Commuters', key: 'commuters', data: demoStats.traits.commuters, icon: '🚗' },
-                  { label: 'Parents', key: 'parents', data: demoStats.traits.parents, icon: '👨‍👩‍👧' },
-                  { label: 'Environmentalists', key: 'environmentalists', data: demoStats.traits.environmentalists, icon: '🌱' },
-                  { label: 'Students', key: 'students', data: demoStats.traits.students, icon: '🎓' }
-                ].map((item, i) => (
-                  <div 
-                    key={i} 
-                    onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'traits', key: item.key }) : null}
-                    className={`p-4 bg-zinc-50 rounded-lg border border-zinc-100 flex flex-col items-center text-center justify-center transition-all group relative ${currentTurn >= 5 ? 'cursor-pointer hover:border-pink-300 hover:shadow-md hover:bg-white' : 'cursor-not-allowed opacity-90'}`}
-                  >
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
-                      {currentTurn >= 5 ? '⤢' : '🔒'}
-                    </div>
-                    <span className={`text-2xl mb-2 transition-transform ${currentTurn >= 5 ? 'group-hover:scale-110' : ''}`}>{item.icon}</span>
-                    <span className={`text-xs font-bold uppercase tracking-wider text-zinc-500 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
-                    <span className="text-2xl font-black text-zinc-800 my-1">{item.data.pct}%</span>
-                    <span className="text-xs text-zinc-500">Avg LS: <strong className="text-pink-600">{item.data.ls}</strong></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 2: THE MINISTERS TAB */}
-        {activeTab === 'ministers' && (
-          <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
-             <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0">
-                <div>
-                  <h2 className="text-xl font-bold text-zinc-800">The Cabinet Room</h2>
-                  <p className="text-sm text-zinc-500">Detailed breakdown of ministerial approval and underlying demographic utility.</p>
-                </div>
-             </div>
-
-             <div className="grid grid-cols-2 lg:grid-cols-3 grid-rows-2 gap-6 flex-1 min-h-0 pb-2">
-                {ministers.map((m, i) => (
-                   <div key={i} className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full">
-                      <div className="flex items-center gap-4 mb-4 shrink-0">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${m.color} border-2 border-white shadow-sm text-2xl shrink-0`}>
-                           {m.status === 'happy' && '😊'}
-                           {m.status === 'neutral' && '😐'}
-                           {m.status === 'angry' && '😠'}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-zinc-800 text-lg truncate">Minister for {m.name}</h4>
-                          <p className="text-xs uppercase tracking-widest text-zinc-400 font-bold">
-                            Status: <span className={m.status === 'angry' ? 'text-red-500' : ''}>{m.status}</span>
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Flex-1 wrapper naturally centers the quote in the remaining vertical space */}
-                      <div className="flex-1 flex items-center mb-5 min-h-0">
-                        <p className="text-zinc-600 text-sm leading-relaxed italic border-l-2 border-zinc-200 pl-3 py-1 line-clamp-4">
-                          "{m.quote}"
-                        </p>
-                      </div>
-
-                      <div className="bg-zinc-50 rounded-lg border border-zinc-100 p-4 space-y-2 text-sm shrink-0">
-                         <div className="flex justify-between">
-                           <span className="text-zinc-500">Base Utility (Turn 1):</span>
-                           <span className="font-mono text-zinc-700">{m.baseScore.toFixed(3)}</span>
-                         </div>
-                         <div className="flex justify-between">
-                           <span className="text-zinc-500">Current Utility:</span>
-                           <span className="font-mono text-zinc-700">{m.projScore.toFixed(3)}</span>
-                         </div>
-                         <div className="w-full h-px bg-zinc-200 my-1" />
-                         <div className="flex justify-between items-center pt-1">
-                           <span className="font-bold text-zinc-700">Trajectory (Δ):</span>
-                           <span className={`font-black ${m.delta < -0.0001 ? 'text-red-500' : m.delta > 0.0001 ? 'text-emerald-500' : 'text-zinc-500'}`}>
-                             {m.delta > 0.0001 ? '+' : ''}{(m.delta * 100).toFixed(2)}%
-                           </span>
-                         </div>
-                      </div>
-                   </div>
-                ))}
-             </div>
-          </div>
-        )}
-
-        {/* VIEW 3: GRAPHS TAB (SIDE-BY-SIDE) */}
-        {activeTab === 'graphs' && (
-          <div className="flex gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
-             
-             {/* GRAPH 1 (Left) */}
-             <div className="flex-1 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col min-w-0">
-                {/* TOP: Preset Configuration */}
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center shrink-0">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Primary Visualisation</h3>
-                  <select 
-                    value={g1Preset} 
-                    onChange={(e) => handleG1Change('preset', e.target.value)} 
-                    className={`bg-white border rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-pink-500 cursor-pointer shadow-sm ${g1Preset === 'Custom' ? 'border-amber-400 text-amber-700' : 'border-zinc-200 text-zinc-700'}`}
-                  >
-                    {GRAPH_PRESETS.map(p => (
-                      <option key={p.label} value={p.label}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* MIDDLE: Graph Container */}
-                <div className="flex-1 p-4 min-h-0 relative">
-                  <D3Chart plotType={g1PlotType} chartData={g1ChartData} histogramData={g1HistogramData} xAxisType={g1XAxis} yAxisType={g1YAxis} />
-                </div>
-
-                {/* BOTTOM: Manual Controls (Fallback to Custom) */}
-                <div className="p-3 border-t border-zinc-100 bg-zinc-50 flex gap-3 items-center shrink-0 flex-wrap justify-center">
-                  <select 
-                    value={g1PlotType} 
-                    onChange={(e) => handleG1Change('plot', e.target.value)} 
-                    className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-bold text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                  >
-                    <option value="1D">1D Histogram</option>
-                    <option value="2D">2D Scatter</option>
-                  </select>
-                  <div className="w-px h-4 bg-zinc-300" />
-                  <span className="text-[10px] font-bold uppercase text-zinc-400">X-Axis:</span>
-                  <select 
-                    value={g1XAxis} 
-                    onChange={(e) => handleG1Change('x', Number(e.target.value))} 
-                    className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                  >
-                    <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-                    <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-                    <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-                  </select>
-                  {g1PlotType === '2D' && (
-                    <>
-                      <div className="w-px h-4 bg-zinc-300" />
-                      <span className="text-[10px] font-bold uppercase text-zinc-400">Y-Axis:</span>
-                      <select 
-                        value={g1YAxis} 
-                        onChange={(e) => handleG1Change('y', Number(e.target.value))} 
-                        className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                      >
-                        <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-                        <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-                        <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-                      </select>
-                    </>
-                  )}
-                </div>
-             </div>
-
-             {/* GRAPH 2 (Right) */}
-             <div className="flex-1 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col min-w-0">
-                {/* TOP: Preset Configuration */}
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center shrink-0">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Secondary Visualisation</h3>
-                  <select 
-                    value={g2Preset} 
-                    onChange={(e) => handleG2Change('preset', e.target.value)} 
-                    className={`bg-white border rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-pink-500 cursor-pointer shadow-sm ${g2Preset === 'Custom' ? 'border-amber-400 text-amber-700' : 'border-zinc-200 text-zinc-700'}`}
-                  >
-                    {GRAPH_PRESETS.map(p => (
-                      <option key={p.label} value={p.label}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* MIDDLE: Graph Container */}
-                <div className="flex-1 p-4 min-h-0 relative">
-                  <D3Chart plotType={g2PlotType} chartData={g2ChartData} histogramData={g2HistogramData} xAxisType={g2XAxis} yAxisType={g2YAxis} />
-                </div>
-
-                {/* BOTTOM: Manual Controls (Fallback to Custom) */}
-                <div className="p-3 border-t border-zinc-100 bg-zinc-50 flex gap-3 items-center shrink-0 flex-wrap justify-center">
-                  <select 
-                    value={g2PlotType} 
-                    onChange={(e) => handleG2Change('plot', e.target.value)} 
-                    className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-bold text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                  >
-                    <option value="1D">1D Histogram</option>
-                    <option value="2D">2D Scatter</option>
-                  </select>
-                  <div className="w-px h-4 bg-zinc-300" />
-                  <span className="text-[10px] font-bold uppercase text-zinc-400">X-Axis:</span>
-                  <select 
-                    value={g2XAxis} 
-                    onChange={(e) => handleG2Change('x', Number(e.target.value))} 
-                    className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                  >
-                    <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-                    <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-                    <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-                  </select>
-                  {g2PlotType === '2D' && (
-                    <>
-                      <div className="w-px h-4 bg-zinc-300" />
-                      <span className="text-[10px] font-bold uppercase text-zinc-400">Y-Axis:</span>
-                      <select 
-                        value={g2YAxis} 
-                        onChange={(e) => handleG2Change('y', Number(e.target.value))} 
-                        className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-                      >
-                        <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-                        <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-                        <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-                      </select>
-                    </>
-                  )}
-                </div>
-             </div>
-
-          </div>
-        )}
-
-        {/* VIEW 4: DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
-            
-            <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
-              <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
-                <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 group-hover:text-pink-600 transition-colors">Life Satisfaction Distribution</h3>
-                  <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
-                </div>
-                <div className="flex-1 p-2 min-h-0">
-                  <D3Chart plotType="1D" chartData={dashboardChartData} histogramData={dashboardHistogramData} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.PersonalUtility} />
-                </div>
-              </div>
-
-              <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
-                <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 group-hover:text-pink-600 transition-colors">
-                    {currentCycle === ElectionCycle.Utilitarian ? "Personal Utility Scatter" : "Societal Fairness Scatter"}
-                  </h3>
-                  <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
-                </div>
-                <div className="flex-1 p-2 min-h-0">
-                  <D3Chart plotType="2D" chartData={dashboardChartData} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={currentCycle === ElectionCycle.Utilitarian ? AxisVariable.PersonalUtility : AxisVariable.SocietalFairness} />
-                </div>
-              </div>
-            </div>
-
-            <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
-              <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">The Cabinet</h3>
-                    <p className="text-xs text-zinc-500 mt-1">Ministerial reaction to selected policy proposal.</p>
-                  </div>
-                  <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none mt-1">↗</span>
-                </div>
-                
-                <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-3 lg:gap-4 flex-1 min-h-0">
-                  {ministers.map((minister, i) => (
-                    <div 
-                      key={i} 
-                      onClick={(e) => { e.stopPropagation(); setSelectedMinister(minister); }}
-                      className="flex flex-col items-center justify-between p-2 rounded-lg border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full"
-                    >
-                      <div className="absolute top-1 left-1.5 opacity-0 group-hover/minister:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
-
-                      <h4 className="text-[10px] lg:text-[11px] font-black text-zinc-800 uppercase tracking-widest leading-none mt-1 mb-1 lg:mb-2 text-center">
-                        {minister.name}
-                      </h4>
-
-                      <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center ${minister.color} border-2 lg:border-4 border-white shadow-md text-2xl lg:text-3xl transition-colors shrink-0`}>
-                         {minister.status === 'happy' && '😊'}
-                         {minister.status === 'neutral' && '😐'}
-                         {minister.status === 'angry' && '😠'}
-                      </div>
-
-                      <div className="h-5 lg:h-6 flex items-center justify-center mt-1 lg:mt-2 shrink-0">
-                        {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
-                          <span className={`text-[10px] lg:text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                            {minister.policyDelta > 0 ? '↑' : '↓'} {(Math.abs(minister.policyDelta) * 100).toFixed(1)}%
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-pink-500" />
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Projected Voter Share</p>
-                <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${currentApproval >= 60 ? 'text-white' : 'text-red-400'}`}>
-                  {currentApproval.toFixed(1)}%
-                </p>
-                <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-                  Target: 60% of population approves of their <strong className="text-zinc-300">{currentCycle === ElectionCycle.Utilitarian ? 'Personal Utility' : 'Societal Fairness'}</strong> trajectory.
-                </p>
-              </div>
-            </div>
-
-            <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
-              <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
-                <p className="text-xs text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                {currentDeck.map((policy) => {
-                  const isSelected = selectedPolicy?.id === policy.id;
-                  const isAffordable = politicalCapital >= policy.politicalCost;
-                  const isAusterity = policy.politicalCost < 0;
-
-                  return (
-                    <button
-                      key={policy.id}
-                      onClick={() => setSelectedPolicy(prev => prev?.id === policy.id ? null : policy)}
-                      className={`relative w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
-                        isSelected ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
-                      } ${!isAffordable && !isSelected ? 'opacity-60 grayscale-[0.5]' : ''}`}
-                    >
-                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-pink-500 rounded-l-xl" />}
-                      <div className="flex justify-between items-start mb-2 gap-2">
-                        <p className={`font-bold text-sm leading-tight ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>{policy.policyName}</p>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-md shrink-0 border ${
-                          isAusterity ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isAffordable || isSelected ? 'bg-zinc-100 text-zinc-600 border-zinc-200' : 'bg-rose-50 text-rose-600 border-rose-100'
-                        }`}>
-                          {isAusterity ? '+' : '-'}{Math.abs(policy.politicalCost)}
-                        </span>
-                      </div>
-                      <p className={`text-xs line-clamp-2 ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>{policy.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-4 border-t border-zinc-100 bg-zinc-50 shrink-0">
-                <button 
-                  onClick={handleApplyPolicy}
-                  disabled={!selectedPolicy || (selectedPolicy && politicalCapital < selectedPolicy.politicalCost)}
-                  className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  {selectedPolicy && politicalCapital < selectedPolicy.politicalCost ? "Cannot Afford" : "Enact Policy"}
-                </button>
-              </div>
-            </div>
-
-          </div>
+          <DashboardTab 
+            setActiveTab={setActiveTab}
+            currentCycle={currentCycle}
+            dashboardChartData={dashboardChartData}
+            dashboardHistogramData={dashboardHistogramData}
+            ministers={ministers}
+            setSelectedMinister={setSelectedMinister}
+            selectedPolicy={selectedPolicy}
+            currentApproval={currentApproval}
+            currentDeck={currentDeck}
+            setSelectedPolicy={setSelectedPolicy}
+            politicalCapital={politicalCapital}
+            handleApplyPolicy={handleApplyPolicy}
+          />
+        )}
+        {activeTab === 'demographics' && (
+          <DemographicsTab 
+            demoStats={demoStats} 
+            initialDemoStats={initialDemoStats} 
+            currentTurn={currentTurn} 
+            setSelectedHistoryGroup={setSelectedHistoryGroup} 
+          />
+        )}
+        {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
+        {activeTab === 'graphs' && (
+          <GraphsTab 
+            g1Preset={g1Preset} g1PlotType={g1PlotType} g1XAxis={g1XAxis} g1YAxis={g1YAxis} g1ChartData={g1ChartData} g1HistogramData={g1HistogramData}
+            g2Preset={g2Preset} g2PlotType={g2PlotType} g2XAxis={g2XAxis} g2YAxis={g2YAxis} g2ChartData={g2ChartData} g2HistogramData={g2HistogramData}
+            handleGraphChange={handleGraphChange} GRAPH_PRESETS={GRAPH_PRESETS}
+          />
         )}
       </main>
 
@@ -1008,7 +547,7 @@ export default function Home() {
         />
       )}
 
-      {/* HISTORICAL TREND MODAL */}
+      {/* HISTORICAL TREND MODAL (Kept inline as per instructions to only focus on tabs) */}
       {selectedHistoryGroup && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/30 backdrop-blur-sm animate-in fade-in duration-200"
@@ -1031,16 +570,12 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Custom SVG Line Graph */}
             <div className="w-full h-80 relative bg-zinc-50 rounded-lg border border-zinc-100 p-4">
               <svg className="w-full h-full overflow-visible">
-                {/* Gridlines */}
                 {[0, 2, 4, 6, 8, 10].map(y => (
                   <line key={y} x1="0%" y1={`${((10 - y) / 10) * 100}%`} x2="100%" y2={`${((10 - y) / 10) * 100}%`} stroke="#e4e4e7" strokeWidth="1" />
                 ))}
 
-                {/* The Line (Drawn segment by segment to use percentages) */}
-                {/* The Line */}
                 {history.map((h, i) => {
                   if (i === 0) return null;
                   const prev = history[i - 1];
@@ -1065,7 +600,6 @@ export default function Home() {
                   );
                 })}
 
-                {/* Data Points (Interactive) */}
                 {history.map((h, i) => {
                   const maxTurns = Math.max(20, history.length - 1);
                   // @ts-ignore
@@ -1077,7 +611,6 @@ export default function Home() {
                     <g key={`point-${i}`} className="group/point cursor-crosshair">
                       <circle cx={xPos} cy={yPos} r="5" fill="#ffffff" stroke="#ec4899" strokeWidth="2" className="group-hover/point:stroke-[#be185d] transition-colors" />
                       
-                      {/* Tooltip (Hover) */}
                       <svg 
                         x={xPos} 
                         y={yPos} 
