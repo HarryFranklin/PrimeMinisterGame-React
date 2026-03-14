@@ -147,6 +147,7 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     setCurrentDeck(drawDeck(new Set()));
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
   }, [drawDeck]);
 
   const previewPopulation = useMemo(() => {
@@ -176,7 +177,6 @@ export default function Home() {
     });
     return bins;
   }, [previewPopulation]);
-
 
   // --- DATA GENERATION FOR GRAPHS TAB ---
   const getAxisValue = useCallback((r: Respondent, axis: AxisVariable, allLS: number[]) => {
@@ -220,7 +220,6 @@ export default function Home() {
   
   const g2ChartData = useMemo(() => generateChartData(g2XAxis, g2YAxis), [generateChartData, g2XAxis, g2YAxis]);
   const g2HistogramData = useMemo(() => generateHistogramData(g2XAxis), [generateHistogramData, g2XAxis]);
-
 
   // --- APPROVAL & DEMOGRAPHICS ---
   const currentApproval = useMemo(() => {
@@ -325,12 +324,14 @@ export default function Home() {
         }
       }
 
+      // FIX: Upgraded colours to solid bold values so they jump out clearly
       return {
         name,
         status: currentStatus,
-        color: currentStatus === 'happy' ? "bg-green-100 text-green-700" : currentStatus === 'neutral' ? "bg-zinc-100 text-zinc-700" : "bg-red-100 text-red-700",
+        color: currentStatus === 'happy' ? "bg-emerald-500 text-white shadow-emerald-200" : currentStatus === 'neutral' ? "bg-amber-400 text-white shadow-amber-200" : "bg-rose-500 text-white shadow-rose-200",
         supportLevel,
-        delta: delta, 
+        delta: delta,
+        policyDelta: policyDelta, 
         baseScore,
         projScore,
         quote: dynamicQuote
@@ -338,30 +339,18 @@ export default function Home() {
     };
 
     return [
-      // Economy is middle-class and wealthy
       evaluateMinister("Economy", r => r.demographics.wealth === 'Middle' || r.demographics.wealth === 'Wealthy'),
-
-      // Equality is poor
       evaluateMinister("Equality", r => r.demographics.wealth === 'Poor'),
-
-      // Youth is young people, students, parents
       evaluateMinister("Youth", r => r.demographics.age === 'Youth' || r.demographics.isStudent || r.demographics.isParent),
-
-      // Health is elderly and people of LS < 4
       evaluateMinister("Health", r => r.demographics.age === 'Elderly' || r.currentLS < 4),
-
-      // Environment is environmentalists
       evaluateMinister("Environment", r => r.demographics.isEnvironmentalist),
-
-      // Transport is commuters
       evaluateMinister("Transport", r => r.demographics.isCommuter)
     ];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
 
-  // --- NEW: History Modal State ---
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<{
     label: string;
-    category: 'age' | 'traits';
+    category: 'wealth' | 'age' | 'traits';
     key: string;
   } | null>(null);
 
@@ -395,6 +384,14 @@ export default function Home() {
 
     setPoliticalCapital((prev) => prev - selectedPolicy.politicalCost);
     
+    setPopulation(previewPopulation);
+    setHistory(prev => [...prev, {
+      turn: currentTurn + 1,
+      enactedPolicyId: selectedPolicy.id,
+      enactedPolicyName: selectedPolicy.policyName,
+      lsAverages: calculateAverages(previewPopulation)
+    }]);
+    
     const newUsed = new Set(usedPolicies);
     newUsed.add(selectedPolicy.id);
     setUsedPolicies(newUsed);
@@ -416,7 +413,7 @@ export default function Home() {
     setPoliticalCapital(40);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
-    setHistory([{ turn: 0, enactedPolicyId: null, enactedPolicyName: null, lsAverages: calculateAverages(data) }]);
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
     setShowElection(false);
   };
 
@@ -429,7 +426,7 @@ export default function Home() {
     setCurrentCycle(ElectionCycle.Empathetic);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
-    setHistory([{ turn: 0, enactedPolicyId: null, enactedPolicyName: null, lsAverages: calculateAverages(data) }]);
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
     setShowElection(false);
   };
 
@@ -511,23 +508,29 @@ export default function Home() {
                 </div>
                 <div className="flex-1 space-y-6 flex flex-col justify-center">
                   {[
-                    { label: 'Wealthy (Top 10%)', data: demoStats.wealth.wealthy, initData: initialDemoStats.wealth.wealthy, color: 'bg-emerald-500' },
-                    { label: 'Middle Class', data: demoStats.wealth.middle, initData: initialDemoStats.wealth.middle, color: 'bg-blue-500' },
-                    { label: 'Poor (Relative Poverty)', data: demoStats.wealth.poor, initData: initialDemoStats.wealth.poor, color: 'bg-red-500' }
+                    { label: 'Wealthy (Top 10%)', key: 'wealthy', data: demoStats.wealth.wealthy, initData: initialDemoStats.wealth.wealthy, color: 'bg-emerald-500' },
+                    { label: 'Middle Class', key: 'middle', data: demoStats.wealth.middle, initData: initialDemoStats.wealth.middle, color: 'bg-blue-500' },
+                    { label: 'Poor (Relative Poverty)', key: 'poor', data: demoStats.wealth.poor, initData: initialDemoStats.wealth.poor, color: 'bg-red-500' }
                   ].map((item, i) => (
-                    <div key={i}>
+                    <div 
+                      key={i}
+                      // FIX: Made wealth items clickable to display in history graph
+                      onClick={() => currentTurn >= 5 ? setSelectedHistoryGroup({ label: item.label, category: 'wealth', key: item.key }) : null}
+                      className={`group p-2 -mx-2 rounded-lg transition-colors relative ${currentTurn >= 5 ? 'hover:bg-zinc-50 cursor-pointer' : 'cursor-not-allowed'}`}
+                    >
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-zinc-400 text-xs transition-opacity" title={currentTurn < 5 ? "Unlocks after Turn 5" : "View History"}>
+                        {currentTurn >= 5 ? '⤢' : '🔒'}
+                      </div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-bold text-zinc-700">{item.label}</span>
-                        <span className="text-zinc-500">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
+                        <span className={`font-bold text-zinc-700 transition-colors ${currentTurn >= 5 ? 'group-hover:text-pink-600' : ''}`}>{item.label}</span>
+                        <span className="text-zinc-500 mr-4">Avg LS: <strong className="text-zinc-800">{item.data.ls}</strong></span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="relative flex-1 h-3 bg-zinc-100 rounded-full overflow-hidden">
-                          {/* Ghost bar for Turn 1 baseline */}
                           <div className={`absolute top-0 left-0 h-full ${item.color} opacity-30`} style={{ width: `${item.initData.pct}%` }} />
-                          {/* Current projected bar */}
                           <div className={`absolute top-0 left-0 h-full ${item.color} shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]`} style={{ width: `${item.data.pct}%` }} />
                         </div>
-                        <span className="text-xs font-bold w-12 text-right">{item.data.pct}%</span>
+                        <span className="text-xs font-bold w-12 text-right mr-4">{item.data.pct}%</span>
                       </div>
                     </div>
                   ))}
@@ -610,7 +613,8 @@ export default function Home() {
                 {ministers.map((m, i) => (
                    <div key={i} className="bg-white p-4 lg:p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col h-full overflow-hidden">
                       <div className="flex items-center gap-4 mb-4 shrink-0">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${m.color} text-2xl shrink-0`}>
+                        {/* FIX: Larger, solid color faces for Ministers */}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${m.color} border-4 border-white shadow-md text-3xl shrink-0`}>
                            {m.status === 'happy' && '😊'}
                            {m.status === 'neutral' && '😐'}
                            {m.status === 'angry' && '😠'}
@@ -624,7 +628,6 @@ export default function Home() {
                         </div>
                       </div>
                       
-                      {/* Added line-clamp-3 to strictly prevent multi-line overflow */}
                       <p className="text-zinc-600 text-sm italic border-l-2 border-zinc-200 pl-3 py-1 mb-4 line-clamp-3">
                         "{m.quote}"
                       </p>
@@ -640,8 +643,8 @@ export default function Home() {
                          </div>
                          <div className="w-full h-px bg-zinc-200 my-1" />
                          <div className="flex justify-between items-center">
-                           <span className="font-bold text-zinc-700">Trajectory (Δ):</span>
-                           <span className={`font-black ${m.delta < -0.0001 ? 'text-red-500' : m.delta > 0.0001 ? 'text-green-500' : 'text-zinc-500'}`}>
+                           <span className="font-bold text-zinc-700">Trajectory (Since Turn 1):</span>
+                           <span className={`font-black ${m.delta < -0.0001 ? 'text-red-500' : m.delta > 0.0001 ? 'text-emerald-500' : 'text-zinc-500'}`}>
                              {m.delta > 0.0001 ? '+' : ''}{(m.delta * 100).toFixed(2)}%
                            </span>
                          </div>
@@ -825,24 +828,23 @@ export default function Home() {
                     >
                       <div className="absolute top-1 left-1.5 opacity-0 group-hover/minister:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
 
-                      {selectedPolicy && minister.supportLevel === 'supports' && (
-                        <div className="absolute top-1 right-1 text-green-700 bg-green-200 rounded-md px-1.5 py-0.5 text-[9px] font-black tracking-widest uppercase shadow-sm">+ For</div>
-                      )}
-                      {selectedPolicy && minister.supportLevel === 'opposes' && (
-                        <div className="absolute top-1 right-1 text-red-700 bg-red-200 rounded-md px-1.5 py-0.5 text-[9px] font-black tracking-widest uppercase shadow-sm">- Against</div>
-                      )}
-
-                      <div className={`w-12 h-12 rounded-full mb-2 mt-2 flex items-center justify-center ${minister.color} border-2 border-white shadow-sm text-xl transition-colors`}>
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${minister.color} border-4 border-white shadow-md text-3xl transition-colors`}>
                          {minister.status === 'happy' && '😊'}
                          {minister.status === 'neutral' && '😐'}
                          {minister.status === 'angry' && '😠'}
                       </div>
-                      <p className="text-[11px] font-bold text-zinc-800 uppercase text-center leading-tight">
+                      <p className="text-[11px] font-bold text-zinc-800 uppercase text-center leading-tight mt-2">
                         Min. for<br/>{minister.name}
                       </p>
-                      <p className={`text-[10px] font-bold mt-1 ${minister.delta < -0.0001 ? 'text-red-500' : minister.delta > 0.0001 ? 'text-green-500' : 'text-zinc-400'}`}>
-                        Δ {(minister.delta * 100).toFixed(1)}%
-                      </p>
+
+                               Only shows if a policy is actively selected, hiding the clutter otherwise */}
+                      <div className="h-6 flex items-center justify-center mt-1">
+                        {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
+                          <span className={`text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            {minister.policyDelta > 0 ? '↑' : '↓'} {(Math.abs(minister.policyDelta) * 100).toFixed(1)}%
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -884,7 +886,7 @@ export default function Home() {
                       <div className="flex justify-between items-start mb-2 gap-2">
                         <p className={`font-bold text-sm leading-tight ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>{policy.policyName}</p>
                         <span className={`text-xs font-bold px-2 py-1 rounded-md shrink-0 border ${
-                          isAusterity ? 'bg-green-50 text-green-700 border-green-200' : isAffordable || isSelected ? 'bg-zinc-100 text-zinc-600 border-zinc-200' : 'bg-red-50 text-red-600 border-red-100'
+                          isAusterity ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isAffordable || isSelected ? 'bg-zinc-100 text-zinc-600 border-zinc-200' : 'bg-rose-50 text-rose-600 border-rose-100'
                         }`}>
                           {isAusterity ? '+' : '-'}{Math.abs(policy.politicalCost)}
                         </span>
@@ -921,7 +923,7 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-4 mb-4">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${selectedMinister.color} text-2xl`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${selectedMinister.color} border-4 border-white shadow-md text-3xl`}>
                  {selectedMinister.status === 'happy' && '😊'}
                  {selectedMinister.status === 'neutral' && '😐'}
                  {selectedMinister.status === 'angry' && '😠'}
@@ -940,7 +942,7 @@ export default function Home() {
                <span className="font-bold text-zinc-700">Trajectory (Since Turn 1): </span>
                <span className={`font-black ${
                  selectedMinister.delta < -0.0001 ? 'text-red-500' : 
-                 selectedMinister.delta > 0.0001 ? 'text-green-500' : 
+                 selectedMinister.delta > 0.0001 ? 'text-emerald-500' : 
                  'text-zinc-500'
                }`}>
                  {selectedMinister.delta > 0.0001 ? '+' : ''}{(selectedMinister.delta * 100).toFixed(2)}%
@@ -990,6 +992,7 @@ export default function Home() {
             </div>
 
             {/* Custom SVG Line Graph (Percentage-based coordinate mapping to fix circle distortion) */}
+            {/* Custom SVG Line Graph */}
             <div className="w-full h-80 relative bg-zinc-50 rounded-lg border border-zinc-100 p-4">
               <svg className="w-full h-full overflow-visible">
                 {/* Gridlines */}
@@ -998,6 +1001,7 @@ export default function Home() {
                 ))}
 
                 {/* The Line (Drawn segment by segment to use percentages) */}
+                {/* The Line */}
                 {history.map((h, i) => {
                   if (i === 0) return null;
                   const prev = history[i - 1];
@@ -1023,6 +1027,7 @@ export default function Home() {
                 })}
 
                 {/* Data Points (Interactive) */}
+                {/* Data Points */}
                 {history.map((h, i) => {
                   const maxTurns = Math.max(20, history.length - 1);
                   // @ts-ignore
@@ -1036,7 +1041,6 @@ export default function Home() {
                       
                       {/* Tooltip (Hover) */}
                       <g className="opacity-0 group-hover/point:opacity-100 transition-opacity pointer-events-none z-50">
-                        {/* Adjust tooltip position based on turn to prevent clipping off edges */}
                         <g transform={`translate(${h.turn > 15 ? -60 : h.turn < 5 ? 10 : -40}, -50)`}>
                            <rect x="0" y="0" width="100" height="40" rx="4" fill="#27272a" className="shadow-lg" />
                            <text x="50" y="14" fill="#ffffff" fontSize="10" textAnchor="middle" fontWeight="bold">Turn {h.turn}</text>
@@ -1051,7 +1055,6 @@ export default function Home() {
                 })}
               </svg>
 
-              {/* Y-Axis Labels */}
               <div className="absolute left-0 top-4 bottom-4 w-6 flex flex-col justify-between items-end pr-2 pointer-events-none text-[9px] font-bold text-zinc-400">
                 <span>10</span><span>8</span><span>6</span><span>4</span><span>2</span><span>0</span>
               </div>
