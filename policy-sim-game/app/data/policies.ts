@@ -74,7 +74,7 @@ export const availablePolicies: Policy[] = [
         targetDemographic: { isCommuter: true },
         affectEveryone: true,
         proportion: 1.0,
-        impact: 1.5
+        impact: 0.75
       },
       {
         note: "Boost for Environmentalists",
