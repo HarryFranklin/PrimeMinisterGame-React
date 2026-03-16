@@ -22,9 +22,9 @@ function getONSBaselineLS(id: number): number {
  * Scaled to UK ONS data (Adults 18+).
  */
 function getDemographics(id: number): Demographics {
-  const r1 = seededRandom(id + 10);
-  const r2 = seededRandom(id + 20);
-  const r3 = seededRandom(id + 30);
+  const r1 = seededRandom(id + 10); // poor or middle, wealthy or middle
+  const r2 = seededRandom(id + 20); // youth or adult, elderly or adult
+  const r3 = seededRandom(id + 30); // subtraits, i.e. student or parent
 
   // 1. Wealth: 21% Poor, 69% Middle, 10% Wealthy
   let wealth: 'Poor' | 'Middle' | 'Wealthy' = 'Middle';
