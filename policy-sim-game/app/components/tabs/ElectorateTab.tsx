@@ -39,9 +39,12 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       }
 
       const delta = currentUtil - initialUtil;
+      
+      // Use multiplier to simulate the effect of people feeling losses more than gains.
       const multiplier = delta < 0 ? 2.5 : 1.2;
       const perceivedScore = currentUtil + (delta * multiplier);
 
+      // 0.90 as the threshold for approval (arbitrarily chosen number)
       const isApproving = perceivedScore >= 0.90;
       const lsTrajectory = r.currentLS - initialPopulation[i].currentLS;
 
