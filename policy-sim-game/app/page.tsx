@@ -58,7 +58,7 @@ export default function Home() {
 
   const [currentTurn, setCurrentTurn] = useState(1);
   const [politicalCapital, setPoliticalCapital] = useState(40);
-  
+
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Utilitarian);
   const [showElection, setShowElection] = useState(false);
 
@@ -315,6 +315,7 @@ export default function Home() {
       };
     };
 
+    // #region Minister->Demographic
     return [
       evaluateMinister("Economy", r => r.demographics.wealth === 'Middle' || r.demographics.wealth === 'Wealthy'),
       evaluateMinister("Equality", r => r.demographics.wealth === 'Poor'),
@@ -352,6 +353,7 @@ export default function Home() {
   const demoStats = useMemo(() => getDemoStats(previewPopulation), [previewPopulation, getDemoStats]);
   const initialDemoStats = useMemo(() => getDemoStats(initialPopulation), [initialPopulation, getDemoStats]);
 
+  // #region Apply Policy
   const handleApplyPolicy = () => {
     if (!selectedPolicy) return;
     if (politicalCapital < selectedPolicy.politicalCost) {

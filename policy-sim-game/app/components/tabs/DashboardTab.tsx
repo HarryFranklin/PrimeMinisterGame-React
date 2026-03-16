@@ -116,6 +116,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           <p className="text-sm text-zinc-500 mt-2 text-center px-4">
             Target: 60% of population approves of their <strong className="text-zinc-300">{currentCycle === ElectionCycle.Utilitarian ? 'Personal Utility' : 'Societal Fairness'}</strong> trajectory. <span className="group-hover:text-pink-400 transition-colors">Click to view electorate breakdown.</span>
           </p>
+          <p className="text-sm text-zinc-500 mt-2 text-center px-4">
+            Click to view electorate breakdown.
+          </p>
         </div>
       </div>
 
