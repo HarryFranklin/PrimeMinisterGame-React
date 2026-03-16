@@ -110,8 +110,6 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       }
     }
 
-    // THE FIX: Sort all seats strictly by their angle (from Math.PI down to 0 -> Left to Right).
-    // This ensures that when we map our sorted voters to these seats, they form clear, solid wedges.
     generatedSeats.sort((a, b) => b.angle - a.angle);
 
     return generatedSeats;

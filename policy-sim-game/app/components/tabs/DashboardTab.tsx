@@ -102,7 +102,7 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* Projected Voter Share Box (Now acts as a button to the Electorate Tab) */}
+        {/* Projected Voter Share Box */}
         <div 
           onClick={() => setActiveTab('electorate')}
           className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group"
