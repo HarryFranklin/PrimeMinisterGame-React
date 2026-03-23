@@ -1,88 +1,65 @@
 import React from "react";
 import D3Chart from "../D3Chart";
-import { AxisVariable } from "../../utils/types";
-
-// Extracted Panel Component for Reusability
-const GraphPanel = ({ 
-  title, graphNum, preset, plotType, xAxis, yAxis, chartData, histogramData, handleGraphChange, GRAPH_PRESETS 
-}: any) => (
-  <div className="flex-1 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col min-w-0">
-    <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center shrink-0">
-      <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">{title}</h3>
-      <select 
-        value={preset} 
-        onChange={(e) => handleGraphChange(graphNum, 'preset', e.target.value)} 
-        className={`bg-white border rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-pink-500 cursor-pointer shadow-sm ${preset === 'Custom' ? 'border-amber-400 text-amber-700' : 'border-zinc-200 text-zinc-700'}`}
-      >
-        {GRAPH_PRESETS.map((p: any) => (
-          <option key={p.label} value={p.label}>{p.label}</option>
-        ))}
-      </select>
-    </div>
-
-    <div className="flex-1 p-4 min-h-0 relative">
-      <D3Chart plotType={plotType} chartData={chartData} histogramData={histogramData} xAxisType={xAxis} yAxisType={yAxis} />
-    </div>
-
-    <div className="p-3 border-t border-zinc-100 bg-zinc-50 flex gap-3 items-center shrink-0 flex-wrap justify-center">
-      <select 
-        value={plotType} 
-        onChange={(e) => handleGraphChange(graphNum, 'plot', e.target.value)} 
-        className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-bold text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-      >
-        <option value="1D">1D Histogram</option>
-        <option value="2D">2D Scatter</option>
-      </select>
-      <div className="w-px h-4 bg-zinc-300" />
-      <span className="text-[10px] font-bold uppercase text-zinc-400">X-Axis:</span>
-      <select 
-        value={xAxis} 
-        onChange={(e) => handleGraphChange(graphNum, 'x', Number(e.target.value))} 
-        className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-      >
-        <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-        <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-        <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-      </select>
-      {plotType === '2D' && (
-        <>
-          <div className="w-px h-4 bg-zinc-300" />
-          <span className="text-[10px] font-bold uppercase text-zinc-400">Y-Axis:</span>
-          <select 
-            value={yAxis} 
-            onChange={(e) => handleGraphChange(graphNum, 'y', Number(e.target.value))} 
-            className="bg-white border border-zinc-200 rounded px-2 py-1 text-xs font-medium text-zinc-600 focus:outline-none focus:border-pink-500 cursor-pointer"
-          >
-            <option value={AxisVariable.LifeSatisfaction}>Life Satisfaction</option>
-            <option value={AxisVariable.PersonalUtility}>Personal Utility</option>
-            <option value={AxisVariable.SocietalFairness}>Societal Fairness</option>
-          </select>
-        </>
-      )}
-    </div>
-  </div>
-);
+import { AxisVariable, ElectionCycle } from "../../utils/types";
 
 interface GraphsTabProps {
-  g1Preset: string; g1PlotType: any; g1XAxis: any; g1YAxis: any; g1ChartData: any; g1HistogramData: any;
-  g2Preset: string; g2PlotType: any; g2XAxis: any; g2YAxis: any; g2ChartData: any; g2HistogramData: any;
-  handleGraphChange: (num: 1 | 2, type: "preset" | "plot" | "x" | "y", val: any) => void;
-  GRAPH_PRESETS: any[];
+  currentCycle: ElectionCycle;
+  chartData: any[];
+  histogramData: any[];
 }
 
-export default function GraphsTab(props: GraphsTabProps) {
+export default function GraphsTab({ currentCycle, chartData, histogramData }: GraphsTabProps) {
+  
+  let title = "";
+  let description = "";
+  let plotType: '1D' | '2D' = '1D';
+  let yAxis = AxisVariable.PersonalUtility;
+  let graphColor = "#ec4899";
+
+  // Configure the graph based on the active cycle
+  if (currentCycle === ElectionCycle.Benthamite) {
+    title = "Life Satisfaction Distribution";
+    description = "The Benthamite framework evaluates your success based on the average Life Satisfaction of the entire population. This histogram displays the spread of satisfaction across all demographics. Your goal is to shift the bulk of the population to the right.";
+    plotType = '1D';
+    graphColor = "#ec4899";
+  } else if (currentCycle === ElectionCycle.Rawlsian) {
+    title = "Least Well-Off Distribution";
+    description = "The Rawlsian framework evaluates your success based purely on the Life Satisfaction of the poorest demographics. This histogram displays the societal distribution, but your focus must remain entirely on raising the 'floor' at the far left of the chart.";
+    plotType = '1D';
+    graphColor = "#ef4444";
+  } else if (currentCycle === ElectionCycle.SocietalUtility) {
+    title = "Societal Fairness vs Life Satisfaction";
+    description = "This scatter plot maps actual Life Satisfaction against perceived Societal Fairness. It visualises how each citizen evaluates the current distribution of wellbeing across the nation.";
+    plotType = '2D';
+    yAxis = AxisVariable.SocietalFairness;
+    graphColor = "#8b5cf6";
+  } else if (currentCycle === ElectionCycle.PersonalUtility) {
+    title = "Personal Utility vs Life Satisfaction";
+    description = "This scatter plot maps Life Satisfaction against Personal Utility, demonstrating how individuals translate their general wellbeing into their own personal, subjective satisfaction.";
+    plotType = '2D';
+    yAxis = AxisVariable.PersonalUtility;
+    graphColor = "#3b82f6";
+  }
+
   return (
-    <div className="flex gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
-      <GraphPanel 
-        title="Primary Visualisation" graphNum={1} preset={props.g1Preset} plotType={props.g1PlotType} 
-        xAxis={props.g1XAxis} yAxis={props.g1YAxis} chartData={props.g1ChartData} histogramData={props.g1HistogramData} 
-        handleGraphChange={props.handleGraphChange} GRAPH_PRESETS={props.GRAPH_PRESETS} 
-      />
-      <GraphPanel 
-        title="Secondary Visualisation" graphNum={2} preset={props.g2Preset} plotType={props.g2PlotType} 
-        xAxis={props.g2XAxis} yAxis={props.g2YAxis} chartData={props.g2ChartData} histogramData={props.g2HistogramData} 
-        handleGraphChange={props.handleGraphChange} GRAPH_PRESETS={props.GRAPH_PRESETS} 
-      />
+    <div className="flex flex-col gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 shrink-0">
+        <h2 className="text-xl font-bold text-zinc-800 mb-2">{title}</h2>
+        <p className="text-sm text-zinc-500 leading-relaxed max-w-4xl">{description}</p>
+      </div>
+
+      <div className="flex-1 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col min-h-0 relative">
+        <div className="flex-1 p-6 min-h-0">
+          <D3Chart 
+            plotType={plotType} 
+            chartData={chartData} 
+            histogramData={histogramData} 
+            xAxisType={AxisVariable.LifeSatisfaction} 
+            yAxisType={yAxis} 
+            color={graphColor}
+          />
+        </div>
+      </div>
     </div>
   );
 }

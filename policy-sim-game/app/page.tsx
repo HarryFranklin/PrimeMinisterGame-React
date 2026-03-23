@@ -15,7 +15,6 @@ import MinistersTab from "./components/tabs/MinistersTab";
 import GraphsTab from "./components/tabs/GraphsTab";
 import ElectorateTab from "./components/tabs/ElectorateTab";
 
-// #region Helpers & Constants
 const totalTurns = 20;
 
 // Reusable calculation for averages across different slices
@@ -46,24 +45,16 @@ const calculateAverages = (pop: Respondent[]): DemographicAverages => {
   };
 };
 
-const GRAPH_PRESETS = [
-  { label: 'Custom', plotType: '1D', xAxis: AxisVariable.LifeSatisfaction, yAxis: AxisVariable.PersonalUtility }, 
-  { label: 'Life Satisfaction Distribution', plotType: '1D', xAxis: AxisVariable.LifeSatisfaction, yAxis: AxisVariable.PersonalUtility },
-  { label: 'Personal Utility vs LS', plotType: '2D', xAxis: AxisVariable.LifeSatisfaction, yAxis: AxisVariable.PersonalUtility },
-  { label: 'Societal Fairness vs LS', plotType: '2D', xAxis: AxisVariable.LifeSatisfaction, yAxis: AxisVariable.SocietalFairness }
-];
-// #endregion
-
 export default function Home() {
   // #region Core Simulation State
   const [population, setPopulation] = useState<Respondent[]>([]);
-  const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]); // This is "Turn 1: When you took office"
+  const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]); 
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
 
   const [currentTurn, setCurrentTurn] = useState(1);
   const [politicalCapital, setPoliticalCapital] = useState(40);
   
-  const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Utilitarian);
+  const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [showElection, setShowElection] = useState(false);
 
   const [history, setHistory] = useState<TurnHistory[]>([]);
@@ -77,38 +68,9 @@ export default function Home() {
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
   // #endregion
 
-  // #region Graph Config State
-  const [g1Preset, setG1Preset] = useState<string>('Life Satisfaction Distribution');
-  const [g1PlotType, setG1PlotType] = useState<'1D' | '2D'>('1D');
-  const [g1XAxis, setG1XAxis] = useState<AxisVariable>(AxisVariable.LifeSatisfaction);
-  const [g1YAxis, setG1YAxis] = useState<AxisVariable>(AxisVariable.PersonalUtility);
-
-  const [g2Preset, setG2Preset] = useState<string>('Personal Utility vs LS');
-  const [g2PlotType, setG2PlotType] = useState<'1D' | '2D'>('2D');
-  const [g2XAxis, setG2XAxis] = useState<AxisVariable>(AxisVariable.LifeSatisfaction);
-  const [g2YAxis, setG2YAxis] = useState<AxisVariable>(AxisVariable.PersonalUtility);
-
-  const handleGraphChange = (graphNum: 1 | 2, type: 'preset' | 'plot' | 'x' | 'y', val: any) => {
-    const setPreset = graphNum === 1 ? setG1Preset : setG2Preset;
-    const setPlot = graphNum === 1 ? setG1PlotType : setG2PlotType;
-    const setX = graphNum === 1 ? setG1XAxis : setG2XAxis;
-    const setY = graphNum === 1 ? setG1YAxis : setG2YAxis;
-
-    if (type === 'preset') {
-      setPreset(val);
-      const preset = GRAPH_PRESETS.find(p => p.label === val);
-      if (preset && val !== 'Custom') {
-        setPlot(preset.plotType as any);
-        setX(preset.xAxis);
-        setY(preset.yAxis);
-      }
-    } else {
-      setPreset('Custom');
-      if (type === 'plot') setPlot(val);
-      if (type === 'x') setX(val);
-      if (type === 'y') setY(val);
-    }
-  };
+  // #region Developer Mode State
+  const [devMode, setDevMode] = useState(false);
+  const [infiniteCapital, setInfiniteCapital] = useState(false);
   // #endregion
 
   // #region Deck Management
@@ -158,9 +120,12 @@ export default function Home() {
     if (previewPopulation.length === 0) return [];
     const allLS = previewPopulation.map(p => p.currentLS);
     return previewPopulation.map((r) => {
-      const yValue = currentCycle === ElectionCycle.Utilitarian 
-        ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities)
-        : WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+      let yValue = r.currentLS;
+      if (currentCycle === ElectionCycle.PersonalUtility) {
+        yValue = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      } else if (currentCycle === ElectionCycle.SocietalUtility) {
+        yValue = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+      }
       return { id: r.id, x: r.currentLS, y: yValue };
     });
   }, [previewPopulation, currentCycle]);
@@ -168,86 +133,35 @@ export default function Home() {
   const dashboardHistogramData = useMemo(() => {
     if (previewPopulation.length === 0) return [];
     const bins = Array(11).fill(0).map((_, i) => ({ name: i, count: 0 }));
-    previewPopulation.forEach((r) => {
+    
+    // The Rawlsian framework strictly focuses on the bottom floor.
+    const targetPop = currentCycle === ElectionCycle.Rawlsian 
+      ? previewPopulation.filter(r => r.demographics.wealth === 'Poor')
+      : previewPopulation;
+
+    targetPop.forEach((r) => {
       let binIndex = Math.round(r.currentLS);
       binIndex = Math.max(0, Math.min(binIndex, 10));
       if(bins[binIndex]) bins[binIndex].count++;
     });
     return bins;
-  }, [previewPopulation]);
-
-  const getAxisValue = useCallback((r: Respondent, axis: AxisVariable, allLS: number[]) => {
-    if (axis === AxisVariable.LifeSatisfaction) return r.currentLS;
-    if (axis === AxisVariable.PersonalUtility) return WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
-    if (axis === AxisVariable.SocietalFairness) return WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
-    return 0;
-  }, []);
-
-  const generateChartData = useCallback((xAxis: AxisVariable, yAxis: AxisVariable) => {
-    if (previewPopulation.length === 0) return [];
-    const allLS = previewPopulation.map(p => p.currentLS);
-    return previewPopulation.map((r) => ({
-      id: r.id,
-      x: getAxisValue(r, xAxis, allLS),
-      y: getAxisValue(r, yAxis, allLS)
-    }));
-  }, [previewPopulation, getAxisValue]);
-
-  const generateHistogramData = useCallback((xAxis: AxisVariable) => {
-    if (previewPopulation.length === 0) return [];
-    const allLS = previewPopulation.map(p => p.currentLS);
-    const isLS = xAxis === AxisVariable.LifeSatisfaction;
-    const bins = Array(11).fill(0).map((_, i) => ({
-      name: isLS ? i : (i / 10).toFixed(1),
-      count: 0
-    }));
-
-    previewPopulation.forEach((r) => {
-      let val = getAxisValue(r, xAxis, allLS);
-      let binIndex = isLS ? Math.round(val) : Math.round(val * 10);
-      binIndex = Math.max(0, Math.min(binIndex, 10));
-      if (bins[binIndex]) bins[binIndex].count++;
-    });
-    return bins;
-  }, [previewPopulation, getAxisValue]);
-
-  const g1ChartData = useMemo(() => generateChartData(g1XAxis, g1YAxis), [generateChartData, g1XAxis, g1YAxis]);
-  const g1HistogramData = useMemo(() => generateHistogramData(g1XAxis), [generateHistogramData, g1XAxis]);
-  
-  const g2ChartData = useMemo(() => generateChartData(g2XAxis, g2YAxis), [generateChartData, g2XAxis, g2YAxis]);
-  const g2HistogramData = useMemo(() => generateHistogramData(g2XAxis), [generateHistogramData, g2XAxis]);
+  }, [previewPopulation, currentCycle]);
 
   const currentApproval = useMemo(() => {
     if (previewPopulation.length === 0 || initialPopulation.length === 0) return 0;
-    const allInitialLS = initialPopulation.map(p => p.currentLS);
-    const allPreviewLS = previewPopulation.map(p => p.currentLS);
 
-    let approvingVoters = 0;
+    if (currentCycle === ElectionCycle.Benthamite) {
+      const avgLS = previewPopulation.reduce((sum, r) => sum + r.currentLS, 0) / previewPopulation.length;
+      return (avgLS / 10) * 100; 
+    } 
+    else if (currentCycle === ElectionCycle.Rawlsian) {
+      const poorPop = previewPopulation.filter(r => r.demographics.wealth === 'Poor');
+      const avgPoorLS = poorPop.length > 0 ? poorPop.reduce((sum, r) => sum + r.currentLS, 0) / poorPop.length : 0;
+      return (avgPoorLS / 10) * 100;
+    }
 
-    previewPopulation.forEach((r, i) => {
-      let initialUtil = 0;
-      let currentUtil = 0;
-
-      // Approval is explicitly anchored to Turn 1 (initialPopulation)
-      if (currentCycle === ElectionCycle.Utilitarian) {
-        initialUtil = WelfareMetrics.getUtilityForPerson(initialPopulation[i].currentLS, r.personalUtilities);
-        currentUtil = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
-      } else {
-        initialUtil = WelfareMetrics.evaluateDistribution(allInitialLS, r.societalUtilities);
-        currentUtil = WelfareMetrics.evaluateDistribution(allPreviewLS, r.societalUtilities);
-      }
-
-      const delta = currentUtil - initialUtil;
-      const multiplier = delta < 0 ? 2.5 : 1.2;
-      const perceivedScore = currentUtil + (delta * multiplier);
-
-      if (perceivedScore >= 0.90) {
-        approvingVoters++;
-      }
-    });
-
-    return (approvingVoters / previewPopulation.length) * 100;
-  }, [initialPopulation, previewPopulation, currentCycle]);
+    return 0;
+  }, [previewPopulation, currentCycle, initialPopulation]);
 
   const ministers = useMemo(() => {
     if (initialPopulation.length === 0 || previewPopulation.length === 0) return [];
@@ -260,7 +174,9 @@ export default function Home() {
       const group = pop.filter(filterFn);
       if (group.length === 0) return 0;
       const total = group.reduce((sum, r) => {
-        if (currentCycle === ElectionCycle.Utilitarian) {
+        if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
+          return sum + (r.currentLS / 10); 
+        } else if (currentCycle === ElectionCycle.PersonalUtility) {
           return sum + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
         } else {
           return sum + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
@@ -371,12 +287,16 @@ export default function Home() {
   // #region Apply Policy
   const handleApplyPolicy = () => {
     if (!selectedPolicy) return;
-    if (politicalCapital < selectedPolicy.politicalCost) {
+
+    // Dev Mode bypass for political capital
+    if (!infiniteCapital && politicalCapital < selectedPolicy.politicalCost) {
       alert("Not enough Political Capital!");
       return;
     }
 
-    setPoliticalCapital((prev) => prev - selectedPolicy.politicalCost);
+    if (!infiniteCapital) {
+      setPoliticalCapital((prev) => prev - selectedPolicy.politicalCost);
+    }
     
     setPopulation(previewPopulation);
     setHistory(prev => [...prev, {
@@ -418,12 +338,27 @@ export default function Home() {
     setInitialPopulation(data);
     setCurrentTurn(1);
     setPoliticalCapital(40);
-    setCurrentCycle(ElectionCycle.Empathetic);
+    setCurrentCycle(ElectionCycle.Rawlsian);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
     setShowElection(false);
   };
+
+  // #region Developer Tool Utilities
+  const jumpToCycle = (cycle: ElectionCycle) => {
+    const data = loadPopulation();
+    setPopulation(data);
+    setInitialPopulation(data);
+    setCurrentTurn(1);
+    setPoliticalCapital(40);
+    setCurrentCycle(cycle);
+    setUsedPolicies(new Set());
+    setCurrentDeck(drawDeck(new Set()));
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
+    setShowElection(false);
+  };
+  // #endregion
 
   // #region Main Render
   const tabs = ['dashboard', 'demographics', 'electorate', 'ministers', 'graphs'];
@@ -436,7 +371,9 @@ export default function Home() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-zinc-800 leading-tight">Policy Simulator</h1>
             <p className="text-xs font-bold text-pink-600 uppercase tracking-widest">
-              {currentCycle === ElectionCycle.Utilitarian ? "Cycle 1: Utilitarian" : "Cycle 2: Empathetic"}
+              {currentCycle === ElectionCycle.Benthamite ? "Cycle 1: Benthamite" : 
+               currentCycle === ElectionCycle.Rawlsian ? "Cycle 2: Rawlsian" : 
+               currentCycle === ElectionCycle.SocietalUtility ? "Cycle 3: Societal Utility" : "Cycle 4: Personal Utility"}
             </p>
           </div>
           
@@ -467,8 +404,8 @@ export default function Home() {
           <div className="w-px h-8 bg-zinc-200" />
           <div className="text-right">
             <p className="text-xs font-bold uppercase text-zinc-400">Pol. Capital</p>
-            <p className={`text-xl font-black ${politicalCapital < 10 ? 'text-red-600' : 'text-pink-600'}`}>
-              {politicalCapital}
+            <p className={`text-xl font-black ${politicalCapital < 10 && !infiniteCapital ? 'text-red-600' : 'text-pink-600'}`}>
+              {infiniteCapital ? '∞' : politicalCapital}
             </p>
           </div>
         </div>
@@ -487,7 +424,7 @@ export default function Home() {
             currentApproval={currentApproval}
             currentDeck={currentDeck}
             setSelectedPolicy={setSelectedPolicy}
-            politicalCapital={politicalCapital}
+            politicalCapital={infiniteCapital ? 9999 : politicalCapital}
             handleApplyPolicy={handleApplyPolicy}
           />
         )}
@@ -502,9 +439,9 @@ export default function Home() {
         {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
         {activeTab === 'graphs' && (
           <GraphsTab 
-            g1Preset={g1Preset} g1PlotType={g1PlotType} g1XAxis={g1XAxis} g1YAxis={g1YAxis} g1ChartData={g1ChartData} g1HistogramData={g1HistogramData}
-            g2Preset={g2Preset} g2PlotType={g2PlotType} g2XAxis={g2XAxis} g2YAxis={g2YAxis} g2ChartData={g2ChartData} g2HistogramData={g2HistogramData}
-            handleGraphChange={handleGraphChange} GRAPH_PRESETS={GRAPH_PRESETS}
+            currentCycle={currentCycle}
+            chartData={dashboardChartData}
+            histogramData={dashboardHistogramData}
           />
         )}
         {activeTab === 'electorate' && (
@@ -516,7 +453,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* MINI-MODALS & HISTORICAL CHART */}
+      {/* --- MINI-MODALS & HISTORICAL CHART --- */}
       {selectedMinister && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-zinc-900/20 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedMinister(null)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-zinc-200 transform scale-100 transition-all" onClick={(e) => e.stopPropagation()}>
@@ -600,6 +537,49 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* --- DEV CONTROLS UI --- */}
+      <button 
+        onClick={() => setDevMode(!devMode)} 
+        className="fixed bottom-4 left-4 z-50 bg-zinc-800/80 backdrop-blur-sm text-zinc-400 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full hover:bg-zinc-700 hover:text-white transition-colors border border-zinc-600 shadow-lg"
+      >
+        Dev Mode {devMode ? 'ON' : 'OFF'}
+      </button>
+
+      {devMode && (
+        <div className="fixed bottom-14 left-4 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
+          <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2">Developer Panel</h3>
+          
+          <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+            <input 
+              type="checkbox" 
+              checked={infiniteCapital} 
+              onChange={(e) => setInfiniteCapital(e.target.checked)} 
+              className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+            />
+            <span className="font-bold text-zinc-300 text-xs uppercase tracking-widest">Infinite Capital</span>
+          </label>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Jump to Cycle</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => jumpToCycle(ElectionCycle.Benthamite)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">1. Benthamite</button>
+              <button onClick={() => jumpToCycle(ElectionCycle.Rawlsian)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">2. Rawlsian</button>
+              <button onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">3. Societal</button>
+              <button onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">4. Personal</button>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Time Controls</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setCurrentTurn(prev => Math.min(totalTurns, prev + 1))} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">Skip 1 Turn</button>
+              <button onClick={() => setCurrentTurn(totalTurns)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">Jump to End</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
   // #endregion

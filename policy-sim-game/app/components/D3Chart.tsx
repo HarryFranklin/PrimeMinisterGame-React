@@ -8,6 +8,7 @@ interface D3ChartProps {
   histogramData?: any[]; 
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
+  color?: string; // New prop for cycle-specific colours
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -43,45 +44,53 @@ const getAxisLabel = (axisType: AxisVariable): string => {
   }
 };
 
-export default function D3Chart({ plotType, chartData, histogramData, xAxisType, yAxisType }: D3ChartProps) {
+export default function D3Chart({ plotType, chartData, histogramData, xAxisType, yAxisType, color }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const prevPlotType = useRef<string | null>(null);
+  const prevXAxis = useRef<AxisVariable | null>(null);
+  const prevYAxis = useRef<AxisVariable | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
     const margin = { top: 20, right: 30, bottom: 60, left: 70 };
-    const width = containerRef.current.clientWidth - margin.left - margin.right;
-    const height = containerRef.current.clientHeight - margin.top - margin.bottom;
+    const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
+    const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
+    const chartColor = color || "#ec4899"; // Default to pink if none provided
 
     const svg = d3.select(svgRef.current);
 
-    // Only wipe the entire SVG if we are switching between 1D and 2D views
-    if (prevPlotType.current !== plotType) {
+    svg
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom);
+
+    // Wipe the chart if plotType OR axis metrics change to ensure D3 scales/labels don't cross-contaminate
+    if (prevPlotType.current !== plotType || prevXAxis.current !== xAxisType || prevYAxis.current !== yAxisType) {
       svg.selectAll("*").remove();
       
       const chart = svg
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("class", "main-group")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // Create permanent containers for axes and data so they can be updated smoothly
       chart.append("g").attr("class", "grid-x");
       chart.append("g").attr("class", "grid-y");
-      chart.append("g").attr("class", "axis-x").attr("transform", `translate(0,${height})`);
+      chart.append("g").attr("class", "axis-x"); 
       chart.append("g").attr("class", "axis-y");
       chart.append("text").attr("class", "label-x");
       chart.append("text").attr("class", "label-y").attr("transform", "rotate(-90)");
       chart.append("g").attr("class", "data-layer");
       
       prevPlotType.current = plotType;
+      prevXAxis.current = xAxisType;
+      prevYAxis.current = yAxisType;
     }
 
     const chart = svg.select(".main-group");
     const dataLayer = chart.select(".data-layer");
+    
+    chart.select(".axis-x").attr("transform", `translate(0,${height})`);
 
     const styleFriendlyAxis = (selection: any) => {
       selection.select(".domain").attr("stroke", "#d4d4d8").attr("stroke-width", 3).attr("stroke-linecap", "round");
@@ -94,7 +103,7 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
       selection.select(".domain").remove();
     };
 
-    // --- 1D HISTOGRAM RENDER (Animated) ---
+    // --- 1D HISTOGRAM RENDER ---
     if (plotType === '1D') {
       if (!histogramData || histogramData.length === 0) return;
 
@@ -109,35 +118,34 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 50).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(xAxisType));
       chart.select(".label-y").attr("y", -50).attr("x", -(height / 2)).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text("Number of People");
 
-      // Bind data and animate bars
       const bars = dataLayer.selectAll<SVGRectElement, any>("rect.bar").data(histogramData, d => d.name);
       
       const barsEnter = bars.enter()
         .append("rect")
         .attr("class", "bar")
         .attr("x", d => xScale(d.name.toString()) || 0)
-        .attr("y", height) // Start from the bottom
+        .attr("y", height)
         .attr("width", xScale.bandwidth())
-        .attr("height", 0) // Start with 0 height
-        .attr("fill", "#ec4899")
+        .attr("height", 0)
+        .attr("fill", chartColor)
         .attr("rx", 4).attr("ry", 4);
 
       barsEnter.append("title");
 
       bars.merge(barsEnter)
-        .transition().duration(500) // 500ms smooth animation
+        .transition().duration(500) 
         .attr("x", d => xScale(d.name.toString()) || 0)
         .attr("y", d => yScale(d.count))
         .attr("width", xScale.bandwidth())
-        .attr("height", d => height - yScale(d.count));
+        .attr("height", d => height - yScale(d.count))
+        .attr("fill", chartColor);
 
-      // Update tooltips
       dataLayer.selectAll("rect.bar title").data(histogramData, (d: any) => d.name).text((d: any) => `Value: ${d.name}\nPeople: ${d.count}`);
       
       bars.exit().remove();
     } 
     
-    // --- 2D SCATTER RENDER (Animated) ---
+    // --- 2D SCATTER RENDER ---
     else {
       if (!chartData || chartData.length === 0) return;
 
@@ -155,7 +163,6 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 50).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(xAxisType));
       chart.select(".label-y").attr("y", -50).attr("x", -(height / 2)).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px").text(getAxisLabel(yAxisType));
 
-      // Bind data and animate dots
       const circles = dataLayer.selectAll<SVGCircleElement, any>("circle.dot").data(chartData, (d: any) => d.id);
 
       const circlesEnter = circles.enter()
@@ -164,21 +171,22 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
         .attr("cx", d => xScale(d.x))
         .attr("cy", d => yScale(d.y))
         .attr("r", 5)
-        .style("fill", "#ec4899")
+        .style("fill", chartColor)
         .style("opacity", 0.7);
 
       circlesEnter.append("title");
 
       circles.merge(circlesEnter)
-        .transition().duration(500) // Smooth floating animation for dots
+        .transition().duration(500) 
         .attr("cx", d => xScale(d.x))
-        .attr("cy", d => yScale(d.y));
+        .attr("cy", d => yScale(d.y))
+        .style("fill", chartColor);
 
       dataLayer.selectAll("circle.dot title").data(chartData, (d: any) => d.id).text((d: any) => `Respondent ID: ${d.id}\nX: ${d.x.toFixed(2)}\nY: ${d.y.toFixed(2)}`);
 
       circles.exit().remove();
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color]);
 
   return (
     <div ref={containerRef} className="w-full h-full">

@@ -2,12 +2,11 @@ import React from "react";
 import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
 
-// Interface defining all the state and handlers passed down from page.tsx
 interface DashboardTabProps {
   setActiveTab: (tab: any) => void;
   currentCycle: ElectionCycle;
-  dashboardChartData: any;
-  dashboardHistogramData: any;
+  dashboardChartData: any[];
+  dashboardHistogramData: any[];
   ministers: any[];
   setSelectedMinister: (m: any) => void;
   selectedPolicy: Policy | null;
@@ -25,42 +24,52 @@ export default function DashboardTab(props: DashboardTabProps) {
     currentDeck, setSelectedPolicy, politicalCapital, handleApplyPolicy 
   } = props;
 
+  // Determine graph configuration for the current cycle
+  const is2D = currentCycle === ElectionCycle.SocietalUtility || currentCycle === ElectionCycle.PersonalUtility;
+  const yAxisType = currentCycle === ElectionCycle.SocietalUtility ? AxisVariable.SocietalFairness : AxisVariable.PersonalUtility;
+  
+  let graphTitle = "";
+  let graphColor = "#ec4899"; // Pink for Benthamite
+
+  if (currentCycle === ElectionCycle.Benthamite) {
+    graphTitle = "Life Satisfaction Distribution";
+  } else if (currentCycle === ElectionCycle.Rawlsian) {
+    graphTitle = "Least Well-Off Distribution";
+    graphColor = "#ef4444"; // Red for Rawlsian 'Poor' demographic
+  } else if (currentCycle === ElectionCycle.SocietalUtility) {
+    graphTitle = "Societal Fairness Scatter";
+    graphColor = "#8b5cf6"; // Purple for Societal 
+  } else {
+    graphTitle = "Personal Utility Scatter";
+    graphColor = "#3b82f6"; // Blue for Personal
+  }
+
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
       
-      {/* LEFT COLUMN: Mini Visualisations */}
-      {/* These provide a quick glance at the distributions, acting as shortcuts to the main Graphs tab */}
-      <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
-        
-        {/* 1D Histogram Preview */}
+      {/* LEFT COLUMN: Single Cycle-Relevant Visualisation */}
+      <div className="col-span-4 flex flex-col h-full min-h-0">
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
-          <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 group-hover:text-pink-600 transition-colors">Life Satisfaction Distribution</h3>
-            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
+          <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">{graphTitle}</h3>
+              <p className="text-xs text-zinc-500 mt-1">Primary cycle metric</p>
+            </div>
+            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none">↗</span>
           </div>
-          <div className="flex-1 p-2 min-h-0">
-            <D3Chart plotType="1D" chartData={dashboardChartData} histogramData={dashboardHistogramData} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.PersonalUtility} />
-          </div>
-        </div>
-
-        {/* 2D Scatter Preview (Changes based on current election cycle) */}
-        <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
-          <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 group-hover:text-pink-600 transition-colors">
-              {currentCycle === ElectionCycle.Utilitarian ? "Personal Utility Scatter" : "Societal Fairness Scatter"}
-            </h3>
-            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
-          </div>
-          <div className="flex-1 p-2 min-h-0">
-            <D3Chart plotType="2D" chartData={dashboardChartData} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={currentCycle === ElectionCycle.Utilitarian ? AxisVariable.PersonalUtility : AxisVariable.SocietalFairness} />
-          </div>
+          <D3Chart 
+            plotType={is2D ? '2D' : '1D'} 
+            chartData={dashboardChartData} 
+            histogramData={dashboardHistogramData} 
+            xAxisType={AxisVariable.LifeSatisfaction} 
+            yAxisType={yAxisType} 
+            color={graphColor}
+          />
         </div>
       </div>
 
       {/* MIDDLE COLUMN: Cabinet & Electorate Shortcut */}
       <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
-        
-        {/* The Cabinet Overview */}
         <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
@@ -70,7 +79,6 @@ export default function DashboardTab(props: DashboardTabProps) {
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none mt-1">↗</span>
           </div>
           
-          {/* Renders the grid of minister emojis and their status indicators */}
           <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-3 lg:gap-4 flex-1 min-h-0">
             {ministers.map((minister, i) => (
               <div 
@@ -102,22 +110,18 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* Projected Voter Share Box */}
         <div 
           onClick={() => setActiveTab('electorate')}
           className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group"
         >
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1 bg-pink-500" />
-          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Projected Voter Share</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Target Metric Score</p>
           <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${currentApproval >= 60 ? 'text-white' : 'text-red-400'}`}>
             {currentApproval.toFixed(1)}%
           </p>
           <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-            Target: 60% of population approves of their <strong className="text-zinc-300">{currentCycle === ElectionCycle.Utilitarian ? 'Personal Utility' : 'Societal Fairness'}</strong> trajectory. <span className="group-hover:text-pink-400 transition-colors">Click to view electorate breakdown.</span>
-          </p>
-          <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-            Click to view electorate breakdown.
+            Target: Achieve an index of 60% based on <strong className="text-zinc-300">{currentCycle === ElectionCycle.Benthamite ? 'National Average Life Satisfaction' : 'Least Well-Off Life Satisfaction'}</strong>.
           </p>
         </div>
       </div>
@@ -129,7 +133,6 @@ export default function DashboardTab(props: DashboardTabProps) {
           <p className="text-xs text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>
         </div>
         
-        {/* Scrollable list of currently drawn policies */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {currentDeck.map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
@@ -159,7 +162,6 @@ export default function DashboardTab(props: DashboardTabProps) {
           })}
         </div>
 
-        {/* Submission Button */}
         <div className="p-4 border-t border-zinc-100 bg-zinc-50 shrink-0">
           <button 
             onClick={handleApplyPolicy}

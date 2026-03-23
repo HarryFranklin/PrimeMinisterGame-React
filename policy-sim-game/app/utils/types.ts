@@ -42,9 +42,10 @@ export interface Policy {
 }
 
 export enum ElectionCycle {
-  Utilitarian,
-  Empathetic,
-  PlayerChoice
+  Benthamite,
+  Rawlsian,
+  SocietalUtility,
+  PersonalUtility
 }
 
 export interface DemographicAverages {

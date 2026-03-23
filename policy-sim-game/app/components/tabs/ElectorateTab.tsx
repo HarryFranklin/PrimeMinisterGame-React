@@ -36,23 +36,29 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
     const allPreviewLS = previewPopulation.map(p => p.currentLS);
 
     const mapped = previewPopulation.map((r, i) => {
-      const initialUtil = currentCycle === ElectionCycle.Utilitarian 
-        ? WelfareMetrics.getUtilityForPerson(initialPopulation[i].currentLS, r.personalUtilities)
-        : WelfareMetrics.evaluateDistribution(allInitialLS, r.societalUtilities);
-        
-      const currentUtil = currentCycle === ElectionCycle.Utilitarian 
-        ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities)
-        : WelfareMetrics.evaluateDistribution(allPreviewLS, r.societalUtilities);
+      let initialUtil = 0;
+      let currentUtil = 0;
+
+      if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
+        initialUtil = initialPopulation[i].currentLS / 10;
+        currentUtil = r.currentLS / 10;
+      } else if (currentCycle === ElectionCycle.PersonalUtility) {
+        initialUtil = WelfareMetrics.getUtilityForPerson(initialPopulation[i].currentLS, r.personalUtilities);
+        currentUtil = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      } else {
+        initialUtil = WelfareMetrics.evaluateDistribution(allInitialLS, r.societalUtilities);
+        currentUtil = WelfareMetrics.evaluateDistribution(allPreviewLS, r.societalUtilities);
+      }
 
       const utilityShift = currentUtil - initialUtil;
-      const multiplier = utilityShift < 0 ? 2.5 : 1.2; // Multiplier to account for loss aversion
+      const multiplier = utilityShift < 0 ? 2.5 : 1.2; 
       const perceivedScore = currentUtil + (utilityShift * multiplier);
 
       return {
         ...r,
         initialLS: initialPopulation[i].currentLS,
         utilityShift,
-        isApproving: perceivedScore >= 0.90, // Happiness threshold
+        isApproving: perceivedScore >= 0.60, 
         lsTrajectory: r.currentLS - initialPopulation[i].currentLS
       };
     });
