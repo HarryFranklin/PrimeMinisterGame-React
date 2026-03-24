@@ -38,7 +38,6 @@ export interface Policy {
   policyName: string;
   description: string;
   specificRules: PolicyRule[];
-  politicalCost: number;
 }
 
 export enum ElectionCycle {

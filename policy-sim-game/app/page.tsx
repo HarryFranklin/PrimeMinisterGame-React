@@ -52,7 +52,6 @@ export default function Home() {
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
 
   const [currentTurn, setCurrentTurn] = useState(1);
-  const [politicalCapital, setPoliticalCapital] = useState(40);
   
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [showElection, setShowElection] = useState(false);
@@ -70,7 +69,6 @@ export default function Home() {
 
   // #region Developer Mode State
   const [devMode, setDevMode] = useState(false);
-  const [infiniteCapital, setInfiniteCapital] = useState(false);
   // #endregion
 
   // #region Deck Management
@@ -81,19 +79,9 @@ export default function Home() {
       setUsedPolicies(new Set()); 
     }
 
-    const austerity = available.filter(p => p.politicalCost < 0);
-    const low = available.filter(p => p.politicalCost >= 0 && p.politicalCost <= 10);
-    const med = available.filter(p => p.politicalCost > 10 && p.politicalCost <= 15);
-    const high = available.filter(p => p.politicalCost > 15);
-
     const pickRandom = (arr: Policy[]) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
     const deck: Policy[] = [];
     const add = (p: Policy | null) => { if (p && !deck.find(d => d.id === p.id)) deck.push(p); };
-
-    add(pickRandom(austerity));
-    add(pickRandom(low));
-    add(pickRandom(med));
-    add(pickRandom(high));
 
     while (deck.length < 4 && available.length > deck.length) {
       add(pickRandom(available));
@@ -287,16 +275,6 @@ export default function Home() {
   // #region Apply Policy
   const handleApplyPolicy = () => {
     if (!selectedPolicy) return;
-
-    // Dev Mode bypass for political capital
-    if (!infiniteCapital && politicalCapital < selectedPolicy.politicalCost) {
-      alert("Not enough Political Capital!");
-      return;
-    }
-
-    if (!infiniteCapital) {
-      setPoliticalCapital((prev) => prev - selectedPolicy.politicalCost);
-    }
     
     setPopulation(previewPopulation);
     setHistory(prev => [...prev, {
@@ -325,7 +303,6 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     setCurrentTurn(1);
-    setPoliticalCapital(40);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
@@ -337,7 +314,6 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     setCurrentTurn(1);
-    setPoliticalCapital(40);
     setCurrentCycle(ElectionCycle.Rawlsian);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
@@ -351,7 +327,6 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     setCurrentTurn(1);
-    setPoliticalCapital(40);
     setCurrentCycle(cycle);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
@@ -402,12 +377,6 @@ export default function Home() {
             <p className="text-lg font-mono font-bold text-zinc-700">Turn {currentTurn} / {totalTurns}</p>
           </div>
           <div className="w-px h-8 bg-zinc-200" />
-          <div className="text-right">
-            <p className="text-xs font-bold uppercase text-zinc-400">Pol. Capital</p>
-            <p className={`text-xl font-black ${politicalCapital < 10 && !infiniteCapital ? 'text-red-600' : 'text-pink-600'}`}>
-              {infiniteCapital ? '∞' : politicalCapital}
-            </p>
-          </div>
         </div>
       </header>
 
@@ -424,7 +393,6 @@ export default function Home() {
             currentApproval={currentApproval}
             currentDeck={currentDeck}
             setSelectedPolicy={setSelectedPolicy}
-            politicalCapital={infiniteCapital ? 9999 : politicalCapital}
             handleApplyPolicy={handleApplyPolicy}
           />
         )}
@@ -549,16 +517,6 @@ export default function Home() {
       {devMode && (
         <div className="fixed bottom-14 left-4 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
           <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2">Developer Panel</h3>
-          
-          <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-            <input 
-              type="checkbox" 
-              checked={infiniteCapital} 
-              onChange={(e) => setInfiniteCapital(e.target.checked)} 
-              className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-            />
-            <span className="font-bold text-zinc-300 text-xs uppercase tracking-widest">Infinite Capital</span>
-          </label>
 
           <div className="flex flex-col gap-2">
             <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Jump to Cycle</span>

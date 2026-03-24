@@ -13,7 +13,6 @@ interface DashboardTabProps {
   currentApproval: number;
   currentDeck: Policy[];
   setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
-  politicalCapital: number;
   handleApplyPolicy: () => void;
 }
 
@@ -21,7 +20,7 @@ export default function DashboardTab(props: DashboardTabProps) {
   const { 
     setActiveTab, currentCycle, dashboardChartData, dashboardHistogramData, 
     ministers, setSelectedMinister, selectedPolicy, currentApproval, 
-    currentDeck, setSelectedPolicy, politicalCapital, handleApplyPolicy 
+    currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
   // Determine graph configuration for the current cycle
@@ -136,8 +135,6 @@ export default function DashboardTab(props: DashboardTabProps) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {currentDeck.map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
-            const isAffordable = politicalCapital >= policy.politicalCost;
-            const isAusterity = policy.politicalCost < 0;
 
             return (
               <button
@@ -145,18 +142,15 @@ export default function DashboardTab(props: DashboardTabProps) {
                 onClick={() => setSelectedPolicy(prev => prev?.id === policy.id ? null : policy)}
                 className={`relative w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
                   isSelected ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
-                } ${!isAffordable && !isSelected ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                }`}
               >
                 {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-pink-500 rounded-l-xl" />}
-                <div className="flex justify-between items-start mb-2 gap-2">
-                  <p className={`font-bold text-sm leading-tight ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>{policy.policyName}</p>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-md shrink-0 border ${
-                    isAusterity ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : isAffordable || isSelected ? 'bg-zinc-100 text-zinc-600 border-zinc-200' : 'bg-rose-50 text-rose-600 border-rose-100'
-                  }`}>
-                    {isAusterity ? '+' : '-'}{Math.abs(policy.politicalCost)}
-                  </span>
-                </div>
-                <p className={`text-xs line-clamp-2 ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>{policy.description}</p>
+                <p className={`font-bold text-sm leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                  {policy.policyName}
+                </p>
+                <p className={`text-xs line-clamp-2 ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                  {policy.description}
+                </p>
               </button>
             );
           })}
@@ -165,10 +159,10 @@ export default function DashboardTab(props: DashboardTabProps) {
         <div className="p-4 border-t border-zinc-100 bg-zinc-50 shrink-0">
           <button 
             onClick={handleApplyPolicy}
-            disabled={!selectedPolicy || (selectedPolicy && politicalCapital < selectedPolicy.politicalCost)}
+            disabled={!selectedPolicy}
             className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-lg"
           >
-            {selectedPolicy && politicalCapital < selectedPolicy.politicalCost ? "Cannot Afford" : "Enact Policy"}
+            Enact Policy
           </button>
         </div>
       </div>
