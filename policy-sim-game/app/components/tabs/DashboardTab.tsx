@@ -26,6 +26,16 @@ export default function DashboardTab(props: DashboardTabProps) {
   // Determine graph configuration for the current cycle
   const is2D = currentCycle === ElectionCycle.SocietalUtility || currentCycle === ElectionCycle.PersonalUtility;
   const yAxisType = currentCycle === ElectionCycle.SocietalUtility ? AxisVariable.SocietalFairness : AxisVariable.PersonalUtility;
+
+  // Cycle type
+  const isBenthamite = currentCycle === ElectionCycle.Benthamite;
+  const isRawlsian = currentCycle === ElectionCycle.Rawlsian;
+
+  // Calculate Average LS for Benthamite line
+  const averageLS = isBenthamite ? (currentApproval / 100) * 10 : undefined;
+  
+  // Scaffolding for Rawlsian
+  const highlightValue = isRawlsian ? 3 : undefined;
   
   let graphTitle = "";
   let graphColor = "#ec4899"; // Pink for Benthamite
@@ -68,6 +78,8 @@ export default function DashboardTab(props: DashboardTabProps) {
             xAxisType={AxisVariable.LifeSatisfaction} 
             yAxisType={yAxisType} 
             color={graphColor}
+            highlightValue={highlightValue}
+            averageValue={averageLS}
           />
         </div>
       </div>

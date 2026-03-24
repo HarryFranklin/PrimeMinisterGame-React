@@ -16,6 +16,7 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
   let yAxis = AxisVariable.PersonalUtility;
   let graphColor = "#ec4899";
   let highlightValue: number | undefined = undefined;
+  let averageValue: number | undefined = undefined;
 
   // Configure the graph based on the active cycle
   if (currentCycle === ElectionCycle.Benthamite) {
@@ -23,18 +24,26 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
     description = "The Benthamite framework evaluates your success based on the average Life Satisfaction of the entire population. This histogram displays the spread of satisfaction across all demographics. Your goal is to shift the bulk of the population to the right.";
     plotType = '1D';
     graphColor = "#ec4899";
+
+    // Calculate average from histogram data
+    const totalCount = histogramData.reduce((sum, d) => sum + d.count, 0);
+    const weightedSum = histogramData.reduce((sum, d) => sum + (d.name * d.count), 0);
+    averageValue = totalCount > 0 ? weightedSum / totalCount : 0;
+
   } else if (currentCycle === ElectionCycle.Rawlsian) {
     title = "Least Well-Off Distribution";
     description = "The Rawlsian framework evaluates success based purely on the Life Satisfaction of the poorest. Note the highlighted 'floor' below; raising these individuals is your only objective.";
     plotType = '1D';
     graphColor = "#fca5a5"; // Light red for background bars
     highlightValue = 3;     // Highlight the bottom of the histogram
+
   } else if (currentCycle === ElectionCycle.SocietalUtility) {
     title = "Societal Fairness vs Life Satisfaction";
     description = "This scatter plot maps actual Life Satisfaction against perceived Societal Fairness. It visualises how each citizen evaluates the current distribution of wellbeing across the nation.";
     plotType = '2D';
     yAxis = AxisVariable.SocietalFairness;
     graphColor = "#8b5cf6";
+
   } else if (currentCycle === ElectionCycle.PersonalUtility) {
     title = "Personal Utility vs Life Satisfaction";
     description = "This scatter plot maps Life Satisfaction against Personal Utility, demonstrating how individuals translate their general wellbeing into their own personal, subjective satisfaction.";
@@ -59,7 +68,8 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
             xAxisType={AxisVariable.LifeSatisfaction} 
             yAxisType={yAxis} 
             color={graphColor}
-            highlightValue={highlightValue} 
+            highlightValue={highlightValue}
+            averageValue={averageValue}
           />
         </div>
       </div>

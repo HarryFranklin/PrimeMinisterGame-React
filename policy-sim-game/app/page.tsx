@@ -122,18 +122,13 @@ export default function Home() {
     if (previewPopulation.length === 0) return [];
     const bins = Array(11).fill(0).map((_, i) => ({ name: i, count: 0 }));
     
-    // The Rawlsian framework strictly focuses on the bottom floor.
-    const targetPop = currentCycle === ElectionCycle.Rawlsian 
-      ? previewPopulation.filter(r => r.demographics.wealth === 'Poor')
-      : previewPopulation;
-
-    targetPop.forEach((r) => {
+    previewPopulation.forEach((r) => {
       let binIndex = Math.round(r.currentLS);
       binIndex = Math.max(0, Math.min(binIndex, 10));
       if(bins[binIndex]) bins[binIndex].count++;
     });
     return bins;
-  }, [previewPopulation, currentCycle]);
+  }, [previewPopulation]);
 
   const currentApproval = useMemo(() => {
     if (previewPopulation.length === 0 || initialPopulation.length === 0) return 0;

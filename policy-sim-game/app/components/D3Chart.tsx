@@ -9,7 +9,8 @@ interface D3ChartProps {
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
   color?: string; // Prop for cycle-specific colours
-  highlightValue?: number; // Prop to highlight a specific LS floor (e.g., for Rawlsian cycle)
+  highlightValue?: number; // Prop to highlight LS floor (Rawlsian)
+  averageValue?: number; // Prop for vertical average line (Benthamite)
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -52,7 +53,8 @@ export default function D3Chart({
   xAxisType, 
   yAxisType, 
   color,
-  highlightValue 
+  highlightValue,
+  averageValue 
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -66,16 +68,14 @@ export default function D3Chart({
     const margin = { top: 20, right: 30, bottom: 60, left: 70 };
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
-    const chartColor = color || "#ec4899"; // Default to pink if none provided
+    const chartColor = color || "#ec4899"; 
 
     const svg = d3.select(svgRef.current);
 
-    // Update SVG boundaries on every render to handle flexbox layout shifts
     svg
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 
-    // Wipe the chart if plotType OR axis metrics change to ensure D3 scales/labels don't cross-contaminate
     if (prevPlotType.current !== plotType || prevXAxis.current !== xAxisType || prevYAxis.current !== yAxisType) {
       svg.selectAll("*").remove();
       
@@ -148,14 +148,40 @@ export default function D3Chart({
         .attr("width", xScale.bandwidth())
         .attr("height", d => height - yScale(d.count))
         .attr("fill", d => {
-          // Rawlsian Highlighting: vivid red for the designated LS "floor"
-          if (highlightValue !== undefined && d.name <= highlightValue) {
-            return "#ef4444"; 
-          }
+          if (highlightValue !== undefined && d.name <= highlightValue) return "#ef4444"; 
           return chartColor;
         })
         .attr("stroke", d => (highlightValue !== undefined && d.name <= highlightValue) ? "#991b1b" : "none")
         .attr("stroke-width", d => (highlightValue !== undefined && d.name <= highlightValue) ? 2 : 0);
+
+      // --- DRAW AVERAGE LINE (Benthamite Scaffolding) ---
+      if (averageValue !== undefined) {
+        // Calculate precise linear position across the width based on the 0-10 domain
+        const xPosLinear = (averageValue / 10) * width; 
+
+        dataLayer.selectAll("line.avg-line").data([averageValue])
+          .join("line")
+          .attr("class", "avg-line")
+          .attr("x1", xPosLinear)
+          .attr("x2", xPosLinear)
+          .attr("y1", 0)
+          .attr("y2", height)
+          .attr("stroke", "#3f3f46")
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "4 4");
+
+        dataLayer.selectAll("text.avg-label").data([averageValue])
+          .join("text")
+          .attr("class", "avg-label")
+          .attr("x", xPosLinear + 5)
+          .attr("y", 15)
+          .attr("fill", "#3f3f46")
+          .style("font-size", "10px")
+          .style("font-weight", "bold")
+          .text(`AVG: ${averageValue.toFixed(1)}`);
+      } else {
+        dataLayer.selectAll(".avg-line, .avg-label").remove();
+      }
 
       dataLayer.selectAll("rect.bar title").data(histogramData, (d: any) => d.name).text((d: any) => `Value: ${d.name}\nPeople: ${d.count}`);
       
@@ -203,7 +229,7 @@ export default function D3Chart({
 
       circles.exit().remove();
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightValue]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightValue, averageValue]);
 
   return (
     <div ref={containerRef} className="w-full h-full">
