@@ -8,7 +8,8 @@ interface D3ChartProps {
   histogramData?: any[]; 
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
-  color?: string; // New prop for cycle-specific colours
+  color?: string; // Prop for cycle-specific colours
+  highlightValue?: number; // Prop to highlight a specific LS floor (e.g., for Rawlsian cycle)
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -44,7 +45,15 @@ const getAxisLabel = (axisType: AxisVariable): string => {
   }
 };
 
-export default function D3Chart({ plotType, chartData, histogramData, xAxisType, yAxisType, color }: D3ChartProps) {
+export default function D3Chart({ 
+  plotType, 
+  chartData, 
+  histogramData, 
+  xAxisType, 
+  yAxisType, 
+  color,
+  highlightValue 
+}: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const prevPlotType = useRef<string | null>(null);
@@ -61,6 +70,7 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
 
     const svg = d3.select(svgRef.current);
 
+    // Update SVG boundaries on every render to handle flexbox layout shifts
     svg
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
@@ -127,7 +137,6 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
         .attr("y", height)
         .attr("width", xScale.bandwidth())
         .attr("height", 0)
-        .attr("fill", chartColor)
         .attr("rx", 4).attr("ry", 4);
 
       barsEnter.append("title");
@@ -138,7 +147,15 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
         .attr("y", d => yScale(d.count))
         .attr("width", xScale.bandwidth())
         .attr("height", d => height - yScale(d.count))
-        .attr("fill", chartColor);
+        .attr("fill", d => {
+          // Rawlsian Highlighting: vivid red for the designated LS "floor"
+          if (highlightValue !== undefined && d.name <= highlightValue) {
+            return "#ef4444"; 
+          }
+          return chartColor;
+        })
+        .attr("stroke", d => (highlightValue !== undefined && d.name <= highlightValue) ? "#991b1b" : "none")
+        .attr("stroke-width", d => (highlightValue !== undefined && d.name <= highlightValue) ? 2 : 0);
 
       dataLayer.selectAll("rect.bar title").data(histogramData, (d: any) => d.name).text((d: any) => `Value: ${d.name}\nPeople: ${d.count}`);
       
@@ -186,7 +203,7 @@ export default function D3Chart({ plotType, chartData, histogramData, xAxisType,
 
       circles.exit().remove();
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightValue]);
 
   return (
     <div ref={containerRef} className="w-full h-full">

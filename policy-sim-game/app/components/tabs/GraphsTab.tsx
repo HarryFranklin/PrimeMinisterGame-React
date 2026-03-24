@@ -15,6 +15,7 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
   let plotType: '1D' | '2D' = '1D';
   let yAxis = AxisVariable.PersonalUtility;
   let graphColor = "#ec4899";
+  let highlightValue: number | undefined = undefined;
 
   // Configure the graph based on the active cycle
   if (currentCycle === ElectionCycle.Benthamite) {
@@ -24,9 +25,10 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
     graphColor = "#ec4899";
   } else if (currentCycle === ElectionCycle.Rawlsian) {
     title = "Least Well-Off Distribution";
-    description = "The Rawlsian framework evaluates your success based purely on the Life Satisfaction of the poorest demographics. This histogram displays the societal distribution, but your focus must remain entirely on raising the 'floor' at the far left of the chart.";
+    description = "The Rawlsian framework evaluates success based purely on the Life Satisfaction of the poorest. Note the highlighted 'floor' below; raising these individuals is your only objective.";
     plotType = '1D';
-    graphColor = "#ef4444";
+    graphColor = "#fca5a5"; // Light red for background bars
+    highlightValue = 3;     // Highlight the bottom of the histogram
   } else if (currentCycle === ElectionCycle.SocietalUtility) {
     title = "Societal Fairness vs Life Satisfaction";
     description = "This scatter plot maps actual Life Satisfaction against perceived Societal Fairness. It visualises how each citizen evaluates the current distribution of wellbeing across the nation.";
@@ -57,6 +59,7 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
             xAxisType={AxisVariable.LifeSatisfaction} 
             yAxisType={yAxis} 
             color={graphColor}
+            highlightValue={highlightValue} 
           />
         </div>
       </div>
