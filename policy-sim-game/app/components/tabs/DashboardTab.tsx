@@ -23,22 +23,11 @@ export default function DashboardTab(props: DashboardTabProps) {
     currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
-  // Determine graph configuration for the current cycle
-  const is2D = currentCycle === ElectionCycle.SocietalUtility || currentCycle === ElectionCycle.PersonalUtility;
+  const is1D = currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian;
   const yAxisType = currentCycle === ElectionCycle.SocietalUtility ? AxisVariable.SocietalFairness : AxisVariable.PersonalUtility;
-
-  // Cycle type
-  const isBenthamite = currentCycle === ElectionCycle.Benthamite;
-  const isRawlsian = currentCycle === ElectionCycle.Rawlsian;
-
-  // Calculate Average LS for Benthamite line
-  const averageLS = isBenthamite ? (currentApproval / 100) * 10 : undefined;
-  
-  // Scaffolding for Rawlsian
-  const highlightValue = isRawlsian ? 3 : undefined;
   
   let graphTitle = "";
-  let graphColor = "#ec4899"; // Pink for Benthamite
+  let graphColor = "#ec4899"; 
   let targetText = "";
 
   if (currentCycle === ElectionCycle.Benthamite) {
@@ -71,16 +60,16 @@ export default function DashboardTab(props: DashboardTabProps) {
             </div>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none">↗</span>
           </div>
-          <D3Chart 
-            plotType={is2D ? '2D' : '1D'} 
-            chartData={dashboardChartData} 
-            histogramData={dashboardHistogramData} 
-            xAxisType={AxisVariable.LifeSatisfaction} 
-            yAxisType={yAxisType} 
-            color={graphColor}
-            highlightValue={highlightValue}
-            averageValue={averageLS}
-          />
+          <div className="flex-1 p-4 min-h-0">
+            <D3Chart 
+              plotType={is1D ? '1D' : '2D'} 
+              chartData={dashboardChartData} 
+              histogramData={dashboardHistogramData} 
+              xAxisType={AxisVariable.LifeSatisfaction} 
+              yAxisType={yAxisType} 
+              color={graphColor}
+            />
+          </div>
         </div>
       </div>
 
@@ -142,7 +131,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Legislative Agenda (Policy Selection) */}
+      {/* RIGHT COLUMN: Legislative Agenda */}
       <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
         <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
           <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
@@ -152,7 +141,6 @@ export default function DashboardTab(props: DashboardTabProps) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {currentDeck.map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
-
             return (
               <button
                 key={policy.id}
