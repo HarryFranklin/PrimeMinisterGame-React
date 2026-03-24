@@ -12,8 +12,29 @@ export default function ElectionModal({ approvalRating, currentCycle, onNextCycl
   
   const won = approvalRating >= 60; // 60% of the target metric must be achieved
   const approvalPercentage = approvalRating.toFixed(1);
-  const cycleName = currentCycle === ElectionCycle.Benthamite ? "Cycle 1: Benthamite" : "Cycle 2: Rawlsian";
-  const evaluatedMetric = currentCycle === ElectionCycle.Benthamite ? "Average Life Satisfaction" : "Least Well-Off LS";
+  
+  let cycleName = "";
+  let evaluatedMetric = "";
+  let nextCycleName = "";
+  let isFinalCycle = false;
+
+  if (currentCycle === ElectionCycle.Benthamite) {
+    cycleName = "Cycle 1: Benthamite";
+    evaluatedMetric = "Average Life Satisfaction";
+    nextCycleName = "Start Cycle 2: Rawlsian";
+  } else if (currentCycle === ElectionCycle.Rawlsian) {
+    cycleName = "Cycle 2: Rawlsian";
+    evaluatedMetric = "Least Well-Off LS";
+    nextCycleName = "Start Cycle 3: Societal";
+  } else if (currentCycle === ElectionCycle.SocietalUtility) {
+    cycleName = "Cycle 3: Societal";
+    evaluatedMetric = "Average Societal Utility";
+    nextCycleName = "Start Cycle 4: Personal";
+  } else {
+    cycleName = "Cycle 4: Personal";
+    evaluatedMetric = "Average Personal Utility";
+    isFinalCycle = true;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm">
@@ -49,12 +70,12 @@ export default function ElectionModal({ approvalRating, currentCycle, onNextCycl
           >
             Restart Cycle
           </button>
-          {won && currentCycle === ElectionCycle.Benthamite && (
+          {won && !isFinalCycle && (
             <button 
               onClick={onNextCycle}
               className="flex-1 py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg"
             >
-              Start Cycle 2
+              {nextCycleName}
             </button>
           )}
         </div>

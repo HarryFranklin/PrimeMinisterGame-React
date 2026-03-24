@@ -29,18 +29,23 @@ export default function DashboardTab(props: DashboardTabProps) {
   
   let graphTitle = "";
   let graphColor = "#ec4899"; // Pink for Benthamite
+  let targetText = "";
 
   if (currentCycle === ElectionCycle.Benthamite) {
     graphTitle = "Life Satisfaction Distribution";
+    targetText = "National Average Life Satisfaction";
   } else if (currentCycle === ElectionCycle.Rawlsian) {
     graphTitle = "Least Well-Off Distribution";
-    graphColor = "#ef4444"; // Red for Rawlsian 'Poor' demographic
+    graphColor = "#ef4444"; 
+    targetText = "Least Well-Off Life Satisfaction";
   } else if (currentCycle === ElectionCycle.SocietalUtility) {
     graphTitle = "Societal Fairness Scatter";
-    graphColor = "#8b5cf6"; // Purple for Societal 
+    graphColor = "#8b5cf6"; 
+    targetText = "Average Societal Utility";
   } else {
     graphTitle = "Personal Utility Scatter";
-    graphColor = "#3b82f6"; // Blue for Personal
+    graphColor = "#3b82f6"; 
+    targetText = "Average Personal Utility";
   }
 
   return (
@@ -120,7 +125,7 @@ export default function DashboardTab(props: DashboardTabProps) {
             {currentApproval.toFixed(1)}%
           </p>
           <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-            Target: Achieve an index of 60% based on <strong className="text-zinc-300">{currentCycle === ElectionCycle.Benthamite ? 'National Average Life Satisfaction' : 'Least Well-Off Life Satisfaction'}</strong>.
+            Target: Achieve an index of 60% based on <strong className="text-zinc-300">{targetText}</strong>.
           </p>
         </div>
       </div>

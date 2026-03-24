@@ -147,6 +147,15 @@ export default function Home() {
       const avgPoorLS = poorPop.length > 0 ? poorPop.reduce((sum, r) => sum + r.currentLS, 0) / poorPop.length : 0;
       return (avgPoorLS / 10) * 100;
     }
+    else if (currentCycle === ElectionCycle.SocietalUtility) {
+      const allLS = previewPopulation.map(p => p.currentLS);
+      const avgSoc = previewPopulation.reduce((sum, r) => sum + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / previewPopulation.length;
+      return avgSoc * 100; 
+    }
+    else if (currentCycle === ElectionCycle.PersonalUtility) {
+      const avgPers = previewPopulation.reduce((sum, r) => sum + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
+      return avgPers * 100; 
+    }
 
     return 0;
   }, [previewPopulation, currentCycle, initialPopulation]);
@@ -314,7 +323,15 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     setCurrentTurn(1);
-    setCurrentCycle(ElectionCycle.Rawlsian);
+    
+    // Determine the next cycle dynamically
+    let nextCycle = ElectionCycle.Rawlsian;
+    if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
+    else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.SocietalUtility;
+    else if (currentCycle === ElectionCycle.SocietalUtility) nextCycle = ElectionCycle.PersonalUtility;
+    else nextCycle = ElectionCycle.Benthamite; // Loops back to start if won on final cycle
+    
+    setCurrentCycle(nextCycle);
     setUsedPolicies(new Set());
     setCurrentDeck(drawDeck(new Set()));
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(data) }]);
