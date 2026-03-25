@@ -9,6 +9,9 @@ interface D3ChartProps {
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
   color?: string; 
+  targetValue?: number;
+  currentValue?: number;
+  initialValue?: number;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -45,7 +48,8 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color
+  plotType, chartData, histogramData, xAxisType, yAxisType, color,
+  targetValue, currentValue, initialValue
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -56,7 +60,7 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 30, right: 30, bottom: 60, left: 70 };
+    const margin = { top: 40, right: 30, bottom: 60, left: 70 }; // Increased top margin for labels
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -74,6 +78,7 @@ export default function D3Chart({
       chart.append("text").attr("class", "label-x");
       chart.append("text").attr("class", "label-y").attr("transform", "rotate(-90)");
       chart.append("g").attr("class", "data-layer");
+      chart.append("g").attr("class", "annotation-layer"); // Dedicated layer for our lines
       prevPlotType.current = plotType;
       prevXAxis.current = xAxisType;
       prevYAxis.current = yAxisType;
@@ -81,6 +86,7 @@ export default function D3Chart({
 
     const chart = svg.select(".main-group");
     const dataLayer = chart.select(".data-layer");
+    const annotationLayer = chart.select(".annotation-layer");
     chart.select(".axis-x").attr("transform", `translate(0,${height})`);
 
     const styleAxis = (sel: any) => {
@@ -93,12 +99,8 @@ export default function D3Chart({
       const xDomain = histogramData.map(d => d.name.toString());
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
       
-      // === SOFT CAP Y-AXIS LOGIC ===
       const totalPop = d3.sum(histogramData, d => d.count);
       const currentHighestBar = d3.max(histogramData, d => d.count) || 0;
-      
-      // The graph will never shrink below 30% of the total population.
-      // But if a bar exceeds 30%, the graph will expand to fit it.
       const baselineMax = Math.ceil(totalPop * 0.30); 
       const yDomainMax = Math.max(baselineMax, currentHighestBar);
       
@@ -116,7 +118,60 @@ export default function D3Chart({
         .attr("fill", chartColor)
         .attr("rx", 4);
 
+      // === DRAW ANNOTATIONS ===
+      annotationLayer.selectAll("*").remove(); // Clear old lines
+
+      // Helper to map continuous 0-10 value accurately onto the band scale
+      const getContinuousX = (val: number) => {
+        const step = xScale.step();
+        const offset = (xScale("0") as number) || 0;
+        return offset + (val * step) + xScale.bandwidth() / 2;
+      };
+
+      const drawLine = (val: number | undefined, color: string, label: string, yPos: number, dashed: boolean) => {
+        if (val === undefined) return;
+        const xPos = getContinuousX(val);
+
+        // Draw Line
+        annotationLayer.append("line")
+          .attr("x1", xPos).attr("x2", xPos)
+          .attr("y1", yPos + 10).attr("y2", height)
+          .attr("stroke", color).attr("stroke-width", 2.5)
+          .attr("stroke-dasharray", dashed ? "4,4" : "none")
+          .style("opacity", 0.9);
+
+        // Draw Text Background Pill
+        annotationLayer.append("rect")
+          .attr("x", xPos - 35).attr("y", yPos - 12)
+          .attr("width", 70).attr("height", 16)
+          .attr("fill", color).attr("rx", 8)
+          .style("opacity", 0.15);
+
+        // Draw Text
+        annotationLayer.append("text")
+          .attr("x", xPos).attr("y", yPos)
+          .attr("text-anchor", "middle")
+          .attr("fill", color)
+          .style("font-size", "10px")
+          .style("font-weight", "bold")
+          .style("text-transform", "uppercase")
+          .text(`${label}: ${val.toFixed(1)}`);
+      };
+
+      // 1. Draw Start and Target
+      drawLine(initialValue, "#71717a", "Start", -20, true);   
+      drawLine(targetValue, "#10b981", "Target", -5, true);    
+
+      // 2. Only draw 'Current' if it is noticeably different from the Start value
+      const isAtStart = currentValue !== undefined && initialValue !== undefined && Math.abs(currentValue - initialValue) < 0.01;
+      
+      if (!isAtStart) {
+        drawLine(currentValue, "#18181b", "Current", 10, false); 
+      }
+
     } else if (plotType === '2D') {
+      annotationLayer.selectAll("*").remove(); // Clear lines if switching to 2D
+      
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, width]);
       const yScale = d3.scaleLinear().domain(getAxisDomain(yAxisType)).range([height, 0]);
 
@@ -128,7 +183,7 @@ export default function D3Chart({
         .transition().duration(500)
         .attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, targetValue, currentValue, initialValue]);
 
   return <div ref={containerRef} className="w-full h-full"><svg ref={svgRef}></svg></div>;
 }

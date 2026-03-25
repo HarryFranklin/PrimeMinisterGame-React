@@ -118,6 +118,19 @@ export default function Home() {
     return previewPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
   }, [previewPopulation, currentCycle]);
 
+  // === Calculate the Baseline Score for the Chart Annotations ===
+  const initialMetricScore = useMemo(() => {
+    if (initialPopulation.length === 0) return 0;
+    if (currentCycle === ElectionCycle.Benthamite) return initialPopulation.reduce((s, r) => s + r.currentLS, 0) / initialPopulation.length;
+    if (currentCycle === ElectionCycle.Rawlsian) {
+      const p = initialPopulation.filter(r => r.demographics.wealth === 'Poor');
+      return p.length > 0 ? p.reduce((s, r) => s + r.currentLS, 0) / p.length : 0;
+    }
+    const allLS = initialPopulation.map(p => p.currentLS);
+    if (currentCycle === ElectionCycle.SocietalUtility) return initialPopulation.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / initialPopulation.length;
+    return initialPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / initialPopulation.length;
+  }, [initialPopulation, currentCycle]);
+
   // 2. Properly map the Y-axis data depending on the active cycle's metric for the 2D Charts
   const chartData = useMemo(() => {
     if (previewPopulation.length === 0) return [];
@@ -291,12 +304,13 @@ export default function Home() {
           <DashboardTab 
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
-            dashboardChartData={chartData}
+            dashboardChartData={chartData} 
             dashboardHistogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
             ministers={ministers} 
             setSelectedMinister={setSelectedMinister} 
             selectedPolicy={selectedPolicy} 
             currentMetricScore={currentMetricScore} 
+            initialMetricScore={initialMetricScore}
             currentDeck={currentDeck} 
             setSelectedPolicy={setSelectedPolicy} 
             handleApplyPolicy={handleApplyPolicy} 

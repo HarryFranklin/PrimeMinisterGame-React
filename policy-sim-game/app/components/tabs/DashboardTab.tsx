@@ -12,6 +12,7 @@ interface DashboardTabProps {
   setSelectedMinister: (m: any) => void;
   selectedPolicy: Policy | null;
   currentMetricScore: number; 
+  initialMetricScore: number;
   currentDeck: Policy[];
   setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
   handleApplyPolicy: () => void;
@@ -20,7 +21,7 @@ interface DashboardTabProps {
 export default function DashboardTab(props: DashboardTabProps) {
   const { 
     setActiveTab, currentCycle, dashboardChartData, dashboardHistogramData, 
-    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, 
+    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
@@ -49,6 +50,10 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
+              // === ANNOTATION PROPS ===
+              targetValue={is1D ? rule.metricTarget : undefined}
+              currentValue={is1D ? currentMetricScore : undefined}
+              initialValue={is1D ? initialMetricScore : undefined}
             />
           </div>
         </div>
