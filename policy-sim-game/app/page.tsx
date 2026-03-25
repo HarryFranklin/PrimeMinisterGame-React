@@ -131,30 +131,18 @@ export default function Home() {
     return bins;
   }, [previewPopulation]);
 
-  const currentApproval = useMemo(() => {
-    if (previewPopulation.length === 0 || initialPopulation.length === 0) return 0;
-
-    if (currentCycle === ElectionCycle.Benthamite) {
-      const avgLS = previewPopulation.reduce((sum, r) => sum + r.currentLS, 0) / previewPopulation.length;
-      return (avgLS / 10) * 100; 
-    } 
-    else if (currentCycle === ElectionCycle.Rawlsian) {
-      const poorPop = previewPopulation.filter(r => r.demographics.wealth === 'Poor');
-      const avgPoorLS = poorPop.length > 0 ? poorPop.reduce((sum, r) => sum + r.currentLS, 0) / poorPop.length : 0;
-      return (avgPoorLS / 10) * 100;
+  // The Single Source of Truth for Winning
+  const currentMetricScore = useMemo(() => {
+    if (previewPopulation.length === 0) return 0;
+    if (currentCycle === ElectionCycle.Benthamite) return previewPopulation.reduce((s, r) => s + r.currentLS, 0) / previewPopulation.length;
+    if (currentCycle === ElectionCycle.Rawlsian) {
+      const p = previewPopulation.filter(r => r.demographics.wealth === 'Poor');
+      return p.length > 0 ? p.reduce((s, r) => s + r.currentLS, 0) / p.length : 0;
     }
-    else if (currentCycle === ElectionCycle.SocietalUtility) {
-      const allLS = previewPopulation.map(p => p.currentLS);
-      const avgSoc = previewPopulation.reduce((sum, r) => sum + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / previewPopulation.length;
-      return avgSoc * 100; 
-    }
-    else if (currentCycle === ElectionCycle.PersonalUtility) {
-      const avgPers = previewPopulation.reduce((sum, r) => sum + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
-      return avgPers * 100; 
-    }
-
-    return 0;
-  }, [previewPopulation, currentCycle, initialPopulation]);
+    const allLS = previewPopulation.map(p => p.currentLS);
+    if (currentCycle === ElectionCycle.SocietalUtility) return previewPopulation.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / previewPopulation.length;
+    return previewPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
+  }, [previewPopulation, currentCycle]);
 
   const ministers = useMemo(() => {
     const activeRule = FRAMEWORK_RULES[currentCycle]; // Pull current rules
@@ -309,17 +297,17 @@ export default function Home() {
       <main className="flex-1 overflow-hidden p-6 flex flex-col">
         {activeTab === 'dashboard' && (
           <DashboardTab 
-            setActiveTab={setActiveTab}
-            currentCycle={currentCycle}
-            dashboardChartData={dashboardChartData}
-            dashboardHistogramData={dashboardHistogramData}
-            ministers={ministers}
-            setSelectedMinister={setSelectedMinister}
-            selectedPolicy={selectedPolicy}
-            currentApproval={currentApproval}
-            currentDeck={currentDeck}
-            setSelectedPolicy={setSelectedPolicy}
-            handleApplyPolicy={handleApplyPolicy}
+            setActiveTab={setActiveTab} 
+            currentCycle={currentCycle} 
+            dashboardChartData={previewPopulation.map(r => ({ id: r.id, x: r.currentLS, y: r.currentLS }))} 
+            dashboardHistogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
+            ministers={ministers} 
+            setSelectedMinister={setSelectedMinister} 
+            selectedPolicy={selectedPolicy} 
+            currentMetricScore={currentMetricScore} // We only pass the metric score now
+            currentDeck={currentDeck} 
+            setSelectedPolicy={setSelectedPolicy} 
+            handleApplyPolicy={handleApplyPolicy} 
           />
         )}
         {activeTab === 'demographics' && (
@@ -372,9 +360,7 @@ export default function Home() {
         </div>
       )}
 
-      {showElection && (
-        <ElectionModal approvalRating={currentApproval} currentCycle={currentCycle} onNextCycle={handleNextCycle} onReset={handleResetCycle} />
-      )}
+      {showElection && <ElectionModal currentMetricScore={currentMetricScore} currentCycle={currentCycle} onNextCycle={handleNextCycle} onReset={() => window.location.reload()} />}
 
       {selectedHistoryGroup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/30 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedHistoryGroup(null)}>

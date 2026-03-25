@@ -3,23 +3,22 @@ import { ElectionCycle } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 
 interface ElectionModalProps {
-  approvalRating: number;
+  currentMetricScore: number;
   currentCycle: ElectionCycle;
   onNextCycle: () => void;
   onReset: () => void;
 }
 
-export default function ElectionModal({ approvalRating, currentCycle, onNextCycle, onReset }: ElectionModalProps) {
+export default function ElectionModal({ currentMetricScore, currentCycle, onNextCycle, onReset }: ElectionModalProps) {
   
   const rule = FRAMEWORK_RULES[currentCycle];
-  const won = approvalRating >= rule.winThreshold; // DYNAMIC WIN CHECK
-  const approvalPercentage = approvalRating.toFixed(1);
+  const won = currentMetricScore >= rule.metricTarget; 
+  const is1D = rule.plotType === '1D';
   
   let nextCycleName = "";
   let isFinalCycle = false;
   let adviceText = "";
 
-  // Advice can still live here as it's specific to the "loss" state of the modal
   if (currentCycle === ElectionCycle.Benthamite) {
     nextCycleName = "Start Cycle 2: Rawlsian";
     adviceText = "The Benthamite framework requires the greatest good for the greatest number. You may have focused too heavily on niche demographics while neglecting the broad majority.";
@@ -51,13 +50,13 @@ export default function ElectionModal({ approvalRating, currentCycle, onNextCycl
           won ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
         }`}>
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-            Final {rule.targetMetricName} Score
+            Final {rule.targetMetricName}
           </p>
           <div className="flex items-baseline justify-center gap-2 mb-2">
              <p className={`text-6xl font-black ${won ? 'text-emerald-600' : 'text-rose-600'}`}>
-               {approvalPercentage}%
+               {is1D ? currentMetricScore.toFixed(1) : currentMetricScore.toFixed(2)}
              </p>
-             <p className="text-zinc-400 font-bold text-lg">/ {rule.winThreshold}.0% Required</p>
+             <p className="text-zinc-400 font-bold text-lg">/ {rule.metricTarget} Required</p>
           </div>
         </div>
 
