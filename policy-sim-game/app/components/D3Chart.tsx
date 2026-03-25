@@ -160,7 +160,7 @@ export default function D3Chart({
 
       // 1. Draw Start and Target
       drawLine(initialValue, "#71717a", "Start", -20, true);   
-      drawLine(targetValue, "#10b981", "Target", -5, true);    
+      drawLine(targetValue, "#10b981", "Target", -5, false);    
 
       // 2. Only draw 'Current' if it is noticeably different from the Start value
       const isAtStart = currentValue !== undefined && initialValue !== undefined && Math.abs(currentValue - initialValue) < 0.01;

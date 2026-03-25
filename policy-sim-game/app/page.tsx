@@ -338,8 +338,10 @@ export default function Home() {
         {activeTab === 'graphs' && (
           <GraphsTab 
             currentCycle={currentCycle} 
-            chartData={chartData}
+            chartData={chartData} 
             histogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
+            currentMetricScore={currentMetricScore}
+            initialMetricScore={initialMetricScore} 
           />
         )}
         {activeTab === 'electorate' && (

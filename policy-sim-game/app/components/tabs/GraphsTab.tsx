@@ -7,11 +7,16 @@ interface GraphsTabProps {
   currentCycle: ElectionCycle;
   chartData: any[];
   histogramData: any[];
+  currentMetricScore: number; // NEW
+  initialMetricScore: number; // NEW
 }
 
-export default function GraphsTab({ currentCycle, chartData, histogramData }: GraphsTabProps) {
+export default function GraphsTab({ 
+  currentCycle, chartData, histogramData, currentMetricScore, initialMetricScore 
+}: GraphsTabProps) {
   
   const rule = FRAMEWORK_RULES[currentCycle];
+  const is1D = rule.plotType === '1D';
 
   return (
     <div className="flex flex-col gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
@@ -29,6 +34,10 @@ export default function GraphsTab({ currentCycle, chartData, histogramData }: Gr
             xAxisType={AxisVariable.LifeSatisfaction} 
             yAxisType={rule.yAxisType} 
             color={rule.graphColor}
+            // === NEW ANNOTATION PROPS ===
+            targetValue={is1D ? rule.metricTarget : undefined}
+            currentValue={is1D ? currentMetricScore : undefined}
+            initialValue={is1D ? initialMetricScore : undefined}
           />
         </div>
       </div>
