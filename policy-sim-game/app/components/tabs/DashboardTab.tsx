@@ -55,8 +55,8 @@ export default function DashboardTab(props: DashboardTabProps) {
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">{graphTitle}</h3>
-              <p className="text-xs text-zinc-500 mt-1">Primary cycle metric</p>
+              <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">{graphTitle}</h3>
+              <p className="text-sm text-zinc-500 mt-1">Primary cycle metric</p>
             </div>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none">↗</span>
           </div>
@@ -78,8 +78,8 @@ export default function DashboardTab(props: DashboardTabProps) {
         <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">The Cabinet</h3>
-              <p className="text-xs text-zinc-500 mt-1">Ministerial reaction to selected policy proposal.</p>
+              <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">The Cabinet</h3>
+              <p className="text-sm text-zinc-500 mt-1">Ministerial reaction to selected policy proposal.</p>
             </div>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none mt-1">↗</span>
           </div>
@@ -134,26 +134,26 @@ export default function DashboardTab(props: DashboardTabProps) {
       {/* RIGHT COLUMN: Legislative Agenda */}
       <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
         <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
-          <p className="text-xs text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>
+          <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
+          <p className="text-sm text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+
+        <div className="flex-1 flex flex-col p-4 gap-3 min-h-0 overflow-hidden">
           {currentDeck.map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
             return (
               <button
                 key={policy.id}
                 onClick={() => setSelectedPolicy(prev => prev?.id === policy.id ? null : policy)}
-                className={`relative w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
+                className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
                   isSelected ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                 }`}
               >
                 {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-pink-500 rounded-l-xl" />}
-                <p className={`font-bold text-sm leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                <p className={`font-bold text-base leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
                   {policy.policyName}
                 </p>
-                <p className={`text-xs line-clamp-2 ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                <p className={`text-sm ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
                   {policy.description}
                 </p>
               </button>
