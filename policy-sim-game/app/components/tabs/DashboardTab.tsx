@@ -1,6 +1,7 @@
 import React from "react";
 import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
+import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 
 interface DashboardTabProps {
   setActiveTab: (tab: any) => void;
@@ -23,51 +24,31 @@ export default function DashboardTab(props: DashboardTabProps) {
     currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
-  const is1D = currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian;
-  const yAxisType = currentCycle === ElectionCycle.SocietalUtility ? AxisVariable.SocietalFairness : AxisVariable.PersonalUtility;
-  
-  let graphTitle = "";
-  let graphColor = "#ec4899"; 
-  let targetText = "";
-
-  if (currentCycle === ElectionCycle.Benthamite) {
-    graphTitle = "Life Satisfaction Distribution";
-    targetText = "National Average Life Satisfaction";
-  } else if (currentCycle === ElectionCycle.Rawlsian) {
-    graphTitle = "Least Well-Off Distribution";
-    graphColor = "#ef4444"; 
-    targetText = "Least Well-Off Life Satisfaction";
-  } else if (currentCycle === ElectionCycle.SocietalUtility) {
-    graphTitle = "Societal Fairness Scatter";
-    graphColor = "#8b5cf6"; 
-    targetText = "Average Societal Utility";
-  } else {
-    graphTitle = "Personal Utility Scatter";
-    graphColor = "#3b82f6"; 
-    targetText = "Average Personal Utility";
-  }
+  // 1. THIS IS THE MISSING LINE! It loads all the settings for the current cycle.
+  const rule = FRAMEWORK_RULES[currentCycle];
 
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
       
-      {/* LEFT COLUMN: Single Cycle-Relevant Visualisation */}
+      {/* LEFT COLUMN */}
       <div className="col-span-4 flex flex-col h-full min-h-0">
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
-              <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">{graphTitle}</h3>
-              <p className="text-sm text-zinc-500 mt-1">Primary cycle metric</p>
+              {/* Uses the title from frameworkRules.ts */}
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">{rule.graphTitle}</h3>
+              
             </div>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none">↗</span>
           </div>
           <div className="flex-1 p-4 min-h-0">
             <D3Chart 
-              plotType={is1D ? '1D' : '2D'} 
+              plotType={rule.plotType} 
               chartData={dashboardChartData} 
               histogramData={dashboardHistogramData} 
               xAxisType={AxisVariable.LifeSatisfaction} 
-              yAxisType={yAxisType} 
-              color={graphColor}
+              yAxisType={rule.yAxisType} 
+              color={rule.graphColor}
             />
           </div>
         </div>
@@ -93,7 +74,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               >
                 <div className="absolute top-1 left-1.5 opacity-0 group-hover/minister:opacity-100 text-zinc-400 font-black text-xs transition-opacity">⤢</div>
 
-                <h4 className="text-[10px] lg:text-[11px] font-black text-zinc-800 uppercase tracking-widest leading-none mt-1 mb-1 lg:mb-2 text-center">
+                <h4 className="text-[10px] lg:text-[12px] font-black text-zinc-800 uppercase tracking-widest leading-none mt-1 mb-1 lg:mb-2 text-center">
                   {minister.name}
                 </h4>
 
@@ -115,18 +96,18 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        <div 
-          onClick={() => setActiveTab('electorate')}
-          className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group"
-        >
+        {/* Target Metric Score Box */}
+        <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
-          <div className="absolute top-0 left-0 w-full h-1 bg-pink-500" />
+          {/* Uses the color from frameworkRules.ts */}
+          <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Target Metric Score</p>
-          <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${currentApproval >= 60 ? 'text-white' : 'text-red-400'}`}>
+          {/* Uses the dynamic winThreshold from frameworkRules.ts */}
+          <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${currentApproval >= rule.winThreshold ? 'text-white' : 'text-red-400'}`}>
             {currentApproval.toFixed(1)}%
           </p>
           <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-            Target: Achieve an index of 60% based on <strong className="text-zinc-300">{targetText}</strong>.
+            Target: Achieve {rule.winThreshold}% based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
           </p>
         </div>
       </div>

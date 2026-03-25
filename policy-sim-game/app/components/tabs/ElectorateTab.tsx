@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Respondent, ElectionCycle } from "../../utils/types";
 import { WelfareMetrics } from "../../utils/WelfareMetrics";
+import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 
 interface ElectorateTabProps {
   initialPopulation: Respondent[];
@@ -38,6 +39,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
     const mapped = previewPopulation.map((r, i) => {
       let initialUtil = 0;
       let currentUtil = 0;
+      const rule = FRAMEWORK_RULES[currentCycle];
 
       if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
         initialUtil = initialPopulation[i].currentLS / 10;
@@ -51,14 +53,15 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       }
 
       const utilityShift = currentUtil - initialUtil;
-      const multiplier = utilityShift < 0 ? 2.5 : 1.2; 
+      // APPLY DYNAMIC RULES HERE
+      const multiplier = utilityShift < 0 ? rule.lossAversionMultiplier : rule.gainMultiplier; 
       const perceivedScore = currentUtil + (utilityShift * multiplier);
 
       return {
         ...r,
         initialLS: initialPopulation[i].currentLS,
         utilityShift,
-        isApproving: perceivedScore >= 0.60, 
+        isApproving: perceivedScore >= rule.voterTolerance, // DYNAMIC APPROVAL
         lsTrajectory: r.currentLS - initialPopulation[i].currentLS
       };
     });

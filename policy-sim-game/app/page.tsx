@@ -7,6 +7,7 @@ import { WelfareMetrics } from "./utils/WelfareMetrics";
 import { availablePolicies } from "./data/policies";
 import { PolicyEngine } from "./utils/PolicyEngine";
 import ElectionModal from "./components/ElectionModal";
+import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports
 import DashboardTab from "./components/tabs/DashboardTab";
@@ -156,96 +157,24 @@ export default function Home() {
   }, [previewPopulation, currentCycle, initialPopulation]);
 
   const ministers = useMemo(() => {
-    if (initialPopulation.length === 0 || previewPopulation.length === 0) return [];
-    
-    const allInitialLS = initialPopulation.map(p => p.currentLS);
-    const allCurrentLS = population.map(p => p.currentLS);
-    const allPreviewLS = previewPopulation.map(p => p.currentLS);
+    const activeRule = FRAMEWORK_RULES[currentCycle]; // Pull current rules
 
-    const getGroupUtility = (pop: Respondent[], allLS: number[], filterFn: (r: Respondent) => boolean) => {
-      const group = pop.filter(filterFn);
-      if (group.length === 0) return 0;
-      const total = group.reduce((sum, r) => {
-        if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
-          return sum + (r.currentLS / 10); 
-        } else if (currentCycle === ElectionCycle.PersonalUtility) {
-          return sum + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
-        } else {
-          return sum + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
-        }
-      }, 0);
-      return total / group.length;
-    };
-
-    const getStatus = (score: number, ministerName: string): 'happy' | 'neutral' | 'angry' => {
-      let happyThreshold = 0.85;
-      let neutralThreshold = 0.70;
-      
-      if (ministerName === "Equality" || ministerName === "Environment") {
-        happyThreshold = 0.88;
-        neutralThreshold = 0.75;
-      }
-
-      if (score >= happyThreshold) return 'happy';
-      if (score >= neutralThreshold) return 'neutral';
-      return 'angry';
-    };
-
-    const evaluateMinister = (name: string, filterFn: (r: Respondent) => boolean) => {
-      const baseScore = getGroupUtility(initialPopulation, allInitialLS, filterFn);
-      const projScore = getGroupUtility(previewPopulation, allPreviewLS, filterFn);
-      
-      const delta = projScore - baseScore; 
-      const lossAversionMultiplier = delta < 0 ? 2.5 : 1.2;
-      const perceivedScore = projScore + (delta * lossAversionMultiplier);
-      
-      const currentStatus = getStatus(perceivedScore, name);
-      
-      let supportLevel = 'neutral';
-      const prePolicyScore = getGroupUtility(population, allCurrentLS, filterFn);
-      const policyDelta = projScore - prePolicyScore;
-      
-      if (policyDelta > 0.005) supportLevel = 'supports';
-      if (policyDelta < -0.005) supportLevel = 'opposes';
-
-      let dynamicQuote = "";
-      if (currentStatus === 'happy') {
-        dynamicQuote = `${name} demographics are highly satisfied with our trajectory.`;
-      } else if (currentStatus === 'neutral') {
-        dynamicQuote = delta < -0.01 
-          ? `${name} demographics are stable, but frustrated by recent losses.`
-          : `${name} demographics are relatively stable, but watching closely.`;
-      } else { 
-        if (delta < -0.001) {
-          dynamicQuote = `"We are worse off than when you started!" - The ${name} demographic.`;
-        } else if (delta > 0.001) {
-          dynamicQuote = `"Any progress is too slow. The ${name} demographic demands radical action!"`;
-        } else {
-          dynamicQuote = `"We are suffering from systemic neglect. We need immediate support."`;
-        }
-      }
-
-      return {
-        name,
-        status: currentStatus,
-        color: currentStatus === 'happy' ? "bg-emerald-500 text-white shadow-emerald-200" : currentStatus === 'neutral' ? "bg-amber-400 text-white shadow-amber-200" : "bg-rose-500 text-white shadow-rose-200",
-        supportLevel,
-        delta: delta,
-        policyDelta: policyDelta, 
-        baseScore,
-        projScore,
-        quote: dynamicQuote
+    const evalMin = (n: string, f: (r: Respondent) => boolean) => {
+      const avg = (p: Respondent[]) => {
+        const g = p.filter(f); if (g.length === 0) return 0;
+        return g.reduce((s, r) => s + (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian ? r.currentLS / 10 : currentCycle === ElectionCycle.PersonalUtility ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities) : WelfareMetrics.evaluateDistribution(p.map(x => x.currentLS), r.societalUtilities)), 0) / g.length;
       };
+      
+      const proj = avg(previewPopulation), base = avg(initialPopulation), delta = proj - base;
+      
+      // APPLY DYNAMIC LOSS AVERSION HERE
+      const multiplier = delta < 0 ? activeRule.lossAversionMultiplier : activeRule.gainMultiplier;
+      const score = proj + (delta * multiplier);
+      
+      const status = score >= (n === "Equality" ? 0.88 : 0.85) ? 'happy' : score >= (n === "Equality" ? 0.75 : 0.70) ? 'neutral' : 'angry';
+      return { name: n, status, color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", delta, policyDelta: proj - avg(population), quote: `${n} concerns reflected.` };
     };
-
-    return [
-      evaluateMinister("Economy", r => r.demographics.wealth === 'Middle' || r.demographics.wealth === 'Wealthy'),
-      evaluateMinister("Equality", r => r.demographics.wealth === 'Poor'),
-      evaluateMinister("Youth", r => r.demographics.age === 'Youth' || r.demographics.isStudent || r.demographics.isParent),
-      evaluateMinister("Health", r => r.demographics.age === 'Elderly' || r.currentLS < 4),
-      evaluateMinister("Environment", r => r.demographics.isEnvironmentalist),
-      evaluateMinister("Transport", r => r.demographics.isCommuter)
-    ];
+    return [evalMin("Economy", r => r.demographics.wealth !== 'Poor'), evalMin("Equality", r => r.demographics.wealth === 'Poor'), evalMin("Youth", r => r.demographics.age === 'Youth'), evalMin("Health", r => r.demographics.age === 'Elderly'), evalMin("Environment", r => r.demographics.isEnvironmentalist), evalMin("Transport", r => r.demographics.isCommuter)];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
 
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<{
@@ -354,41 +283,26 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
-        <div className="flex items-center gap-8">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-zinc-800 leading-tight">Policy Simulator</h1>
-            <p className="text-xs font-bold text-pink-600 uppercase tracking-widest">
-              {currentCycle === ElectionCycle.Benthamite ? "Cycle 1: Benthamite" : 
-               currentCycle === ElectionCycle.Rawlsian ? "Cycle 2: Rawlsian" : 
-               currentCycle === ElectionCycle.SocietalUtility ? "Cycle 3: Societal Utility" : "Cycle 4: Personal Utility"}
-            </p>
-          </div>
-          
-          <nav className="relative flex gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200">
-            <div 
-              className="absolute top-1 bottom-1 w-32 bg-white rounded-md shadow-sm transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))` }}
-            />
-            {tabs.map((tab) => (
-              <button 
-                key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`relative z-10 w-32 py-1.5 text-xs font-bold uppercase rounded-md transition-colors duration-300 ${
-                  activeTab === tab ? 'text-pink-600' : 'text-zinc-500 hover:text-zinc-700'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </nav>
+        <div>
+          <h1 className="text-xl font-bold">Policy Simulator</h1>
+          <p className="text-xs font-bold text-pink-600 uppercase">
+            {FRAMEWORK_RULES[currentCycle].frameworkTitle}
+          </p>
         </div>
-
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-xs font-bold uppercase text-zinc-400">Time to Election</p>
-            <p className="text-lg font-mono font-bold text-zinc-700">Turn {currentTurn} / {totalTurns}</p>
-          </div>
-          <div className="w-px h-8 bg-zinc-200" />
+        <nav className="flex gap-1 bg-zinc-100 p-1 rounded-lg">
+          {tabs.map(t => (
+            <button 
+              key={t} 
+              onClick={() => setActiveTab(t as any)} 
+              className={`px-8 py-1.5 text-xs font-bold uppercase rounded-md ${activeTab === t ? 'bg-white text-pink-600' : 'text-zinc-500'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+        <div className="text-right">
+          <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
+          <p className="text-lg font-mono font-bold">{totalTurns - currentTurn + 1} Turns</p>
         </div>
       </header>
 
