@@ -105,33 +105,7 @@ export default function Home() {
     return PolicyEngine.applyPolicy(population, selectedPolicy);
   }, [population, selectedPolicy]);
 
-  const dashboardChartData = useMemo(() => {
-    if (previewPopulation.length === 0) return [];
-    const allLS = previewPopulation.map(p => p.currentLS);
-    return previewPopulation.map((r) => {
-      let yValue = r.currentLS;
-      if (currentCycle === ElectionCycle.PersonalUtility) {
-        yValue = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
-      } else if (currentCycle === ElectionCycle.SocietalUtility) {
-        yValue = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
-      }
-      return { id: r.id, x: r.currentLS, y: yValue };
-    });
-  }, [previewPopulation, currentCycle]);
-
-  const dashboardHistogramData = useMemo(() => {
-    if (previewPopulation.length === 0) return [];
-    const bins = Array(11).fill(0).map((_, i) => ({ name: i, count: 0 }));
-    
-    previewPopulation.forEach((r) => {
-      let binIndex = Math.round(r.currentLS);
-      binIndex = Math.max(0, Math.min(binIndex, 10));
-      if(bins[binIndex]) bins[binIndex].count++;
-    });
-    return bins;
-  }, [previewPopulation]);
-
-  // The Single Source of Truth for Winning
+  // 1. The Single Source of Truth for Winning
   const currentMetricScore = useMemo(() => {
     if (previewPopulation.length === 0) return 0;
     if (currentCycle === ElectionCycle.Benthamite) return previewPopulation.reduce((s, r) => s + r.currentLS, 0) / previewPopulation.length;
@@ -142,6 +116,24 @@ export default function Home() {
     const allLS = previewPopulation.map(p => p.currentLS);
     if (currentCycle === ElectionCycle.SocietalUtility) return previewPopulation.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / previewPopulation.length;
     return previewPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
+  }, [previewPopulation, currentCycle]);
+
+  // 2. Properly map the Y-axis data depending on the active cycle's metric for the 2D Charts
+  const chartData = useMemo(() => {
+    if (previewPopulation.length === 0) return [];
+    const allLS = previewPopulation.map(p => p.currentLS);
+    
+    return previewPopulation.map(r => {
+      let yVal = r.currentLS; // Default for 1D histograms (though unused)
+      
+      if (currentCycle === ElectionCycle.SocietalUtility) {
+        yVal = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+      } else if (currentCycle === ElectionCycle.PersonalUtility) {
+        yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      }
+      
+      return { id: r.id, x: r.currentLS, y: yVal };
+    });
   }, [previewPopulation, currentCycle]);
 
   const ministers = useMemo(() => {
@@ -299,12 +291,12 @@ export default function Home() {
           <DashboardTab 
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
-            dashboardChartData={previewPopulation.map(r => ({ id: r.id, x: r.currentLS, y: r.currentLS }))} 
+            dashboardChartData={chartData}
             dashboardHistogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
             ministers={ministers} 
             setSelectedMinister={setSelectedMinister} 
             selectedPolicy={selectedPolicy} 
-            currentMetricScore={currentMetricScore} // We only pass the metric score now
+            currentMetricScore={currentMetricScore} 
             currentDeck={currentDeck} 
             setSelectedPolicy={setSelectedPolicy} 
             handleApplyPolicy={handleApplyPolicy} 
@@ -321,9 +313,9 @@ export default function Home() {
         {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
         {activeTab === 'graphs' && (
           <GraphsTab 
-            currentCycle={currentCycle}
-            chartData={dashboardChartData}
-            histogramData={dashboardHistogramData}
+            currentCycle={currentCycle} 
+            chartData={chartData}
+            histogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
           />
         )}
         {activeTab === 'electorate' && (
