@@ -172,8 +172,8 @@ export default function Home() {
         color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", 
         delta, 
         policyDelta: proj - current,
-        currentScore: current,     // NEW: Explicit absolute score
-        projectedScore: proj,      // NEW: Explicit projected score
+        currentScore: current,     
+        projectedScore: proj,      
         quote: `${n} concerns reflected.` 
       };
     };

@@ -7,7 +7,7 @@ export class PolicyEngine {
 
       for (const rule of policy.specificRules) {
         
-        // NEW: Check demographic targeting
+        // Check demographic targeting
         if (rule.targetDemographic) {
           const td = rule.targetDemographic;
           if (td.wealth && r.demographics.wealth !== td.wealth) continue;
