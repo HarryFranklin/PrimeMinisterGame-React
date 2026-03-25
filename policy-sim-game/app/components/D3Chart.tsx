@@ -92,7 +92,17 @@ export default function D3Chart({
     if (plotType === '1D' && histogramData) {
       const xDomain = histogramData.map(d => d.name.toString());
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
-      const yScale = d3.scaleLinear().domain([0, d3.max(histogramData, d => d.count) || 10]).nice().range([height, 0]);
+      
+      // === SOFT CAP Y-AXIS LOGIC ===
+      const totalPop = d3.sum(histogramData, d => d.count);
+      const currentHighestBar = d3.max(histogramData, d => d.count) || 0;
+      
+      // The graph will never shrink below 30% of the total population.
+      // But if a bar exceeds 30%, the graph will expand to fit it.
+      const baselineMax = Math.ceil(totalPop * 0.30); 
+      const yDomainMax = Math.max(baselineMax, currentHighestBar);
+      
+      const yScale = d3.scaleLinear().domain([0, yDomainMax]).nice().range([height, 0]);
 
       chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale) as any).call(styleAxis);
       chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
