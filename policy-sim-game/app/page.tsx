@@ -150,22 +150,32 @@ export default function Home() {
   }, [previewPopulation, currentCycle]);
 
   const ministers = useMemo(() => {
-    const activeRule = FRAMEWORK_RULES[currentCycle]; // Pull current rules
-
+    const activeRule = FRAMEWORK_RULES[currentCycle];
     const evalMin = (n: string, f: (r: Respondent) => boolean) => {
       const avg = (p: Respondent[]) => {
         const g = p.filter(f); if (g.length === 0) return 0;
         return g.reduce((s, r) => s + (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian ? r.currentLS / 10 : currentCycle === ElectionCycle.PersonalUtility ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities) : WelfareMetrics.evaluateDistribution(p.map(x => x.currentLS), r.societalUtilities)), 0) / g.length;
       };
       
-      const proj = avg(previewPopulation), base = avg(initialPopulation), delta = proj - base;
+      const proj = avg(previewPopulation);
+      const base = avg(initialPopulation);
+      const current = avg(population); // The actual current score
+      const delta = proj - base;
       
-      // APPLY DYNAMIC LOSS AVERSION HERE
       const multiplier = delta < 0 ? activeRule.lossAversionMultiplier : activeRule.gainMultiplier;
       const score = proj + (delta * multiplier);
-      
       const status = score >= (n === "Equality" ? 0.88 : 0.85) ? 'happy' : score >= (n === "Equality" ? 0.75 : 0.70) ? 'neutral' : 'angry';
-      return { name: n, status, color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", delta, policyDelta: proj - avg(population), quote: `${n} concerns reflected.` };
+      
+      return { 
+        name: n, 
+        status, 
+        color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", 
+        delta, 
+        policyDelta: proj - current,
+        currentScore: current,     // NEW: Explicit absolute score
+        projectedScore: proj,      // NEW: Explicit projected score
+        quote: `${n} concerns reflected.` 
+      };
     };
     return [evalMin("Economy", r => r.demographics.wealth !== 'Poor'), evalMin("Equality", r => r.demographics.wealth === 'Poor'), evalMin("Youth", r => r.demographics.age === 'Youth'), evalMin("Health", r => r.demographics.age === 'Elderly'), evalMin("Environment", r => r.demographics.isEnvironmentalist), evalMin("Transport", r => r.demographics.isCommuter)];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
