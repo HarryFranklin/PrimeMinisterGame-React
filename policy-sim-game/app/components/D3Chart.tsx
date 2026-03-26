@@ -111,10 +111,71 @@ export default function D3Chart({
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 45).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       const bars = dataLayer.selectAll<SVGRectElement, any>("rect.bar").data(histogramData, d => d.name);
-      bars.join("rect").attr("class", "bar")
+      
+      bars.join("rect")
+        .attr("class", "bar")
+        .style("cursor", "crosshair")
+        .on("mouseenter", (event, d) => {
+          if (d.count === 0) return;
+          
+          // Create tooltip if it doesn't exist
+          let tooltip: any = d3.select("#chart-tooltip");
+          if (tooltip.empty()) {
+            tooltip = d3.select(containerRef.current).append("div")
+              .attr("id", "chart-tooltip")
+              .attr("class", "absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-lg p-3 min-w-[180px] text-zinc-800 animate-in fade-in zoom-in duration-150");
+          }
+
+          tooltip.style("opacity", 1).html(`
+            <div class="space-y-3">
+              <div class="border-b border-zinc-100 pb-1.5">
+                <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400">LS Score ${d.name}</p>
+                <p class="text-sm font-bold text-zinc-600">${d.count} Residents</p>
+              </div>
+              
+              <div class="space-y-2">
+                <div>
+                  <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Wealth Breakdown</p>
+                  <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
+                    <div style="width: ${d.breakdown.wealth.Poor}%" class="bg-rose-500"></div>
+                    <div style="width: ${d.breakdown.wealth.Middle}%" class="bg-blue-500"></div>
+                    <div style="width: ${d.breakdown.wealth.Wealthy}%" class="bg-emerald-500"></div>
+                  </div>
+                  <div class="flex justify-between text-[10px] mt-1 font-bold">
+                    <span class="text-rose-600">Poor ${Math.round(d.breakdown.wealth.Poor)}%</span>
+                    <span class="text-emerald-600">Rich ${Math.round(d.breakdown.wealth.Wealthy)}%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Key Demographics</p>
+                  <div class="grid grid-cols-2 gap-1 text-[10px] font-medium text-zinc-600">
+                    <span>Youth: ${Math.round(d.breakdown.age.Youth)}%</span>
+                    <span>Elderly: ${Math.round(d.breakdown.age.Elderly)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `);
+        })
+        .on("mousemove", (event) => {
+          const [x, y] = d3.pointer(event, containerRef.current);
+          // Keep tooltip within bounds
+          const chartWidth = containerRef.current?.clientWidth || 0;
+          const xPos = x + 200 > chartWidth ? x - 200 : x + 20;
+          
+          d3.select("#chart-tooltip")
+            .style("left", `${xPos}px`)
+            .style("top", `${y - 20}px`);
+        })
+        .on("mouseleave", () => {
+          d3.select("#chart-tooltip").style("opacity", 0);
+        })
         .transition().duration(500)
-        .attr("x", d => xScale(d.name.toString()) || 0).attr("y", d => yScale(d.count))
-        .attr("width", xScale.bandwidth()).attr("height", d => height - yScale(d.count))
+        .attr("x", d => xScale(d.name.toString()) || 0)
+        .attr("y", d => yScale(d.count))
+        .attr("width", xScale.bandwidth())
+        .attr("height", d => height - yScale(d.count))
         .attr("fill", chartColor)
         .attr("rx", 4);
 

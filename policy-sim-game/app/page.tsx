@@ -149,6 +149,37 @@ export default function Home() {
     });
   }, [previewPopulation, currentCycle]);
 
+  // 3. Calculate the 1D Histogram Data with Demographic Breakdowns
+  const histogramData = useMemo(() => {
+    return Array.from({ length: 11 }, (_, i) => {
+      const peopleInBar = previewPopulation.filter(r => Math.round(r.currentLS) === i);
+      const total = peopleInBar.length;
+
+      const getPct = (count: number) => (total > 0 ? (count / total) * 100 : 0);
+
+      return {
+        name: i,
+        count: total,
+        breakdown: {
+          wealth: {
+            Poor: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Poor').length),
+            Middle: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Middle').length),
+            Wealthy: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Wealthy').length),
+          },
+          age: {
+            Youth: getPct(peopleInBar.filter(p => p.demographics.age === 'Youth').length),
+            Adult: getPct(peopleInBar.filter(p => p.demographics.age === 'Adult').length),
+            Elderly: getPct(peopleInBar.filter(p => p.demographics.age === 'Elderly').length),
+          },
+          traits: {
+            Commuters: getPct(peopleInBar.filter(p => p.demographics.isCommuter).length),
+            Environmentalists: getPct(peopleInBar.filter(p => p.demographics.isEnvironmentalist).length),
+          }
+        }
+      };
+    });
+  }, [previewPopulation]);
+
   const ministers = useMemo(() => {
     const activeRule = FRAMEWORK_RULES[currentCycle];
     const evalMin = (n: string, f: (r: Respondent) => boolean) => {
@@ -315,7 +346,7 @@ export default function Home() {
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
             dashboardChartData={chartData} 
-            dashboardHistogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
+            dashboardHistogramData={histogramData}
             ministers={ministers} 
             setSelectedMinister={setSelectedMinister} 
             selectedPolicy={selectedPolicy} 
@@ -339,7 +370,7 @@ export default function Home() {
           <GraphsTab 
             currentCycle={currentCycle} 
             chartData={chartData} 
-            histogramData={Array.from({length:11}, (_,i)=>({name:i, count: previewPopulation.filter(r => Math.round(r.currentLS) === i).length}))} 
+            histogramData={histogramData} 
             currentMetricScore={currentMetricScore}
             initialMetricScore={initialMetricScore} 
           />
