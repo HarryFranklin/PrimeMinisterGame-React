@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   output: 'export',
   basePath: '/PrimeMinisterGame-React',
+  assetPrefix: '/PrimeMinisterGame-React/', 
 };
 
 export default nextConfig;
