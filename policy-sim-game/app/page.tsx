@@ -323,16 +323,29 @@ export default function Home() {
             {FRAMEWORK_RULES[currentCycle].frameworkTitle}
           </p>
         </div>
-        <nav className="flex gap-1 bg-zinc-100 p-1 rounded-lg">
-          {tabs.map(t => (
-            <button 
-              key={t} 
-              onClick={() => setActiveTab(t as any)} 
-              className={`px-8 py-1.5 text-xs font-bold uppercase rounded-md ${activeTab === t ? 'bg-white text-pink-600' : 'text-zinc-500'}`}
-            >
-              {t}
-            </button>
-          ))}
+        <nav className="bg-zinc-100 p-1 rounded-lg">
+          <div className="relative flex gap-1">
+            {/* Sliding Background Indicator */}
+            <div 
+              className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
+              style={{
+                width: `calc((100% - ${(tabs.length - 1) * 4}px) / ${tabs.length})`,
+                transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
+              }}
+            />
+            
+            {tabs.map((t) => (
+              <button 
+                key={t} 
+                onClick={() => setActiveTab(t as any)} 
+                className={`relative z-10 flex-1 px-8 py-1.5 text-xs font-bold uppercase rounded-md transition-colors duration-300 ${
+                  activeTab === t ? 'text-pink-600' : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </nav>
         <div className="text-right">
           <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
