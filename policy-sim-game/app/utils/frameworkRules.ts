@@ -13,6 +13,7 @@ export interface FrameworkRule {
   metricTarget: number;            // The sole condition to win the election
   lossAversionMultiplier: number;  // Used to calculate Minister/Electorate anger
   gainMultiplier: number;          
+  voterTolerance: number;          // Baseline utility required for a voter to approve
   
   // Graph Config
   plotType: '1D' | '2D';
@@ -32,6 +33,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     metricTarget: 5.5, 
     lossAversionMultiplier: 2.0, 
     gainMultiplier: 1.0, 
+    voterTolerance: 0.5,           
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility
   },
@@ -46,6 +48,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     metricTarget: 5.0, 
     lossAversionMultiplier: 3.0, 
     gainMultiplier: 1.2,
+    voterTolerance: 0.5,    
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     highlightRawlsianFloor: true
@@ -61,6 +64,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     metricTarget: 0.55, 
     lossAversionMultiplier: 2.5,
     gainMultiplier: 1.2,
+    voterTolerance: 0.5,          
     plotType: '2D',
     yAxisType: AxisVariable.SocietalFairness
   },
@@ -75,6 +79,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     metricTarget: 0.55, 
     lossAversionMultiplier: 2.5,
     gainMultiplier: 1.2,
+    voterTolerance: 0.5,         
     plotType: '2D',
     yAxisType: AxisVariable.PersonalUtility
   }
