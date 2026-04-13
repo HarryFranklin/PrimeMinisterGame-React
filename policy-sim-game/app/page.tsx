@@ -382,7 +382,8 @@ export default function Home() {
         )}
         {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
         {activeTab === 'graphs' && (
-          <GraphsTab 
+          <GraphsTab
+            setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
             chartData={chartData} 
             histogramData={histogramData} 

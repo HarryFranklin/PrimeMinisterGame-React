@@ -4,15 +4,16 @@ import { AxisVariable, ElectionCycle } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 
 interface GraphsTabProps {
+  setActiveTab: (tab: any) => void;
   currentCycle: ElectionCycle;
   chartData: any[];
   histogramData: any[];
-  currentMetricScore: number; // NEW
-  initialMetricScore: number; // NEW
+  currentMetricScore: number;
+  initialMetricScore: number;
 }
 
 export default function GraphsTab({ 
-  currentCycle, chartData, histogramData, currentMetricScore, initialMetricScore 
+  setActiveTab, currentCycle, chartData, histogramData, currentMetricScore, initialMetricScore 
 }: GraphsTabProps) {
   
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -20,6 +21,22 @@ export default function GraphsTab({
 
   return (
     <div className="flex flex-col gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
+
+      {/* Back Navigation Bar */}
+      <button 
+        onClick={() => setActiveTab('dashboard')}
+        className="w-full bg-zinc-50/50 hover:bg-zinc-100/50 rounded-xl border border-zinc-200 shadow-sm p-4 flex items-center gap-3 shrink-0 transition-all group cursor-pointer text-left"
+      >
+        <span className="text-xl leading-none mb-1 text-zinc-400 group-hover:text-pink-600 transition-colors">←</span>
+        <span className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">
+          Back to Dashboard
+        </span>
+      </button>
+
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 shrink-0">
+        <h2 className="text-xl font-bold text-zinc-800 mb-2">{rule.graphTitle}</h2>
+        <p className="text-sm text-zinc-500 leading-relaxed max-w-4xl">{rule.description}</p>
+      </div>
       <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 shrink-0">
         <h2 className="text-xl font-bold text-zinc-800 mb-2">{rule.graphTitle}</h2>
         <p className="text-sm text-zinc-500 leading-relaxed max-w-4xl">{rule.description}</p>
