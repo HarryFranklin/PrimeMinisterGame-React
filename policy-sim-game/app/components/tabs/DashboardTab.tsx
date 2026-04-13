@@ -50,9 +50,9 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
-              // === ANNOTATION PROPS ===
+              // Freeze the target line so it doesn't move during policy preview
               targetValue={is1D ? rule.metricTarget : undefined}
-              currentValue={is1D ? currentMetricScore : undefined}
+              currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
             />
           </div>
@@ -100,21 +100,30 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         {/* Clean, Unified Target Box */}
+        {/* Clean, Unified Target Box */}
         <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
-          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Target Metric Score</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Current Metric Score</p>
           
           <div className="flex items-baseline gap-2">
-            <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${currentMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400'}`}>
-              {is1D ? currentMetricScore.toFixed(1) : currentMetricScore.toFixed(2)}
+            {/* Freeze the large number readout to initialMetricScore */}
+            <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${initialMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400'}`}>
+              {is1D ? initialMetricScore.toFixed(1) : initialMetricScore.toFixed(2)}
             </p>
             <p className="text-zinc-500 font-bold text-lg">/ {is1D ? '10' : '1.0'}</p>
           </div>
 
-          <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-            Target: Achieve <strong className={currentMetricScore >= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300'}>{rule.metricTarget}</strong> based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
-          </p>
+          {/* Add a suspenseful warning if a policy is selected */}
+          {selectedPolicy ? (
+             <p className="text-xs text-pink-400 font-bold uppercase tracking-widest mt-3 animate-pulse">
+               Predicted Outcome Hidden
+             </p>
+          ) : (
+            <p className="text-sm text-zinc-500 mt-2 text-center px-4">
+              Target: Achieve <strong className={initialMetricScore >= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300'}>{rule.metricTarget}</strong> based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
+            </p>
+          )}
         </div>
       </div>
 
