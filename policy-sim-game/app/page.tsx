@@ -323,13 +323,14 @@ export default function Home() {
             {FRAMEWORK_RULES[currentCycle].frameworkTitle}
           </p>
         </div>
-        <nav className="bg-zinc-100 p-1 rounded-lg">
-          <div className="relative flex gap-1">
+        <nav className="bg-zinc-100 p-1 rounded-lg w-full max-w-3xl"> 
+          <div className="relative grid grid-cols-5 gap-1">
             {/* Sliding Background Indicator */}
             <div 
               className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
               style={{
-                width: `calc((100% - ${(tabs.length - 1) * 4}px) / ${tabs.length})`,
+                // 4 gaps of 4px = 16px total gap space
+                width: `calc((100% - 16px) / 5)`, 
                 transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
               }}
             />
@@ -338,7 +339,8 @@ export default function Home() {
               <button 
                 key={t} 
                 onClick={() => setActiveTab(t as any)} 
-                className={`relative z-10 flex-1 px-8 py-1.5 text-xs font-bold uppercase rounded-md transition-colors duration-300 ${
+                // Note: Removed px-8 and added w-full
+                className={`relative z-10 w-full py-1.5 text-xs font-bold uppercase rounded-md transition-colors duration-300 ${
                   activeTab === t ? 'text-pink-600' : 'text-zinc-500 hover:text-zinc-700'
                 }`}
               >
