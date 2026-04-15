@@ -169,7 +169,8 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         <div className="flex-1 flex flex-col p-4 gap-3 min-h-0 overflow-hidden">
-          {currentDeck.map((policy) => {
+          {/* We use .slice(0, 3) here to guarantee the UI only ever attempts to render a maximum of 3 policies */}
+          {currentDeck.slice(0, 3).map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
             return (
               <button

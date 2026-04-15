@@ -66,20 +66,30 @@ export default function Home() {
   // #endregion
 
   // #region Deck Management
+  
+  // Draws 3 random policies from the deck, ensuring no duplicates from previous turns
   const drawDeck = useCallback((used: Set<string>) => {
+    // 1. Filter out policies we've already enacted
     let available = availablePolicies.filter(p => !used.has(p.id));
-    if (available.length < 4) {
+    
+    // 2. If we run out of cards, reshuffle the entire deck
+    if (available.length < 3) {
       available = availablePolicies;
       setUsedPolicies(new Set()); 
     }
 
-    const pickRandom = (arr: Policy[]) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
     const deck: Policy[] = [];
-    const add = (p: Policy | null) => { if (p && !deck.find(d => d.id === p.id)) deck.push(p); };
-
-    while (deck.length < 4 && available.length > deck.length) {
-      add(pickRandom(available));
+    
+    // 3. Keep picking random cards until we have exactly 3
+    while (deck.length < 3 && available.length > 0) {
+      const randomIndex = Math.floor(Math.random() * available.length);
+      const picked = available[randomIndex];
+      
+      // Add it to our hand and remove it from the available pool so we don't draw it twice in one turn
+      deck.push(picked);
+      available.splice(randomIndex, 1);
     }
+    
     return deck;
   }, []);
 
