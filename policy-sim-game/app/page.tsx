@@ -205,17 +205,15 @@ export default function Home() {
   // 3b. Projected Histogram Data (After Policy)
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
-  // Generates the cabinet of ministers, mapping each to a specific demographic slice
+  // Generates the cabinet of ministers
   const ministers = useMemo(() => {
     const activeRule = FRAMEWORK_RULES[currentCycle];
     
-    // Evaluates a specific demographic slice's utility and returns a minister object
-    const evalMin = (n: string, f: (r: Respondent) => boolean) => {
+    const evalMin = (n: string, mandate: string, f: (r: Respondent) => boolean) => {
       const avg = (p: Respondent[]) => {
         const g = p.filter(f); 
         if (g.length === 0) return 0;
         
-        // Use the appropriate metric evaluation depending on the current election cycle
         return g.reduce((s, r) => s + (
           currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian 
             ? r.currentLS / 10 
@@ -230,33 +228,30 @@ export default function Home() {
       const current = avg(population); 
       const delta = proj - base;
       
-      // Apply the framework's specific loss aversion multiplier
       const multiplier = delta < 0 ? activeRule.lossAversionMultiplier : activeRule.gainMultiplier;
       const score = proj + (delta * multiplier);
       
-      // Calculate happiness thresholds
       const status = score >= 0.85 ? 'happy' : score >= 0.70 ? 'neutral' : 'angry';
       
       return { 
         name: n, 
+        mandate, 
         status, 
         color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", 
         delta, 
         policyDelta: proj - current, 
         currentScore: current, 
-        projectedScore: proj, 
-        quote: `${n} concerns reflected.` 
+        projectedScore: proj 
       };
     };
 
-    // Return the 6 ministers mapped strictly to our 6 active demographic brackets
     return [
-        evalMin("Welfare", r => r.demographics.wealth === 'Poor'), 
-        evalMin("Home Office", r => r.demographics.wealth === 'Middle'), 
-        evalMin("Treasury", r => r.demographics.wealth === 'Wealthy'),
-        evalMin("Education", r => r.demographics.age === 'Youth'),
-        evalMin("Work", r => r.demographics.age === 'Adult'),
-        evalMin("Health", r => r.demographics.age === 'Elderly')
+        evalMin("Welfare Secretary", "Focus: Low Income", r => r.demographics.wealth === 'Poor'),
+        evalMin("Home Secretary", "Focus: Middle Class", r => r.demographics.wealth === 'Middle'),
+        evalMin("Chancellor", "Focus: High Earners", r => r.demographics.wealth === 'Wealthy'),
+        evalMin("Education Secretary", "Focus: Youth", r => r.demographics.age === 'Youth'),
+        evalMin("Business Secretary", "Focus: Working Adults", r => r.demographics.age === 'Adult'),
+        evalMin("Pensions Secretary", "Focus: Elderly", r => r.demographics.age === 'Elderly')
     ];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
 

@@ -99,25 +99,43 @@ export default function DashboardTab(props: DashboardTabProps) {
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none mt-1">↗</span>
           </div>
           
-          {/* The Cabinet UI */}
-          <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-3 lg:gap-4 flex-1 min-h-0">
+          <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-4 lg:gap-6 flex-1 min-h-0">
             {ministers.map((minister, i) => (
               <div 
                 key={i} 
                 onClick={(e) => { e.stopPropagation(); setSelectedMinister(minister); }}
-                className="flex flex-col items-center justify-between p-2 rounded-lg border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full"
+                className="flex flex-col items-center justify-between p-3 rounded-xl border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full"
               >
-                <h4 className="text-[12px] lg:text-[12px] font-black text-zinc-800 uppercase tracking-widest leading-none mt-1 mb-1 lg:mb-2 text-center h-6 flex items-center justify-center">
-                  {minister.name}
-                </h4>
-                <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center ${minister.color} border-2 lg:border-4 border-white shadow-md text-xl lg:text-2xl transition-colors shrink-0`}>
+                {/* Minister Title & Explicit Mandate */}
+                <div className="flex flex-col items-center justify-start mt-1 mb-2 h-12 w-full">
+                  <h4 className="text-xs lg:text-sm font-black text-zinc-800 uppercase tracking-widest leading-tight text-center">
+                    {/* Prints the sector name (e.g. "Welfare") */}
+                    {minister.name.replace(' Secretary', '')}
+                    
+                    {/* Conditionally prints "Secretary" on its own line below */}
+                    {minister.name.includes('Secretary') && (
+                      <span className="block text-[10px] lg:text-xs text-zinc-600 mt-0.5">
+                        Secretary
+                      </span>
+                    )}
+                  </h4>
+                  {/* Mandate Text */}
+                  <p className="text-[10px] lg:text-xs font-bold text-zinc-400 mt-1.5 text-center leading-none">
+                    {minister.mandate}
+                  </p>
+                </div>
+                
+                {/* Basic Minister Emoji */}
+                <div className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center ${minister.color} border-4 border-white shadow-md text-3xl lg:text-4xl transition-colors shrink-0 mt-2`}>
                     {minister.status === 'happy' && '😊'}
                     {minister.status === 'neutral' && '😐'}
                     {minister.status === 'angry' && '😠'}
                 </div>
-                <div className="h-5 lg:h-6 flex items-center justify-center mt-1 lg:mt-2 shrink-0">
+
+                <div className="h-6 flex items-center justify-center mt-3 shrink-0">
+                  {/* Policy Delta Badge */}
                   {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
-                    <span className={`text-[9px] lg:text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    <span className={`text-xs lg:text-sm font-black px-3 py-1 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {minister.policyDelta > 0 ? '↑' : '↓'} {(Math.abs(minister.policyDelta) * 100).toFixed(1)}%
                     </span>
                   ) : null}
