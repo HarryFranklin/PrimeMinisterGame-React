@@ -362,12 +362,12 @@ export default function Home() {
           </p>
         </div>
         <nav className="bg-zinc-100 p-1 rounded-lg w-full max-w-3xl"> 
-          <div className="relative grid grid-cols-5 gap-1">
+          <div className="relative grid grid-cols-4 gap-1">
             {/* Sliding Background Indicator */}
             <div 
               className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
               style={{
-                // 3 gaps of 4px = 12px total gap space
+                // 3 gaps of 4px = 12px total gap space, divided by 4 tabs
                 width: `calc((100% - 12px) / 4)`, 
                 transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
               }}
@@ -377,7 +377,6 @@ export default function Home() {
               <button 
                 key={t} 
                 onClick={() => setActiveTab(t as any)} 
-                // Note: Removed px-8 and added w-full
                 className={`relative z-10 w-full py-1.5 text-xs font-bold uppercase rounded-md transition-colors duration-300 ${
                   activeTab === t ? 'text-pink-600' : 'text-zinc-500 hover:text-zinc-700'
                 }`}
