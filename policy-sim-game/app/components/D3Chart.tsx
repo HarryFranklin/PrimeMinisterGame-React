@@ -60,7 +60,7 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 40, right: 30, bottom: 60, left: 70 }; // Increased top margin for labels
+    const margin = { top: 40, right: 30, bottom: 60, left: 70 }; 
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -78,7 +78,7 @@ export default function D3Chart({
       chart.append("text").attr("class", "label-x");
       chart.append("text").attr("class", "label-y").attr("transform", "rotate(-90)");
       chart.append("g").attr("class", "data-layer");
-      chart.append("g").attr("class", "annotation-layer"); // Dedicated layer for our lines
+      chart.append("g").attr("class", "annotation-layer"); 
       prevPlotType.current = plotType;
       prevXAxis.current = xAxisType;
       prevYAxis.current = yAxisType;
@@ -118,12 +118,11 @@ export default function D3Chart({
         .on("mouseenter", (event, d) => {
           if (d.count === 0) return;
           
-          // Create tooltip if it doesn't exist
-          let tooltip: any = d3.select("#chart-tooltip");
+          // Select the tooltip specifically within THIS component's container
+          let tooltip: any = d3.select(containerRef.current).select(".chart-tooltip");
           if (tooltip.empty()) {
             tooltip = d3.select(containerRef.current).append("div")
-              .attr("id", "chart-tooltip")
-              .attr("class", "absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-lg p-3 min-w-[180px] text-zinc-800 animate-in fade-in zoom-in duration-150");
+              .attr("class", "chart-tooltip absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-lg p-3 min-w-[180px] text-zinc-800 animate-in fade-in zoom-in duration-150");
           }
 
           tooltip.style("opacity", 1).html(`
@@ -160,16 +159,17 @@ export default function D3Chart({
         })
         .on("mousemove", (event) => {
           const [x, y] = d3.pointer(event, containerRef.current);
-          // Keep tooltip within bounds
           const chartWidth = containerRef.current?.clientWidth || 0;
           const xPos = x + 200 > chartWidth ? x - 200 : x + 20;
           
-          d3.select("#chart-tooltip")
+          // Position the tooltip within THIS container
+          d3.select(containerRef.current).select(".chart-tooltip")
             .style("left", `${xPos}px`)
             .style("top", `${y - 20}px`);
         })
         .on("mouseleave", () => {
-          d3.select("#chart-tooltip").style("opacity", 0);
+          // Hide the tooltip within THIS container
+          d3.select(containerRef.current).select(".chart-tooltip").style("opacity", 0);
         })
         .transition().duration(500)
         .attr("x", d => xScale(d.name.toString()) || 0)
@@ -180,9 +180,8 @@ export default function D3Chart({
         .attr("rx", 4);
 
       // === DRAW ANNOTATIONS ===
-      annotationLayer.selectAll("*").remove(); // Clear old lines
+      annotationLayer.selectAll("*").remove();
 
-      // Helper to map continuous 0-10 value accurately onto the band scale
       const getContinuousX = (val: number) => {
         const step = xScale.step();
         const offset = (xScale("0") as number) || 0;
@@ -193,7 +192,6 @@ export default function D3Chart({
         if (val === undefined) return;
         const xPos = getContinuousX(val);
 
-        // Draw Line
         annotationLayer.append("line")
           .attr("x1", xPos).attr("x2", xPos)
           .attr("y1", yPos + 10).attr("y2", height)
@@ -201,14 +199,12 @@ export default function D3Chart({
           .attr("stroke-dasharray", dashed ? "4,4" : "none")
           .style("opacity", 0.9);
 
-        // Draw Text Background Pill
         annotationLayer.append("rect")
           .attr("x", xPos - 35).attr("y", yPos - 12)
           .attr("width", 70).attr("height", 16)
           .attr("fill", color).attr("rx", 8)
           .style("opacity", 0.15);
 
-        // Draw Text
         annotationLayer.append("text")
           .attr("x", xPos).attr("y", yPos)
           .attr("text-anchor", "middle")
@@ -219,11 +215,9 @@ export default function D3Chart({
           .text(`${label}: ${val.toFixed(1)}`);
       };
 
-      // 1. Draw Start and Target
       drawLine(initialValue, "#71717a", "Start", -20, true);   
       drawLine(targetValue, "#10b981", "Target", -5, false);    
 
-      // 2. Only draw 'Current' if it is noticeably different from the Start value
       const isAtStart = currentValue !== undefined && initialValue !== undefined && Math.abs(currentValue - initialValue) < 0.01;
       
       if (!isAtStart) {
@@ -231,7 +225,7 @@ export default function D3Chart({
       }
 
     } else if (plotType === '2D') {
-      annotationLayer.selectAll("*").remove(); // Clear lines if switching to 2D
+      annotationLayer.selectAll("*").remove(); 
       
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, width]);
       const yScale = d3.scaleLinear().domain(getAxisDomain(yAxisType)).range([height, 0]);
@@ -246,5 +240,5 @@ export default function D3Chart({
     }
   }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, targetValue, currentValue, initialValue]);
 
-  return <div ref={containerRef} className="w-full h-full"><svg ref={svgRef}></svg></div>;
+  return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }
