@@ -6,57 +6,89 @@ import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 interface GraphsTabProps {
   setActiveTab: (tab: any) => void;
   currentCycle: ElectionCycle;
-  chartData: any[];
-  histogramData: any[];
+  currentChartData: any[];
+  previewChartData: any[];
+  currentHistogramData: any[];
+  previewHistogramData: any[];
   currentMetricScore: number;
   initialMetricScore: number;
 }
 
-export default function GraphsTab({ 
-  setActiveTab, currentCycle, chartData, histogramData, currentMetricScore, initialMetricScore 
-}: GraphsTabProps) {
-  
+export default function GraphsTab(props: GraphsTabProps) {
+  const { 
+    currentCycle, 
+    currentChartData, previewChartData, 
+    currentHistogramData, previewHistogramData, 
+    initialMetricScore 
+  } = props;
+
   const rule = FRAMEWORK_RULES[currentCycle];
   const is1D = rule.plotType === '1D';
 
   return (
-    <div className="flex flex-col gap-6 h-full w-full animate-in fade-in duration-300 overflow-hidden">
-
-      {/* Back Navigation Bar */}
-      <button 
-        onClick={() => setActiveTab('dashboard')}
-        className="w-full bg-zinc-50/50 hover:bg-zinc-100/50 rounded-xl border border-zinc-200 shadow-sm p-4 flex items-center gap-3 shrink-0 transition-all group cursor-pointer text-left"
-      >
-        <span className="text-xl leading-none mb-1 text-zinc-400 group-hover:text-pink-600 transition-colors">←</span>
-        <span className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">
-          Back to Dashboard
-        </span>
-      </button>
-
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 shrink-0">
-        <h2 className="text-xl font-bold text-zinc-800 mb-2">{rule.graphTitle}</h2>
-        <p className="text-sm text-zinc-500 leading-relaxed max-w-4xl">{rule.description}</p>
-      </div>
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-6 shrink-0">
-        <h2 className="text-xl font-bold text-zinc-800 mb-2">{rule.graphTitle}</h2>
-        <p className="text-sm text-zinc-500 leading-relaxed max-w-4xl">{rule.description}</p>
-      </div>
-
-      <div className="flex-1 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col min-h-0 relative">
-        <div className="flex-1 p-6 min-h-0">
-          <D3Chart 
-            plotType={rule.plotType} 
-            chartData={chartData} 
-            histogramData={histogramData} 
-            xAxisType={AxisVariable.LifeSatisfaction} 
-            yAxisType={rule.yAxisType} 
-            color={rule.graphColor}
-            // === NEW ANNOTATION PROPS ===
-            targetValue={is1D ? rule.metricTarget : undefined}
-            currentValue={is1D ? currentMetricScore : undefined}
-            initialValue={is1D ? initialMetricScore : undefined}
-          />
+    <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
+      
+      {/* Header */}
+      <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0">
+        <div>
+          <h2 className="text-xl font-bold text-zinc-800">Distribution Analysis</h2>
+          <p className="text-sm text-zinc-500">Detailed side-by-side comparison of policy impacts on the electorate.</p>
         </div>
+        <div className="text-right">
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Current Framework</p>
+          <p className="text-lg font-black" style={{ color: rule.graphColor }}>{rule.frameworkTitle}</p>
+        </div>
+      </div>
+
+      {/* Side-by-Side Graphs */}
+      <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
+        
+        {/* Left Column: Current State */}
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl shrink-0 flex justify-between items-center">
+             <div>
+               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">Current State</h3>
+               <p className="text-xs text-zinc-400 font-medium mt-1">Before policy enactment</p>
+             </div>
+          </div>
+          <div className="flex-1 p-6 min-h-0">
+            <D3Chart 
+              plotType={rule.plotType} 
+              chartData={currentChartData} 
+              histogramData={currentHistogramData} 
+              xAxisType={AxisVariable.LifeSatisfaction} 
+              yAxisType={rule.yAxisType} 
+              color="#d4d4d8" // Ghost grey
+              targetValue={is1D ? rule.metricTarget : undefined}
+              currentValue={is1D ? initialMetricScore : undefined}
+              initialValue={is1D ? initialMetricScore : undefined}
+            />
+          </div>
+        </div>
+
+        {/* Right Column: Projected State */}
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl shrink-0 flex justify-between items-center">
+             <div>
+               <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: rule.graphColor }}>Projected State</h3>
+               <p className="text-xs text-zinc-500 font-medium mt-1">Estimated impact of selected policy</p>
+             </div>
+          </div>
+          <div className="flex-1 p-6 min-h-0">
+            <D3Chart 
+              plotType={rule.plotType} 
+              chartData={previewChartData} 
+              histogramData={previewHistogramData} 
+              xAxisType={AxisVariable.LifeSatisfaction} 
+              yAxisType={rule.yAxisType} 
+              color={rule.graphColor}
+              targetValue={is1D ? rule.metricTarget : undefined}
+              currentValue={is1D ? initialMetricScore : undefined}
+              initialValue={is1D ? initialMetricScore : undefined}
+            />
+          </div>
+        </div>
+
       </div>
     </div>
   );

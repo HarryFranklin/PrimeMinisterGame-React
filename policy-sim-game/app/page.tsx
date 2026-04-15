@@ -11,7 +11,6 @@ import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports
 import DashboardTab from "./components/tabs/DashboardTab";
-import DemographicsTab from "./components/tabs/DemographicsTab";
 import MinistersTab from "./components/tabs/MinistersTab";
 import GraphsTab from "./components/tabs/GraphsTab";
 import ElectorateTab from "./components/tabs/ElectorateTab";
@@ -139,19 +138,26 @@ export default function Home() {
   }, [population, currentCycle]);
 
   // 2. Properly map the Y-axis data depending on the active cycle's metric for the 2D Charts
-  const chartData = useMemo(() => {
+  // The Before State (2D Scatter Data)
+  const currentChartData = useMemo(() => {
+    if (population.length === 0) return [];
+    const allLS = population.map(p => p.currentLS);
+    return population.map(r => {
+      let yVal = r.currentLS; 
+      if (currentCycle === ElectionCycle.SocietalUtility) yVal = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+      else if (currentCycle === ElectionCycle.PersonalUtility) yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      return { id: r.id, x: r.currentLS, y: yVal };
+    });
+  }, [population, currentCycle]);
+
+  // The After State (2D Scatter Data)
+  const previewChartData = useMemo(() => {
     if (previewPopulation.length === 0) return [];
     const allLS = previewPopulation.map(p => p.currentLS);
-    
     return previewPopulation.map(r => {
-      let yVal = r.currentLS; // Default for 1D histograms (though unused)
-      
-      if (currentCycle === ElectionCycle.SocietalUtility) {
-        yVal = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
-      } else if (currentCycle === ElectionCycle.PersonalUtility) {
-        yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
-      }
-      
+      let yVal = r.currentLS; 
+      if (currentCycle === ElectionCycle.SocietalUtility) yVal = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+      else if (currentCycle === ElectionCycle.PersonalUtility) yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
       return { id: r.id, x: r.currentLS, y: yVal };
     });
   }, [previewPopulation, currentCycle]);
@@ -343,7 +349,7 @@ export default function Home() {
   // #endregion
 
   // #region Main Render
-  const tabs = ['dashboard', 'demographics', 'electorate', 'ministers', 'graphs'];
+  const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'];
   const activeTabIndex = tabs.indexOf(activeTab);
 
   return (
@@ -361,8 +367,8 @@ export default function Home() {
             <div 
               className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
               style={{
-                // 4 gaps of 4px = 16px total gap space
-                width: `calc((100% - 16px) / 5)`, 
+                // 3 gaps of 4px = 12px total gap space
+                width: `calc((100% - 12px) / 4)`, 
                 transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
               }}
             />
@@ -392,7 +398,8 @@ export default function Home() {
           <DashboardTab 
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
-            dashboardChartData={chartData} 
+            currentChartData={currentChartData}
+            previewChartData={previewChartData}
             currentHistogramData={currentHistogramData}
             previewHistogramData={previewHistogramData}
             ministers={ministers} 
@@ -406,21 +413,15 @@ export default function Home() {
             handleApplyPolicy={handleApplyPolicy} 
           />
         )}
-        {activeTab === 'demographics' && (
-          <DemographicsTab 
-            demoStats={demoStats} 
-            initialDemoStats={initialDemoStats} 
-            currentTurn={currentTurn} 
-            setSelectedHistoryGroup={setSelectedHistoryGroup} 
-          />
-        )}
         {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
         {activeTab === 'graphs' && (
           <GraphsTab
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
-            chartData={chartData} 
-            histogramData={previewHistogramData}
+            currentChartData={currentChartData} 
+            previewChartData={previewChartData} 
+            currentHistogramData={currentHistogramData} 
+            previewHistogramData={previewHistogramData} 
             currentMetricScore={currentMetricScore}
             initialMetricScore={initialMetricScore} 
           />

@@ -6,9 +6,10 @@ import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 interface DashboardTabProps {
   setActiveTab: (tab: any) => void;
   currentCycle: ElectionCycle;
-  dashboardChartData: any[];
-  currentHistogramData: any[]; // Updated
-  previewHistogramData: any[]; // Added
+  currentChartData: any[];
+  previewChartData: any[];
+  currentHistogramData: any[];
+  previewHistogramData: any[];
   ministers: any[];
   setSelectedMinister: (m: any) => void;
   selectedPolicy: Policy | null;
@@ -22,11 +23,11 @@ interface DashboardTabProps {
 
 export default function DashboardTab(props: DashboardTabProps) {
   const { 
-    setActiveTab, currentCycle, dashboardChartData, 
+    setActiveTab, currentCycle, 
+    currentChartData, previewChartData,
     currentHistogramData, previewHistogramData, 
     ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
-    turnMetricScore,
-    currentDeck, setSelectedPolicy, handleApplyPolicy 
+    turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -49,9 +50,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           <div className="flex-1 p-4 min-h-0">
             <D3Chart 
               plotType={rule.plotType} 
-              chartData={dashboardChartData} 
+              chartData={currentChartData}
               histogramData={currentHistogramData} 
-              xAxisType={AxisVariable.LifeSatisfaction} 
+              xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color="#d4d4d8" // Neutral grey to denote the "Ghost/Before" graph
               targetValue={is1D ? rule.metricTarget : undefined}
@@ -72,9 +73,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           <div className="flex-1 p-4 min-h-0">
             <D3Chart 
               plotType={rule.plotType} 
-              chartData={dashboardChartData} 
+              chartData={previewChartData}
               histogramData={previewHistogramData} 
-              xAxisType={AxisVariable.LifeSatisfaction} 
+              xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
               targetValue={is1D ? rule.metricTarget : undefined}
