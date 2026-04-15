@@ -149,10 +149,10 @@ export default function Home() {
     });
   }, [previewPopulation, currentCycle]);
 
-  // 3. Calculate the 1D Histogram Data with Demographic Breakdowns
-  const histogramData = useMemo(() => {
+  // 3. Helper function to generate histogram data
+  const generateHistogramData = useCallback((targetPopulation: Respondent[]) => {
     return Array.from({ length: 11 }, (_, i) => {
-      const peopleInBar = previewPopulation.filter(r => Math.round(r.currentLS) === i);
+      const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
       const total = peopleInBar.length;
 
       const getPct = (count: number) => (total > 0 ? (count / total) * 100 : 0);
@@ -178,7 +178,13 @@ export default function Home() {
         }
       };
     });
-  }, [previewPopulation]);
+  }, []);
+
+  // 3a. Current Histogram Data (Before Policy)
+  const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
+  
+  // 3b. Projected Histogram Data (After Policy)
+  const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
   const ministers = useMemo(() => {
     const activeRule = FRAMEWORK_RULES[currentCycle];
@@ -361,7 +367,8 @@ export default function Home() {
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
             dashboardChartData={chartData} 
-            dashboardHistogramData={histogramData}
+            currentHistogramData={currentHistogramData}
+            previewHistogramData={previewHistogramData}
             ministers={ministers} 
             setSelectedMinister={setSelectedMinister} 
             selectedPolicy={selectedPolicy} 
@@ -386,7 +393,7 @@ export default function Home() {
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
             chartData={chartData} 
-            histogramData={histogramData} 
+            histogramData={previewHistogramData}
             currentMetricScore={currentMetricScore}
             initialMetricScore={initialMetricScore} 
           />

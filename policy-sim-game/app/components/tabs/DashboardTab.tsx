@@ -7,7 +7,8 @@ interface DashboardTabProps {
   setActiveTab: (tab: any) => void;
   currentCycle: ElectionCycle;
   dashboardChartData: any[];
-  dashboardHistogramData: any[];
+  currentHistogramData: any[]; // Updated
+  previewHistogramData: any[]; // Added
   ministers: any[];
   setSelectedMinister: (m: any) => void;
   selectedPolicy: Policy | null;
@@ -20,7 +21,8 @@ interface DashboardTabProps {
 
 export default function DashboardTab(props: DashboardTabProps) {
   const { 
-    setActiveTab, currentCycle, dashboardChartData, dashboardHistogramData, 
+    setActiveTab, currentCycle, dashboardChartData, 
+    currentHistogramData, previewHistogramData, 
     ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
@@ -31,26 +33,48 @@ export default function DashboardTab(props: DashboardTabProps) {
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
       
-      {/* LEFT COLUMN: Chart */}
-      <div className="col-span-4 flex flex-col h-full min-h-0">
+      {/* LEFT COLUMN: Split Graphs */}
+      <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
+        
+        {/* Top Graph: Current State (Ghost Graph) */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
-          <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">
-                {rule.graphTitle}
-              </h3>
-            </div>
-            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-xl leading-none">↗</span>
+          <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              Current Distribution
+            </h3>
+            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
           </div>
           <div className="flex-1 p-4 min-h-0">
             <D3Chart 
               plotType={rule.plotType} 
               chartData={dashboardChartData} 
-              histogramData={dashboardHistogramData} 
+              histogramData={currentHistogramData} 
+              xAxisType={AxisVariable.LifeSatisfaction} 
+              yAxisType={rule.yAxisType} 
+              color="#d4d4d8" // Neutral grey to denote the "Ghost/Before" graph
+              targetValue={is1D ? rule.metricTarget : undefined}
+              currentValue={is1D ? initialMetricScore : undefined}
+              initialValue={is1D ? initialMetricScore : undefined}
+            />
+          </div>
+        </div>
+
+        {/* Bottom Graph: Projected State */}
+        <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
+          <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-800">
+              Projected Distribution
+            </h3>
+            <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
+          </div>
+          <div className="flex-1 p-4 min-h-0">
+            <D3Chart 
+              plotType={rule.plotType} 
+              chartData={dashboardChartData} 
+              histogramData={previewHistogramData} 
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
-              // Freeze the target line so it doesn't move during policy preview
               targetValue={is1D ? rule.metricTarget : undefined}
               currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
@@ -100,21 +124,18 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         {/* Clean, Unified Target Box */}
-        {/* Clean, Unified Target Box */}
         <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Current Metric Score</p>
           
           <div className="flex items-baseline gap-2">
-            {/* Freeze the large number readout to initialMetricScore */}
             <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${initialMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400'}`}>
               {is1D ? initialMetricScore.toFixed(1) : initialMetricScore.toFixed(2)}
             </p>
             <p className="text-zinc-500 font-bold text-lg">/ {is1D ? '10' : '1.0'}</p>
           </div>
 
-          {/* Add a suspenseful warning if a policy is selected */}
           {selectedPolicy ? (
              <p className="text-xs text-pink-400 font-bold uppercase tracking-widest mt-3 animate-pulse">
                Predicted Outcome Hidden
@@ -127,7 +148,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Legislative Agenda (unchanged) */}
+      {/* RIGHT COLUMN: Legislative Agenda */}
       <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
         <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
           <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
