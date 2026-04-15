@@ -109,27 +109,40 @@ export default function Home() {
   const currentMetricScore = useMemo(() => {
     if (previewPopulation.length === 0) return 0;
     if (currentCycle === ElectionCycle.Benthamite) return previewPopulation.reduce((s, r) => s + r.currentLS, 0) / previewPopulation.length;
-    if (currentCycle === ElectionCycle.Rawlsian) {
-      const p = previewPopulation.filter(r => r.demographics.wealth === 'Poor');
-      return p.length > 0 ? p.reduce((s, r) => s + r.currentLS, 0) / p.length : 0;
-    }
+    
+    //  RAWLSIAN LOGIC
+    if (currentCycle === ElectionCycle.Rawlsian) return WelfareMetrics.calculateInequalityIndex(previewPopulation);
+    
     const allLS = previewPopulation.map(p => p.currentLS);
     if (currentCycle === ElectionCycle.SocietalUtility) return previewPopulation.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / previewPopulation.length;
     return previewPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / previewPopulation.length;
   }, [previewPopulation, currentCycle]);
 
-  // === Calculate the Baseline Score for the Chart Annotations ===
+  // === Calculate the Baseline Score ===
   const initialMetricScore = useMemo(() => {
     if (initialPopulation.length === 0) return 0;
     if (currentCycle === ElectionCycle.Benthamite) return initialPopulation.reduce((s, r) => s + r.currentLS, 0) / initialPopulation.length;
-    if (currentCycle === ElectionCycle.Rawlsian) {
-      const p = initialPopulation.filter(r => r.demographics.wealth === 'Poor');
-      return p.length > 0 ? p.reduce((s, r) => s + r.currentLS, 0) / p.length : 0;
-    }
+    
+    //  RAWLSIAN LOGIC
+    if (currentCycle === ElectionCycle.Rawlsian) return WelfareMetrics.calculateInequalityIndex(initialPopulation);
+    
     const allLS = initialPopulation.map(p => p.currentLS);
     if (currentCycle === ElectionCycle.SocietalUtility) return initialPopulation.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / initialPopulation.length;
     return initialPopulation.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / initialPopulation.length;
   }, [initialPopulation, currentCycle]);
+
+  // === Calculate the Score for the CURRENT Turn (Before Preview) ===
+  const turnMetricScore = useMemo(() => {
+    if (population.length === 0) return 0;
+    if (currentCycle === ElectionCycle.Benthamite) return population.reduce((s, r) => s + r.currentLS, 0) / population.length;
+    
+    // RAWLSIAN: Uses the actual, confirmed population of this turn
+    if (currentCycle === ElectionCycle.Rawlsian) return WelfareMetrics.calculateInequalityIndex(population);
+    
+    const allLS = population.map(p => p.currentLS);
+    if (currentCycle === ElectionCycle.SocietalUtility) return population.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / population.length;
+    return population.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / population.length;
+  }, [population, currentCycle]);
 
   // 2. Properly map the Y-axis data depending on the active cycle's metric for the 2D Charts
   const chartData = useMemo(() => {
@@ -374,6 +387,7 @@ export default function Home() {
             selectedPolicy={selectedPolicy} 
             currentMetricScore={currentMetricScore} 
             initialMetricScore={initialMetricScore}
+            turnMetricScore={turnMetricScore}
             currentDeck={currentDeck} 
             setSelectedPolicy={setSelectedPolicy} 
             handleApplyPolicy={handleApplyPolicy} 

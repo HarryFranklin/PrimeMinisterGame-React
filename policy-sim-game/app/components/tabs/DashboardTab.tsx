@@ -14,6 +14,7 @@ interface DashboardTabProps {
   selectedPolicy: Policy | null;
   currentMetricScore: number; 
   initialMetricScore: number;
+  turnMetricScore: number;
   currentDeck: Policy[];
   setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
   handleApplyPolicy: () => void;
@@ -24,6 +25,7 @@ export default function DashboardTab(props: DashboardTabProps) {
     setActiveTab, currentCycle, dashboardChartData, 
     currentHistogramData, previewHistogramData, 
     ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
+    turnMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy 
   } = props;
 
@@ -130,10 +132,13 @@ export default function DashboardTab(props: DashboardTabProps) {
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Current Metric Score</p>
           
           <div className="flex items-baseline gap-2">
-            <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${initialMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400'}`}>
-              {is1D ? initialMetricScore.toFixed(1) : initialMetricScore.toFixed(2)}
+            <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${
+              rule.targetDirection === 'minimize' 
+                ? (turnMetricScore <= rule.metricTarget ? 'text-white' : 'text-red-400')
+                : (turnMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400')
+            }`}>
+              {turnMetricScore.toFixed(2)}
             </p>
-            <p className="text-zinc-500 font-bold text-lg">/ {is1D ? '10' : '1.0'}</p>
           </div>
 
           {selectedPolicy ? (
@@ -142,7 +147,13 @@ export default function DashboardTab(props: DashboardTabProps) {
              </p>
           ) : (
             <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-              Target: Achieve <strong className={initialMetricScore >= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300'}>{rule.metricTarget}</strong> based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
+              Target: Achieve <strong className={
+                rule.targetDirection === 'minimize' 
+                  ? (turnMetricScore <= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300')
+                  : (turnMetricScore >= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300')
+              }>
+                {rule.targetDirection === 'minimize' ? 'under ' : 'over '}{rule.metricTarget}
+              </strong> based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
             </p>
           )}
         </div>

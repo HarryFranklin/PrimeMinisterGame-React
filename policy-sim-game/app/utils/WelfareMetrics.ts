@@ -1,3 +1,5 @@
+import { Respondent } from './types';
+
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 export class WelfareMetrics {
@@ -28,5 +30,25 @@ export class WelfareMetrics {
       totalUtility += this.getUtilityForPerson(populationLS[i], respondentUOthersCurve);
     }
     return totalUtility / populationLS.length;
+  }
+
+  /**
+   * Calculates the Standard Deviation of Life Satisfaction for the population.
+   * Acts as a mathematical proxy for inequality (lower = more equal).
+   */
+  static calculateInequalityIndex(population: Respondent[]): number {
+    if (population.length === 0) return 0;
+    
+    // 1. Find the mean LS
+    const mean = population.reduce((sum, r) => sum + r.currentLS, 0) / population.length;
+    
+    // 2. Find the squared differences from the mean
+    const squaredDiffs = population.map(r => Math.pow(r.currentLS - mean, 2));
+    
+    // 3. Find the average of those squared differences (variance)
+    const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / population.length;
+    
+    // 4. Square root to get Standard Deviation
+    return Math.sqrt(variance);
   }
 }

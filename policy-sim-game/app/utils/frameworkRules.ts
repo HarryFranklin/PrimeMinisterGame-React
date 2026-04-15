@@ -1,86 +1,65 @@
 import { ElectionCycle, AxisVariable } from "./types";
 
 export interface FrameworkRule {
-  id: ElectionCycle;
-  name: string;
   frameworkTitle: string;
   graphTitle: string;
-  graphColor: string;
   targetMetricName: string;
-  description: string;
-  
-  // Math & Mechanics
-  metricTarget: number;            // The sole condition to win the election
-  lossAversionMultiplier: number;  // Used to calculate Minister/Electorate anger
-  gainMultiplier: number;          
-  voterTolerance: number;          // Baseline utility required for a voter to approve
-  
-  // Graph Config
+  metricTarget: number;
+  targetDirection?: 'maximize' | 'minimize';
   plotType: '1D' | '2D';
   yAxisType: AxisVariable;
-  highlightRawlsianFloor?: boolean;
+  graphColor: string;
+  gainMultiplier: number;
+  lossAversionMultiplier: number;
 }
 
 export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.Benthamite]: {
-    id: ElectionCycle.Benthamite,
-    name: "Benthamite",
-    frameworkTitle: "Cycle 1: Benthamite",
+    frameworkTitle: "Benthamite Framework",
     graphTitle: "Life Satisfaction Distribution",
-    graphColor: "#ec4899", 
-    targetMetricName: "National Average Life Satisfaction",
-    description: "The Benthamite framework focuses purely on the national mean. To win, move the 'Current' average past your 'Target' threshold.",
-    metricTarget: 5.5, 
-    lossAversionMultiplier: 2.0, 
-    gainMultiplier: 1.0, 
-    voterTolerance: 0.5,           
+    targetMetricName: "Average Life Satisfaction",
+    metricTarget: 5.5,
+    targetDirection: 'maximize',
     plotType: '1D',
-    yAxisType: AxisVariable.PersonalUtility
+    yAxisType: AxisVariable.LifeSatisfaction, 
+    graphColor: "#ec4899", // Pink
+    gainMultiplier: 1.0,
+    lossAversionMultiplier: 2.0, // Strong loss aversion
   },
   [ElectionCycle.Rawlsian]: {
-    id: ElectionCycle.Rawlsian,
-    name: "Rawlsian",
-    frameworkTitle: "Cycle 2: Rawlsian",
-    graphTitle: "Life Satisfaction Distribution", 
-    graphColor: "#ef4444", 
-    targetMetricName: "Least Well-Off Life Satisfaction",
-    description: "The Rawlsian framework evaluates success based solely on the highlighted bottom demographic. Raise the floor to survive.",
-    metricTarget: 5.0, 
-    lossAversionMultiplier: 3.0, 
-    gainMultiplier: 1.2,
-    voterTolerance: 0.5,    
+    frameworkTitle: "Rawlsian Framework",
+    graphTitle: "Life Satisfaction Distribution",
+    targetMetricName: "Inequality Index (SD)",
+    metricTarget: 2.0,
+    targetDirection: 'minimize', // UI now knows lower is better
     plotType: '1D',
-    yAxisType: AxisVariable.PersonalUtility,
-    highlightRawlsianFloor: true
+    yAxisType: AxisVariable.LifeSatisfaction,
+    graphColor: "#3b82f6", // Blue
+    gainMultiplier: 1.0,
+    lossAversionMultiplier: 1.0,
   },
   [ElectionCycle.SocietalUtility]: {
-    id: ElectionCycle.SocietalUtility,
-    name: "Societal",
-    frameworkTitle: "Cycle 3: Societal",
+    frameworkTitle: "Societal Utility Framework",
     graphTitle: "Societal Fairness vs Life Satisfaction",
-    graphColor: "#8b5cf6", 
-    targetMetricName: "Average Societal Utility",
-    description: "This scatter plot maps actual Life Satisfaction against perceived Societal Fairness.",
-    metricTarget: 0.55, 
-    lossAversionMultiplier: 2.5,
-    gainMultiplier: 1.2,
-    voterTolerance: 0.5,          
+    targetMetricName: "Average Societal Fairness",
+    metricTarget: 0.65, 
+    targetDirection: 'maximize',
     plotType: '2D',
-    yAxisType: AxisVariable.SocietalFairness
+    yAxisType: AxisVariable.SocietalFairness,
+    graphColor: "#10b981", // Emerald
+    gainMultiplier: 1.0,
+    lossAversionMultiplier: 1.5,
   },
   [ElectionCycle.PersonalUtility]: {
-    id: ElectionCycle.PersonalUtility,
-    name: "Personal",
-    frameworkTitle: "Cycle 4: Personal",
+    frameworkTitle: "Personal Utility Framework",
     graphTitle: "Personal Utility vs Life Satisfaction",
-    graphColor: "#3b82f6", 
     targetMetricName: "Average Personal Utility",
-    description: "This scatter plot maps Life Satisfaction against Personal Utility.",
-    metricTarget: 0.55, 
-    lossAversionMultiplier: 2.5,
-    gainMultiplier: 1.2,
-    voterTolerance: 0.5,         
+    metricTarget: 0.65, 
+    targetDirection: 'maximize',
     plotType: '2D',
-    yAxisType: AxisVariable.PersonalUtility
+    yAxisType: AxisVariable.PersonalUtility,
+    graphColor: "#8b5cf6", // Violet
+    gainMultiplier: 1.0,
+    lossAversionMultiplier: 1.5,
   }
 };
