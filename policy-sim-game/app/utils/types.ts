@@ -9,10 +9,6 @@ export enum AxisVariable {
 export interface Demographics {
   wealth: 'Poor' | 'Middle' | 'Wealthy';
   age: 'Youth' | 'Adult' | 'Elderly';
-  isStudent: boolean;
-  isParent: boolean;
-  isEnvironmentalist: boolean;
-  isCommuter: boolean;
 }
 
 export interface Respondent {
@@ -51,7 +47,6 @@ export interface DemographicAverages {
   national: number;
   wealth: { poor: number; middle: number; wealthy: number };
   age: { youth: number; adult: number; elderly: number };
-  traits: { students: number; parents: number; commuters: number; environmentalists: number };
 }
 
 export interface TurnHistory {

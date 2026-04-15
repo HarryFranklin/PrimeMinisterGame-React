@@ -22,45 +22,22 @@ function getONSBaselineLS(id: number): number {
  * Scaled to UK ONS data (Adults 18+).
  */
 function getDemographics(id: number): Demographics {
-  const r1 = seededRandom(id + 10); // poor or middle, wealthy or middle
-  const r2 = seededRandom(id + 20); // youth or adult, elderly or adult
-  const r3 = seededRandom(id + 30); // subtraits, i.e. student or parent
+  const r1 = seededRandom(id + 10); 
+  const r2 = seededRandom(id + 20); 
 
   // 1. Wealth: 21% Poor, 69% Middle, 10% Wealthy
   let wealth: 'Poor' | 'Middle' | 'Wealthy' = 'Middle';
   if (r1 < 0.21) wealth = 'Poor';
-  else if (r1 > 0.90) wealth = 'Wealthy'; // Top 10%
+  else if (r1 > 0.90) wealth = 'Wealthy'; 
 
   // 2. Age: Scaled to the 18+ electorate (18.6% Youth, 58.1% Adult, 23.3% Elderly)
   let age: 'Youth' | 'Adult' | 'Elderly' = 'Adult';
   if (r2 < 0.186) age = 'Youth';
-  else if (r2 > 0.767) age = 'Elderly'; // Top 23.3%
-
-  // 3. Sub-traits
-  const isStudent = age === 'Youth' && r3 < 0.30;
-  const isParent = age === 'Adult' && r3 < 0.423;
-
-  // Environmentalists: Weighted towards Youth and Students
-  let enviroChance = 0.15; // Base chance
-  if (isStudent) enviroChance = 0.45;
-  else if (age === 'Youth') enviroChance = 0.35;
-  else if (age === 'Elderly') enviroChance = 0.05;
-  const isEnvironmentalist = seededRandom(id + 40) < enviroChance;
-
-  // Commuters: Standardised heavily to working adults
-  let commChance = 0.54; // National average proxy
-  if (age === 'Elderly') commChance = 0.02; // Rarely commute
-  else if (age === 'Adult') commChance = 0.75; // Primary working block
-  else if (isStudent) commChance = 0.25; // Students commute less often than full-time workers
-  const isCommuter = seededRandom(id + 50) < commChance;
+  else if (r2 > 0.767) age = 'Elderly'; 
 
   return {
     wealth,
-    age,
-    isStudent,
-    isParent,
-    isEnvironmentalist,
-    isCommuter
+    age
   };
 }
 

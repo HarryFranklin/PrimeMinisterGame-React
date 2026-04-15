@@ -36,12 +36,6 @@ const calculateAverages = (pop: Respondent[]): DemographicAverages => {
       youth: getAvg(r => r.demographics.age === 'Youth'),
       adult: getAvg(r => r.demographics.age === 'Adult'),
       elderly: getAvg(r => r.demographics.age === 'Elderly')
-    },
-    traits: {
-      students: getAvg(r => r.demographics.isStudent),
-      parents: getAvg(r => r.demographics.isParent),
-      commuters: getAvg(r => r.demographics.isCommuter),
-      environmentalists: getAvg(r => r.demographics.isEnvironmentalist)
     }
   };
 };
@@ -184,10 +178,6 @@ export default function Home() {
             Adult: getPct(peopleInBar.filter(p => p.demographics.age === 'Adult').length),
             Elderly: getPct(peopleInBar.filter(p => p.demographics.age === 'Elderly').length),
           },
-          traits: {
-            Commuters: getPct(peopleInBar.filter(p => p.demographics.isCommuter).length),
-            Environmentalists: getPct(peopleInBar.filter(p => p.demographics.isEnvironmentalist).length),
-          }
         }
       };
     });
@@ -227,9 +217,9 @@ export default function Home() {
         quote: `${n} concerns reflected.` 
       };
     };
-    return [evalMin("Economy", r => r.demographics.wealth !== 'Poor'), evalMin("Equality", r => r.demographics.wealth === 'Poor'), evalMin("Youth", r => r.demographics.age === 'Youth'), evalMin("Health", r => r.demographics.age === 'Elderly'), evalMin("Environment", r => r.demographics.isEnvironmentalist), evalMin("Transport", r => r.demographics.isCommuter)];
+    return [evalMin("Economy", r => r.demographics.wealth !== 'Poor'), evalMin("Equality", r => r.demographics.wealth === 'Poor'), evalMin("Public", () => true) ];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
-
+  
   const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<{
     label: string;
     category: 'wealth' | 'age' | 'traits';
@@ -250,7 +240,6 @@ export default function Home() {
       total,
       wealth: { poor: getStat(r => r.demographics.wealth === 'Poor'), middle: getStat(r => r.demographics.wealth === 'Middle'), wealthy: getStat(r => r.demographics.wealth === 'Wealthy') },
       age: { youth: getStat(r => r.demographics.age === 'Youth'), adult: getStat(r => r.demographics.age === 'Adult'), elderly: getStat(r => r.demographics.age === 'Elderly') },
-      traits: { students: getStat(r => r.demographics.isStudent), parents: getStat(r => r.demographics.isParent), commuters: getStat(r => r.demographics.isCommuter), environmentalists: getStat(r => r.demographics.isEnvironmentalist) }
     };
   }, []);
 
