@@ -42,7 +42,7 @@ export default function ElectionModal({ currentMetricScore, currentCycle, onNext
             {won ? "Re-elected" : "Term in Opposition"}
           </h2>
           <p className={`text-sm font-bold uppercase tracking-widest ${won ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {rule.name} Framework
+            {rule.frameworkTitle}
           </p>
         </div>
 
