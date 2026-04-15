@@ -9,8 +9,6 @@ export interface FrameworkRule {
   plotType: '1D' | '2D';
   yAxisType: AxisVariable;
   graphColor: string;
-  gainMultiplier: number;
-  lossAversionMultiplier: number;
 }
 
 export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
@@ -22,21 +20,17 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction, 
-    graphColor: "#ec4899", // Pink
-    gainMultiplier: 1.0,
-    lossAversionMultiplier: 2.0, // Strong loss aversion
+    graphColor: "#ec4899", 
   },
   [ElectionCycle.Rawlsian]: {
     frameworkTitle: "Rawlsian Framework",
     graphTitle: "Life Satisfaction Distribution",
     targetMetricName: "Inequality Index (SD)",
     metricTarget: 2.0,
-    targetDirection: 'minimize', // UI now knows lower is better
+    targetDirection: 'minimize', 
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
-    graphColor: "#3b82f6", // Blue
-    gainMultiplier: 1.0,
-    lossAversionMultiplier: 1.0,
+    graphColor: "#3b82f6", 
   },
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",
@@ -46,9 +40,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '2D',
     yAxisType: AxisVariable.SocietalFairness,
-    graphColor: "#10b981", // Emerald
-    gainMultiplier: 1.0,
-    lossAversionMultiplier: 1.5,
+    graphColor: "#10b981", 
   },
   [ElectionCycle.PersonalUtility]: {
     frameworkTitle: "Personal Utility Framework",
@@ -58,8 +50,6 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '2D',
     yAxisType: AxisVariable.PersonalUtility,
-    graphColor: "#8b5cf6", // Violet
-    gainMultiplier: 1.0,
-    lossAversionMultiplier: 1.5,
+    graphColor: "#8b5cf6", 
   }
 };

@@ -207,7 +207,6 @@ export default function Home() {
 
   // Generates the cabinet of ministers
   const ministers = useMemo(() => {
-    const activeRule = FRAMEWORK_RULES[currentCycle];
     
     const evalMin = (n: string, mandate: string, f: (r: Respondent) => boolean) => {
       const avg = (p: Respondent[]) => {
@@ -226,12 +225,13 @@ export default function Home() {
       const proj = avg(previewPopulation);
       const base = avg(initialPopulation);
       const current = avg(population); 
-      const delta = proj - base;
+      const delta = proj - base; // Trajectory since Turn 1
+      const policyDelta = proj - current; // Immediate impact of proposed policy
       
-      const multiplier = delta < 0 ? activeRule.lossAversionMultiplier : activeRule.gainMultiplier;
-      const score = proj + (delta * multiplier);
-      
-      const status = score >= 0.85 ? 'happy' : score >= 0.70 ? 'neutral' : 'angry';
+      // Minister emotion is strictly based on whether the current policy helps or harms their demographic
+      let status = 'neutral';
+      if (policyDelta > 0.005) status = 'happy';
+      else if (policyDelta < -0.005) status = 'angry';
       
       return { 
         name: n, 
@@ -239,7 +239,7 @@ export default function Home() {
         status, 
         color: status === 'happy' ? "bg-emerald-500" : status === 'neutral' ? "bg-amber-400" : "bg-rose-500", 
         delta, 
-        policyDelta: proj - current, 
+        policyDelta, 
         currentScore: current, 
         projectedScore: proj 
       };

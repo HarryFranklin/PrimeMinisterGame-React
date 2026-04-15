@@ -39,8 +39,8 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
     const mapped = previewPopulation.map((r, i) => {
       let initialUtil = 0;
       let currentUtil = 0;
-      const rule = FRAMEWORK_RULES[currentCycle];
 
+      // Calculate base LS or complex Utility depending on the cycle
       if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
         initialUtil = initialPopulation[i].currentLS / 10;
         currentUtil = r.currentLS / 10;
@@ -53,15 +53,13 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       }
 
       const utilityShift = currentUtil - initialUtil;
-      // APPLY DYNAMIC RULES HERE
-      const multiplier = utilityShift < 0 ? rule.lossAversionMultiplier : rule.gainMultiplier; 
-      const perceivedScore = currentUtil + (utilityShift * multiplier);
 
       return {
         ...r,
         initialLS: initialPopulation[i].currentLS,
         utilityShift,
-        isApproving: perceivedScore >= rule.voterTolerance, // DYNAMIC APPROVAL
+        // PURE RATIONAL CHOICE: They approve if the policy doesn't harm their overall utility
+        isApproving: utilityShift >= -0.001, 
         lsTrajectory: r.currentLS - initialPopulation[i].currentLS
       };
     });
