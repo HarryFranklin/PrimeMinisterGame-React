@@ -42,7 +42,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         {/* Top Graph: Current State (Ghost Graph) */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
               Current Distribution
             </h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
@@ -65,7 +65,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         {/* Bottom Graph: Projected State */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-800">
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
               Projected Distribution
             </h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
