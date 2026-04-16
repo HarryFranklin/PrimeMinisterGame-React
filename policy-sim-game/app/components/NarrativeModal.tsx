@@ -61,7 +61,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
     return Math.floor(Math.min(...population.map(p => p.currentLS)));
   }, [population]);
 
-  // NEW: Dynamically calculate what the bottom 20% looks like for Cycle 1
+  // Dynamically calculate what the bottom 20% looks like for Cycle 1
   const leftBehindThreshold = useMemo(() => {
     if (population.length === 0) return 3;
     const sorted = [...population].map(p => p.currentLS).sort((a, b) => a - b);
@@ -73,6 +73,8 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
 
   const renderContent = () => {
     switch (completedCycle) {
+      
+      // TRANSITION 1: End of Benthamite -> Moving to Rawlsian
       case ElectionCycle.Benthamite:
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -85,7 +87,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                 Let's restart the simulation from scratch. This time, we will use a <strong>Rawlsian</strong> approach: you must protect the most vulnerable by raising the societal "floor".
               </p>
               <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
-                Restart Simulation: Cycle 2
+                Restart Simulation: Cycle 2 (Rawlsian)
               </button>
             </div>
             <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col">
@@ -110,6 +112,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
           </div>
         );
 
+      // TRANSITION 2: End of Rawlsian -> Moving to Personal Utility
       case ElectionCycle.Rawlsian:
         return (
           <div className="flex flex-col">
@@ -183,24 +186,25 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                 disabled={!revealed}
                 className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-lg"
               >
-                Restart Simulation: Cycle 3
+                Restart Simulation: Cycle 3 (Personal Utility) 
               </button>
             </div>
           </div>
         );
 
-      case ElectionCycle.SocietalUtility:
+      // TRANSITION 3: End of Personal Utility -> Moving to Societal Utility
+      case ElectionCycle.PersonalUtility:
         return (
           <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">Fairness vs. Self-Interest</h2>
+            <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">Self-Interest vs. Empathy</h2>
             <p className="text-zinc-600 mb-6 leading-relaxed">
-              Societal Utility helped us build a fairer society, but humans are inherently self-interested. A mathematically "fair" society might still leave individuals feeling unfulfilled if they don't see personal gains.
+              Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy, and a society driven entirely by self-interest can feel deeply unfair to those living in it.
             </p>
             <p className="text-zinc-600 mb-8 leading-relaxed">
-              For your final term, let's restart and focus entirely on maximising <strong>Personal Utility</strong>.
+              For your final term, let's restart and focus on <strong>Societal Utility</strong>, balancing personal gains with the population's broader desire for fairness and equality.
             </p>
             <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
-              Restart Simulation: Final Cycle
+              Restart Simulation: Final Cycle (Societal Utility)
             </button>
           </div>
         );

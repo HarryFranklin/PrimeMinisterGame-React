@@ -271,8 +271,8 @@ export default function Home() {
     
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
-    else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.SocietalUtility;
-    else if (currentCycle === ElectionCycle.SocietalUtility) nextCycle = ElectionCycle.PersonalUtility;
+    else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
+    else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
     
     startCycle(nextCycle, data); // Restarts schedule & MAO tracking to 0
     setShowNarrative(false);
@@ -402,8 +402,8 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => jumpToCycle(ElectionCycle.Benthamite)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">1. Benthamite</button>
               <button onClick={() => jumpToCycle(ElectionCycle.Rawlsian)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">2. Rawlsian</button>
-              <button onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">3. Societal</button>
-              <button onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">4. Personal</button>
+              <button onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">3. Personal</button>
+              <button onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">4. Societal</button>
             </div>
           </div>
           <div className="flex flex-col gap-2">
