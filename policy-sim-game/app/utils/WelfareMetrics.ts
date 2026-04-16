@@ -73,6 +73,8 @@ export class WelfareMetrics {
       approvalRating = progress * 51;
     }
     
-    return Math.max(0, Math.min(100, approvalRating));
+    // Lock to 1 decimal place to prevent display vs. logic mismatch
+    const finalRating = Math.max(0, Math.min(100, approvalRating));
+    return Math.round(finalRating * 10) / 10; 
   }
 }
