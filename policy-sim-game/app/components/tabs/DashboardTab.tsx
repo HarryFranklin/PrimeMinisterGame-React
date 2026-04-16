@@ -19,6 +19,8 @@ interface DashboardTabProps {
   currentDeck: Policy[];
   setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
   handleApplyPolicy: () => void;
+  cycleMAO: number;
+  approvalRating: number;
 }
 
 export default function DashboardTab(props: DashboardTabProps) {
@@ -26,8 +28,8 @@ export default function DashboardTab(props: DashboardTabProps) {
     setActiveTab, currentCycle, 
     currentChartData, previewChartData,
     currentHistogramData, previewHistogramData, 
-    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
-    turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy 
+    ministers, setSelectedMinister, selectedPolicy, initialMetricScore,
+    currentDeck, setSelectedPolicy, handleApplyPolicy, cycleMAO, approvalRating
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -38,13 +40,9 @@ export default function DashboardTab(props: DashboardTabProps) {
       
       {/* LEFT COLUMN: Split Graphs */}
       <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
-        
-        {/* Top Graph: Current State (Ghost Graph) */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
-              Current Distribution
-            </h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
           </div>
           <div className="flex-1 p-4 min-h-0">
@@ -54,7 +52,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               histogramData={currentHistogramData} 
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
-              color="#d4d4d8" // Neutral grey to denote the "Ghost/Before" graph
+              color="#d4d4d8"
               targetValue={is1D ? rule.metricTarget : undefined}
               currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
@@ -62,12 +60,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* Bottom Graph: Projected State */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
-            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
-              Projected Distribution
-            </h3>
+            <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Projected Distribution</h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
           </div>
           <div className="flex-1 p-4 min-h-0">
@@ -88,8 +83,6 @@ export default function DashboardTab(props: DashboardTabProps) {
 
       {/* MIDDLE COLUMN: Cabinet & Single Target Box */}
       <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
-        
-        {/* The Cabinet */}
         <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
@@ -101,39 +94,22 @@ export default function DashboardTab(props: DashboardTabProps) {
           
           <div className="p-3 lg:p-4 grid grid-cols-3 grid-rows-2 gap-4 lg:gap-6 flex-1 min-h-0">
             {ministers.map((minister, i) => (
-              <div 
-                key={i} 
-                onClick={(e) => { e.stopPropagation(); setSelectedMinister(minister); }}
-                className="flex flex-col items-center justify-between p-3 rounded-xl border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full"
-              >
-                {/* Minister Title & Explicit Mandate */}
+              <div key={i} onClick={(e) => { e.stopPropagation(); setSelectedMinister(minister); }} className="flex flex-col items-center justify-between p-3 rounded-xl border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full">
                 <div className="flex flex-col items-center justify-start mt-1 mb-2 h-12 w-full">
                   <h4 className="text-xs lg:text-sm font-black text-zinc-800 uppercase tracking-widest leading-tight text-center">
-                    {/* Prints the sector name (e.g. "Welfare") */}
                     {minister.name.replace(' Secretary', '')}
-                    
-                    {/* Conditionally prints "Secretary" on its own line below */}
                     {minister.name.includes('Secretary') && (
-                      <span className="block text-[10px] lg:text-xs text-zinc-600 mt-0.5">
-                        Secretary
-                      </span>
+                      <span className="block text-[10px] lg:text-xs text-zinc-600 mt-0.5">Secretary</span>
                     )}
                   </h4>
-                  {/* Mandate Text */}
-                  <p className="text-[10px] lg:text-xs font-bold text-zinc-400 mt-1.5 text-center leading-none">
-                    {minister.mandate}
-                  </p>
+                  <p className="text-[10px] lg:text-xs font-bold text-zinc-400 mt-1.5 text-center leading-none">{minister.mandate}</p>
                 </div>
-                
-                {/* Basic Minister Emoji */}
                 <div className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center ${minister.color} border-4 border-white shadow-md text-3xl lg:text-4xl transition-colors shrink-0 mt-2`}>
                     {minister.status === 'happy' && '😊'}
                     {minister.status === 'neutral' && '😐'}
                     {minister.status === 'angry' && '😠'}
                 </div>
-
                 <div className="h-6 flex items-center justify-center mt-3 shrink-0">
-                  {/* Policy Delta Badge */}
                   {selectedPolicy && Math.abs(minister.policyDelta) > 0.0005 ? (
                     <span className={`text-xs lg:text-sm font-black px-3 py-1 rounded-full shadow-sm ${minister.policyDelta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {minister.policyDelta > 0 ? '↑' : '↓'} {(Math.abs(minister.policyDelta) * 100).toFixed(1)}%
@@ -145,19 +121,17 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* Clean, Unified Target Box */}
+        {/* Clean, Unified Target Box (Approval Rating) */}
         <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center shrink-0 h-48 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
-          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Current Metric Score</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Public Approval</p>
           
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-1">
             <p className={`text-6xl font-black tracking-tighter transition-colors duration-500 ${
-              rule.targetDirection === 'minimize' 
-                ? (turnMetricScore <= rule.metricTarget ? 'text-white' : 'text-red-400')
-                : (turnMetricScore >= rule.metricTarget ? 'text-white' : 'text-red-400')
+              approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'
             }`}>
-              {turnMetricScore.toFixed(2)}
+              {approvalRating.toFixed(1)}%
             </p>
           </div>
 
@@ -166,15 +140,14 @@ export default function DashboardTab(props: DashboardTabProps) {
                Predicted Outcome Hidden
              </p>
           ) : (
-            <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-              Target: Achieve <strong className={
-                rule.targetDirection === 'minimize' 
-                  ? (turnMetricScore <= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300')
-                  : (turnMetricScore >= rule.metricTarget ? 'text-emerald-400' : 'text-zinc-300')
-              }>
-                {rule.targetDirection === 'minimize' ? 'under ' : 'over '}{rule.metricTarget}
-              </strong> based on <strong className="text-zinc-300">{rule.targetMetricName}</strong>.
-            </p>
+            <>
+              <p className="text-sm text-zinc-500 mt-2 text-center px-4">
+                Threshold: <strong className="text-zinc-300">51.0%</strong>
+              </p>
+              <p className="text-[10px] text-zinc-600 mt-1 uppercase tracking-widest font-bold text-center">
+                Proxy for {rule.targetMetricName} <br/> (Maximum Achievable: {cycleMAO.toFixed(2)})
+              </p>
+            </>
           )}
         </div>
       </div>
@@ -187,7 +160,6 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         <div className="flex-1 flex flex-col p-4 gap-3 min-h-0 overflow-hidden">
-          {/* We use .slice(0, 3) here to guarantee the UI only ever attempts to render a maximum of 3 policies */}
           {currentDeck.slice(0, 3).map((policy) => {
             const isSelected = selectedPolicy?.id === policy.id;
             return (

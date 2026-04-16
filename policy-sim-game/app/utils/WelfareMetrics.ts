@@ -38,17 +38,41 @@ export class WelfareMetrics {
    */
   static calculateInequalityIndex(population: Respondent[]): number {
     if (population.length === 0) return 0;
-    
-    // 1. Find the mean LS
     const mean = population.reduce((sum, r) => sum + r.currentLS, 0) / population.length;
-    
-    // 2. Find the squared differences from the mean
     const squaredDiffs = population.map(r => Math.pow(r.currentLS - mean, 2));
-    
-    // 3. Find the average of those squared differences (variance)
     const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / population.length;
-    
-    // 4. Square root to get Standard Deviation
     return Math.sqrt(variance);
+  }
+
+  /**
+   * Calculates the Societal Floor (Minimum Life Satisfaction).
+   * Used as the target metric for the Rawlsian Framework.
+   */
+  static calculateSocietalFloor(population: Respondent[]): number {
+    if (population.length === 0) return 0;
+    return Math.min(...population.map(r => r.currentLS));
+  }
+
+  /**
+   * Maps a raw metric score against the MAO to democratic Approval Rating.
+   * 90% of MAO = 51% Approval.
+   */
+  static calculateApprovalRating(currentScore: number, cycleMAO: number): number {
+    if (cycleMAO <= 0) return 0; // Fallback safety
+    const threshold = cycleMAO * 0.90;
+    
+    let approvalRating = 0;
+    if (currentScore >= threshold) {
+      // Maps [Threshold -> MAO] to [51% -> 100%]
+      const range = cycleMAO - threshold;
+      const progress = range <= 0 ? 1 : (currentScore - threshold) / range;
+      approvalRating = 51 + (progress * 49);
+    } else {
+      // Maps [0 -> Threshold] to [0% -> 51%]
+      const progress = Math.max(0, currentScore) / threshold;
+      approvalRating = progress * 51;
+    }
+    
+    return Math.max(0, Math.min(100, approvalRating));
   }
 }

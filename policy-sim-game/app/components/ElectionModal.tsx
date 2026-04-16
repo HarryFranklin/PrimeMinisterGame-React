@@ -5,14 +5,15 @@ import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 interface ElectionModalProps {
   currentMetricScore: number;
   currentCycle: ElectionCycle;
+  approvalRating: number;
   onNextCycle: () => void;
   onReset: () => void;
 }
 
-export default function ElectionModal({ currentMetricScore, currentCycle, onNextCycle, onReset }: ElectionModalProps) {
+export default function ElectionModal({ currentMetricScore, currentCycle, approvalRating, onNextCycle, onReset }: ElectionModalProps) {
   
   const rule = FRAMEWORK_RULES[currentCycle];
-  const won = currentMetricScore >= rule.metricTarget; 
+  const won = approvalRating >= 51.0; 
   const is1D = rule.plotType === '1D';
   
   let nextCycleName = "";
@@ -50,14 +51,17 @@ export default function ElectionModal({ currentMetricScore, currentCycle, onNext
           won ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
         }`}>
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-            Final {rule.targetMetricName}
+            Final Approval Rating
           </p>
           <div className="flex items-baseline justify-center gap-2 mb-2">
              <p className={`text-6xl font-black ${won ? 'text-emerald-600' : 'text-rose-600'}`}>
-               {is1D ? currentMetricScore.toFixed(1) : currentMetricScore.toFixed(2)}
+               {approvalRating.toFixed(1)}%
              </p>
-             <p className="text-zinc-400 font-bold text-lg">/ {rule.metricTarget} Required</p>
+             <p className="text-zinc-400 font-bold text-lg">/ 51.0% Required</p>
           </div>
+          <p className="text-sm text-zinc-400 font-bold mt-2 uppercase tracking-widest">
+             True {rule.targetMetricName}: {currentMetricScore.toFixed(2)}
+          </p>
         </div>
 
         {!won && (

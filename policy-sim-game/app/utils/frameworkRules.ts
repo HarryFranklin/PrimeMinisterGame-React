@@ -16,7 +16,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     frameworkTitle: "Benthamite Framework",
     graphTitle: "Life Satisfaction Distribution",
     targetMetricName: "Average Life Satisfaction",
-    metricTarget: 5.5,
+    metricTarget: 5.5, // Will eventually be superseded by MAO, kept for safety
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction, 
@@ -25,9 +25,9 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.Rawlsian]: {
     frameworkTitle: "Rawlsian Framework",
     graphTitle: "Life Satisfaction Distribution",
-    targetMetricName: "Inequality Index (SD)",
-    metricTarget: 2.0,
-    targetDirection: 'minimize', 
+    targetMetricName: "Societal Floor (Minimum LS)",
+    metricTarget: 0, // MAO calculation takes over dynamically
+    targetDirection: 'maximize', 
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#3b82f6", 
