@@ -12,6 +12,7 @@ interface D3ChartProps {
   targetValue?: number;
   currentValue?: number;
   initialValue?: number;
+  highlightBars?: number[];
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
