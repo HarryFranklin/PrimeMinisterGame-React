@@ -61,7 +61,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
     return Math.floor(Math.min(...population.map(p => p.currentLS)));
   }, [population]);
 
-  // Dynamically calculate what the bottom 20% looks like for Cycle 1
+  // Dynamically calculate what the bottom 20% looks like for Cycle 1 & 3
   const leftBehindThreshold = useMemo(() => {
     if (population.length === 0) return 3;
     const sorted = [...population].map(p => p.currentLS).sort((a, b) => a - b);
@@ -70,6 +70,28 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
   }, [population]);
 
   const leftBehindBars = Array.from({ length: leftBehindThreshold + 1 }, (_, i) => i);
+
+  // NEW: Find a citizen doing well personally, but with low societal utility due to empathy (For Cycle 3)
+  const empathyCitizen = useMemo(() => {
+    if (population.length === 0) return null;
+    const allLS = population.map(p => p.currentLS);
+    
+    let bestCitizen = population[0];
+    let maxDiff = -1;
+
+    for (const r of population) {
+      if (r.currentLS >= 7) { // Must be someone personally thriving
+        const pu = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+        const su = WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities);
+        const diff = pu - su; // Find the biggest gap between their selfishness and their empathy
+        if (diff > maxDiff) {
+          maxDiff = diff;
+          bestCitizen = r;
+        }
+      }
+    }
+    return bestCitizen;
+  }, [population]);
 
   const renderContent = () => {
     switch (completedCycle) {
@@ -124,7 +146,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              
               {/* Context Graph */}
               <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col lg:col-span-1">
                 <div className="mb-2">
@@ -193,41 +214,94 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
         );
 
       // TRANSITION 3: End of Personal Utility -> Moving to Societal Utility
-      case ElectionCycle.PersonalUtility:
+      case ElectionCycle.PersonalUtility: {
+        if (!empathyCitizen) return null;
+        const allLS = population.map(p => p.currentLS);
+        const pu = WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities);
+        const su = WelfareMetrics.evaluateDistribution(allLS, empathyCitizen.societalUtilities);
+
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="flex flex-col justify-center">
+          <div className="flex flex-col">
+            <div className="mb-8 text-center max-w-2xl mx-auto">
               <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">Self-Interest vs. Empathy</h2>
-              <p className="text-zinc-600 mb-6 leading-relaxed">
-                Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy, and a society driven entirely by self-interest can feel deeply unfair to those living in it.
+              <p className="text-zinc-600 leading-relaxed">
+                Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy. Click on the citizen below to see how they feel about the society you built.
               </p>
-              <p className="text-zinc-600 mb-8 leading-relaxed">
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+              
+              {/* Context Graph (The Fairness Gap) */}
+              <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col lg:col-span-1">
+                <div className="mb-2">
+                  <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-widest">The Fairness Gap</h3>
+                  <p className="text-xs text-zinc-400 font-medium">Structural inequality remained.</p>
+                </div>
+                <div className="flex-1 min-h-[200px]">
+                   <D3Chart 
+                      plotType="1D" 
+                      chartData={[]} 
+                      histogramData={histogramData} 
+                      xAxisType={AxisVariable.LifeSatisfaction} 
+                      yAxisType={AxisVariable.LifeSatisfaction} 
+                      color="#d4d4d8" 
+                      highlightBars={leftBehindBars} 
+                   />
+                </div>
+              </div>
+
+              {/* Empathy Citizen Card */}
+              <div className="lg:col-span-2">
+                <div 
+                  onClick={() => setRevealed(true)}
+                  className="p-8 rounded-xl border-2 border-zinc-200 bg-zinc-50 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all text-center relative overflow-hidden group flex flex-col justify-center h-full"
+                >
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">Citizen #{String(empathyCitizen.id).substring(0,4)}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <span className="text-sm text-zinc-400 block mb-1">Life Satisfaction</span>
+                      <strong className="text-3xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)} / 10</strong>
+                    </div>
+                    <div>
+                      <span className="text-sm text-zinc-400 block mb-1">Personal Utility</span>
+                      <strong className="text-3xl text-zinc-800">{pu.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                  
+                  <div className={`transition-all duration-500 ${revealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4'}`}>
+                    <div className="w-full h-px bg-zinc-200 my-6" />
+                    <span className="text-sm text-emerald-500 font-bold uppercase tracking-widest block mb-2">Societal Utility (Empathy for others)</span>
+                    <strong className="text-5xl text-emerald-600">{su.toFixed(2)}</strong>
+                    <p className="text-sm text-zinc-500 mt-4 max-w-md mx-auto italic">
+                      "Even though I'm doing great personally, my overall wellbeing is dragged down by the severe inequality I see around me."
+                    </p>
+                  </div>
+
+                  {!revealed && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="bg-white px-5 py-3 rounded-full text-sm font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-2xl mx-auto text-center">
+              <p className={`text-zinc-600 mb-6 leading-relaxed transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 For your final term, let's restart and focus on <strong>Societal Utility</strong>, balancing personal gains with the population's broader desire for fairness and equality.
               </p>
-              <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
+              <button 
+                onClick={onProceed} 
+                disabled={!revealed}
+                className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-lg"
+              >
                 Restart Simulation: Final Cycle (Societal Utility)
               </button>
             </div>
-            <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-widest">The Fairness Gap</h3>
-                <p className="text-xs text-zinc-400 font-medium">Individuals thrived, but structural inequality remained.</p>
-              </div>
-              <div className="flex-1 min-h-[250px]">
-                 {/* Re-using the leftBehindBars to visually show that inequality persists */}
-                 <D3Chart 
-                    plotType="1D" 
-                    chartData={[]} 
-                    histogramData={histogramData} 
-                    xAxisType={AxisVariable.LifeSatisfaction} 
-                    yAxisType={AxisVariable.LifeSatisfaction} 
-                    color="#d4d4d8" 
-                    highlightBars={leftBehindBars} 
-                 />
-              </div>
-            </div>
           </div>
         );
+      }
 
       default:
         return null; 
