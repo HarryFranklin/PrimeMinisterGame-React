@@ -379,7 +379,6 @@ export default function Home() {
         />
       )}
 
-      {/* ADDED THIS BLOCK */}
       {showNarrative && (
         <NarrativeModal 
           completedCycle={currentCycle}
