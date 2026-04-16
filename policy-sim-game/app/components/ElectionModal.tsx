@@ -14,7 +14,6 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
   
   const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0; 
-  const is1D = rule.plotType === '1D';
   
   let nextCycleName = "";
   let isFinalCycle = false;
@@ -24,14 +23,14 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
     nextCycleName = "Start Cycle 2: Rawlsian";
     adviceText = "The Benthamite framework requires the greatest good for the greatest number. You may have focused too heavily on niche demographics while neglecting the broad majority.";
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    nextCycleName = "Start Cycle 3: Societal";
+    nextCycleName = "Start Cycle 3: Personal Utility";
     adviceText = "The Rawlsian framework is binary: if the bottom demographic suffers, you fail. To succeed, you must raise the 'floor' of society, even at the expense of the wealthy.";
-  } else if (currentCycle === ElectionCycle.SocietalUtility) {
-    nextCycleName = "Start Cycle 4: Personal";
-    adviceText = "Success here depends on how people believe society should be structured. Focus on policies that reduce perceived unfairness in the distribution of wellbeing.";
+  } else if (currentCycle === ElectionCycle.PersonalUtility) {
+    nextCycleName = "Start Cycle 4: Societal Utility";
+    adviceText = "Individuals here care about their subjective gains. Ensure your policies are translating general wellbeing into personal satisfaction for each citizen.";
   } else {
     isFinalCycle = true;
-    adviceText = "Individuals here care about their subjective gains. Ensure your policies are translating general wellbeing into personal satisfaction for each citizen.";
+    adviceText = "Success here depends on how people believe society should be structured. Focus on policies that reduce perceived unfairness in the distribution of wellbeing.";
   }
 
   return (

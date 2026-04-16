@@ -195,17 +195,37 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
       // TRANSITION 3: End of Personal Utility -> Moving to Societal Utility
       case ElectionCycle.PersonalUtility:
         return (
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">Self-Interest vs. Empathy</h2>
-            <p className="text-zinc-600 mb-6 leading-relaxed">
-              Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy, and a society driven entirely by self-interest can feel deeply unfair to those living in it.
-            </p>
-            <p className="text-zinc-600 mb-8 leading-relaxed">
-              For your final term, let's restart and focus on <strong>Societal Utility</strong>, balancing personal gains with the population's broader desire for fairness and equality.
-            </p>
-            <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
-              Restart Simulation: Final Cycle (Societal Utility)
-            </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="flex flex-col justify-center">
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">Self-Interest vs. Empathy</h2>
+              <p className="text-zinc-600 mb-6 leading-relaxed">
+                Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy, and a society driven entirely by self-interest can feel deeply unfair to those living in it.
+              </p>
+              <p className="text-zinc-600 mb-8 leading-relaxed">
+                For your final term, let's restart and focus on <strong>Societal Utility</strong>, balancing personal gains with the population's broader desire for fairness and equality.
+              </p>
+              <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
+                Restart Simulation: Final Cycle (Societal Utility)
+              </button>
+            </div>
+            <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col">
+              <div className="mb-4">
+                <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-widest">The Fairness Gap</h3>
+                <p className="text-xs text-zinc-400 font-medium">Individuals thrived, but structural inequality remained.</p>
+              </div>
+              <div className="flex-1 min-h-[250px]">
+                 {/* Re-using the leftBehindBars to visually show that inequality persists */}
+                 <D3Chart 
+                    plotType="1D" 
+                    chartData={[]} 
+                    histogramData={histogramData} 
+                    xAxisType={AxisVariable.LifeSatisfaction} 
+                    yAxisType={AxisVariable.LifeSatisfaction} 
+                    color="#d4d4d8" 
+                    highlightBars={leftBehindBars} 
+                 />
+              </div>
+            </div>
           </div>
         );
 

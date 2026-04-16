@@ -263,12 +263,13 @@ export default function Home() {
     setShowNarrative(true);
   };
 
-  // 2. Triggered by the Narrative Modal's "Restart Simulation" button
+  // Triggered by the Narrative Modal's "Restart Simulation" button
   const handleProceedFromNarrative = () => {
     const data = loadPopulation(); // Restarts population to 0
     setPopulation(data);
     setInitialPopulation(data);
     
+    // THE BUG WAS HERE: This needs to map the progression perfectly
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
@@ -428,7 +429,8 @@ export default function Home() {
 
           {/* --- OPTIMAL PATH DEV WIDGET --- */}
           {devMode && showOptimalPath && optimalPath.length > 0 && (
-            <div className="fixed top-24 right-6 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-right-4">
+            // I changed the className on this div right below:
+            <div className="fixed bottom-14 left-80 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
               <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
                 Optimal Path (MAO: {cycleMAO.toFixed(2)})
               </h3>
