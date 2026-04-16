@@ -61,6 +61,16 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
     return Math.floor(Math.min(...population.map(p => p.currentLS)));
   }, [population]);
 
+  // NEW: Dynamically calculate what the bottom 20% looks like for Cycle 1
+  const leftBehindThreshold = useMemo(() => {
+    if (population.length === 0) return 3;
+    const sorted = [...population].map(p => p.currentLS).sort((a, b) => a - b);
+    const p20Index = Math.floor(sorted.length * 0.20);
+    return Math.ceil(sorted[p20Index]);
+  }, [population]);
+
+  const leftBehindBars = Array.from({ length: leftBehindThreshold + 1 }, (_, i) => i);
+
   const renderContent = () => {
     switch (completedCycle) {
       case ElectionCycle.Benthamite:
@@ -80,8 +90,10 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             </div>
             <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col">
               <div className="mb-4">
-                <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest">The "Left Behind" (LS 0-3)</h3>
-                <p className="text-xs text-zinc-400 font-medium">Despite a high average, these citizens suffered.</p>
+                <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest">
+                  The "Left Behind" (LS 0-{leftBehindThreshold})
+                </h3>
+                <p className="text-xs text-zinc-400 font-medium">Despite a high average, the bottom 20% still fall behind.</p>
               </div>
               <div className="flex-1 min-h-[250px]">
                  <D3Chart 
@@ -91,7 +103,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                     xAxisType={AxisVariable.LifeSatisfaction} 
                     yAxisType={AxisVariable.LifeSatisfaction} 
                     color="#d4d4d8" 
-                    highlightBars={[0, 1, 2, 3]} 
+                    highlightBars={leftBehindBars} 
                  />
               </div>
             </div>
