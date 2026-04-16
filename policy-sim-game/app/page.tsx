@@ -8,6 +8,7 @@ import { availablePolicies } from "./data/policies";
 import { PolicyEngine } from "./utils/PolicyEngine";
 import { MAOEngine } from "./utils/MAOEngine";
 import ElectionModal from "./components/ElectionModal";
+import NarrativeModal from "./components/NarrativeModal";
 import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports
@@ -84,11 +85,14 @@ export default function Home() {
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [showElection, setShowElection] = useState(false);
+  const [showNarrative, setShowNarrative] = useState(false);
   const [history, setHistory] = useState<TurnHistory[]>([]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs' | 'electorate'>('dashboard');
   const [selectedMinister, setSelectedMinister] = useState<any | null>(null);
   const [devMode, setDevMode] = useState(false);
+
+  
 
   // New MAO & Schedule State
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
@@ -249,8 +253,15 @@ export default function Home() {
     startCycle(currentCycle, data);
   };
 
-  const handleNextCycle = () => {
-    const data = loadPopulation();
+  // 1. Triggered by the Election Modal's "Next Cycle" button
+  const handleShowNarrative = () => {
+    setShowElection(false);
+    setShowNarrative(true);
+  };
+
+  // 2. Triggered by the Narrative Modal's "Restart Simulation" button
+  const handleProceedFromNarrative = () => {
+    const data = loadPopulation(); // Restarts population to 0
     setPopulation(data);
     setInitialPopulation(data);
     
@@ -258,9 +269,9 @@ export default function Home() {
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.SocietalUtility;
     else if (currentCycle === ElectionCycle.SocietalUtility) nextCycle = ElectionCycle.PersonalUtility;
-    else nextCycle = ElectionCycle.Benthamite;
     
-    startCycle(nextCycle, data);
+    startCycle(nextCycle, data); // Restarts schedule & MAO tracking to 0
+    setShowNarrative(false);
   };
 
   const jumpToCycle = (cycle: ElectionCycle) => {
@@ -359,8 +370,17 @@ export default function Home() {
           currentMetricScore={turnMetricScore} 
           currentCycle={currentCycle} 
           approvalRating={turnApprovalRating}
-          onNextCycle={handleNextCycle} 
+          onNextCycle={handleShowNarrative}
           onReset={handleResetCycle} 
+        />
+      )}
+
+      {/* ADDED THIS BLOCK */}
+      {showNarrative && (
+        <NarrativeModal 
+          completedCycle={currentCycle}
+          population={population}
+          onProceed={handleProceedFromNarrative}
         />
       )}
 
