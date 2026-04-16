@@ -8,10 +8,11 @@ interface ElectionModalProps {
   approvalRating: number;
   onNextCycle: () => void;
   onReset: () => void;
+  onFinish?: () => void;
 }
 
-export default function ElectionModal({ currentMetricScore, currentCycle, approvalRating, onNextCycle, onReset }: ElectionModalProps) {
-  
+export default function ElectionModal({ currentMetricScore, currentCycle, approvalRating, onNextCycle, onReset, onFinish }: ElectionModalProps) {
+
   const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0; 
   
@@ -74,9 +75,16 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
           <button onClick={onReset} className="flex-1 py-4 bg-zinc-100 text-zinc-700 font-bold rounded-xl hover:bg-zinc-200 transition-all border border-zinc-300">
             {won ? "Restart Cycle" : "Try Again"}
           </button>
+          
           {won && !isFinalCycle && (
             <button onClick={onNextCycle} className="flex-1 py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
               {nextCycleName}
+            </button>
+          )}
+
+          {won && isFinalCycle && onFinish && (
+            <button onClick={onFinish} className="flex-1 py-4 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all shadow-lg">
+              Finish Simulation
             </button>
           )}
         </div>

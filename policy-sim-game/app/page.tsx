@@ -9,6 +9,7 @@ import { PolicyEngine } from "./utils/PolicyEngine";
 import { MAOEngine } from "./utils/MAOEngine";
 import ElectionModal from "./components/ElectionModal";
 import NarrativeModal from "./components/NarrativeModal";
+import FinalDebriefModal from "./components/FinalDebriefModal";
 import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports
@@ -86,6 +87,7 @@ export default function Home() {
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [showElection, setShowElection] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
+  const [showFinalDebrief, setShowFinalDebrief] = useState(false);
   const [history, setHistory] = useState<TurnHistory[]>([]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs' | 'electorate'>('dashboard');
@@ -263,13 +265,17 @@ export default function Home() {
     setShowNarrative(true);
   };
 
+  const handleFinishSimulation = () => {
+    setShowElection(false);
+    setShowFinalDebrief(true);
+  };
+
   // Triggered by the Narrative Modal's "Restart Simulation" button
   const handleProceedFromNarrative = () => {
     const data = loadPopulation(); // Restarts population to 0
     setPopulation(data);
     setInitialPopulation(data);
     
-    // THE BUG WAS HERE: This needs to map the progression perfectly
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
@@ -377,6 +383,7 @@ export default function Home() {
           approvalRating={turnApprovalRating}
           onNextCycle={handleShowNarrative}
           onReset={handleResetCycle} 
+          onFinish={handleFinishSimulation}
         />
       )}
 
@@ -386,6 +393,10 @@ export default function Home() {
           population={population}
           onProceed={handleProceedFromNarrative}
         />
+      )}
+
+      {showFinalDebrief && (
+        <FinalDebriefModal />
       )}
 
       <button 
