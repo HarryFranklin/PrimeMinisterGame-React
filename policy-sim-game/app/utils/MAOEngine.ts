@@ -7,14 +7,18 @@ export class MAOEngine {
     turnDecks: Policy[][],
     cycle: ElectionCycle,
     metricFunction: (pop: Respondent[], cycle: ElectionCycle) => number
-  ): number {
+  ): { maxScore: number; optimalPath: Policy[] } { // <-- Updated return type
     let maxScore = -Infinity;
+    let bestPath: Policy[] = [];
 
-    function search(turnIndex: number, currentPop: Respondent[]) {
+    function search(turnIndex: number, currentPop: Respondent[], currentPath: Policy[]) {
       // Base Case: Reached the end of the 5-turn cycle
       if (turnIndex === turnDecks.length) {
         const score = metricFunction(currentPop, cycle);
-        if (score > maxScore) maxScore = score;
+        if (score > maxScore) {
+          maxScore = score;
+          bestPath = [...currentPath]; // <-- Save the winning path!
+        }
         return;
       }
 
@@ -22,12 +26,15 @@ export class MAOEngine {
       const options = turnDecks[turnIndex];
       for (let i = 0; i < options.length; i++) {
         const nextPop = PolicyEngine.applyPolicy(currentPop, options[i]);
-        search(turnIndex + 1, nextPop);
+        
+        currentPath.push(options[i]); // Add choice to path
+        search(turnIndex + 1, nextPop, currentPath);
+        currentPath.pop(); // Remove choice (backtrack) to test the next option
       }
     }
 
     // Initiate recursive depth-first search
-    search(0, initialPopulation);
-    return maxScore;
+    search(0, initialPopulation, []);
+    return { maxScore, optimalPath: bestPath };
   }
 }

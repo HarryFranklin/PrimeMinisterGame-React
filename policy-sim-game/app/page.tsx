@@ -99,13 +99,17 @@ export default function Home() {
   const [cycleMAO, setCycleMAO] = useState<number>(0);
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
 
+  const [optimalPath, setOptimalPath] = useState<Policy[]>([]); 
+  const [showOptimalPath, setShowOptimalPath] = useState(false);
+
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
     const schedule = generateCycleSchedule(cycle, availablePolicies);
     setCycleSchedule(schedule);
     
     // Calculate Absolute Maximum Score possible with this specific schedule
-    const mao = MAOEngine.calculateMAO(pop, schedule, cycle, getMetricScore);
-    setCycleMAO(mao);
+    const maoResult = MAOEngine.calculateMAO(pop, schedule, cycle, getMetricScore);
+    setCycleMAO(maoResult.maxScore);
+    setOptimalPath(maoResult.optimalPath);
     
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
@@ -410,6 +414,39 @@ export default function Home() {
               <button onClick={() => setCurrentTurn(TURNS_PER_CYCLE)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">Jump to End</button>
             </div>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Cheat Codes</span>
+            <div className="grid grid-cols-1 gap-2">
+              <button 
+                onClick={() => setShowOptimalPath(!showOptimalPath)} 
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${showOptimalPath ? 'bg-pink-600 text-white' : 'bg-zinc-800 hover:bg-zinc-700'}`}
+              >
+                {showOptimalPath ? 'Hide Optimal Path' : 'Show Optimal Path'}
+              </button>
+            </div>
+          </div>
+
+          {/* --- OPTIMAL PATH DEV WIDGET --- */}
+          {devMode && showOptimalPath && optimalPath.length > 0 && (
+            <div className="fixed top-24 right-6 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
+                Optimal Path (MAO: {cycleMAO.toFixed(2)})
+              </h3>
+              <ol className="flex flex-col gap-3 text-sm">
+                {optimalPath.map((policy, index) => {
+                  const isPast = index + 1 < currentTurn;
+                  const isCurrent = index + 1 === currentTurn;
+                  return (
+                    <li key={index} className={`flex items-start gap-3 transition-colors ${isPast ? 'opacity-30 line-through' : isCurrent ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>
+                      <span className="font-mono text-xs mt-0.5">{index + 1}.</span>
+                      <span className="leading-tight">{policy.policyName}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
         </div>
       )}
     </div>
