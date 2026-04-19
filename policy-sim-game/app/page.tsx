@@ -223,12 +223,12 @@ export default function Home() {
     };
 
     return [
-        evalMin("Welfare Secretary", "Focus: Low Income", r => r.demographics.wealth === 'Poor'),
-        evalMin("Home Secretary", "Focus: Middle Class", r => r.demographics.wealth === 'Middle'),
-        evalMin("Chancellor", "Focus: High Earners", r => r.demographics.wealth === 'Wealthy'),
-        evalMin("Education Secretary", "Focus: Youth", r => r.demographics.age === 'Youth'),
-        evalMin("Business Secretary", "Focus: Working Adults", r => r.demographics.age === 'Adult'),
-        evalMin("Pensions Secretary", "Focus: Elderly", r => r.demographics.age === 'Elderly')
+        evalMin("Welfare", "Low Income", r => r.demographics.wealth === 'Poor'),
+        evalMin("Home", "Middle Class", r => r.demographics.wealth === 'Middle'),
+        evalMin("Chancellor", "High Earners", r => r.demographics.wealth === 'Wealthy'),
+        evalMin("Education", "Youth", r => r.demographics.age === 'Youth'),
+        evalMin("Business", "Working Adults", r => r.demographics.age === 'Adult'),
+        evalMin("Pensions", "Elderly", r => r.demographics.age === 'Elderly')
     ];
   }, [initialPopulation, population, previewPopulation, currentCycle]);
 
@@ -354,7 +354,7 @@ export default function Home() {
             approvalRating={turnApprovalRating}
           />
         )}
-        {activeTab === 'ministers' && <MinistersTab ministers={ministers} />}
+        {activeTab === 'ministers' && <MinistersTab ministers={ministers} selectedMinisterName={selectedMinister}/>}
         {activeTab === 'graphs' && (
           <GraphsTab
             setActiveTab={setActiveTab} 
