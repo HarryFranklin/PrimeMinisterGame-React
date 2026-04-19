@@ -116,15 +116,15 @@ export default function D3Chart({
         .on("mouseenter", (event, d) => {
           if (d.count === 0) return;
           
-          let tooltip: any = d3.select(containerRef.current).select(".chart-tooltip");
+          // Explicitly cast the generic selection to an HTMLDivElement so it matches the append type
+          let tooltip = d3.select("body").select<HTMLDivElement>(".chart-tooltip-global");
           if (tooltip.empty()) {
-            tooltip = d3.select(containerRef.current).append("div")
-              .attr("class", "chart-tooltip absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[240px] text-zinc-800 animate-in fade-in zoom-in duration-150");
+            tooltip = d3.select("body").append("div")
+              .attr("class", "chart-tooltip-global fixed pointer-events-none z-[9999] bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[240px] text-zinc-800 transition-opacity duration-150");
           }
 
           let stakeholderHtml = "";
           if (ministers && ministers.length > 0) {
-            // Find the absolute highest percentage keys for this specific bin
             const dominantWealth = Object.keys(d.breakdown.wealth).reduce((a, b) => d.breakdown.wealth[a] > d.breakdown.wealth[b] ? a : b) as 'Poor' | 'Middle' | 'Wealthy';
             const dominantAge = Object.keys(d.breakdown.age).reduce((a, b) => d.breakdown.age[a] > d.breakdown.age[b] ? a : b) as 'Youth' | 'Adult' | 'Elderly';
 
@@ -135,7 +135,6 @@ export default function D3Chart({
             const aMin = ministers.find(m => m.name === ageMinisterMap[dominantAge]);
 
             const getEmoji = (status: string) => status === 'happy' ? '😊' : status === 'angry' ? '😠' : '😐';
-            // Swap out grey for amber when neutral
             const getCircleColor = (status: string) => status === 'happy' ? 'bg-emerald-500' : status === 'angry' ? 'bg-rose-500' : 'bg-amber-400';
 
             stakeholderHtml = `
@@ -204,13 +203,31 @@ export default function D3Chart({
           `);
         })
         .on("mousemove", (event) => {
-          const [x, y] = d3.pointer(event, containerRef.current);
-          const chartWidth = containerRef.current?.clientWidth || 0;
-          const xPos = x + 200 > chartWidth ? x - 200 : x + 20;
-          d3.select(containerRef.current).select(".chart-tooltip").style("left", `${xPos}px`).style("top", `${y - 20}px`);
+          const tooltipNode = d3.select("body").select(".chart-tooltip-global").node() as HTMLElement;
+          const tooltipWidth = tooltipNode?.offsetWidth || 240;
+          const tooltipHeight = tooltipNode?.offsetHeight || 280;
+          
+          let xPos = event.clientX + 20;
+          let yPos = event.clientY - 20;
+
+          if (xPos + tooltipWidth > window.innerWidth) {
+            xPos = event.clientX - tooltipWidth - 20;
+          }
+          
+          if (yPos + tooltipHeight > window.innerHeight) {
+            yPos = window.innerHeight - tooltipHeight - 10;
+          }
+          
+          if (yPos < 0) {
+            yPos = 10;
+          }
+
+          d3.select("body").select(".chart-tooltip-global")
+            .style("left", `${xPos}px`)
+            .style("top", `${yPos}px`);
         })
         .on("mouseleave", () => {
-          d3.select(containerRef.current).select(".chart-tooltip").style("opacity", 0);
+          d3.select("body").select(".chart-tooltip-global").style("opacity", 0);
         })
         .transition().duration(500)
         .attr("x", d => xScale(d.name.toString()) || 0)
@@ -236,6 +253,10 @@ export default function D3Chart({
         .transition().duration(500)
         .attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
+
+    return () => {
+      d3.selectAll(".chart-tooltip-global").remove();
+    };
   }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
