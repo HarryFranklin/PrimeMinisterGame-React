@@ -13,6 +13,7 @@ interface GraphsTabProps {
   currentMetricScore: number;
   initialMetricScore: number;
   selectedPolicy: Policy | null;
+  ministers: any[];
 }
 
 export default function GraphsTab(props: GraphsTabProps) {
@@ -20,7 +21,8 @@ export default function GraphsTab(props: GraphsTabProps) {
     currentCycle, 
     currentChartData, previewChartData, 
     currentHistogramData, previewHistogramData, 
-    selectedPolicy 
+    selectedPolicy,
+    ministers
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -58,7 +60,8 @@ export default function GraphsTab(props: GraphsTabProps) {
               histogramData={currentHistogramData} 
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
-              color="#d4d4d8" 
+              color="#d4d4d8"
+              ministers={ministers}
             />
           </div>
         </div>
@@ -79,6 +82,7 @@ export default function GraphsTab(props: GraphsTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
+              ministers={ministers}
             />
 
             {/* Frosted Glass Overlay */}

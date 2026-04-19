@@ -10,6 +10,7 @@ interface D3ChartProps {
   yAxisType: AxisVariable;
   color?: string; 
   highlightBars?: number[];
+  ministers?: any[]; // Added to receive cabinet data
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -46,7 +47,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -121,6 +122,43 @@ export default function D3Chart({
               .attr("class", "chart-tooltip absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[240px] text-zinc-800 animate-in fade-in zoom-in duration-150");
           }
 
+          // Identify dominant demographics to map to relevant cabinet ministers
+          let stakeholderHtml = "";
+          if (ministers && ministers.length > 0) {
+            // Find the highest percentage keys for this specific bin
+            const dominantWealth = Object.keys(d.breakdown.wealth).reduce((a, b) => d.breakdown.wealth[a] > d.breakdown.wealth[b] ? a : b) as 'Poor' | 'Middle' | 'Wealthy';
+            const dominantAge = Object.keys(d.breakdown.age).reduce((a, b) => d.breakdown.age[a] > d.breakdown.age[b] ? a : b) as 'Youth' | 'Adult' | 'Elderly';
+
+            // Mapping demographics to minister names matching page.tsx
+            const wealthMinisterMap = { 'Poor': 'Welfare Secretary', 'Middle': 'Home Secretary', 'Wealthy': 'Chancellor' };
+            const ageMinisterMap = { 'Youth': 'Education Secretary', 'Adult': 'Business Secretary', 'Elderly': 'Pensions Secretary' };
+
+            const wMin = ministers.find(m => m.name === wealthMinisterMap[dominantWealth]);
+            const aMin = ministers.find(m => m.name === ageMinisterMap[dominantAge]);
+
+            const getEmoji = (status: string) => status === 'happy' ? '😊' : status === 'angry' ? '😠' : '😐';
+
+            stakeholderHtml = `
+              <div class="mt-4 pt-3 border-t border-zinc-100">
+                <p class="text-[9px] font-bold uppercase text-zinc-400 mb-2">Dominant Stakeholders</p>
+                <div class="flex flex-col gap-2">
+                  ${wMin ? `
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-zinc-600"><strong>${wMin.name}</strong> (${dominantWealth})</span>
+                      <span class="text-base">${getEmoji(wMin.status)}</span>
+                    </div>
+                  ` : ''}
+                  ${aMin && aMin.name !== wMin?.name ? `
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-zinc-600"><strong>${aMin.name}</strong> (${dominantAge})</span>
+                      <span class="text-base">${getEmoji(aMin.status)}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }
+
           tooltip.style("opacity", 1).html(`
             <div class="space-y-4">
               <div class="border-b border-zinc-100 pb-2">
@@ -157,6 +195,7 @@ export default function D3Chart({
                   </div>
                 </div>
               </div>
+              ${stakeholderHtml}
             </div>
           `);
         })
@@ -193,7 +232,8 @@ export default function D3Chart({
         .transition().duration(500)
         .attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color]);
+  // Ensure 'ministers' is added to the dependency array
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }

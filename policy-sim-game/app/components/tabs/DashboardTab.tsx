@@ -60,6 +60,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color="#d4d4d8"
+              ministers={ministers}
             />
           </div>
         </div>
@@ -77,6 +78,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
+              ministers={ministers}
             />
             
             {!selectedPolicy && (
