@@ -23,12 +23,12 @@ interface DashboardTabProps {
   approvalRating: number;
 }
 
-// Updated Helper: Now returns circle background colours and tighter thresholds
+// Helper: Returns circle background colours and tighter thresholds
 const getMinisterReaction = (delta: number) => {
-  if (delta >= 0.05) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊" };
-  if (delta >= 0.005) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂" };
-  if (delta <= -0.05) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠" };
-  if (delta <= -0.005) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁" };
+  if (delta >= 0.5) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊" };
+  if (delta >= 0.05) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂" };
+  if (delta <= -0.5) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠" };
+  if (delta <= -0.05) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁" };
   return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐" };
 };
 

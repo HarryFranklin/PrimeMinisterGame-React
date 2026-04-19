@@ -46,7 +46,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
         if (Math.abs(population[i].currentLS - population[j].currentLS) < 0.2) {
           const u1 = WelfareMetrics.getUtilityForPerson(population[i].currentLS, population[i].personalUtilities);
           const u2 = WelfareMetrics.getUtilityForPerson(population[j].currentLS, population[j].personalUtilities);
-          if (Math.abs(u1 - u2) > 0.4) {
+          if (Math.abs(u1 - u2) > 4.0) {
             return [population[i], population[j]];
           }
         }
@@ -178,12 +178,12 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Citizen #{String(citizen.id).substring(0,4)}</p>
                       <div className="mb-2">
                         <span className="text-sm text-zinc-400">Life Satisfaction: </span>
-                        <strong className="text-3xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)} / 10</strong>
+                        <strong className="text-3xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)} / 10.0</strong>
                       </div>
                       
                       <div className={`transition-all duration-500 ${revealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4'}`}>
                         <div className="w-full h-px bg-zinc-200 my-4" />
-                        <span className="text-sm text-pink-500 font-bold uppercase tracking-widest block mb-1">True Utility</span>
+                        <span className="text-sm text-pink-500 font-bold uppercase tracking-widest block mb-1">Utility (Happiness)</span>
                         <strong className="text-4xl text-pink-600">{utility.toFixed(2)}</strong>
                       </div>
 
@@ -261,7 +261,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <span className="text-sm text-zinc-400 block mb-1">Life Satisfaction</span>
-                      <strong className="text-3xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)} / 10</strong>
+                      <strong className="text-3xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)} / 10.0</strong>
                     </div>
                     <div>
                       <span className="text-sm text-zinc-400 block mb-1">Personal Utility</span>

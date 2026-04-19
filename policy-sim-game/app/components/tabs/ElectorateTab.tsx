@@ -40,10 +40,9 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       let initialUtil = 0;
       let currentUtil = 0;
 
-      // Calculate base LS or complex Utility depending on the cycle
       if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
-        initialUtil = initialPopulation[i].currentLS / 10;
-        currentUtil = r.currentLS / 10;
+        initialUtil = initialPopulation[i].currentLS;
+        currentUtil = r.currentLS;
       } else if (currentCycle === ElectionCycle.PersonalUtility) {
         initialUtil = WelfareMetrics.getUtilityForPerson(initialPopulation[i].currentLS, r.personalUtilities);
         currentUtil = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
@@ -59,7 +58,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
         initialLS: initialPopulation[i].currentLS,
         utilityShift,
         // PURE RATIONAL CHOICE: They approve if the policy doesn't harm their overall utility
-        isApproving: utilityShift >= -0.001, 
+        isApproving: utilityShift >= -0.01, 
         lsTrajectory: r.currentLS - initialPopulation[i].currentLS
       };
     });

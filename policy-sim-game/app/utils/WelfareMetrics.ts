@@ -6,7 +6,7 @@ export class WelfareMetrics {
   
   // Maps a Life Satisfaction score to a Utility value using the respondent's unique curve
   static getUtilityForPerson(lsScore: number, curve: number[]): number {
-    if (lsScore <= -0.9) return curve[0]; // Death state
+    if (lsScore <= -0.9) return curve[0] * 10; // Death state
 
     const score = Math.max(lsScore, 2.0); // Clamp to minimum available data
     const exactIndex = score / 2.0;
@@ -20,7 +20,7 @@ export class WelfareMetrics {
     if (lowerIndex > 5) lowerIndex = 5;
 
     const t = exactIndex - lowerIndex; 
-    return lerp(curve[lowerIndex], curve[upperIndex], t);
+    return lerp(curve[lowerIndex], curve[upperIndex], t) * 10;
   }
 
   // Calculates Societal Fairness by evaluating the whole population against one respondent's empathy curve
@@ -32,10 +32,6 @@ export class WelfareMetrics {
     return totalUtility / populationLS.length;
   }
 
-  /**
-   * Calculates the Standard Deviation of Life Satisfaction for the population.
-   * Acts as a mathematical proxy for inequality (lower = more equal).
-   */
   static calculateInequalityIndex(population: Respondent[]): number {
     if (population.length === 0) return 0;
     const mean = population.reduce((sum, r) => sum + r.currentLS, 0) / population.length;
@@ -44,36 +40,25 @@ export class WelfareMetrics {
     return Math.sqrt(variance);
   }
 
-  /**
-   * Calculates the Societal Floor (Minimum Life Satisfaction).
-   * Used as the target metric for the Rawlsian Framework.
-   */
   static calculateSocietalFloor(population: Respondent[]): number {
     if (population.length === 0) return 0;
     return Math.min(...population.map(r => r.currentLS));
   }
 
-  /**
-   * Maps a raw metric score against the MAO to democratic Approval Rating.
-   * 90% of MAO = 51% Approval.
-   */
   static calculateApprovalRating(currentScore: number, cycleMAO: number): number {
     if (cycleMAO <= 0) return 0; // Fallback safety
     const threshold = cycleMAO * 0.90;
     
     let approvalRating = 0;
     if (currentScore >= threshold) {
-      // Maps [Threshold -> MAO] to [51% -> 100%]
       const range = cycleMAO - threshold;
       const progress = range <= 0 ? 1 : (currentScore - threshold) / range;
       approvalRating = 51 + (progress * 49);
     } else {
-      // Maps [0 -> Threshold] to [0% -> 51%]
       const progress = Math.max(0, currentScore) / threshold;
       approvalRating = progress * 51;
     }
     
-    // Lock to 1 decimal place to prevent display vs. logic mismatch
     const finalRating = Math.max(0, Math.min(100, approvalRating));
     return Math.round(finalRating * 10) / 10; 
   }

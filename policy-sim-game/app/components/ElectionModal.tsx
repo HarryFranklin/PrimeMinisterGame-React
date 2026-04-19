@@ -18,20 +18,41 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
   
   let nextCycleName = "";
   let isFinalCycle = false;
-  let adviceText = "";
+  let debriefText = "";
+  let canProceed = true; // Determines if the player is allowed to move to the next cycle
 
+  // Map out the logic according to the Study Plan's Game Flow Logic
   if (currentCycle === ElectionCycle.Benthamite) {
-    nextCycleName = "Start Cycle 2: Rawlsian";
-    adviceText = "The Benthamite framework requires the greatest good for the greatest number. You may have focused too heavily on niche demographics while neglecting the broad majority.";
+    nextCycleName = "Proceed to Next Cycle"; 
+    // Logic on Loss: Restart (Tutorial phase)
+    if (won) {
+      debriefText = "“You successfully raised the average Life Satisfaction, but look at the effect it had on inequality and the societal floor. This is the primary limitation of a strictly Benthamite approach to policy aggregation.”";
+      canProceed = true;
+    } else {
+      debriefText = "You failed to secure a majority. Try again to achieve the goal of increasing average Life Satisfaction.";
+      canProceed = false; 
+    }
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    nextCycleName = "Start Cycle 3: Personal Utility";
-    adviceText = "The Rawlsian framework is binary: if the bottom demographic suffers, you fail. To succeed, you must raise the 'floor' of society, even at the expense of the wealthy.";
+    nextCycleName = "Proceed to Next Cycle"; 
+    isFinalCycle = false;
+    // Logic on Loss: Proceed (Intentional "impossible" difficulty to prompt utility frameworks)
+    debriefText = "“While you prioritised pulling up the societal floor, the intense compromise required suggests that raw Life Satisfaction scores might not capture the full reality of individual happiness. Are all citizens at 'LS 2' experiencing the same level of utility?”";
+    canProceed = true;
   } else if (currentCycle === ElectionCycle.PersonalUtility) {
-    nextCycleName = "Start Cycle 4: Societal Utility";
-    adviceText = "Individuals here care about their subjective gains. Ensure your policies are translating general wellbeing into personal satisfaction for each citizen.";
+    nextCycleName = "Proceed to Next Cycle"; 
+    isFinalCycle = false;
+    // Logic on Loss: Proceed (Failure is a valid research outcome demonstrating the "Status Quo Trap")
+    debriefText = "“You’ve encountered the 'status quo trap'; because citizens prioritised personal risk and loss aversion, meaningful redistribution became impossible.”";
+    canProceed = true;
   } else {
     isFinalCycle = true;
-    adviceText = "Success here depends on how people believe society should be structured. Focus on policies that reduce perceived unfairness in the distribution of wellbeing.";
+    canProceed = true;
+    // Logic on Loss: Outcome (Measures if the player recognises societal utilities)
+    if (won) {
+      debriefText = "“By applying the Wellbeing-Equity Trade-off Model, you achieved a win state by prioritising collective fairness and inequality aversion.”";
+    } else {
+      debriefText = "“You failed to reach the 51% threshold. This framework measures whether you recognise that focusing on societal utilities and fairness can be an effective way to govern.”";
+    }
   }
 
   return (
@@ -64,25 +85,33 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
           </p>
         </div>
 
-        {!won && (
-          <div className="mb-8 p-6 bg-zinc-50 rounded-xl border border-zinc-200 italic text-zinc-600 text-sm leading-relaxed">
-            <span className="font-bold text-zinc-800 not-italic block mb-1">Ministerial Debrief:</span>
-            "{adviceText}"
-          </div>
-        )}
+        {/* Debrief text is now always shown to ensure educational delivery */}
+        <div className="mb-8 p-6 bg-zinc-50 rounded-xl border border-zinc-200 italic text-zinc-600 text-sm leading-relaxed">
+          <span className="font-bold text-zinc-800 not-italic block mb-1">Ministerial Debrief:</span>
+          {debriefText}
+        </div>
 
         <div className="flex gap-4">
-          <button onClick={onReset} className="flex-1 py-4 bg-zinc-100 text-zinc-700 font-bold rounded-xl hover:bg-zinc-200 transition-all border border-zinc-300">
+          {/* Secondary Button: Always allow retry, but style it prominently only if it's the mandatory action */}
+          <button 
+            onClick={onReset} 
+            className={`py-4 font-bold rounded-xl transition-all border ${
+              !canProceed 
+                ? "flex-1 bg-zinc-900 text-white hover:bg-black border-transparent shadow-lg" // Primary style if they MUST retry
+                : "flex-1 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border-zinc-300" // Secondary style if they are allowed to proceed
+            }`}
+          >
             {won ? "Restart Cycle" : "Try Again"}
           </button>
           
-          {won && !isFinalCycle && (
+          {/* Primary Button: Proceed to Next / Finish */}
+          {canProceed && !isFinalCycle && (
             <button onClick={onNextCycle} className="flex-1 py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
               {nextCycleName}
             </button>
           )}
 
-          {won && isFinalCycle && onFinish && (
+          {canProceed && isFinalCycle && onFinish && (
             <button onClick={onFinish} className="flex-1 py-4 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all shadow-lg">
               Finish Simulation
             </button>

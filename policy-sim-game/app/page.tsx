@@ -198,7 +198,7 @@ export default function Home() {
         if (g.length === 0) return 0;
         return g.reduce((s, r) => s + (
           currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian 
-            ? r.currentLS / 10 
+            ? r.currentLS 
             : currentCycle === ElectionCycle.PersonalUtility 
               ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities) 
               : WelfareMetrics.evaluateDistribution(p.map(x => x.currentLS), r.societalUtilities)
@@ -212,8 +212,8 @@ export default function Home() {
       const policyDelta = proj - current;
       
       let status = 'neutral';
-      if (policyDelta > 0.005) status = 'happy';
-      else if (policyDelta < -0.005) status = 'angry';
+      if (policyDelta > 0.05) status = 'happy';
+      else if (policyDelta < -0.05) status = 'angry';
       
       return { 
         name: n, mandate, status, 

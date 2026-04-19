@@ -19,10 +19,10 @@ const getAxisDomain = (axisType: AxisVariable): [number, number] => {
   switch (axisType) {
     case AxisVariable.LifeSatisfaction: return [0, 10];
     case AxisVariable.PersonalUtility:
-    case AxisVariable.SocietalFairness: return [0, 1];
+    case AxisVariable.SocietalFairness: return [0, 10];
     case AxisVariable.DeltaPersonalUtility:
-    case AxisVariable.DeltaSocietalFairness: return [-1, 1];
-    default: return [0, 1];
+    case AxisVariable.DeltaSocietalFairness: return [-10, 10];
+    default: return [0, 10];
   }
 };
 
@@ -30,9 +30,9 @@ const getTicks = (axisType: AxisVariable) => {
   switch (axisType) {
     case AxisVariable.LifeSatisfaction: return [0, 2.5, 5, 7.5, 10];
     case AxisVariable.PersonalUtility:
-    case AxisVariable.SocietalFairness: return [0, 0.25, 0.5, 0.75, 1];
+    case AxisVariable.SocietalFairness: return [0, 2.5, 5, 7.5, 10];
     case AxisVariable.DeltaPersonalUtility:
-    case AxisVariable.DeltaSocietalFairness: return [-1, -0.5, 0, 0.5, 1];
+    case AxisVariable.DeltaSocietalFairness: return [-10, -5, 0, 5, 10];
     default: return [];
   }
 };
