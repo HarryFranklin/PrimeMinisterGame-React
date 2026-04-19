@@ -81,6 +81,7 @@ const getMetricScore = (pop: Respondent[], cycle: ElectionCycle) => {
 export default function Home() {
   const [population, setPopulation] = useState<Respondent[]>([]);
   const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]); 
+  const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
 
   const [currentTurn, setCurrentTurn] = useState(1);
@@ -125,6 +126,7 @@ export default function Home() {
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
+    setBaselinePopulation(data);
     startCycle(ElectionCycle.Benthamite, data);
   }, [startCycle]);
 
@@ -397,7 +399,10 @@ export default function Home() {
       )}
 
       {showFinalDebrief && (
-        <FinalDebriefModal />
+        <FinalDebriefModal 
+          baselinePopulation={baselinePopulation}
+          finalPopulation={population}
+        />
       )}
 
       <button 

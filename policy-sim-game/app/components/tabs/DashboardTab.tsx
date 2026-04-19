@@ -36,19 +36,17 @@ export default function DashboardTab(props: DashboardTabProps) {
     setActiveTab, currentCycle, 
     currentChartData, previewChartData,
     currentHistogramData, previewHistogramData, 
-    ministers, setSelectedMinister, selectedPolicy, initialMetricScore,
+    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy, cycleMAO, approvalRating
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
-  const is1D = rule.plotType === '1D';
 
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
       
-      {/* LEFT COLUMN: Split Graphs (Stacked Vertically) */}
+      {/* LEFT COLUMN: Split Graphs */}
       <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
-        {/* Top Graph: Current Distribution */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
@@ -62,14 +60,10 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color="#d4d4d8"
-              targetValue={is1D ? rule.metricTarget : undefined}
-              currentValue={is1D ? initialMetricScore : undefined}
-              initialValue={is1D ? initialMetricScore : undefined}
             />
           </div>
         </div>
 
-        {/* Bottom Graph: Projected Distribution */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Projected Distribution</h3>
@@ -83,12 +77,8 @@ export default function DashboardTab(props: DashboardTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
-              targetValue={is1D ? rule.metricTarget : undefined}
-              currentValue={is1D ? initialMetricScore : undefined}
-              initialValue={is1D ? initialMetricScore : undefined}
             />
             
-            {/* Frosted Glass Overlay */}
             {!selectedPolicy && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-b-xl z-10 border-t border-zinc-100 animate-in fade-in duration-300">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-white px-3 py-1.5 rounded-full shadow-sm border border-zinc-200">

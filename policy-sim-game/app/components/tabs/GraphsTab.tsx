@@ -20,11 +20,10 @@ export default function GraphsTab(props: GraphsTabProps) {
     currentCycle, 
     currentChartData, previewChartData, 
     currentHistogramData, previewHistogramData, 
-    initialMetricScore, selectedPolicy 
+    selectedPolicy 
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
-  const is1D = rule.plotType === '1D';
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
@@ -60,9 +59,6 @@ export default function GraphsTab(props: GraphsTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color="#d4d4d8" 
-              targetValue={is1D ? rule.metricTarget : undefined}
-              currentValue={is1D ? initialMetricScore : undefined}
-              initialValue={is1D ? initialMetricScore : undefined}
             />
           </div>
         </div>
@@ -83,9 +79,6 @@ export default function GraphsTab(props: GraphsTabProps) {
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
-              targetValue={is1D ? rule.metricTarget : undefined}
-              currentValue={is1D ? initialMetricScore : undefined}
-              initialValue={is1D ? initialMetricScore : undefined}
             />
 
             {/* Frosted Glass Overlay */}

@@ -9,9 +9,6 @@ interface D3ChartProps {
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
   color?: string; 
-  targetValue?: number;
-  currentValue?: number;
-  initialValue?: number;
   highlightBars?: number[];
 }
 
@@ -49,8 +46,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color,
-  targetValue, currentValue, initialValue
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -119,7 +115,6 @@ export default function D3Chart({
         .on("mouseenter", (event, d) => {
           if (d.count === 0) return;
           
-          // Select the tooltip specifically within THIS component's container
           let tooltip: any = d3.select(containerRef.current).select(".chart-tooltip");
           if (tooltip.empty()) {
             tooltip = d3.select(containerRef.current).append("div")
@@ -169,14 +164,9 @@ export default function D3Chart({
           const [x, y] = d3.pointer(event, containerRef.current);
           const chartWidth = containerRef.current?.clientWidth || 0;
           const xPos = x + 200 > chartWidth ? x - 200 : x + 20;
-          
-          // Position the tooltip within THIS container
-          d3.select(containerRef.current).select(".chart-tooltip")
-            .style("left", `${xPos}px`)
-            .style("top", `${y - 20}px`);
+          d3.select(containerRef.current).select(".chart-tooltip").style("left", `${xPos}px`).style("top", `${y - 20}px`);
         })
         .on("mouseleave", () => {
-          // Hide the tooltip within THIS container
           d3.select(containerRef.current).select(".chart-tooltip").style("opacity", 0);
         })
         .transition().duration(500)
@@ -187,50 +177,7 @@ export default function D3Chart({
         .attr("fill", chartColor)
         .attr("rx", 4);
 
-      // === DRAW ANNOTATIONS ===
       annotationLayer.selectAll("*").remove();
-
-      const getContinuousX = (val: number) => {
-        const step = xScale.step();
-        const offset = (xScale("0") as number) || 0;
-        return offset + (val * step) + xScale.bandwidth() / 2;
-      };
-
-      const drawLine = (val: number | undefined, color: string, label: string, yPos: number, dashed: boolean) => {
-        if (val === undefined) return;
-        const xPos = getContinuousX(val);
-
-        annotationLayer.append("line")
-          .attr("x1", xPos).attr("x2", xPos)
-          .attr("y1", yPos + 10).attr("y2", height)
-          .attr("stroke", color).attr("stroke-width", 2.5)
-          .attr("stroke-dasharray", dashed ? "4,4" : "none")
-          .style("opacity", 0.9);
-
-        annotationLayer.append("rect")
-          .attr("x", xPos - 35).attr("y", yPos - 12)
-          .attr("width", 70).attr("height", 16)
-          .attr("fill", color).attr("rx", 8)
-          .style("opacity", 0.15);
-
-        annotationLayer.append("text")
-          .attr("x", xPos).attr("y", yPos)
-          .attr("text-anchor", "middle")
-          .attr("fill", color)
-          .style("font-size", "10px")
-          .style("font-weight", "bold")
-          .style("text-transform", "uppercase")
-          .text(`${label}: ${val.toFixed(1)}`);
-      };
-
-      drawLine(initialValue, "#71717a", "Start", -20, true);   
-      drawLine(targetValue, "#10b981", "Target", -5, false);    
-
-      const isAtStart = currentValue !== undefined && initialValue !== undefined && Math.abs(currentValue - initialValue) < 0.01;
-      
-      if (!isAtStart) {
-        drawLine(currentValue, "#18181b", "Current", 10, false); 
-      }
 
     } else if (plotType === '2D') {
       annotationLayer.selectAll("*").remove(); 
@@ -246,7 +193,7 @@ export default function D3Chart({
         .transition().duration(500)
         .attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, targetValue, currentValue, initialValue]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }
