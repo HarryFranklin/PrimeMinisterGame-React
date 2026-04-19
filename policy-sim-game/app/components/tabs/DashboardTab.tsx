@@ -173,7 +173,7 @@ export default function DashboardTab(props: DashboardTabProps) {
              </p>
           ) : (
             <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-              Public Approval: <strong className="text-zinc-300">51.0%</strong>
+              Required Approval: <strong className="text-zinc-300">51.0%</strong>
             </p>
           )}
         </div>
