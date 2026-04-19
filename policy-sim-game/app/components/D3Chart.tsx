@@ -143,14 +143,16 @@ export default function D3Chart({
                   </div>
                   <div class="flex justify-between text-[10px] mt-1 font-bold">
                     <span class="text-rose-600">Poor ${Math.round(d.breakdown.wealth.Poor)}%</span>
+                    <span class="text-blue-500">Mid ${Math.round(d.breakdown.wealth.Middle)}%</span>
                     <span class="text-emerald-600">Rich ${Math.round(d.breakdown.wealth.Wealthy)}%</span>
                   </div>
                 </div>
 
                 <div>
-                  <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Key Demographics</p>
-                  <div class="grid grid-cols-2 gap-1 text-[10px] font-medium text-zinc-600">
+                  <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Age Breakdown</p>
+                  <div class="grid grid-cols-3 gap-1 text-[10px] font-medium text-zinc-600 text-center">
                     <span>Youth: ${Math.round(d.breakdown.age.Youth)}%</span>
+                    <span>Adult: ${Math.round(d.breakdown.age.Adult)}%</span>
                     <span>Elderly: ${Math.round(d.breakdown.age.Elderly)}%</span>
                   </div>
                 </div>
