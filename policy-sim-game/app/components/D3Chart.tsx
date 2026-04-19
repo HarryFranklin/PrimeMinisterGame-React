@@ -123,17 +123,17 @@ export default function D3Chart({
           let tooltip: any = d3.select(containerRef.current).select(".chart-tooltip");
           if (tooltip.empty()) {
             tooltip = d3.select(containerRef.current).append("div")
-              .attr("class", "chart-tooltip absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-lg p-3 min-w-[180px] text-zinc-800 animate-in fade-in zoom-in duration-150");
+              .attr("class", "chart-tooltip absolute pointer-events-none z-50 bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[240px] text-zinc-800 animate-in fade-in zoom-in duration-150");
           }
 
           tooltip.style("opacity", 1).html(`
-            <div class="space-y-3">
-              <div class="border-b border-zinc-100 pb-1.5">
+            <div class="space-y-4">
+              <div class="border-b border-zinc-100 pb-2">
                 <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400">LS Score ${d.name}</p>
                 <p class="text-sm font-bold text-zinc-600">${d.count} Residents</p>
               </div>
               
-              <div class="space-y-2">
+              <div class="space-y-3">
                 <div>
                   <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Wealth Breakdown</p>
                   <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
@@ -141,19 +141,24 @@ export default function D3Chart({
                     <div style="width: ${d.breakdown.wealth.Middle}%" class="bg-blue-500"></div>
                     <div style="width: ${d.breakdown.wealth.Wealthy}%" class="bg-emerald-500"></div>
                   </div>
-                  <div class="flex justify-between text-[10px] mt-1 font-bold">
-                    <span class="text-rose-600">Poor ${Math.round(d.breakdown.wealth.Poor)}%</span>
-                    <span class="text-blue-500">Mid ${Math.round(d.breakdown.wealth.Middle)}%</span>
-                    <span class="text-emerald-600">Rich ${Math.round(d.breakdown.wealth.Wealthy)}%</span>
+                  <div class="flex justify-between text-[10px] mt-1.5 font-bold">
+                    <span class="text-rose-600">Poor: ${Math.round(d.breakdown.wealth.Poor)}%</span>
+                    <span class="text-blue-500">Middle: ${Math.round(d.breakdown.wealth.Middle)}%</span>
+                    <span class="text-emerald-600">Wealthy: ${Math.round(d.breakdown.wealth.Wealthy)}%</span>
                   </div>
                 </div>
 
                 <div>
                   <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Age Breakdown</p>
-                  <div class="grid grid-cols-3 gap-1 text-[10px] font-medium text-zinc-600 text-center">
-                    <span>Youth: ${Math.round(d.breakdown.age.Youth)}%</span>
-                    <span>Adult: ${Math.round(d.breakdown.age.Adult)}%</span>
-                    <span>Elderly: ${Math.round(d.breakdown.age.Elderly)}%</span>
+                  <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
+                    <div style="width: ${d.breakdown.age.Youth}%" class="bg-amber-400"></div>
+                    <div style="width: ${d.breakdown.age.Adult}%" class="bg-indigo-500"></div>
+                    <div style="width: ${d.breakdown.age.Elderly}%" class="bg-teal-500"></div>
+                  </div>
+                  <div class="flex justify-between text-[10px] mt-1.5 font-bold">
+                    <span class="text-amber-600">Youth: ${Math.round(d.breakdown.age.Youth)}%</span>
+                    <span class="text-indigo-500">Adult: ${Math.round(d.breakdown.age.Adult)}%</span>
+                    <span class="text-teal-600">Elderly: ${Math.round(d.breakdown.age.Elderly)}%</span>
                   </div>
                 </div>
               </div>
