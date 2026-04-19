@@ -361,6 +361,7 @@ export default function Home() {
             currentCycle={currentCycle} 
             currentChartData={currentChartData} 
             previewChartData={previewChartData} 
+            selectedPolicy={selectedPolicy}
             currentHistogramData={currentHistogramData} 
             previewHistogramData={previewHistogramData} 
             currentMetricScore={currentMetricScore}

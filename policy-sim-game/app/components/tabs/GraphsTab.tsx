@@ -1,6 +1,6 @@
 import React from "react";
 import D3Chart from "../D3Chart";
-import { AxisVariable, ElectionCycle } from "../../utils/types";
+import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 
 interface GraphsTabProps {
@@ -12,6 +12,7 @@ interface GraphsTabProps {
   previewHistogramData: any[];
   currentMetricScore: number;
   initialMetricScore: number;
+  selectedPolicy: Policy | null;
 }
 
 export default function GraphsTab(props: GraphsTabProps) {
@@ -19,7 +20,7 @@ export default function GraphsTab(props: GraphsTabProps) {
     currentCycle, 
     currentChartData, previewChartData, 
     currentHistogramData, previewHistogramData, 
-    initialMetricScore 
+    initialMetricScore, selectedPolicy 
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -58,7 +59,7 @@ export default function GraphsTab(props: GraphsTabProps) {
               histogramData={currentHistogramData} 
               xAxisType={AxisVariable.LifeSatisfaction} 
               yAxisType={rule.yAxisType} 
-              color="#d4d4d8" // Ghost grey
+              color="#d4d4d8" 
               targetValue={is1D ? rule.metricTarget : undefined}
               currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
@@ -74,7 +75,7 @@ export default function GraphsTab(props: GraphsTabProps) {
                <p className="text-xs text-zinc-500 font-medium mt-1">Estimated impact of selected policy</p>
              </div>
           </div>
-          <div className="flex-1 p-6 min-h-0">
+          <div className="flex-1 p-6 min-h-0 relative">
             <D3Chart 
               plotType={rule.plotType} 
               chartData={previewChartData} 
@@ -86,6 +87,21 @@ export default function GraphsTab(props: GraphsTabProps) {
               currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
             />
+
+            {/* Frosted Glass Overlay */}
+            {!selectedPolicy && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-b-xl z-10 animate-in fade-in duration-300">
+                <div className="bg-white px-6 py-5 rounded-2xl shadow-xl border border-zinc-200 text-center max-w-sm">
+                  <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-zinc-400 text-xl">📊</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-2">Awaiting Policy</h4>
+                  <p className="text-sm text-zinc-500 font-medium">
+                    Return to the dashboard and select a policy from the Legislative Agenda to forecast its impact on the distribution.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

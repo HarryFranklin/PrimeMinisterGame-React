@@ -23,12 +23,11 @@ interface DashboardTabProps {
   approvalRating: number;
 }
 
-// Helper: Returns circle background colours and tighter thresholds
 const getMinisterReaction = (delta: number) => {
-  if (delta >= 0.5) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊" };
-  if (delta >= 0.05) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂" };
-  if (delta <= -0.5) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠" };
-  if (delta <= -0.05) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁" };
+  if (delta >= 0.05) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊" };
+  if (delta >= 0.005) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂" };
+  if (delta <= -0.05) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠" };
+  if (delta <= -0.005) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁" };
   return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐" };
 };
 
@@ -47,8 +46,9 @@ export default function DashboardTab(props: DashboardTabProps) {
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
       
-      {/* LEFT COLUMN: Split Graphs */}
+      {/* LEFT COLUMN: Split Graphs (Stacked Vertically) */}
       <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
+        {/* Top Graph: Current Distribution */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
@@ -69,12 +69,13 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
+        {/* Bottom Graph: Projected Distribution */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group">
           <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">Projected Distribution</h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
           </div>
-          <div className="flex-1 p-4 min-h-0">
+          <div className="flex-1 p-4 min-h-0 relative">
             <D3Chart 
               plotType={rule.plotType} 
               chartData={previewChartData}
@@ -86,6 +87,15 @@ export default function DashboardTab(props: DashboardTabProps) {
               currentValue={is1D ? initialMetricScore : undefined}
               initialValue={is1D ? initialMetricScore : undefined}
             />
+            
+            {/* Frosted Glass Overlay */}
+            {!selectedPolicy && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-b-xl z-10 border-t border-zinc-100 animate-in fade-in duration-300">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-white px-3 py-1.5 rounded-full shadow-sm border border-zinc-200">
+                  Awaiting Policy
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -103,19 +113,10 @@ export default function DashboardTab(props: DashboardTabProps) {
           
           <div className="p-2 lg:p-3 grid grid-cols-3 grid-rows-2 gap-2 lg:gap-3 flex-1 min-h-0">
             {ministers.map((minister, i) => {
-              // Determine dynamic reaction if a policy is selected
               const isReacting = selectedPolicy !== null;
               const reaction = isReacting ? getMinisterReaction(minister.policyDelta || 0) : null;
-              
-              // Use dynamic emoji if reacting, otherwise use base status
-              const displayEmoji = isReacting 
-                ? reaction?.emoji 
-                : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
-
-              // Override the circle colour completely if reacting
-              const displayColor = isReacting && reaction
-                ? reaction.circle
-                : minister.color;
+              const displayEmoji = isReacting ? reaction?.emoji : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
+              const displayColor = isReacting && reaction ? reaction.circle : minister.color;
 
               return (
                 <div 
@@ -153,7 +154,6 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* Target Box (Approval Rating) */}
         <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
@@ -173,7 +173,7 @@ export default function DashboardTab(props: DashboardTabProps) {
              </p>
           ) : (
             <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-              Required Approval: <strong className="text-zinc-300">51.0%</strong>
+              Public Approval: <strong className="text-zinc-300">51.0%</strong>
             </p>
           )}
         </div>
