@@ -376,6 +376,7 @@ export default function Home() {
             initialPopulation={initialPopulation}
             previewPopulation={previewPopulation}
             currentCycle={currentCycle}
+            approvalRating={turnApprovalRating}
           />
         )}
       </main>
