@@ -7,9 +7,9 @@ import { WelfareMetrics } from "./utils/WelfareMetrics";
 import { availablePolicies } from "./data/policies";
 import { PolicyEngine } from "./utils/PolicyEngine";
 import { MAOEngine } from "./utils/MAOEngine";
-import ElectionModal from "./components/ElectionModal";
-import NarrativeModal from "./components/NarrativeModal";
-import FinalDebriefModal from "./components/FinalDebriefModal";
+import ElectionModal from "./components/modals/ElectionModal";
+import NarrativeModal from "./components/modals/NarrativeModal";
+import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports

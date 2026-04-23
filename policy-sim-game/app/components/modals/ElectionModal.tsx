@@ -1,6 +1,6 @@
 import React from 'react';
-import { ElectionCycle } from '../utils/types';
-import { FRAMEWORK_RULES } from '../utils/frameworkRules';
+import { ElectionCycle } from '../../utils/types';
+import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 
 interface ElectionModalProps {
   currentMetricScore: number;
