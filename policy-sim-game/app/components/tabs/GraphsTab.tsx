@@ -11,6 +11,7 @@ interface GraphsTabProps {
   currentHistogramData: any[];
   previewHistogramData: any[];
   currentMetricScore: number;
+  turnMetricScore: number;
   initialMetricScore: number;
   selectedPolicy: Policy | null;
   ministers: any[];
@@ -21,11 +22,16 @@ export default function GraphsTab(props: GraphsTabProps) {
     currentCycle, 
     currentChartData, previewChartData, 
     currentHistogramData, previewHistogramData, 
+    turnMetricScore,
     selectedPolicy,
     ministers
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
+
+  let markerLabel = undefined;
+  if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
+  else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
@@ -62,6 +68,8 @@ export default function GraphsTab(props: GraphsTabProps) {
               yAxisType={rule.yAxisType} 
               color="#d4d4d8"
               ministers={ministers}
+              markerValue={markerLabel ? turnMetricScore : undefined}
+              markerLabel={markerLabel}
             />
           </div>
         </div>
@@ -83,6 +91,7 @@ export default function GraphsTab(props: GraphsTabProps) {
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
               ministers={ministers}
+              // Removed marker props so players cannot min-max the projection
             />
 
             {/* Frosted Glass Overlay */}

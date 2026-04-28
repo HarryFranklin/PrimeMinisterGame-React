@@ -368,6 +368,7 @@ export default function Home() {
             previewHistogramData={previewHistogramData} 
             currentMetricScore={currentMetricScore}
             initialMetricScore={initialMetricScore} 
+            turnMetricScore={turnMetricScore}
             ministers={ministers}
           />
         )}

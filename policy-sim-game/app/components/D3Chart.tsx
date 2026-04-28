@@ -11,6 +11,8 @@ interface D3ChartProps {
   color?: string; 
   highlightBars?: number[];
   ministers?: any[]; 
+  markerValue?: number;
+  markerLabel?: string;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -47,7 +49,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers, markerValue, markerLabel
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -116,7 +118,6 @@ export default function D3Chart({
         .on("mouseenter", (event, d) => {
           if (d.count === 0) return;
           
-          // Explicitly cast the generic selection to an HTMLDivElement so it matches the append type
           let tooltip = d3.select("body").select<HTMLDivElement>(".chart-tooltip-global");
           if (tooltip.empty()) {
             tooltip = d3.select("body").append("div")
@@ -239,6 +240,53 @@ export default function D3Chart({
 
       annotationLayer.selectAll("*").remove();
 
+      // NEW: Improved Marker rendering logic
+      if (markerValue !== undefined && markerLabel) {
+        const safeVal = Math.max(0, Math.min(10, markerValue));
+        
+        // Create a continuous scale mapping 0-10 exactly to the centres of the 0 and 10 bars
+        const firstBarCenter = (xScale("0") || 0) + xScale.bandwidth() / 2;
+        const lastBarCenter = (xScale("10") || 0) + xScale.bandwidth() / 2;
+        
+        const continuousXScale = d3.scaleLinear()
+          .domain([0, 10])
+          .range([firstBarCenter, lastBarCenter]);
+
+        const markerX = continuousXScale(safeVal);
+
+        annotationLayer.append("line")
+          .attr("x1", markerX)
+          .attr("x2", markerX)
+          .attr("y1", 0)
+          .attr("y2", height)
+          .attr("stroke", "#3f3f46") // zinc-700
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "6,4")
+          .attr("opacity", 0)
+          .transition().duration(500)
+          .attr("opacity", 1);
+
+        const textNode = annotationLayer.append("text")
+          .attr("y", 20)
+          .attr("fill", "#18181b") // zinc-900
+          .attr("font-size", "12px")
+          .attr("font-weight", "900")
+          .attr("stroke", "white")
+          .attr("stroke-width", 4)
+          .style("paint-order", "stroke") // Gives excellent readable outline
+          .text(`${markerLabel}: ${markerValue.toFixed(2)}`)
+          .attr("opacity", 0);
+
+        // Prevent text clipping if value is too far to the right
+        if (markerValue > 8) {
+          textNode.attr("x", markerX - 8).attr("text-anchor", "end");
+        } else {
+          textNode.attr("x", markerX + 8).attr("text-anchor", "start");
+        }
+        
+        textNode.transition().duration(500).attr("opacity", 1);
+      }
+
     } else if (plotType === '2D') {
       annotationLayer.selectAll("*").remove(); 
       
@@ -257,7 +305,7 @@ export default function D3Chart({
     return () => {
       d3.selectAll(".chart-tooltip-global").remove();
     };
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars, markerValue, markerLabel]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }

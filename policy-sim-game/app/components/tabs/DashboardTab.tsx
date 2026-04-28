@@ -36,11 +36,15 @@ export default function DashboardTab(props: DashboardTabProps) {
     setActiveTab, currentCycle, 
     currentChartData, previewChartData,
     currentHistogramData, previewHistogramData, 
-    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore,
+    ministers, setSelectedMinister, selectedPolicy, currentMetricScore, initialMetricScore, turnMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy, cycleMAO, approvalRating
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
+
+  let markerLabel = undefined;
+  if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
+  else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
 
   return (
     <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
@@ -61,6 +65,8 @@ export default function DashboardTab(props: DashboardTabProps) {
               yAxisType={rule.yAxisType} 
               color="#d4d4d8"
               ministers={ministers}
+              markerValue={markerLabel ? turnMetricScore : undefined}
+              markerLabel={markerLabel}
             />
           </div>
         </div>
@@ -79,6 +85,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
               ministers={ministers}
+              // Removed marker props so players cannot min-max the projection
             />
             
             {!selectedPolicy && (
