@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Respondent, AxisVariable } from '../utils/types';
-import D3Chart from './D3Chart';
+import { Respondent, AxisVariable } from '../../utils/types';
+import D3Chart from '.././D3Chart';
 
 interface FinalDebriefModalProps {
   baselinePopulation: Respondent[];

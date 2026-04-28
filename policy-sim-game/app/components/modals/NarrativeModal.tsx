@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ElectionCycle, Respondent, AxisVariable } from '../utils/types';
-import { WelfareMetrics } from '../utils/WelfareMetrics';
-import D3Chart from './D3Chart';
+import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
+import { WelfareMetrics } from '../../utils/WelfareMetrics';
+import D3Chart from '.././D3Chart';
 
 interface NarrativeModalProps {
   completedCycle: ElectionCycle;
