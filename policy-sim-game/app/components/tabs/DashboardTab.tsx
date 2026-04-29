@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState }  from "react";
 import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
@@ -42,6 +42,8 @@ export default function DashboardTab(props: DashboardTabProps) {
 
   const rule = FRAMEWORK_RULES[currentCycle];
 
+  const [highlightedMinisters, setHighlightedMinisters] = useState<string[]>([]);
+
   let markerLabel = undefined;
   if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
   else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
@@ -67,6 +69,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               ministers={ministers}
               markerValue={markerLabel ? turnMetricScore : undefined}
               markerLabel={markerLabel}
+              onHoverMinisters={setHighlightedMinisters}
             />
           </div>
         </div>
@@ -116,6 +119,12 @@ export default function DashboardTab(props: DashboardTabProps) {
               const reaction = isReacting ? getMinisterReaction(minister.policyDelta || 0) : null;
               const displayEmoji = isReacting ? reaction?.emoji : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
               const displayColor = isReacting && reaction ? reaction.circle : minister.color;
+              
+              // Check if this specific minister is currently highlighted
+              const isHighlighted = highlightedMinisters.includes(minister.name);
+              const highlightClasses = isHighlighted 
+                ? "ring-2 ring-pink-500 shadow-md scale-[1.02] bg-pink-50/30 border-pink-200 z-10" 
+                : "border-zinc-100 bg-zinc-50";
 
               return (
                 <div 
@@ -125,7 +134,7 @@ export default function DashboardTab(props: DashboardTabProps) {
                     setSelectedMinister(minister.name); 
                     setActiveTab('ministers');
                   }} 
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-zinc-100 bg-zinc-50 cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full overflow-hidden"
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full overflow-hidden ${highlightClasses}`}
                 >
                   <div className="flex flex-col items-center justify-center w-full mb-1">
                     <h4 className="text-[10px] lg:text-xs font-black text-zinc-800 uppercase tracking-widest leading-tight text-center">

@@ -13,6 +13,7 @@ interface D3ChartProps {
   ministers?: any[]; 
   markerValue?: number;
   markerLabel?: string;
+  onHoverMinisters?: (ministerNames: string[]) => void;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -49,7 +50,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers, markerValue, markerLabel
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers, markerValue, markerLabel, onHoverMinisters
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -110,6 +111,16 @@ export default function D3Chart({
       chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 45).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
+      // Use the exact ONS probabilities defined in dataLoader.ts for the baseline
+      const nationalShares = { 
+        Poor: 0.21, 
+        Middle: 0.69, 
+        Wealthy: 0.10, 
+        Youth: 0.186, 
+        Adult: 0.581, 
+        Elderly: 0.233 
+      };
+
       const bars = dataLayer.selectAll<SVGRectElement, any>("rect.bar").data(histogramData, d => d.name);
       
       bars.join("rect")
@@ -125,42 +136,101 @@ export default function D3Chart({
           }
 
           let stakeholderHtml = "";
+          
+          // Clear any previous highlights on enter
+          if (onHoverMinisters) onHoverMinisters([]); 
+
           if (ministers && ministers.length > 0) {
-            const dominantWealth = Object.keys(d.breakdown.wealth).reduce((a, b) => d.breakdown.wealth[a] > d.breakdown.wealth[b] ? a : b) as 'Poor' | 'Middle' | 'Wealthy';
-            const dominantAge = Object.keys(d.breakdown.age).reduce((a, b) => d.breakdown.age[a] > d.breakdown.age[b] ? a : b) as 'Youth' | 'Adult' | 'Elderly';
+            // Assume breakdown is a percentage (0-100). Convert to 0.0 - 1.0 for LQ maths
+            const wealthTraits = {
+              Poor: { share: (d.breakdown.wealth.Poor || 0) / 100 },
+              Middle: { share: (d.breakdown.wealth.Middle || 0) / 100 },
+              Wealthy: { share: (d.breakdown.wealth.Wealthy || 0) / 100 }
+            };
+            const ageTraits = {
+              Youth: { share: (d.breakdown.age.Youth || 0) / 100 },
+              Adult: { share: (d.breakdown.age.Adult || 0) / 100 },
+              Elderly: { share: (d.breakdown.age.Elderly || 0) / 100 }
+            };
 
-            const wealthMinisterMap = { 'Poor': 'Welfare Secretary', 'Middle': 'Home Secretary', 'Wealthy': 'Chancellor' };
-            const ageMinisterMap = { 'Youth': 'Education Secretary', 'Adult': 'Business Secretary', 'Elderly': 'Pensions Secretary' };
+            let maxWealthTrait: string | null = null; 
+            let maxWealthLQ = 0;
+            Object.entries(wealthTraits).forEach(([trait, data]) => {
+              const natShare = nationalShares[trait as keyof typeof nationalShares];
+              if (natShare > 0) {
+                const lq = data.share / natShare;
+                if (lq > maxWealthLQ) { maxWealthLQ = lq; maxWealthTrait = trait; }
+              }
+            });
 
-            const wMin = ministers.find(m => m.name === wealthMinisterMap[dominantWealth]);
-            const aMin = ministers.find(m => m.name === ageMinisterMap[dominantAge]);
+            let maxAgeTrait: string | null = null; 
+            let maxAgeLQ = 0;
+            Object.entries(ageTraits).forEach(([trait, data]) => {
+              const natShare = nationalShares[trait as keyof typeof nationalShares];
+              if (natShare > 0) {
+                const lq = data.share / natShare;
+                if (lq > maxAgeLQ) { maxAgeLQ = lq; maxAgeTrait = trait; }
+              }
+            });
 
             const getEmoji = (status: string) => status === 'happy' ? '😊' : status === 'angry' ? '😠' : '😐';
             const getCircleColor = (status: string) => status === 'happy' ? 'bg-emerald-500' : status === 'angry' ? 'bg-rose-500' : 'bg-amber-400';
 
-            stakeholderHtml = `
-              <div class="mt-4 pt-3 border-t border-zinc-100">
-                <p class="text-[9px] font-bold uppercase text-zinc-400 mb-2">Dominant Bin Stakeholders</p>
-                <div class="flex flex-col gap-2">
-                  ${wMin ? `
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs text-zinc-600"><strong>${wMin.name}</strong> (${dominantWealth})</span>
-                      <div class="w-7 h-7 rounded-full flex items-center justify-center ${getCircleColor(wMin.status)} border-2 border-white shadow-sm text-sm shrink-0">
-                        ${getEmoji(wMin.status)}
+            const wealthMinisterMap: Record<string, string> = { 'Poor': 'Welfare Secretary', 'Middle': 'Home Secretary', 'Wealthy': 'Chancellor' };
+            const ageMinisterMap: Record<string, string> = { 'Youth': 'Education Secretary', 'Adult': 'Business Secretary', 'Elderly': 'Pensions Secretary' };
+
+            const hoveredMins: string[] = [];
+            let htmlBlocks: string[] = [];
+
+            // Threshold requires the demographic to be x% more concentrated here than average
+            const OVER_REP_THRESHOLD = 1.15;
+
+            const createBlock = (trait: string, lq: number, minName: string) => {
+               const targetMin = ministers.find(m => m.name === minName);
+               if (targetMin) {
+                   hoveredMins.push(minName);
+                   return `
+                     <div class="bg-pink-50 border border-pink-100 p-2.5 rounded-lg shadow-inner mb-2 last:mb-0 flex justify-between items-center">
+                        <div class="flex flex-col">
+                          <span class="text-xs font-black text-zinc-800 uppercase">${trait}</span>
+                          <span class="text-[11px] text-zinc-500 font-medium mt-0.5">${targetMin.name}</span>
+                        </div>
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center ${getCircleColor(targetMin.status)} border-2 border-white shadow-sm text-xs shrink-0">
+                          ${getEmoji(targetMin.status)}
+                        </div>
                       </div>
-                    </div>
-                  ` : ''}
-                  ${aMin && aMin.name !== wMin?.name ? `
-                    <div class="flex items-center justify-between mt-1">
-                      <span class="text-xs text-zinc-600"><strong>${aMin.name}</strong> (${dominantAge})</span>
-                      <div class="w-7 h-7 rounded-full flex items-center justify-center ${getCircleColor(aMin.status)} border-2 border-white shadow-sm text-sm shrink-0">
-                        ${getEmoji(aMin.status)}
-                      </div>
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-            `;
+                   `;
+               }
+               return "";
+            };
+
+            if (maxWealthTrait && maxWealthLQ >= OVER_REP_THRESHOLD) {
+                htmlBlocks.push(createBlock(maxWealthTrait, maxWealthLQ, wealthMinisterMap[maxWealthTrait]));
+            }
+            if (maxAgeTrait && maxAgeLQ >= OVER_REP_THRESHOLD) {
+                htmlBlocks.push(createBlock(maxAgeTrait, maxAgeLQ, ageMinisterMap[maxAgeTrait]));
+            }
+
+            // Propagate the names to DashboardTab to highlight the cabinet
+            if (onHoverMinisters && hoveredMins.length > 0) {
+                onHoverMinisters(hoveredMins);
+            }
+
+            if (htmlBlocks.length > 0) {
+                stakeholderHtml = `
+                  <div class="mt-4 pt-3 border-t border-zinc-100">
+                    <p class="text-[9px] font-bold uppercase text-pink-500 tracking-widest mb-2">Key Stakeholders Identified</p>
+                    ${htmlBlocks.join('')}
+                  </div>
+                `;
+            } else {
+                stakeholderHtml = `
+                  <div class="mt-4 pt-3 border-t border-zinc-100">
+                    <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">Key Stakeholders</p>
+                    <p class="text-xs text-zinc-500 italic">No significant demographic concentrations in this bracket.</p>
+                  </div>
+                `;
+            }
           }
 
           tooltip.style("opacity", 1).html(`
@@ -229,6 +299,7 @@ export default function D3Chart({
         })
         .on("mouseleave", () => {
           d3.select("body").select(".chart-tooltip-global").style("opacity", 0);
+          if (onHoverMinisters) onHoverMinisters([]); // Ensure highlights are cleared when mouse leaves
         })
         .transition().duration(500)
         .attr("x", d => xScale(d.name.toString()) || 0)
@@ -240,7 +311,7 @@ export default function D3Chart({
 
       annotationLayer.selectAll("*").remove();
 
-      // NEW: Improved Marker rendering logic
+      // Improved Marker rendering logic
       if (markerValue !== undefined && markerLabel) {
         const safeVal = Math.max(0, Math.min(10, markerValue));
         
