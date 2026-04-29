@@ -153,23 +153,33 @@ export default function D3Chart({
               Elderly: { share: (d.breakdown.age.Elderly || 0) / 100 }
             };
 
+            // Calculate Impact Score (Share * Location Quotient) for Wealth
             let maxWealthTrait: string | null = null; 
-            let maxWealthLQ = 0;
+            let maxWealthScore = 0;
             Object.entries(wealthTraits).forEach(([trait, data]) => {
               const natShare = nationalShares[trait as keyof typeof nationalShares];
               if (natShare > 0) {
                 const lq = data.share / natShare;
-                if (lq > maxWealthLQ) { maxWealthLQ = lq; maxWealthTrait = trait; }
+                const impactScore = data.share * lq; 
+                if (impactScore > maxWealthScore) { 
+                    maxWealthScore = impactScore; 
+                    maxWealthTrait = trait; 
+                }
               }
             });
 
+            // Calculate Impact Score for Age
             let maxAgeTrait: string | null = null; 
-            let maxAgeLQ = 0;
+            let maxAgeScore = 0;
             Object.entries(ageTraits).forEach(([trait, data]) => {
               const natShare = nationalShares[trait as keyof typeof nationalShares];
               if (natShare > 0) {
                 const lq = data.share / natShare;
-                if (lq > maxAgeLQ) { maxAgeLQ = lq; maxAgeTrait = trait; }
+                const impactScore = data.share * lq;
+                if (impactScore > maxAgeScore) { 
+                    maxAgeScore = impactScore; 
+                    maxAgeTrait = trait; 
+                }
               }
             });
 
@@ -182,10 +192,8 @@ export default function D3Chart({
             const hoveredMins: string[] = [];
             let htmlBlocks: string[] = [];
 
-            // Threshold requires the demographic to be x% more concentrated here than average
-            const OVER_REP_THRESHOLD = 1.15;
-
-            const createBlock = (trait: string, lq: number, minName: string) => {
+            // Updated createBlock to match the exact UI layout you requested, omitting the threshold decimal
+            const createBlock = (trait: string, minName: string) => {
                const targetMin = ministers.find(m => m.name === minName);
                if (targetMin) {
                    hoveredMins.push(minName);
@@ -204,11 +212,12 @@ export default function D3Chart({
                return "";
             };
 
-            if (maxWealthTrait && maxWealthLQ >= OVER_REP_THRESHOLD) {
-                htmlBlocks.push(createBlock(maxWealthTrait, maxWealthLQ, wealthMinisterMap[maxWealthTrait]));
+            // Because we evaluate Impact Score rather than a strict threshold, we simply push the highest scoring trait
+            if (maxWealthTrait) {
+                htmlBlocks.push(createBlock(maxWealthTrait, wealthMinisterMap[maxWealthTrait]));
             }
-            if (maxAgeTrait && maxAgeLQ >= OVER_REP_THRESHOLD) {
-                htmlBlocks.push(createBlock(maxAgeTrait, maxAgeLQ, ageMinisterMap[maxAgeTrait]));
+            if (maxAgeTrait) {
+                htmlBlocks.push(createBlock(maxAgeTrait, ageMinisterMap[maxAgeTrait]));
             }
 
             // Propagate the names to DashboardTab to highlight the cabinet
