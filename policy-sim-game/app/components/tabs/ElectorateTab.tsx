@@ -27,7 +27,7 @@ const STATUS_COLORS = {
 export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating }: ElectorateTabProps) {
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
   const [colorBy, setColorBy] = useState<'intention' | 'trajectory' | 'demographic'>('intention');
-  const [viewMode, setViewMode] = useState<'chamber' | 'histogram'>('chamber');
+  const [viewMode, setViewMode] = useState<'chamber' | 'histogram'>('histogram'); 
   const [hoveredDot, setHoveredDot] = useState<any | null>(null);
 
   const isTurnZero = useMemo(() => {
@@ -262,6 +262,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
             <p className="text-sm text-zinc-500">Visualising demographic distribution and individual voter sentiment.</p>
           </div>
           
+          {/* HIDING CHAMBER TOGGLE FOR NOW
           <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
             <button 
               onClick={() => setViewMode('chamber')} 
@@ -276,6 +277,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
               Distribution View
             </button>
           </div>
+          */}
         </div>
         
         <div className="flex items-center gap-6">
@@ -290,14 +292,24 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
               </button>
             ))}
           </div>
-          <div className="w-px h-8 bg-zinc-200" />
-          <div className="flex bg-zinc-100 p-1 rounded-lg">
-            {['wealth', 'age'].map(t => (
-              <button key={t} onClick={() => setGroupBy(t as any)} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}>
-                Group by {t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
+          
+          {/* Conditionally render the divider and group buttons only when Demographic is selected */}
+          {colorBy === 'demographic' && (
+            <>
+              <div className="w-px h-8 bg-zinc-200" />
+              <div className="flex bg-zinc-100 p-1 rounded-lg">
+                {['wealth', 'age'].map(t => (
+                  <button 
+                    key={t} 
+                    onClick={() => setGroupBy(t as any)} 
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
+                  >
+                    Group by {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
