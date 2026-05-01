@@ -102,7 +102,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       } else if (colorBy === 'intention') {
         groupKey = v.isApproving ? 'Approves' : 'Angry';
       } else {
-        if (v.lsTrajectory > 0.05) groupKey = 'Improved';
+        if (v.lsTrajectory > 0.1125) groupKey = 'Improved'; // For loss aversion (largely indifferent unless it is much better)
         else if (v.lsTrajectory < -0.05) groupKey = 'Worsened';
         else groupKey = 'Stable';
       }
