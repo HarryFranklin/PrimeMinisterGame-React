@@ -156,8 +156,8 @@ export const availablePolicies: Policy[] = [
     description: "Strips the winter heating subsidy from wealthier pensioners to save money for the national budget.",
     specificRules: [
       { note: "Penalty to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
-      { note: "Slight economic relief to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 0.3 },
-      { note: "Slight economic relief to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 0.3 }
+      { note: "Slight economic relief to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 0.125 },
+      { note: "Slight economic relief to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 0.125 }
     ]
   }
 ];
