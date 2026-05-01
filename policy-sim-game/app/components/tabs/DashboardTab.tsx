@@ -73,9 +73,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           const count = residentsInBin.filter(r => {
             const index = population.indexOf(r);
             const delta = previewPopulation[index].currentLS - r.currentLS;
-            if (key === 'Improved') return delta > 0.05;
+            if (key === 'Improved') return delta > 0.1125; // 2.25x bigger for loss aversion
             if (key === 'Worsened') return delta < -0.05;
-            return delta >= -0.05 && delta <= 0.05;
+            return delta >= -0.05 && delta <= 0.1125;
           }).length;
           if (count > 0) segments.push({ label: key, value: count, color: (IMPACT_COLORS as any)[key] });
         });
@@ -104,12 +104,11 @@ export default function DashboardTab(props: DashboardTabProps) {
       {/* LEFT COLUMN: Split Graphs */}
       <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
         
-        {/* TOP: Current Distribution */}
+        {/* TOP: Current Distribution (Links to Graphs Tab) */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group">
-          {/* Added h-[42px] to lock the header height */}
           <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
-              Current Distribution
+              Current Life Satisfaction Distribution
             </h3>
             <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
           </div>
@@ -129,33 +128,38 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* BOTTOM: Impact & Demographic Analysis */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 transition-all">
-          {/* Header height locked to h-[42px] to match the top graph exactly */}
+        {/* BOTTOM: Analysis Tool (Now links to Electorate Tab) */}
+        <div 
+          onClick={() => setActiveTab('electorate')} 
+          className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group"
+        >
           <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
               {selectedPolicy ? "Wellbeing Impact" : "Demographic Breakdown"}
             </h3>
             
-            {/* The toggle is positioned absolutely or handled within the flex to ensure it doesn't stretch the header */}
-            {!selectedPolicy && (
-              <div className="flex bg-zinc-200/50 p-0.5 rounded-md shrink-0 ml-2">
-                {(['wealth', 'age'] as const).map(type => (
-                  <button 
-                    key={type}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setGroupBy(type);
-                    }}
-                    className={`px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all ${
-                      groupBy === type ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {!selectedPolicy && (
+                <div className="flex bg-zinc-200/50 p-0.5 rounded-md shrink-0">
+                  {(['wealth', 'age'] as const).map(type => (
+                    <button 
+                      key={type}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevents tab switch when just toggling data
+                        setGroupBy(type);
+                      }}
+                      className={`px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all ${
+                        groupBy === type ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Arrow indicator matches the top graph */}
+              <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
+            </div>
           </div>
           
           <div className="flex-1 p-4 pb-1 min-h-0 relative">
@@ -171,7 +175,6 @@ export default function DashboardTab(props: DashboardTabProps) {
             />
           </div>
 
-          {/* LEGEND remains at bottom */}
           <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2">
             {(selectedPolicy ? Object.entries(IMPACT_COLORS) : Object.entries(DEMO_COLORS[groupBy])).map(([label, color]) => (
               <div key={label} className="flex items-center gap-1.5">
