@@ -354,6 +354,8 @@ export default function Home() {
             handleApplyPolicy={handleApplyPolicy} 
             cycleMAO={cycleMAO}
             approvalRating={turnApprovalRating}
+            population={population}
+            previewPopulation={previewPopulation}
           />
         )}
         {activeTab === 'ministers' && <MinistersTab ministers={ministers} selectedMinister={selectedMinister} selectedPolicy={selectedPolicy}/>}
