@@ -21,7 +21,7 @@ const DEMO_COLORS = {
 
 const STATUS_COLORS = {
   intention: { 'Approves': '#10b981', 'Angry': '#f43f5e' },
-  trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable/little/no change': '#d4d4d8' }
+  trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
 };
 
 export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating }: ElectorateTabProps) {
@@ -106,7 +106,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       } else {
         if (v.lsTrajectory > 0.1125) groupKey = 'Will improve'; 
         else if (v.lsTrajectory < -0.05) groupKey = 'Will be worsened';
-        else groupKey = 'Will be stable/little/no change';
+        else groupKey = 'Will be stable';
       }
 
       bins[lsBin].groups[groupKey] = (bins[lsBin].groups[groupKey] || 0) + 1;

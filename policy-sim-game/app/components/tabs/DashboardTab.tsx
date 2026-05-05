@@ -10,7 +10,7 @@ const DEMO_COLORS = {
 
 const IMPACT_COLORS = {
   'Will improve': '#10b981',
-  'Will be stable/little/no change': '#d4d4d8',
+  'Will be stable': '#d4d4d8',
   'Will be worsened': '#ef4444'
 };
 
@@ -69,7 +69,7 @@ export default function DashboardTab(props: DashboardTabProps) {
       const segments: any[] = [];
       if (selectedPolicy) {
         // Impact View: Based on change relative to currentLS
-        ['Will be worsened', 'Will be stable/little/no change', 'Will improve'].forEach(key => {
+        ['Will be worsened', 'Will be stable', 'Will improve'].forEach(key => {
           const count = residentsInBin.filter(r => {
             const index = population.indexOf(r);
             const delta = previewPopulation[index].currentLS - r.currentLS;

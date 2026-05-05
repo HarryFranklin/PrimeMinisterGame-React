@@ -96,10 +96,10 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             <div className="flex flex-col justify-center">
               <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">The Limit of Averages</h2>
               <p className="text-zinc-600 mb-6 leading-relaxed">
-                Okay, that doesn't work perfectly. You successfully raised the average Life Satisfaction, but focusing solely on the "greatest good for the greatest number" allowed severe inequality to fester, leaving minority demographics behind in the lower brackets.
+                As you can see on the graph, while the national average is high, severe inequality has festered. Focusing solely on the "greatest good for the greatest number" has allowed minority demographics to be left behind in the lower brackets.
               </p>
               <p className="text-zinc-600 mb-8 leading-relaxed">
-                Let's restart the simulation from scratch. This time, we will use a <strong>Rawlsian</strong> approach: you must protect the most vulnerable by raising the societal "floor".
+                Let's restart the simulation. This time, we will use a <strong>Rawlsian</strong> approach: you must govern by protecting the most vulnerable and raising the societal "floor".
               </p>
               <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
                 Restart Simulation: Cycle 2 (Rawlsian)
@@ -133,7 +133,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             <div className="mb-4 text-center max-w-2xl mx-auto">
               <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">The Illusion of Life Satisfaction</h2>
               <p className="text-zinc-600 leading-relaxed text-sm">
-                Clearly this doesn’t work either. You successfully raised the floor, but something is missing. Click on these two citizens below. They have the exact same Life Satisfaction score... why is one so much happier than the other?
+                If raw metrics are misleading, we need to understand why. Click on these two citizens below. They have the exact same Life Satisfaction score... why is one so much happier than the other?
               </p>
             </div>
 
@@ -214,7 +214,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             <div className="mb-4 text-center max-w-2xl mx-auto">
               <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">Self-Interest vs. Empathy</h2>
               <p className="text-zinc-600 leading-relaxed text-sm">
-                Personal Utility helped us maximise individual happiness, but humans are not purely selfish. We have empathy. Click on the citizen below to see how they feel about the society you built.
+                Personal Utility assumes humans act purely selfishly, avoiding loss at all costs. But humans are not purely selfish; we have empathy. Click on the citizen below to see how they truly feel about the society you built.
               </p>
             </div>
 

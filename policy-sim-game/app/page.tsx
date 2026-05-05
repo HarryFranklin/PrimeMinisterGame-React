@@ -86,6 +86,8 @@ export default function Home() {
 
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
+  const [cycleAttempts, setCycleAttempts] = useState(1);
+  
   const [showElection, setShowElection] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
   const [showFinalDebrief, setShowFinalDebrief] = useState(false);
@@ -94,8 +96,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs' | 'electorate'>('dashboard');
   const [selectedMinister, setSelectedMinister] = useState<any | null>(null);
   const [devMode, setDevMode] = useState(false);
-
-  
 
   // New MAO & Schedule State
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
@@ -128,6 +128,7 @@ export default function Home() {
     setInitialPopulation(data);
     setBaselinePopulation(data);
     startCycle(ElectionCycle.Benthamite, data);
+    setCycleAttempts(1);
   }, [startCycle]);
 
   const previewPopulation = useMemo(() => {
@@ -246,7 +247,7 @@ export default function Home() {
     }]);
     
     if (currentTurn < TURNS_PER_CYCLE) {
-      setCurrentDeck(cycleSchedule[currentTurn]); // currentTurn evaluates to next index (e.g., Turn 1 -> Index 1)
+      setCurrentDeck(cycleSchedule[currentTurn]); 
       setCurrentTurn(prev => prev + 1);
     } else {
       setShowElection(true);
@@ -259,9 +260,9 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     startCycle(currentCycle, data);
+    setCycleAttempts(prev => prev + 1);
   };
 
-  // 1. Triggered by the Election Modal's "Next Cycle" button
   const handleShowNarrative = () => {
     setShowElection(false);
     setShowNarrative(true);
@@ -272,9 +273,8 @@ export default function Home() {
     setShowFinalDebrief(true);
   };
 
-  // Triggered by the Narrative Modal's "Restart Simulation" button
   const handleProceedFromNarrative = () => {
-    const data = loadPopulation(); // Restarts population to 0
+    const data = loadPopulation(); 
     setPopulation(data);
     setInitialPopulation(data);
     
@@ -283,7 +283,8 @@ export default function Home() {
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
     else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
     
-    startCycle(nextCycle, data); // Restarts schedule & MAO tracking to 0
+    startCycle(nextCycle, data); 
+    setCycleAttempts(1);
     setShowNarrative(false);
   };
 
@@ -292,6 +293,7 @@ export default function Home() {
     setPopulation(data);
     setInitialPopulation(data);
     startCycle(cycle, data);
+    setCycleAttempts(1);
   };
 
   const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'];
@@ -389,6 +391,7 @@ export default function Home() {
           currentMetricScore={turnMetricScore} 
           currentCycle={currentCycle} 
           approvalRating={turnApprovalRating}
+          cycleAttempts={cycleAttempts}
           onNextCycle={handleShowNarrative}
           onReset={handleResetCycle} 
           onFinish={handleFinishSimulation}
@@ -451,7 +454,6 @@ export default function Home() {
 
           {/* --- OPTIMAL PATH DEV WIDGET --- */}
           {devMode && showOptimalPath && optimalPath.length > 0 && (
-            // I changed the className on this div right below:
             <div className="fixed bottom-14 left-80 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
               <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
                 Optimal Path (MAO: {cycleMAO.toFixed(2)})
