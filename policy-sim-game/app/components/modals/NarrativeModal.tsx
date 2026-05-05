@@ -18,7 +18,9 @@ const getDummyHistogram = (distribution: Record<number, number>) => {
 };
 
 export default function NarrativeModal({ completedCycle, population, onProceed }: NarrativeModalProps) {
-  const [benthamSelection, setBenthamSelection] = useState<'none' | 'A' | 'B'>('none');
+  // States for Phase 3 interactive reveals
+  const [revealedBenthamA, setRevealedBenthamA] = useState(false);
+  const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
   const [rawlsExplanation, setRawlsExplanation] = useState(false);
@@ -104,47 +106,86 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
     return bestCitizen;
   }, [population]);
 
+  const avgPU = useMemo(() => {
+    if (population.length === 0) return 0;
+    return population.reduce((sum, p) => sum + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / population.length;
+  }, [population]);
+
+  const avgSU = useMemo(() => {
+    if (population.length === 0) return 0;
+    const allLS = population.map(p => p.currentLS);
+    return population.reduce((sum, p) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / population.length;
+  }, [population]);
+
   const renderContent = () => {
     switch (completedCycle) {
       case ElectionCycle.Benthamite:
+        const bothBenthamRevealed = revealedBenthamA && revealedBenthamB;
         return (
           <div className="flex flex-col gap-6">
             <div className="text-center max-w-2xl mx-auto mb-2">
-              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">The Danger of Averages</h2>
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">Challenges with Aggregation</h2>
               <p className="text-zinc-600 leading-relaxed text-sm">
-                Before we examine the society you built, consider this test. Click on the graph that represents a society with an average Life Satisfaction of exactly 5.0.
+                Before examining the society you built, consider this comparison. Click to calculate the Benthamite average for both of these theoretical societies.
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
               <div 
-                onClick={() => setBenthamSelection('A')} 
-                className={`p-4 rounded-xl border-2 transition-all cursor-pointer bg-zinc-50 hover:bg-zinc-100 ${benthamSelection === 'A' ? 'border-pink-500 shadow-md ring-2 ring-pink-500/20' : 'border-zinc-200'}`}
+                onClick={() => setRevealedBenthamA(true)} 
+                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-                <div className="h-[200px] pointer-events-none">
+                <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
                   <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" />
                 </div>
+                
+                {!revealedBenthamA && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="bg-white px-5 py-3 rounded-full text-sm font-bold shadow-sm text-pink-600">Calculate Average</span>
+                  </div>
+                )}
+                
+                {revealedBenthamA && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
+                    <span className="text-sm font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span>
+                    <strong className="text-6xl font-black text-pink-700">5.0</strong>
+                  </div>
+                )}
               </div>
+              
               <div 
-                onClick={() => setBenthamSelection('B')} 
-                className={`p-4 rounded-xl border-2 transition-all cursor-pointer bg-zinc-50 hover:bg-zinc-100 ${benthamSelection === 'B' ? 'border-pink-500 shadow-md ring-2 ring-pink-500/20' : 'border-zinc-200'}`}
+                onClick={() => setRevealedBenthamB(true)} 
+                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-                <div className="h-[200px] pointer-events-none">
+                <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
                   <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" />
                 </div>
+
+                {!revealedBenthamB && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="bg-white px-5 py-3 rounded-full text-sm font-bold shadow-sm text-pink-600">Calculate Average</span>
+                  </div>
+                )}
+                
+                {revealedBenthamB && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
+                    <span className="text-sm font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span>
+                    <strong className="text-6xl font-black text-pink-700">5.0</strong>
+                  </div>
+                )}
               </div>
             </div>
 
-            {benthamSelection !== 'none' && (
-              <div className="bg-pink-50 border border-pink-200 rounded-xl p-6 max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-pink-800 font-bold mb-3">Trick question.</p>
-                <p className="text-pink-900/80 text-sm leading-relaxed mb-6">
-                  Both societies have an exact average of 5.0. Society A is perfectly equal, while Society B is entirely polarised. Relying purely on averages masks structural inequality. 
+            {bothBenthamRevealed && (
+              <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-6 max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
+                <p className="text-zinc-800 font-bold mb-3 text-lg">Mathematically Identical Outcomes</p>
+                <p className="text-zinc-600 text-sm leading-relaxed mb-6">
+                  Under a strictly Benthamite framework, these societies are equally successful. Society A is perfectly equal, while Society B is entirely polarised. Maximising the average efficiently increases total wellbeing, but it does not account for how that wellbeing is distributed. 
                 </p>
                 <p className="text-zinc-700 text-sm leading-relaxed mb-6">
-                  Let's restart the simulation. This time, we will use a <strong>Rawlsian</strong> approach: you must govern by protecting the most vulnerable and raising the societal "floor".
+                  Let's restart the simulation. This time, we will use a <strong>Rawlsian</strong> approach: you must govern by raising the societal "floor" to prioritise the worst-off.
                 </p>
                 <button onClick={onProceed} className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg">
                   Restart Simulation: Cycle 2 (Rawlsian)
@@ -159,9 +200,9 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
         return (
           <div className="flex flex-col">
             <div className="mb-6 text-center max-w-2xl mx-auto">
-              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">The Illusion of Life Satisfaction</h2>
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">Objective Metrics vs. Personal Utility</h2>
               <p className="text-zinc-600 leading-relaxed text-sm">
-                You successfully raised the floor, but something is missing. If raw metrics are misleading, we need to understand why. Click on these two citizens to reveal their true happiness.
+                You successfully raised the floor, but the data presents a new variable. Click on these two citizens to reveal their Personal Utility scores.
               </p>
             </div>
 
@@ -187,7 +228,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                     
                     <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                       <div className="w-full h-px bg-zinc-200 my-4" />
-                      <span className="text-sm text-pink-500 font-bold uppercase tracking-widest block mb-1">Utility (Happiness)</span>
+                      <span className="text-sm text-pink-500 font-bold uppercase tracking-widest block mb-1">Personal Utility</span>
                       <strong className="text-4xl text-pink-600">{utility.toFixed(2)}</strong>
                     </div>
 
@@ -216,7 +257,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             {rawlsExplanation && (
               <div className="max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
                 <p className="text-zinc-600 text-sm mb-6 leading-relaxed">
-                  Despite having identical Life Satisfaction scores, their true Utility is completely different. Simple metrics fail to capture subjective human reality. Moving forward, we must govern based on <strong>Utility</strong>.
+                  Despite having identical objective Life Satisfaction scores, their true Personal Utility is markedly different. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience.
                 </p>
                 <button 
                   onClick={onProceed} 
@@ -238,9 +279,9 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
         return (
           <div className="flex flex-col">
             <div className="mb-6 text-center max-w-2xl mx-auto">
-              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">Self-Interest vs. Empathy</h2>
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">The Individual vs The Collective</h2>
               <p className="text-zinc-600 leading-relaxed text-sm">
-                Personal Utility assumes humans act purely selfishly. But humans have empathy. Click on the citizen below to reveal how they truly feel about the society you built.
+                Personal Utility models citizens making rational choices based purely on their own outcomes. Click on the citizen below to reveal how their perspective shifts when accounting for the broader society.
               </p>
             </div>
 
@@ -266,10 +307,10 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
                 
                 <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-4" />
-                  <span className="text-sm text-emerald-500 font-bold uppercase tracking-widest block mb-2">Societal Utility (Empathy for others)</span>
+                  <span className="text-sm text-emerald-500 font-bold uppercase tracking-widest block mb-2">Societal Utility (Evaluation of distribution)</span>
                   <strong className="text-4xl text-emerald-600">{su.toFixed(2)}</strong>
                   <p className="text-xs text-zinc-500 mt-3 max-w-md mx-auto italic">
-                    "Even though I'm doing great personally, my overall wellbeing is dragged down by the severe inequality I see around me."
+                    "While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
                   </p>
                 </div>
 
@@ -296,7 +337,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             {personalExplanation && (
               <div className="max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
                 <p className="text-zinc-600 text-sm mb-6 leading-relaxed">
-                  Look at the societal floor. While Personal Utility maximised their own score, relying purely on individual rational choice allows inequality to persist. For your final term, let's focus on <strong>Societal Utility</strong> to balance personal gains with a broader desire for fairness.
+                  When citizens evaluate policy strictly to protect their personal utility (influenced by loss aversion), widespread redistribution becomes difficult to enact—a phenomenon known as the Status Quo Trap. For your final term, let's incorporate <strong>Societal Utility</strong>.
                 </p>
                 <button 
                   onClick={onProceed} 
@@ -312,37 +353,47 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
 
       case ElectionCycle.SocietalUtility:
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="flex flex-col justify-center">
-              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-4">The Limits of Fairness</h2>
-              <p className="text-zinc-600 mb-6 leading-relaxed">
-                You balanced personal gains with societal empathy, but look at the issues now. Even when citizens vote on their ideals of fairness, it still opens the door to inequality because those ideals clash. Consensus rarely means unanimity.
+          <div className="flex flex-col">
+            <div className="mb-6 text-center max-w-2xl mx-auto">
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 mb-2">Personal vs. Societal Utility</h2>
+              <p className="text-zinc-600 leading-relaxed text-sm">
+                You have now tested both utility frameworks. Let's directly compare how the society you just built is evaluated under each philosophy, so you can decide which approach to governance you prefer.
               </p>
-              <p className="text-zinc-600 mb-8 leading-relaxed">
-                Look at the societal floor. By attempting to appease everyone's definition of "fair", some minority demographics still bore the cost.
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Cycle 3: Personal Utility</h3>
+                <div className="text-center mb-4">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Population Score</span>
+                  <strong className="text-4xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
+                </div>
+                <div className="flex-1 text-sm text-zinc-600 space-y-3">
+                  <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
+                  <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth, often trapping society in gridlock and leaving the societal floor low.</p>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 flex flex-col">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Cycle 4: Societal Utility</h3>
+                <div className="text-center mb-4">
+                  <span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">Average Population Score</span>
+                  <strong className="text-4xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
+                </div>
+                <div className="flex-1 text-sm text-emerald-800/80 space-y-3">
+                  <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
+                  <p><strong>The Challenge:</strong> While empathy allows the floor to rise and breaks gridlock, consensus remains difficult because citizens hold fundamentally conflicting definitions of "fairness".</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-2xl mx-auto text-center">
+              <p className="text-zinc-600 text-sm mb-6 leading-relaxed">
+                As you proceed to the final debrief, consider which of these four frameworks provides the most effective—and ethical—blueprint for real-world governance.
               </p>
               <button onClick={onProceed} className="w-full py-4 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-all shadow-lg">
                 Proceed to Final Debrief: The Complexity of Governance
               </button>
-            </div>
-            <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-200 flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest">
-                  The Left Behind (LS 0-{leftBehindThreshold})
-                </h3>
-                <p className="text-xs text-zinc-400 font-medium">Conflicting fairness ideals still leave some behind.</p>
-              </div>
-              <div className="flex-1 min-h-[220px]">
-                 <D3Chart 
-                    plotType="1D" 
-                    chartData={[]} 
-                    histogramData={histogramData} 
-                    xAxisType={AxisVariable.LifeSatisfaction} 
-                    yAxisType={AxisVariable.LifeSatisfaction} 
-                    color="#d4d4d8" 
-                    highlightBars={leftBehindBars} 
-                 />
-              </div>
             </div>
           </div>
         );

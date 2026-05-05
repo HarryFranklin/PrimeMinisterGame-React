@@ -54,7 +54,6 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             </p>
           </div>
 
-          {/* Graph Comparison Block - Made shorter to free up vertical space */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
             <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-5 flex flex-col">
               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 text-center">Baseline Society (Start)</h3>
@@ -69,8 +68,8 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                 />
               </div>
             </div>
-            <div className="bg-emerald-50 rounded-2xl border border-emerald-200 p-5 flex flex-col">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600 mb-4 text-center">Final Society (End)</h3>
+            <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-5 flex flex-col">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 text-center">Final Society (End)</h3>
               <div className="flex-1 h-[220px] min-h-[220px]">
                 <D3Chart 
                   plotType="1D" 
@@ -78,13 +77,12 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                   histogramData={finalHistogram} 
                   xAxisType={AxisVariable.LifeSatisfaction} 
                   yAxisType={AxisVariable.LifeSatisfaction} 
-                  color="#10b981" 
+                  color="#d4d4d8" 
                 />
               </div>
             </div>
           </div>
 
-          {/* Act Summaries */}
           <div className="shrink-0 flex flex-col">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
               <div className="border-b border-zinc-200 pb-2">
@@ -98,11 +96,11 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
               <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
                 <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-2">1. Benthamite</h4>
-                <p className="text-xs text-zinc-600 flex-1">Maximising the "average" masks severe inequality, leaving vulnerable demographics behind.</p>
+                <p className="text-xs text-zinc-600 flex-1">Maximising the total average efficiently increases overall societal wellbeing, but it does not account for how that wellbeing is distributed.</p>
               </div>
               <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
                 <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-2">2. Rawlsian</h4>
-                <p className="text-xs text-zinc-600 flex-1">Protecting the vulnerable is crucial, but raw "Life Satisfaction" fails to capture emotional reality.</p>
+                <p className="text-xs text-zinc-600 flex-1">Prioritises the worst-off to create a minimum standard of living, but highlights the variance between objective metrics and subjective experience.</p>
               </div>
 
               <div className="border-b border-zinc-200 pb-2 mt-4 lg:hidden col-span-1 md:col-span-2">
@@ -112,17 +110,17 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
               <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
                 <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-2">3. Personal Utility</h4>
                 <p className="text-xs text-zinc-600 flex-1">
-                  Humans feel the pain of a loss twice as strongly as the joy of a gain. Because citizens voted to protect their own wealth, meaningful redistribution became impossible (The Status Quo Trap).
+                  Focuses on individual rational choice. Due to loss aversion, citizens often vote to protect their current status, making redistribution difficult (The Status Quo Trap).
                 </p>
               </div>
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col">
-                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-800 mb-2">4. Societal Utility</h4>
-                <p className="text-xs text-emerald-700 flex-1">Humans possess empathy. Even if thriving personally, extreme societal inequality drags down their overall wellbeing.</p>
+              
+              <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
+                <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-2">4. Societal Utility</h4>
+                <p className="text-xs text-zinc-600 flex-1">Incorporates empathy and fairness ideals. However, differing definitions of 'fairness' mean consensus rarely results in perfect equality.</p>
               </div>
             </div>
           </div>
 
-          {/* Footer / CTA Box */}
           <div className="p-5 bg-zinc-900 rounded-2xl text-center text-white relative overflow-hidden shadow-xl shrink-0 mt-4">
             <h3 className="text-lg font-bold mb-1">Ready for Phase 3</h3>
             <p className="text-zinc-400 mb-3 text-xs max-w-lg mx-auto">
