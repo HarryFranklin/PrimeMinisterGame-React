@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Respondent, AxisVariable } from '../../utils/types';
-import D3Chart from '.././D3Chart';
+import D3Chart from '../D3Chart';
 
 interface FinalDebriefModalProps {
   baselinePopulation: Respondent[];
@@ -11,15 +11,27 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
   
   const generateHistogramData = (targetPopulation: Respondent[]) => {
     if (!targetPopulation || targetPopulation.length === 0) return [];
+    
     return Array.from({ length: 11 }, (_, i) => {
       const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
       const total = peopleInBar.length;
+      
+      const getPct = (count: number) => (total > 0 ? (count / total) * 100 : 0);
+      
       return {
         name: i,
         count: total,
         breakdown: {
-          wealth: { Poor: 0, Middle: 0, Wealthy: 0 }, 
-          age: { Youth: 0, Adult: 0, Elderly: 0 },
+          wealth: { 
+            Poor: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Poor').length), 
+            Middle: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Middle').length), 
+            Wealthy: getPct(peopleInBar.filter(p => p.demographics.wealth === 'Wealthy').length) 
+          }, 
+          age: { 
+            Youth: getPct(peopleInBar.filter(p => p.demographics.age === 'Youth').length), 
+            Adult: getPct(peopleInBar.filter(p => p.demographics.age === 'Adult').length), 
+            Elderly: getPct(peopleInBar.filter(p => p.demographics.age === 'Elderly').length) 
+          },
         }
       };
     });
@@ -42,11 +54,11 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             </p>
           </div>
 
-          {/* Graph Comparison Block */}
+          {/* Graph Comparison Block - Made shorter to free up vertical space */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
             <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-5 flex flex-col">
               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 text-center">Baseline Society (Start)</h3>
-              <div className="flex-1 min-h-[280px]">
+              <div className="flex-1 h-[220px] min-h-[220px]">
                 <D3Chart 
                   plotType="1D" 
                   chartData={[]} 
@@ -59,7 +71,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             </div>
             <div className="bg-emerald-50 rounded-2xl border border-emerald-200 p-5 flex flex-col">
               <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600 mb-4 text-center">Final Society (End)</h3>
-              <div className="flex-1 min-h-[280px]">
+              <div className="flex-1 h-[220px] min-h-[220px]">
                 <D3Chart 
                   plotType="1D" 
                   chartData={[]} 
@@ -72,9 +84,8 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             </div>
           </div>
 
-          {/* Act Summaries - Unified 4 Column Grid */}
+          {/* Act Summaries */}
           <div className="shrink-0 flex flex-col">
-            {/* Split Headers for Act A and Act B */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
               <div className="border-b border-zinc-200 pb-2">
                 <h3 className="text-xl font-black text-zinc-800 tracking-tight">Act A: Aggregations</h3>
@@ -84,7 +95,6 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
               </div>
             </div>
 
-            {/* A single 4-column grid forces all boxes to inherently share the exact same height */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
               <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
                 <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-2">1. Benthamite</h4>
@@ -95,7 +105,6 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                 <p className="text-xs text-zinc-600 flex-1">Protecting the vulnerable is crucial, but raw "Life Satisfaction" fails to capture emotional reality.</p>
               </div>
 
-              {/* Mobile-only header for Act B so it flows correctly on small screens */}
               <div className="border-b border-zinc-200 pb-2 mt-4 lg:hidden col-span-1 md:col-span-2">
                 <h3 className="text-xl font-black text-zinc-800 tracking-tight">Act B: Utility</h3>
               </div>

@@ -173,7 +173,7 @@ export default function D3Chart({
           let tooltip = d3.select("body").select<HTMLDivElement>(".chart-tooltip-global");
           if (tooltip.empty()) {
             tooltip = d3.select("body").append("div")
-              .attr("class", "chart-tooltip-global fixed pointer-events-none z-[9999] bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[240px] text-zinc-800 transition-opacity duration-150");
+              .attr("class", "chart-tooltip-global fixed pointer-events-none z-[9999] bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[260px] text-zinc-800 transition-opacity duration-150");
           }
 
           let stakeholderHtml = "";
@@ -225,13 +225,26 @@ export default function D3Chart({
                 <p class="text-sm font-bold text-zinc-600">${d.count} Residents</p>
               </div>
               <div class="space-y-3">
-                ${['wealth', 'age'].map(type => `
+                ${['wealth', 'age'].map(type => {
+                  const breakdown = d.breakdown[type as 'wealth' | 'age'];
+                  const entries = Object.entries(breakdown);
+                  return `
                   <div>
-                    <p class="text-[9px] font-bold uppercase text-zinc-400 mb-1">${type} Breakdown</p>
-                    <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
-                      ${Object.entries(d.breakdown[type as 'wealth' | 'age']).map(([k, v]) => `<div style="width: ${v}%" class="${type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500')}"></div>`).join('')}
+                    <div class="flex justify-between items-end mb-1">
+                      <p class="text-[9px] font-bold uppercase text-zinc-400">${type} Breakdown</p>
+                      <div class="flex gap-2">
+                        ${entries.filter(([_, v]) => (v as number) > 0).map(([k, v]) => {
+                          const color = type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500');
+                          // Explicitly set text-[9px] and font-bold on the span so it strictly matches the breakdown label
+                          return `<span class="flex items-center gap-1 text-[9px] font-bold text-zinc-500"><span class="w-1.5 h-1.5 rounded-full ${color}"></span>${Math.round(v as number)}%</span>`;
+                        }).join('')}
+                      </div>
                     </div>
-                  </div>`).join('')}
+                    <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
+                      ${entries.map(([k, v]) => `<div style="width: ${v}%" class="${type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500')}"></div>`).join('')}
+                    </div>
+                  </div>`
+                }).join('')}
               </div>
               ${stakeholderHtml}
             </div>`);
@@ -248,20 +261,9 @@ export default function D3Chart({
           let x = event.clientX + padding;
           let y = event.clientY - padding;
 
-          // Prevent right-side clipping
-          if (x + tooltipWidth > window.innerWidth) {
-            x = event.clientX - tooltipWidth - padding;
-          }
-
-          // FIX: Prevent bottom clipping
-          if (y + tooltipHeight > window.innerHeight) {
-            y = window.innerHeight - tooltipHeight - 10; // 10px buffer from bottom
-          }
-          
-          // Safety check for top clipping
-          if (y < 10) {
-            y = 10;
-          }
+          if (x + tooltipWidth > window.innerWidth) x = event.clientX - tooltipWidth - padding;
+          if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - 10;
+          if (y < 10) y = 10;
 
           tooltip.style("left", `${x}px`).style("top", `${y}px`);
         })
