@@ -36,7 +36,6 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
       }
     }
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    isFinalCycle = false;
     if (won) {
        debriefText = "“You successfully pulled up the societal floor, but securing a comfortable majority required intense compromise. This suggests a flaw in our core metrics. Does raw 'Life Satisfaction' truly capture human happiness? Let's investigate in the debrief.”";
        canProceed = true;
@@ -50,7 +49,6 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
        }
     }
   } else if (currentCycle === ElectionCycle.PersonalUtility) {
-    isFinalCycle = false;
     if (won) {
       debriefText = "“You achieved a majority using Personal Utility. But because this framework operates entirely on individual rational choice, did it abandon the worst-off? Let's proceed to the debrief to review the data.”";
       canProceed = true;
@@ -64,13 +62,12 @@ export default function ElectionModal({ currentMetricScore, currentCycle, approv
       }
     }
   } else if (currentCycle === ElectionCycle.SocietalUtility) {
-    isFinalCycle = true;
     if (won) {
-      debriefText = "“By applying the Wellbeing-Equity Trade-off Model, you achieved a win state by balancing collective fairness and inequality aversion.”";
+      debriefText = "“By applying the Wellbeing-Equity Trade-off Model, you achieved a win state by balancing collective fairness and inequality aversion. But did it solve everything? Let's proceed to the debrief.”";
       canProceed = true;
     } else {
       if (cycleAttempts >= 3) {
-        debriefText = "“You failed to reach the threshold after 3 attempts. Relying on societal utilities is complex, and it still opens the door to inequality when consensus fails.”";
+        debriefText = "“You failed to reach the threshold after 3 attempts. Relying on societal utilities is complex, and it still opens the door to inequality when consensus fails. Let's proceed to the debrief.”";
         canProceed = true;
       } else {
         debriefText = `“You failed to reach the 51% threshold. You have ${3 - cycleAttempts} attempts remaining.”`;

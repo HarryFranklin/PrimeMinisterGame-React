@@ -273,8 +273,16 @@ export default function Home() {
     setShowFinalDebrief(true);
   };
 
+  // Triggered by the Narrative Modal's Proceed button
   const handleProceedFromNarrative = () => {
-    const data = loadPopulation(); 
+    // If we just finished the final cycle, route to the complexity debrief instead of restarting
+    if (currentCycle === ElectionCycle.SocietalUtility) {
+      setShowNarrative(false);
+      setShowFinalDebrief(true);
+      return;
+    }
+
+    const data = loadPopulation(); // Restarts population to 0
     setPopulation(data);
     setInitialPopulation(data);
     
@@ -283,7 +291,7 @@ export default function Home() {
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
     else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
     
-    startCycle(nextCycle, data); 
+    startCycle(nextCycle, data); // Restarts schedule & MAO tracking to 0
     setCycleAttempts(1);
     setShowNarrative(false);
   };
