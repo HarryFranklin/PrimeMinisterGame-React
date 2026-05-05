@@ -9,9 +9,9 @@ const DEMO_COLORS = {
 };
 
 const IMPACT_COLORS = {
-  'Improved': '#10b981',
-  'Stable': '#d4d4d8',
-  'Worsened': '#ef4444'
+  'Will improve': '#10b981',
+  'Will be stable/little/no change': '#d4d4d8',
+  'Will be worsened': '#ef4444'
 };
 
 interface DashboardTabProps {
@@ -69,12 +69,12 @@ export default function DashboardTab(props: DashboardTabProps) {
       const segments: any[] = [];
       if (selectedPolicy) {
         // Impact View: Based on change relative to currentLS
-        ['Worsened', 'Stable', 'Improved'].forEach(key => {
+        ['Will be worsened', 'Will be stable/little/no change', 'Will improve'].forEach(key => {
           const count = residentsInBin.filter(r => {
             const index = population.indexOf(r);
             const delta = previewPopulation[index].currentLS - r.currentLS;
-            if (key === 'Improved') return delta > 0.1125; // 2.25x bigger for loss aversion
-            if (key === 'Worsened') return delta < -0.05;
+            if (key === 'Will improve') return delta > 0.1125; // 2.25x bigger for loss aversion
+            if (key === 'Will be worsened') return delta < -0.05;
             return delta >= -0.05 && delta <= 0.1125;
           }).length;
           if (count > 0) segments.push({ label: key, value: count, color: (IMPACT_COLORS as any)[key] });
@@ -128,7 +128,7 @@ export default function DashboardTab(props: DashboardTabProps) {
           </div>
         </div>
 
-        {/* BOTTOM: Analysis Tool (Now links to Electorate Tab) */}
+        {/* BOTTOM: Analysis Tool (Links to Electorate Tab) */}
         <div 
           onClick={() => setActiveTab('electorate')} 
           className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group"

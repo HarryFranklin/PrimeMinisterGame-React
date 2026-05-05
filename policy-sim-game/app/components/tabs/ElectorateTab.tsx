@@ -21,14 +21,16 @@ const DEMO_COLORS = {
 
 const STATUS_COLORS = {
   intention: { 'Approves': '#10b981', 'Angry': '#f43f5e' },
-  trajectory: { 'Improved': '#3b82f6', 'Worsened': '#f59e0b', 'Stable': '#d4d4d8' }
+  trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable/little/no change': '#d4d4d8' }
 };
 
 export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating }: ElectorateTabProps) {
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
-  const [colorBy, setColorBy] = useState<'intention' | 'trajectory' | 'demographic'>('intention');
+  const [colorBy, setColorBy] = useState<'intention' | 'trajectory' | 'demographic'>('demographic');
   const [viewMode, setViewMode] = useState<'chamber' | 'histogram'>('histogram'); 
   const [hoveredDot, setHoveredDot] = useState<any | null>(null);
+  const [hoveredBin, setHoveredBin] = useState<any | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const isTurnZero = useMemo(() => {
     if (previewPopulation.length === 0 || initialPopulation.length === 0) return true;
@@ -102,9 +104,9 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       } else if (colorBy === 'intention') {
         groupKey = v.isApproving ? 'Approves' : 'Angry';
       } else {
-        if (v.lsTrajectory > 0.1125) groupKey = 'Improved'; // For loss aversion (largely indifferent unless it is much better)
-        else if (v.lsTrajectory < -0.05) groupKey = 'Worsened';
-        else groupKey = 'Stable';
+        if (v.lsTrajectory > 0.1125) groupKey = 'Will improve'; 
+        else if (v.lsTrajectory < -0.05) groupKey = 'Will be worsened';
+        else groupKey = 'Will be stable/little/no change';
       }
 
       bins[lsBin].groups[groupKey] = (bins[lsBin].groups[groupKey] || 0) + 1;
@@ -261,27 +263,10 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
             <h2 className="text-xl font-bold text-zinc-800">Electorate Analysis</h2>
             <p className="text-sm text-zinc-500">Visualising demographic distribution and individual voter sentiment.</p>
           </div>
-          
-          {/* HIDING CHAMBER TOGGLE FOR NOW
-          <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
-            <button 
-              onClick={() => setViewMode('chamber')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${viewMode === 'chamber' ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
-            >
-              Chamber View
-            </button>
-            <button 
-              onClick={() => setViewMode('histogram')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${viewMode === 'histogram' ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
-            >
-              Distribution View
-            </button>
-          </div>
-          */}
         </div>
         
         <div className="flex items-center gap-6">
-          <div className="flex bg-zinc-100 p-1 rounded-lg">
+          <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
             {colorOptions.map(opt => (
               <button 
                 key={opt.id} 
@@ -293,23 +278,25 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
             ))}
           </div>
           
-          {/* Conditionally render the divider and group buttons only when Demographic is selected */}
-          {colorBy === 'demographic' && (
-            <>
-              <div className="w-px h-8 bg-zinc-200" />
-              <div className="flex bg-zinc-100 p-1 rounded-lg">
-                {['wealth', 'age'].map(t => (
-                  <button 
-                    key={t} 
-                    onClick={() => setGroupBy(t as any)} 
-                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
-                  >
-                    Group by {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          {/* Reserved space to prevent UI shifting */}
+          <div className="flex items-center gap-6 w-[280px]">
+            {colorBy === 'demographic' && (
+              <>
+                <div className="w-px h-8 bg-zinc-200" />
+                <div className="flex bg-zinc-100 p-1 rounded-lg">
+                  {['wealth', 'age'].map(t => (
+                    <button 
+                      key={t} 
+                      onClick={() => setGroupBy(t as any)} 
+                      className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
+                    >
+                      Group by {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -386,7 +373,25 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                       : STATUS_COLORS.trajectory;
 
                   return (
-                    <div key={binData.bin} className="flex-1 flex flex-col-reverse group relative" style={{ height: `${totalHeight}%` }}>
+                    <div 
+                      key={binData.bin} 
+                      className="flex-1 flex flex-col-reverse group relative cursor-crosshair" 
+                      style={{ height: `${totalHeight}%` }}
+                      onMouseMove={(e) => {
+                        let x = e.clientX + 15;
+                        let y = e.clientY + 15;
+                        
+                        // Prevent clipping by clamping to window bounds
+                        if (typeof window !== 'undefined') {
+                          if (x + 200 > window.innerWidth) x = e.clientX - 215;
+                          if (y + 150 > window.innerHeight) y = e.clientY - 165;
+                        }
+                        
+                        setHoveredBin(binData);
+                        setMousePos({ x, y });
+                      }}
+                      onMouseLeave={() => setHoveredBin(null)}
+                    >
                       {Object.entries(activeColorMap).map(([groupName, color]) => {
                         const count = binData.groups[groupName] || 0;
                         if (count === 0) return null;
@@ -396,14 +401,10 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                           <div 
                             key={groupName}
                             style={{ height: `${segmentHeight}%`, backgroundColor: color }}
-                            className="w-full"
-                            title={`${groupName}: ${count}`}
+                            className="w-full transition-opacity hover:opacity-90"
                           />
                         );
                       })}
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                        Total: {binData.total}
-                      </div>
                     </div>
                   );
                 })}
@@ -417,19 +418,51 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
             </div>
           )}
 
+          {/* Tooltip overlay for Histogram groups */}
+          {viewMode === 'histogram' && hoveredBin && (
+            <div 
+              className="fixed z-[9999] bg-white border border-zinc-200 p-4 rounded-xl shadow-xl pointer-events-none text-zinc-800 min-w-[180px] transition-opacity duration-150"
+              style={{ left: mousePos.x, top: mousePos.y }}
+            >
+              <div className="border-b border-zinc-100 pb-2 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">LS Score {hoveredBin.bin}</p>
+                <p className="text-sm font-bold text-zinc-600">{hoveredBin.total} Residents</p>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(
+                  colorBy === 'demographic' ? DEMO_COLORS[groupBy] : 
+                  colorBy === 'intention' ? STATUS_COLORS.intention : 
+                  STATUS_COLORS.trajectory
+                ).map(([groupName, color]) => {
+                  const count = hoveredBin.groups[groupName] || 0;
+                  if (count === 0) return null;
+                  return (
+                    <div key={groupName} className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
+                        <span className="text-zinc-600 text-[11px] font-medium">{groupName}</span>
+                      </div>
+                      <span className="font-mono font-bold text-zinc-800 text-[11px]">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Tooltip for Chamber View */}
           {viewMode === 'chamber' && hoveredDot && (
             <div 
-              className="absolute z-50 bg-zinc-900 p-4 rounded-xl shadow-2xl border border-zinc-700 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-6" 
+              className="absolute z-50 bg-white p-4 rounded-xl shadow-xl border border-zinc-200 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-6 min-w-[200px]" 
               style={{ left: `calc(50% - 450px + ${hoveredDot.seat.x}px)`, top: `calc(50% - 225px + ${hoveredDot.seat.y}px)` }}
             >
-              <p className="text-white font-bold text-sm mb-1">Voter ID: {String(hoveredDot.voter.id).substring(0, 6)}</p>
-              <p className="text-zinc-400 text-[11px] uppercase tracking-wider mb-3">{hoveredDot.voter.demographics.wealth} Class • {hoveredDot.voter.demographics.age}</p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-white">
+              <p className="text-zinc-800 font-bold text-sm mb-1">Voter ID: {String(hoveredDot.voter.id).substring(0, 6)}</p>
+              <p className="text-zinc-500 text-[11px] uppercase tracking-wider mb-3">{hoveredDot.voter.demographics.wealth} Class • {hoveredDot.voter.demographics.age}</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-zinc-800">
                 <span className="text-zinc-500">Current LS:</span><span className="font-mono font-bold text-right">{hoveredDot.voter.currentLS.toFixed(1)}</span>
-                <span className="text-zinc-500">LS Change:</span><span className={`font-mono font-bold text-right ${hoveredDot.voter.lsTrajectory >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{hoveredDot.voter.lsTrajectory >= 0 ? '+' : ''}{hoveredDot.voter.lsTrajectory.toFixed(1)}</span>
-                <div className="col-span-2 h-px bg-zinc-800 my-1" />
-                <span className="text-zinc-500 font-bold">Government:</span><span className={`font-black text-right ${hoveredDot.voter.isApproving ? 'text-emerald-400' : 'text-rose-400'}`}>{hoveredDot.voter.isApproving ? 'APPROVES' : 'ANGRY'}</span>
+                <span className="text-zinc-500">LS Change:</span><span className={`font-mono font-bold text-right ${hoveredDot.voter.lsTrajectory >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{hoveredDot.voter.lsTrajectory >= 0 ? '+' : ''}{hoveredDot.voter.lsTrajectory.toFixed(1)}</span>
+                <div className="col-span-2 h-px bg-zinc-100 my-1" />
+                <span className="text-zinc-500 font-bold">Government:</span><span className={`font-black text-right ${hoveredDot.voter.isApproving ? 'text-emerald-500' : 'text-rose-500'}`}>{hoveredDot.voter.isApproving ? 'APPROVES' : 'ANGRY'}</span>
               </div>
             </div>
           )}
