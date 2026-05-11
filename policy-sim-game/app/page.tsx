@@ -10,6 +10,7 @@ import { MAOEngine } from "./utils/MAOEngine";
 import ElectionModal from "./components/modals/ElectionModal";
 import NarrativeModal from "./components/modals/NarrativeModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
+import IntroductionModal from "./components/modals/IntroductionModal";
 import { FRAMEWORK_RULES } from "./utils/frameworkRules";
 
 // Tab Imports
@@ -97,7 +98,7 @@ export default function Home() {
   const [selectedMinister, setSelectedMinister] = useState<any | null>(null);
   const [devMode, setDevMode] = useState(false);
 
-  // New MAO & Schedule State
+  // MAO & Schedule State
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
   const [cycleMAO, setCycleMAO] = useState<number>(0);
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
@@ -105,6 +106,44 @@ export default function Home() {
   const [optimalPath, setOptimalPath] = useState<Policy[]>([]); 
   const [showOptimalPath, setShowOptimalPath] = useState(false);
 
+  // --- Tutorial & Onboarding States ---
+  const [showIntro, setShowIntro] = useState(true);
+  const [isTutorialActive, setIsTutorialActive] = useState(false);
+
+  // --- NEW MASTER TUTORIAL STATES ---
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialVisitedTabs, setTutorialVisitedTabs] = useState<string[]>(['dashboard']);
+
+  useEffect(() => {
+    if (isTutorialActive) {
+      setTutorialStep(0);
+      setTutorialVisitedTabs(['dashboard']);
+      setActiveTab('dashboard'); // Force back to start
+    }
+  }, [isTutorialActive]);
+
+  // Track tab clicks during step 3
+  useEffect(() => {
+    if (isTutorialActive && tutorialStep === 3) {
+      if (!tutorialVisitedTabs.includes(activeTab)) {
+        setTutorialVisitedTabs(prev => [...prev, activeTab]);
+      }
+    }
+  }, [activeTab, isTutorialActive, tutorialStep]);
+
+  // Define steps with dynamic positioning
+  const tutorialStepsData = [
+    { title: 'Data & Demographics', text: 'This section visualises the life satisfaction of your electorate. Use the bottom tool to explore demographic breakdowns.', pos: 'bottom-10 right-10' },
+    { title: 'The Cabinet & Public Approval', text: 'Your ministers represent key voting blocs. Their reactions predict policy impacts. (Notice how this tooltip moved out of the way!)', pos: 'bottom-10 left-10' },
+    { title: 'Legislative Agenda', text: 'Here you select and enact policies. You can only pass one policy per turn, so choose carefully.', pos: 'bottom-10 left-10' },
+    { title: 'Department Overviews', text: 'To finish your onboarding, click through each of the tabs at the top to explore them.', pos: 'top-24 left-1/2 -translate-x-1/2' }
+  ];
+
+  const handleStartGame = () => {
+    setShowIntro(false);
+    setIsTutorialActive(true); 
+  };
+  
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
     const schedule = generateCycleSchedule(cycle, availablePolicies);
     setCycleSchedule(schedule);
@@ -309,13 +348,70 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
-        <div>
+      {showIntro && <IntroductionModal onStart={handleStartGame} />}
+
+      {/* --- MASTER TUTORIAL OVERLAY --- */}
+      {isTutorialActive && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-zinc-900/60 backdrop-blur-[2px] transition-all duration-500" />
+          
+          <div className={`fixed z-[80] bg-white rounded-2xl shadow-2xl p-6 md:p-8 border-2 border-pink-200 max-w-lg w-full flex flex-col gap-4 animate-in fade-in duration-500 transition-all ${tutorialStepsData[tutorialStep].pos}`}>
+            <div>
+              <h3 className="text-2xl font-black text-pink-600 tracking-tight">{tutorialStepsData[tutorialStep].title}</h3>
+              <p className="text-zinc-700 mt-2 leading-relaxed">{tutorialStepsData[tutorialStep].text}</p>
+            </div>
+            
+            {/* Step 3: Tab Checklist */}
+            {tutorialStep === 3 && (
+              <div className="flex gap-2 mt-2">
+                {tabs.map(t => (
+                  <span key={t} className={`text-[10px] font-bold uppercase px-2 py-1 rounded transition-colors ${tutorialVisitedTabs.includes(t) ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-400'}`}>
+                    {t} {tutorialVisitedTabs.includes(t) && '✓'}
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                Step {tutorialStep + 1} of {tutorialStepsData.length}
+              </span>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsTutorialActive(false)} 
+                  className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors"
+                >
+                  Skip
+                </button>
+                <button 
+                  disabled={tutorialStep === 3 && tutorialVisitedTabs.length < tabs.length}
+                  onClick={() => {
+                    if (tutorialStep === tutorialStepsData.length - 1) {
+                      setIsTutorialActive(false);
+                      setActiveTab('dashboard'); // Return to dashboard upon finishing
+                    } else {
+                      setTutorialStep(s => s + 1);
+                    }
+                  }} 
+                  className="px-6 py-2 bg-pink-600 text-white text-sm font-bold rounded-xl hover:bg-pink-700 shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {tutorialStep === tutorialStepsData.length - 1 ? 'Finish Onboarding' : 'Next'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Dynamically boost Header Z-Index during Step 3 */}
+      <header className={`bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm transition-all duration-500 ${isTutorialActive && tutorialStep === 3 ? 'relative z-[70] ring-4 ring-pink-500/20' : 'relative z-10'}`}><div>
           <h1 className="text-xl font-bold">Policy Simulator</h1>
           <p className="text-xs font-bold text-pink-600 uppercase">
             {FRAMEWORK_RULES[currentCycle].frameworkTitle}
           </p>
         </div>
+        
+        {/* TAB BAR */}
         <nav className="bg-zinc-100 p-1 rounded-lg w-full max-w-3xl"> 
           <div className="relative grid grid-cols-4 gap-1">
             <div 
@@ -338,15 +434,32 @@ export default function Home() {
             ))}
           </div>
         </nav>
-        <div className="text-right">
-          <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
-          <p className="text-lg font-mono font-bold">{TURNS_PER_CYCLE - currentTurn + 1} Turns</p>
+        
+        {/* Tutorial Toggle Button */}
+        <div className="flex items-center gap-6 text-right">
+          <button 
+            onClick={() => setIsTutorialActive(!isTutorialActive)}
+            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-colors border shadow-sm ${
+              isTutorialActive 
+                ? 'bg-pink-100 text-pink-700 border-pink-300' 
+                : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'
+            }`}
+          >
+            {isTutorialActive ? 'Tutorial: ON' : 'Tutorial: OFF'}
+          </button>
+
+          <div>
+            <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
+            <p className="text-lg font-mono font-bold">{TURNS_PER_CYCLE - currentTurn + 1} Turns</p>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 overflow-hidden p-6 flex flex-col">
         {activeTab === 'dashboard' && (
           <DashboardTab 
+            isTutorialActive={isTutorialActive}
+            tutorialStep={tutorialStep}
             setActiveTab={setActiveTab} 
             currentCycle={currentCycle} 
             currentChartData={currentChartData}

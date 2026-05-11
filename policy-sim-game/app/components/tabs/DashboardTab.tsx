@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect} from "react";
 import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy, Respondent } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
@@ -34,6 +34,8 @@ interface DashboardTabProps {
   approvalRating: number;
   population: Respondent[];
   previewPopulation: Respondent[];
+  isTutorialActive: boolean;
+  tutorialStep: number;
 }
 
 const getMinisterReaction = (delta: number) => {
@@ -49,7 +51,8 @@ export default function DashboardTab(props: DashboardTabProps) {
     setActiveTab, currentCycle, currentChartData, previewChartData, currentHistogramData,
     ministers, setSelectedMinister, selectedPolicy, turnMetricScore,
     currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    population, previewPopulation
+    population, previewPopulation,
+    isTutorialActive, tutorialStep
   } = props;
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -59,6 +62,15 @@ export default function DashboardTab(props: DashboardTabProps) {
   let markerLabel = undefined;
   if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
   else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
+
+  // Helper function to dynamically apply "spotlight" CSS classes to the columns
+  const getTutorialClass = (columnIndex: number) => {
+    if (!isTutorialActive) return "relative z-10";
+    if (tutorialStep === 3) return "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500"; // Dim everything during the Tabs step
+    return tutorialStep === columnIndex 
+      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl transition-all duration-500 scale-[1.01] bg-white/5" 
+      : "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500";
+  };
 
   // Prepare the stacked data for the bottom graph
   const stackedData = useMemo(() => {
@@ -99,11 +111,11 @@ export default function DashboardTab(props: DashboardTabProps) {
   }, [population, previewPopulation, selectedPolicy, groupBy, currentHistogramData]);
 
   return (
-    <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300">
+    <div className="grid grid-cols-12 gap-6 h-full min-h-0 animate-in fade-in duration-300 relative">
       
-      {/* LEFT COLUMN: Split Graphs */}
-      <div className="col-span-4 flex flex-col gap-4 h-full min-h-0">
-        
+      {/* LEFT COLUMN: Split Graphs (Wrapped with getTutorialClass(0)) */}
+      <div className={`col-span-4 flex flex-col gap-4 h-full min-h-0 ${getTutorialClass(0)}`}>
+
         {/* TOP: Current Distribution (Links to Graphs Tab) */}
         <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group">
           <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
@@ -186,8 +198,8 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
       </div>
 
-      {/* MIDDLE COLUMN: CABINET */}
-      <div className="col-span-4 flex flex-col gap-6 h-full min-h-0">
+      {/* MIDDLE COLUMN: CABINET (Wrapped with getTutorialClass(1)) */}
+      <div className={`col-span-4 flex flex-col gap-6 h-full min-h-0 ${getTutorialClass(1)}`}>
         <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
           <div className="px-4 pt-5 pb-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
@@ -266,8 +278,8 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: LEGISLATIVE AGENDA */}
-      <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
+      {/* RIGHT COLUMN: LEGISLATIVE AGENDA (Wrapped with getTutorialClass(2)) */}
+      <div className={`col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 ${getTutorialClass(2)}`}>
         <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
           <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
           <p className="text-sm text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>
