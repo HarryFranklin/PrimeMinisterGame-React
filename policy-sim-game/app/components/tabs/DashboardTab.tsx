@@ -64,12 +64,20 @@ export default function DashboardTab(props: DashboardTabProps) {
   else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
 
   // Helper function to dynamically apply "spotlight" CSS classes to the columns
+  // 1. Lifts the column above the blur, but removes the ring and background
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";
-    if (tutorialStep === 3) return "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500"; // Dim everything during the Tabs step
+    if (tutorialStep === 3) return "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500";
     return tutorialStep === columnIndex 
-      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl transition-all duration-500 scale-[1.01] bg-white/5" 
+      ? "relative z-[70] transition-all duration-500" 
       : "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500";
+  };
+
+  // 2. Adds the pink highlight ring directly to the solid cards
+  const getCardHighlight = (columnIndex: number) => {
+    return isTutorialActive && tutorialStep === columnIndex 
+      ? "ring-4 ring-pink-500/50 shadow-2xl z-20" 
+      : "";
   };
 
   // Prepare the stacked data for the bottom graph
@@ -117,7 +125,7 @@ export default function DashboardTab(props: DashboardTabProps) {
       <div className={`col-span-4 flex flex-col gap-4 h-full min-h-0 ${getTutorialClass(0)}`}>
 
         {/* TOP: Current Distribution (Links to Graphs Tab) */}
-        <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group">
+        <div onClick={() => setActiveTab('graphs')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
           <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
               Current Life Satisfaction Distribution
@@ -141,10 +149,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         {/* BOTTOM: Analysis Tool (Links to Electorate Tab) */}
-        <div 
-          onClick={() => setActiveTab('electorate')} 
-          className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group"
-        >
+        <div onClick={() => setActiveTab('electorate')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
           <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
             <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
               {selectedPolicy ? "Wellbeing Impact" : "Demographic Breakdown"}
@@ -200,7 +205,7 @@ export default function DashboardTab(props: DashboardTabProps) {
 
       {/* MIDDLE COLUMN: CABINET (Wrapped with getTutorialClass(1)) */}
       <div className={`col-span-4 flex flex-col gap-6 h-full min-h-0 ${getTutorialClass(1)}`}>
-        <div onClick={() => setActiveTab('ministers')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0">
+        <div onClick={() => setActiveTab('ministers')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col cursor-pointer hover:border-zinc-300 hover:shadow-md transition-all group min-h-0 ${getCardHighlight(1)}`}>
           <div className="px-4 pt-5 pb-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0 group-hover:bg-zinc-100/50 transition-colors">
             <div>
               <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800 group-hover:text-pink-600 transition-colors">The Cabinet</h3>
@@ -255,7 +260,7 @@ export default function DashboardTab(props: DashboardTabProps) {
         </div>
 
         {/* APPROVAL RATING */}
-        <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
+        <div onClick={() => setActiveTab('electorate')} className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group ${getCardHighlight(1)}`}>
           <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
           <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
           <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
@@ -279,7 +284,7 @@ export default function DashboardTab(props: DashboardTabProps) {
       </div>
 
       {/* RIGHT COLUMN: LEGISLATIVE AGENDA (Wrapped with getTutorialClass(2)) */}
-      <div className={`col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 ${getTutorialClass(2)}`}>
+      <div className={`col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 ${getTutorialClass(2)} ${getCardHighlight(2)}`}>
         <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
           <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
           <p className="text-sm text-zinc-500 mt-1">Select one of this turn's available policies to enact.</p>

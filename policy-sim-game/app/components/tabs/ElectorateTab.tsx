@@ -7,6 +7,8 @@ interface ElectorateTabProps {
   previewPopulation: Respondent[];
   currentCycle: ElectionCycle;
   approvalRating: number;
+  isTutorialActive?: boolean; 
+  tutorialStep?: number;      
 }
 
 const SORT_ORDERS = {
@@ -24,7 +26,7 @@ const STATUS_COLORS = {
   trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
 };
 
-export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating }: ElectorateTabProps) {
+export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating, isTutorialActive, tutorialStep }: ElectorateTabProps) {
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
   const [colorBy, setColorBy] = useState<'intention' | 'trajectory' | 'demographic'>('demographic');
   const [viewMode, setViewMode] = useState<'chamber' | 'histogram'>('histogram'); 
@@ -36,6 +38,13 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
     if (previewPopulation.length === 0 || initialPopulation.length === 0) return true;
     return previewPopulation.every((p, i) => Math.abs(p.currentLS - initialPopulation[i].currentLS) < 0.0001);
   }, [initialPopulation, previewPopulation]);
+
+  const getTutorialClass = (columnIndex: number) => {
+    if (!isTutorialActive) return "relative z-10";
+    return tutorialStep === columnIndex 
+      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl"
+      : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
+  };
 
   // #region Data Processing
   const processedVoters = useMemo(() => {
@@ -255,9 +264,9 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
+    <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
       {/* Control Bar */}
-      <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0">
+      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0 ${getTutorialClass(0)}`}>
         <div className="flex gap-8 items-center">
           <div>
             <h2 className="text-xl font-bold text-zinc-800">Electorate Analysis</h2>
@@ -303,7 +312,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       <div className="flex-1 flex gap-6 min-h-0">
         
         {/* Chart Area */}
-        <div className="flex-[3] bg-white rounded-xl border border-zinc-200 shadow-sm p-10 relative flex flex-col items-center justify-center min-h-0 overflow-hidden">
+        <div className={`flex-[3] bg-white rounded-xl border border-zinc-200 shadow-sm p-10 relative flex flex-col items-center justify-center min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
           {/* Dynamic Legend */}
           <div className="absolute top-6 right-6 bg-white/80 backdrop-blur-sm border border-zinc-200 p-4 rounded-lg shadow-sm z-10">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3 text-center">Legend</h4>
@@ -469,7 +478,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
         </div>
 
         {/* Guided Analysis Sidebar */}
-        <div className="flex-1 max-w-[380px] bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col gap-4 overflow-y-auto shrink-0 shadow-inner">
+        <div className={`flex-1 max-w-[380px] bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col gap-4 overflow-y-auto shrink-0 shadow-inner ${getTutorialClass(2)}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">💡</span>
             <h3 className="text-sm font-black uppercase tracking-widest text-zinc-800">Guided Analysis</h3>

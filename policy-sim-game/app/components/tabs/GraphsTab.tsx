@@ -10,11 +10,13 @@ interface GraphsTabProps {
   previewChartData: any[];
   currentHistogramData: any[];
   previewHistogramData: any[];
+  selectedPolicy: Policy | null;
+  ministers: any[];
   currentMetricScore: number;
   turnMetricScore: number;
   initialMetricScore: number;
-  selectedPolicy: Policy | null;
-  ministers: any[];
+  isTutorialActive?: boolean;
+  tutorialStep?: number;   
 }
 
 export default function GraphsTab(props: GraphsTabProps) {
@@ -24,8 +26,17 @@ export default function GraphsTab(props: GraphsTabProps) {
     currentHistogramData, previewHistogramData, 
     turnMetricScore,
     selectedPolicy,
-    ministers
+    ministers,
+    isTutorialActive,
+    tutorialStep    
   } = props;
+
+  const getTutorialClass = (columnIndex: number) => {
+    if (!isTutorialActive) return "relative z-10";
+    return tutorialStep === columnIndex 
+      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl" 
+      : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
+  };
 
   const rule = FRAMEWORK_RULES[currentCycle];
 
@@ -34,7 +45,7 @@ export default function GraphsTab(props: GraphsTabProps) {
   else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
 
   return (
-    <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">
+    <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
       
       {/* Header */}
       <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0">
@@ -52,7 +63,7 @@ export default function GraphsTab(props: GraphsTabProps) {
       <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
         
         {/* Left Column: Current State */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0">
+        <div className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 ${getTutorialClass(0)}`}>
           <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl shrink-0 flex justify-between items-center">
              <div>
                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">Current State</h3>
@@ -75,7 +86,7 @@ export default function GraphsTab(props: GraphsTabProps) {
         </div>
 
         {/* Right Column: Projected State */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0">
+        <div className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 ${getTutorialClass(1)}`}>
           <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl shrink-0 flex justify-between items-center">
              <div>
                <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: rule.graphColor }}>Projected State</h3>

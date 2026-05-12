@@ -4,6 +4,8 @@ interface MinistersTabProps {
   ministers: any[];
   selectedMinister?: any | null; 
   selectedPolicy?: any | null;   
+  isTutorialActive?: boolean; 
+  tutorialStep?: number;    
 }
 
 const getMinisterReaction = (delta: number) => {
@@ -14,7 +16,7 @@ const getMinisterReaction = (delta: number) => {
   return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐", statusName: "neutral" };
 };
 
-export default function MinistersTab({ ministers, selectedMinister, selectedPolicy }: MinistersTabProps) {
+export default function MinistersTab({ ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep }: MinistersTabProps) {
   const selectedName = typeof selectedMinister === 'string' ? selectedMinister : selectedMinister?.name;
 
   const getHighlightStyles = (status: string) => {
@@ -26,8 +28,15 @@ export default function MinistersTab({ ministers, selectedMinister, selectedPoli
     }
   };
 
+  const getTutorialClass = (columnIndex: number) => {
+    if (!isTutorialActive) return "relative z-10";
+    return tutorialStep === columnIndex 
+      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl" 
+      : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
+  };
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 h-full min-h-0 w-full animate-in fade-in duration-300">
+    <div className={`grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 h-full min-h-0 w-full animate-in fade-in duration-300 ${getTutorialClass(0)}`}>
       {ministers.map((minister, i) => {
         const isHighlighted = selectedName === minister.name;
         const isReacting = selectedPolicy != null;
@@ -38,9 +47,10 @@ export default function MinistersTab({ ministers, selectedMinister, selectedPoli
         const displayEmoji = isReacting && reaction ? reaction.emoji : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
 
         const styles = isHighlighted ? getHighlightStyles(displayStatus) : { card: 'border-zinc-200 bg-white', text: 'text-zinc-800' };
+        const tutorialIndex = i === 0 ? 0 : 1;
         
         return (
-          <div key={i} className={`rounded-xl border p-4 lg:p-6 flex flex-col h-full min-h-0 transition-all duration-300 ${styles.card}`}>
+          <div key={i} className={`rounded-xl border p-4 lg:p-6 flex flex-col h-full min-h-0 transition-all duration-300 ${styles.card} ${getTutorialClass(tutorialIndex)}`}>
             
             <div className="flex justify-between items-start mb-3 lg:mb-4 shrink-0">
               <div className="flex-1 pr-2">
