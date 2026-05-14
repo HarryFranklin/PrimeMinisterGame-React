@@ -9,6 +9,9 @@ interface ElectorateTabProps {
   approvalRating: number;
   isTutorialActive?: boolean; 
   tutorialStep?: number;      
+  selectedPolicy?: any;           
+  setSelectedPolicy?: any;        
+  onNavigateToPolicy?: () => void;
 }
 
 const SORT_ORDERS = {
@@ -24,7 +27,12 @@ const STATUS_COLORS = {
 
 type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
 
-export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating, isTutorialActive, tutorialStep }: ElectorateTabProps) {
+export default function ElectorateTab({ 
+  initialPopulation, previewPopulation, currentCycle, approvalRating, 
+  isTutorialActive, tutorialStep,
+  selectedPolicy, setSelectedPolicy, onNavigateToPolicy 
+}: ElectorateTabProps) {
+
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
   const [hoveredDot, setHoveredDot] = useState<any | null>(null);
@@ -224,14 +232,36 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
     <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
       {/* Control Bar */}
       <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
-        <div className="flex gap-4 items-center">
-          <div className="bg-zinc-900 text-white px-4 py-2 rounded-lg flex flex-col justify-center items-center">
+        <div className="flex gap-4 items-center flex-wrap">
+          <div className="bg-zinc-900 text-white px-4 py-2 rounded-lg flex flex-col justify-center items-center shrink-0">
              <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">Approval</span>
              <span className={`text-xl font-black ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
           </div>
-          <div>
+          
+          {/* ACTIVE POLICY WIDGET */}
+          {selectedPolicy && onNavigateToPolicy && setSelectedPolicy && (
+            <div 
+              onClick={onNavigateToPolicy}
+              className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg p-2 pl-3 md:px-4 cursor-pointer hover:bg-pink-100 hover:border-pink-300 transition-all shadow-sm group shrink-0"
+            >
+              <div className="flex flex-col pr-4 border-r border-pink-200/60 mr-3">
+                <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-0.5">Draft Selected</span>
+                <span className="text-sm font-bold text-pink-900 leading-none truncate max-w-[200px]">{selectedPolicy.policyName}</span>
+              </div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPolicy(null);
+                }}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-200/50 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors shrink-0"
+              >
+                <span className="text-xs font-bold">✕</span>
+              </button>
+            </div>
+          )}
+
+          <div className="hidden xl:block ml-2">
             <h2 className="text-xl font-bold text-zinc-800">Polling & Electorate Analysis</h2>
-            <p className="text-sm text-zinc-500">Break down who is supporting your administration.</p>
           </div>
         </div>
         

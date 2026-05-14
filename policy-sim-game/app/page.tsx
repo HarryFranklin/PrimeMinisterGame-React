@@ -85,6 +85,8 @@ export default function Home() {
   const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
 
+  const [pulsePolicy, setPulsePolicy] = useState(false);
+
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
@@ -160,6 +162,12 @@ export default function Home() {
     setShowIntro(false);
     setIsTutorialActive(true); 
   };
+
+  const handleNavigateToPolicy = useCallback(() => {
+    setActiveTab('dashboard');
+    setPulsePolicy(true);
+    setTimeout(() => setPulsePolicy(false), 1500); // Clear pulse after 1.5s
+  }, []);
   
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
     const schedule = generateCycleSchedule(cycle, availablePolicies);
@@ -571,6 +579,7 @@ export default function Home() {
             approvalRating={turnApprovalRating}
             population={population}
             previewPopulation={previewPopulation}
+            pulsePolicy={pulsePolicy}
           />
         )}
 
@@ -581,6 +590,8 @@ export default function Home() {
             ministers={ministers} 
             selectedMinister={selectedMinister} 
             selectedPolicy={selectedPolicy}
+            setSelectedPolicy={setSelectedPolicy}
+            onNavigateToPolicy={handleNavigateToPolicy}
           />
         )}
         
@@ -599,6 +610,8 @@ export default function Home() {
             initialMetricScore={initialMetricScore} 
             turnMetricScore={turnMetricScore}
             ministers={ministers}
+            setSelectedPolicy={setSelectedPolicy}
+            onNavigateToPolicy={handleNavigateToPolicy}
           />
         )}
         {activeTab === 'electorate' && (
@@ -609,6 +622,9 @@ export default function Home() {
             previewPopulation={previewPopulation}
             currentCycle={currentCycle}
             approvalRating={turnApprovalRating}
+            selectedPolicy={selectedPolicy}
+            setSelectedPolicy={setSelectedPolicy}
+            onNavigateToPolicy={handleNavigateToPolicy}
           />
         )}
       </main>

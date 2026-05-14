@@ -22,14 +22,14 @@ interface DashboardTabProps {
   currentHistogramData: any[];
   previewHistogramData: any[];
   ministers: any[];
-  selectedMinister: any | null;
+  selectedMinister: any | null; 
   setSelectedMinister: (m: any) => void;
   selectedPolicy: Policy | null;
   currentMetricScore: number;
   initialMetricScore: number;
   turnMetricScore: number;
   currentDeck: Policy[];
-  presentedPolicies: Policy[]
+  presentedPolicies: Policy[];
   setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
   handleApplyPolicy: () => void;
   cycleMAO: number;
@@ -38,6 +38,7 @@ interface DashboardTabProps {
   previewPopulation: Respondent[];
   isTutorialActive: boolean;
   tutorialStep: number;
+  pulsePolicy?: boolean;
 }
 
 const getMinisterReaction = (delta: number) => {
@@ -52,10 +53,10 @@ export default function DashboardTab(props: DashboardTabProps) {
   const {
     setActiveTab, currentCycle, currentChartData, previewChartData, currentHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
-    currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
+    currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
     population, previewPopulation,
-    isTutorialActive, tutorialStep
-  } = props;
+    isTutorialActive, tutorialStep, pulsePolicy 
+  } = props;;
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
@@ -130,7 +131,7 @@ export default function DashboardTab(props: DashboardTabProps) {
   return (
     <div className="flex flex-col gap-6 h-full min-h-0 animate-in fade-in duration-300 relative">
       
-      {/* NEW TOP BANNER: GUIDED ANALYSIS */}
+      {/* TOP BANNER: GUIDED ANALYSIS */}
       <div className={`shrink-0 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start gap-4 shadow-sm ${getTutorialClass(0)}`}>
         <span className="text-2xl mt-0.5">🧭</span>
         <div>
@@ -331,14 +332,16 @@ export default function DashboardTab(props: DashboardTabProps) {
               </div>
             ) : (
               <>
-                {currentDeck.slice(0, 3).map((policy) => {
+                {presentedPolicies.map((policy) => {
                   const isSelected = selectedPolicy?.id === policy.id;
                   return (
                     <button
                       key={policy.id}
                       onClick={() => setSelectedPolicy(prev => prev?.id === policy.id ? null : policy)}
-                      className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-200 group ${
-                        isSelected ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500/20 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                      className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-300 group ${
+                        isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                      } ${
+                        isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
                       }`}
                     >
                       {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
