@@ -121,7 +121,13 @@ export default function D3Chart({
       
       if (visualStyle === 'faces') {
         const bw = xScale.bandwidth();
-        const faceSize = Math.min(Math.floor(bw), 30); 
+        
+        // 1. Calculate an ideal column count based on width, but clamp it strictly between 2 and 3
+        const idealFaceSize = 18; 
+        const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
+        
+        // 2. The face size is now perfectly derived from our constrained column count
+        const faceSize = bw / cols; 
         
         const patterns = defs.selectAll("pattern.face-pattern").data(histogramData, (d: any) => d.name);
         
@@ -130,44 +136,38 @@ export default function D3Chart({
           .attr("class", "face-pattern")
           .attr("id", d => `face-${d.name}`)
           .attr("patternUnits", "userSpaceOnUse")
-          .attr("width", bw)         
+          .attr("width", faceSize)   
           .attr("height", faceSize)  
-          // ALIGN GRID: Force the pattern to start exactly on the bar's X, and on the baseline Y
           .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("y", height); 
 
         const faceGroup = patternsEnter.append("g");
-
-        // Center coordinates for the face inside its column
-        const cx = bw / 2;
+        const cx = faceSize / 2;
         const cy = faceSize / 2;
 
-        // 1. Procedural Background Colour
         faceGroup.append("circle")
           .attr("cx", cx)
           .attr("cy", cy)
-          .attr("r", faceSize / 2 - 2)
+          .attr("r", faceSize / 2 - 1) // Reduced the gap slightly for smaller faces
           .attr("fill", d => d3.interpolateRdYlGn(Number(d.name) / 10))
-          .attr("stroke", "rgba(0,0,0,0.15)")
-          .attr("stroke-width", 1.5);
+          .attr("stroke", d => d3.color(d3.interpolateRdYlGn(Number(d.name) / 10))?.darker(0.6)?.toString() || "#1f2937")
+          .attr("stroke-width", 1); // Thinner stroke for smaller faces
 
-        // 2. Eyes
-        faceGroup.append("circle").attr("cx", cx - faceSize * 0.15).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
-        faceGroup.append("circle").attr("cx", cx + faceSize * 0.15).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
+        faceGroup.append("circle").attr("cx", cx - faceSize * 0.16).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
+        faceGroup.append("circle").attr("cx", cx + faceSize * 0.16).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
 
-        // 3. Procedural Mouth Curve
         faceGroup.append("path")
           .attr("d", d => {
             const score = Number(d.name); 
-            const startX = cx - faceSize * 0.2;
-            const endX = cx + faceSize * 0.2;
+            const startX = cx - faceSize * 0.22;
+            const endX = cx + faceSize * 0.22;
             const baseY = cy + faceSize * 0.15; 
             const controlY = cy - faceSize * 0.05 + (score / 10) * (faceSize * 0.4); 
 
             return `M ${startX} ${baseY} Q ${cx} ${controlY} ${endX} ${baseY}`;
           })
           .attr("stroke", "#1f2937")
-          .attr("stroke-width", 1.5)
+          .attr("stroke-width", 1) // Thinner stroke
           .attr("fill", "none")
           .attr("stroke-linecap", "round");
       }
@@ -205,19 +205,22 @@ export default function D3Chart({
         });
       } else {
         const bw = xScale.bandwidth();
-        const faceSize = Math.min(Math.floor(bw), 30);
+        
+        // Ensure this exactly matches the logic above
+        const idealFaceSize = 18;
+        const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
+        const faceSize = bw / cols;
 
         dataLayer.selectAll("rect.bar").data(histogramData, (d: any) => d.name)
           .join("rect")
           .attr("class", "bar")
           .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("width", bw)
-          // THE FIX: Snap the Y and Height so they are exact multiples of the face size
           .attr("y", d => {
             if (visualStyle === 'faces') {
               const rawHeight = height - yScale(d.count);
               let faceCount = Math.floor(rawHeight / faceSize);
-              if (d.count > 0 && faceCount === 0) faceCount = 1; // Always show at least 1 face if there is data
+              if (d.count > 0 && faceCount === 0) faceCount = 1;
               return height - (faceCount * faceSize);
             }
             return yScale(d.count);
@@ -355,7 +358,7 @@ export default function D3Chart({
         const continuousXScale = d3.scaleLinear().domain([0, 10]).range([(xScale("0") || 0) + xScale.bandwidth() / 2, (xScale("10") || 0) + xScale.bandwidth() / 2]);
         const markerX = continuousXScale(Math.max(0, Math.min(10, markerValue)));
         annotationLayer.append("line").attr("x1", markerX).attr("x2", markerX).attr("y1", 0).attr("y2", height).attr("stroke", "#3f3f46").attr("stroke-width", 2).attr("stroke-dasharray", "6,4");
-        annotationLayer.append("text").attr("y", 20).attr("x", markerValue > 8 ? markerX - 8 : markerX + 8).attr("fill", "#18181b").attr("font-size", "12px").attr("font-weight", "900").attr("stroke", "white").attr("stroke-width", 4).style("paint-order", "stroke").attr("text-anchor", markerValue > 8 ? "end" : "start").text(`${markerLabel}: ${markerValue.toFixed(2)}`);
+        annotationLayer.append("text").attr("y", 5).attr("x", markerValue > 8 ? markerX - 8 : markerX + 8).attr("fill", "#18181b").attr("font-size", "12px").attr("font-weight", "900").attr("stroke", "white").attr("stroke-width", 4).style("paint-order", "stroke").attr("text-anchor", markerValue > 8 ? "end" : "start").text(`${markerLabel}: ${markerValue.toFixed(2)}`);
       }
     } else if (plotType === '2D') {
       annotationLayer.selectAll("*").remove(); 
