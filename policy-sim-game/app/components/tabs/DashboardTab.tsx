@@ -144,6 +144,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               markerValue={markerLabel ? turnMetricScore : undefined}
               markerLabel={markerLabel}
               onHoverMinisters={setHighlightedMinisters}
+              visualStyle={'solid'}
             />
           </div>
         </div>

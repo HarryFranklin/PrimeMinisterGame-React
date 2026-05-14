@@ -25,6 +25,7 @@ interface D3ChartProps {
   markerLabel?: string;
   onHoverMinisters?: (ministerNames: string[]) => void;
   isStacked?: boolean;
+  visualStyle?: 'solid' | 'faces';
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -61,7 +62,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers, markerValue, markerLabel, onHoverMinisters, isStacked
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, highlightBars, ministers, markerValue, markerLabel, onHoverMinisters, isStacked, visualStyle = 'faces'
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -72,7 +73,7 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 40, right: 30, bottom: 60, left: 70 }; 
+    const margin = { top: 20, right: 20, bottom: 45, left: 50 };
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -115,9 +116,66 @@ export default function D3Chart({
       
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
 
+      // --- PROCEDURAL FACE GENERATOR ---
+      const defs = svg.selectAll("defs").data([0]).join("defs");
+      
+      if (visualStyle === 'faces') {
+        const bw = xScale.bandwidth();
+        const faceSize = Math.min(Math.floor(bw), 30); 
+        
+        const patterns = defs.selectAll("pattern.face-pattern").data(histogramData, (d: any) => d.name);
+        
+        const patternsEnter = patterns.enter()
+          .append("pattern")
+          .attr("class", "face-pattern")
+          .attr("id", d => `face-${d.name}`)
+          .attr("patternUnits", "userSpaceOnUse")
+          .attr("width", bw)         
+          .attr("height", faceSize)  
+          // ALIGN GRID: Force the pattern to start exactly on the bar's X, and on the baseline Y
+          .attr("x", d => xScale(d.name.toString()) || 0)
+          .attr("y", height); 
+
+        const faceGroup = patternsEnter.append("g");
+
+        // Center coordinates for the face inside its column
+        const cx = bw / 2;
+        const cy = faceSize / 2;
+
+        // 1. Procedural Background Colour
+        faceGroup.append("circle")
+          .attr("cx", cx)
+          .attr("cy", cy)
+          .attr("r", faceSize / 2 - 2)
+          .attr("fill", d => d3.interpolateRdYlGn(Number(d.name) / 10))
+          .attr("stroke", "rgba(0,0,0,0.15)")
+          .attr("stroke-width", 1.5);
+
+        // 2. Eyes
+        faceGroup.append("circle").attr("cx", cx - faceSize * 0.15).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
+        faceGroup.append("circle").attr("cx", cx + faceSize * 0.15).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
+
+        // 3. Procedural Mouth Curve
+        faceGroup.append("path")
+          .attr("d", d => {
+            const score = Number(d.name); 
+            const startX = cx - faceSize * 0.2;
+            const endX = cx + faceSize * 0.2;
+            const baseY = cy + faceSize * 0.15; 
+            const controlY = cy - faceSize * 0.05 + (score / 10) * (faceSize * 0.4); 
+
+            return `M ${startX} ${baseY} Q ${cx} ${controlY} ${endX} ${baseY}`;
+          })
+          .attr("stroke", "#1f2937")
+          .attr("stroke-width", 1.5)
+          .attr("fill", "none")
+          .attr("stroke-linecap", "round");
+      }
+      // --- END PROCEDURAL GENERATOR ---
+
       chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale) as any).call(styleAxis);
       chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
-      chart.select(".label-x").attr("x", width / 2).attr("y", height + 45).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
+      chart.select(".label-x").attr("x", width / 2).attr("y", height + 35).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       dataLayer.selectAll("g.bar-group").remove();
       dataLayer.selectAll("rect.bar").remove();
@@ -146,15 +204,35 @@ export default function D3Chart({
             .attr("stroke-width", 0.5);
         });
       } else {
+        const bw = xScale.bandwidth();
+        const faceSize = Math.min(Math.floor(bw), 30);
+
         dataLayer.selectAll("rect.bar").data(histogramData, (d: any) => d.name)
           .join("rect")
           .attr("class", "bar")
           .attr("x", d => xScale(d.name.toString()) || 0)
-          .attr("y", d => yScale(d.count))
-          .attr("width", xScale.bandwidth())
-          .attr("height", d => height - yScale(d.count))
-          .attr("fill", chartColor)
-          .attr("rx", 4);
+          .attr("width", bw)
+          // THE FIX: Snap the Y and Height so they are exact multiples of the face size
+          .attr("y", d => {
+            if (visualStyle === 'faces') {
+              const rawHeight = height - yScale(d.count);
+              let faceCount = Math.floor(rawHeight / faceSize);
+              if (d.count > 0 && faceCount === 0) faceCount = 1; // Always show at least 1 face if there is data
+              return height - (faceCount * faceSize);
+            }
+            return yScale(d.count);
+          })
+          .attr("height", d => {
+            if (visualStyle === 'faces') {
+              const rawHeight = height - yScale(d.count);
+              let faceCount = Math.floor(rawHeight / faceSize);
+              if (d.count > 0 && faceCount === 0) faceCount = 1;
+              return faceCount * faceSize;
+            }
+            return height - yScale(d.count);
+          })
+          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name})` : chartColor)
+          .attr("rx", visualStyle === 'faces' ? 0 : 4);
       }
 
       dataLayer.selectAll("rect.hit-area").remove();

@@ -81,6 +81,7 @@ export default function GraphsTab(props: GraphsTabProps) {
               ministers={ministers}
               markerValue={markerLabel ? turnMetricScore : undefined}
               markerLabel={markerLabel}
+              visualStyle={'faces'}
             />
           </div>
         </div>
