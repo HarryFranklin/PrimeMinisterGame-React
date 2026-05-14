@@ -19,6 +19,11 @@ const SORT_ORDERS = {
   age: { 'Youth': 1, 'Adult': 2, 'Elderly': 3 }
 };
 
+const DEMO_COLORS: Record<'wealth' | 'age', Record<string, string>> = {
+  wealth: { 'Poor': '#ef4444', 'Middle': '#3b82f6', 'Wealthy': '#10b981' }, 
+  age: { 'Youth': '#ec4899', 'Adult': '#8b5cf6', 'Elderly': '#7ff163' }    
+};
+
 
 const STATUS_COLORS = {
   intention: { 'Approves': '#10b981', 'Angry': '#f43f5e' },
@@ -30,7 +35,7 @@ type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
 export default function ElectorateTab({ 
   initialPopulation, previewPopulation, currentCycle, approvalRating, 
   isTutorialActive, tutorialStep,
-  selectedPolicy, setSelectedPolicy, onNavigateToPolicy 
+  selectedPolicy, setSelectedPolicy, onNavigateToPolicy,
 }: ElectorateTabProps) {
 
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
@@ -230,77 +235,59 @@ export default function ElectorateTab({
 
   return (
     <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
-      {/* Control Bar */}
-      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
-        <div className="flex gap-4 items-center flex-wrap">
-          <div className="bg-zinc-900 text-white px-4 py-2 rounded-lg flex flex-col justify-center items-center shrink-0">
-             <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">Approval</span>
-             <span className={`text-xl font-black ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
-          </div>
-          
-          {/* ACTIVE POLICY WIDGET */}
-          {selectedPolicy && onNavigateToPolicy && setSelectedPolicy && (
-            <div 
-              onClick={onNavigateToPolicy}
-              className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg p-2 pl-3 md:px-4 cursor-pointer hover:bg-pink-100 hover:border-pink-300 transition-all shadow-sm group shrink-0"
-            >
-              <div className="flex flex-col pr-4 border-r border-pink-200/60 mr-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-0.5">Draft Selected</span>
-                <span className="text-sm font-bold text-pink-900 leading-none truncate max-w-[200px]">{selectedPolicy.policyName}</span>
-              </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedPolicy(null);
-                }}
-                className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-200/50 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors shrink-0"
-              >
-                <span className="text-xs font-bold">✕</span>
-              </button>
-            </div>
-          )}
-
-          <div className="hidden xl:block ml-2">
-            <h2 className="text-xl font-bold text-zinc-800">Polling & Electorate Analysis</h2>
-          </div>
-        </div>
+      {/* UNIFIED HEADER BANNER */}
+      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
         
-        <div className="flex items-center gap-6">
-          <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
-            <button 
-              onClick={() => setActiveLens('approval_ls')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
-            >
-              Support by Wellbeing
-            </button>
-            <button 
-              onClick={() => setActiveLens('approval_demo')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_demo' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
-            >
-              Support by Demographic
-            </button>
-            <button 
-              onClick={() => setActiveLens('impact_ls')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'impact_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
-            >
-              Objective Impact
-            </button>
+        {/* Left Side: Standardised Status Indicators */}
+        <div className="flex items-stretch gap-3 h-[52px] shrink-0">
+           <div className="bg-zinc-900 text-white px-4 rounded-lg flex flex-col justify-center items-center shrink-0 min-w-[100px] shadow-sm">
+             <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-400 mb-0.5">Approval</span>
+             <span className={`text-lg font-black leading-none ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
+           </div>
+           
+           {selectedPolicy && onNavigateToPolicy && setSelectedPolicy ? (
+              <div 
+                onClick={onNavigateToPolicy}
+                className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-3 cursor-pointer hover:bg-pink-100 hover:border-pink-300 transition-all shadow-sm group shrink-0 min-w-[200px]"
+              >
+                <div className="flex flex-col justify-center pr-3 border-r border-pink-200/60 mr-3 h-full">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-0.5 leading-none">Draft Selected</span>
+                  <span className="text-sm font-bold text-pink-900 leading-none truncate max-w-[150px]">{selectedPolicy.policyName}</span>
+                </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedPolicy(null); }}
+                  className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-200/50 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors shrink-0"
+                >
+                  <span className="text-xs font-bold leading-none">✕</span>
+                </button>
+              </div>
+           ) : (
+              <div className="flex items-center justify-center border border-dashed border-zinc-200 bg-zinc-50 rounded-lg px-4 shrink-0 min-w-[200px] h-full">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">No Policy Selected</span>
+              </div>
+           )}
+        </div>
+
+        {/* Right Side: Tab Specific Controls */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-1 w-full gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-zinc-800">Electorate Analysis</h2>
+            <p className="text-sm text-zinc-500 hidden lg:block">Break down who is supporting your administration.</p>
           </div>
           
-          {/* Group By Toggle - Only visible when in demographic lens */}
-          <div className="flex items-center gap-6 w-[200px]">
+          {/* The Toggle Buttons */}
+          <div className="flex items-center gap-4">
+            <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
+              <button onClick={() => setActiveLens('approval_ls')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}>Support by Wellbeing</button>
+              <button onClick={() => setActiveLens('approval_demo')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_demo' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}>Support by Demographic</button>
+              <button onClick={() => setActiveLens('impact_ls')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'impact_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}>Objective Impact</button>
+            </div>
             {activeLens === 'approval_demo' && (
               <>
-                <div className="w-px h-8 bg-zinc-200" />
+                <div className="w-px h-8 bg-zinc-200 hidden md:block" />
                 <div className="flex bg-zinc-100 p-1 rounded-lg">
                   {['wealth', 'age'].map(t => (
-                    <button 
-                      key={t} 
-                      onClick={() => setGroupBy(t as any)} 
-                      className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
-                    >
-                      {t}
-                    </button>
+                    <button key={t} onClick={() => setGroupBy(t as any)} className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}>{t}</button>
                   ))}
                 </div>
               </>
@@ -330,7 +317,14 @@ export default function ElectorateTab({
             {viewMode === 'chamber' && (
               <div className="pt-3 border-t border-zinc-200">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Seating Groups</h4>
-
+                <div className="space-y-1.5">
+                  {Object.entries(DEMO_COLORS[groupBy]).map(([name, color]) => (
+                    <div key={name} className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded border" style={{borderColor: color, backgroundColor: `${color}20`}} />
+                      <span className="text-xs font-bold text-zinc-700">{name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -341,7 +335,7 @@ export default function ElectorateTab({
                 let fill = colorBy === 'intention' 
                   ? (dot.voter.isApproving ? "#10b981" : "#f43f5e")
                   : (dot.voter.lsTrajectory > 0.05 ? "#3b82f6" : dot.voter.lsTrajectory < -0.05 ? "#f59e0b" : "#d4d4d8");
-
+                
                 return (
                   <circle 
                     key={i} 
@@ -349,7 +343,7 @@ export default function ElectorateTab({
                     cy={dot.seat.y} 
                     r="8"
                     fill={fill} 
-                    stroke="rgba(0,0,0,0.1)" // Clean, subtle drop-shadow effect
+                    stroke="rgba(0,0,0,0.1)"
                     strokeWidth="1"
                     className="transition-all duration-500 cursor-crosshair hover:r-[10px] hover:stroke-zinc-900 hover:stroke-[3px]" 
                     onMouseEnter={() => setHoveredDot(dot)} 

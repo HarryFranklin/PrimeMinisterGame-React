@@ -592,6 +592,7 @@ export default function Home() {
             selectedPolicy={selectedPolicy}
             setSelectedPolicy={setSelectedPolicy}
             onNavigateToPolicy={handleNavigateToPolicy}
+            approvalRating={turnApprovalRating}
           />
         )}
         
@@ -610,6 +611,7 @@ export default function Home() {
             initialMetricScore={initialMetricScore} 
             turnMetricScore={turnMetricScore}
             ministers={ministers}
+            approvalRating={turnApprovalRating}
             setSelectedPolicy={setSelectedPolicy}
             onNavigateToPolicy={handleNavigateToPolicy}
           />

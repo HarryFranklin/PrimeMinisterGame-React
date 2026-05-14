@@ -8,6 +8,7 @@ interface MinistersTabProps {
   tutorialStep?: number;
   setSelectedPolicy?: any;
   onNavigateToPolicy?: () => void;
+  approvalRating: number;
 }
 
 const getMinisterReaction = (delta: number) => {
@@ -18,7 +19,7 @@ const getMinisterReaction = (delta: number) => {
   return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐", statusName: "neutral" };
 };
 
-export default function MinistersTab({ ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, setSelectedPolicy, onNavigateToPolicy }: MinistersTabProps) {
+export default function MinistersTab({ ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, setSelectedPolicy, onNavigateToPolicy, approvalRating}: MinistersTabProps) {
   const selectedName = typeof selectedMinister === 'string' ? selectedMinister : selectedMinister?.name;
 
   const getHighlightStyles = (status: string) => {
@@ -40,33 +41,48 @@ export default function MinistersTab({ ministers, selectedMinister, selectedPoli
   return (
     <div className="flex flex-col gap-6 h-full animate-in fade-in duration-300">
       
-      {/* HEADER BANNER WITH WIDGET */}
-      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
-        <div>
-          <h2 className="text-xl font-bold text-zinc-800">The Cabinet</h2>
-          <p className="text-sm text-zinc-500">Review departmental projections and ministerial reactions.</p>
-        </div>
+      {/* UNIFIED HEADER BANNER */}
+      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
         
-        {selectedPolicy && onNavigateToPolicy && setSelectedPolicy && (
-          <div 
-            onClick={onNavigateToPolicy}
-            className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg p-2 pl-3 md:px-4 cursor-pointer hover:bg-pink-100 hover:border-pink-300 transition-all shadow-sm group shrink-0"
-          >
-            <div className="flex flex-col pr-4 border-r border-pink-200/60 mr-3">
-              <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-0.5">Draft Selected</span>
-              <span className="text-sm font-bold text-pink-900 leading-none truncate max-w-[200px]">{selectedPolicy.policyName}</span>
-            </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedPolicy(null);
-              }}
-              className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-200/50 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors shrink-0"
-            >
-              <span className="text-xs font-bold">✕</span>
-            </button>
+        {/* Left Side: Standardised Status Indicators */}
+        <div className="flex items-stretch gap-3 h-[52px] shrink-0">
+           {/* Approval */}
+           <div className="bg-zinc-900 text-white px-4 rounded-lg flex flex-col justify-center items-center shrink-0 min-w-[100px] shadow-sm">
+             <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-400 mb-0.5">Approval</span>
+             <span className={`text-lg font-black leading-none ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
+           </div>
+           
+           {/* Policy Widget with Placeholder to prevent UI shift */}
+           {selectedPolicy && onNavigateToPolicy && setSelectedPolicy ? (
+              <div 
+                onClick={onNavigateToPolicy}
+                className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-3 cursor-pointer hover:bg-pink-100 hover:border-pink-300 transition-all shadow-sm group shrink-0 min-w-[200px]"
+              >
+                <div className="flex flex-col justify-center pr-3 border-r border-pink-200/60 mr-3 h-full">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-0.5 leading-none">Draft Selected</span>
+                  <span className="text-sm font-bold text-pink-900 leading-none truncate max-w-[150px]">{selectedPolicy.policyName}</span>
+                </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedPolicy(null); }}
+                  className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-200/50 text-pink-500 hover:bg-pink-500 hover:text-white transition-colors shrink-0"
+                >
+                  <span className="text-xs font-bold leading-none">✕</span>
+                </button>
+              </div>
+           ) : (
+              <div className="flex items-center justify-center border border-dashed border-zinc-200 bg-zinc-50 rounded-lg px-4 shrink-0 min-w-[200px] h-full">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">No Policy Selected</span>
+              </div>
+           )}
+        </div>
+
+        {/* Right Side: Tab Specific Controls */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-1 w-full gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-zinc-800">The Cabinet</h2>
+            <p className="text-sm text-zinc-500 hidden md:block">Review departmental projections and ministerial reactions.</p>
           </div>
-        )}
+        </div>
       </div>
 
       <div className={`grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0 w-full ${getTutorialClass(0)}`}>
