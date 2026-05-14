@@ -245,9 +245,16 @@ export default function DashboardTab(props: DashboardTabProps) {
                   <div 
                     key={i} 
                     onClick={() => { 
-                      // Removed routing, keeps them on dashboard to continue the loop
-                      setSelectedMinister(minister.name); 
-                    }} 
+                      if (selectedMinister === minister.name) {
+                        // Toggle off: Revert to unfiltered tray and clear active policy
+                        setSelectedMinister(null);
+                        setSelectedPolicy(null); 
+                      } else {
+                        // Select new minister: Sponsorship locks and reveals 3 policies
+                        setSelectedMinister(minister.name);
+                        setSelectedPolicy(null); 
+                      }
+                    }}
                     className={`flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full overflow-hidden ${highlightClasses}`}
                   >
                     <div className="flex flex-col items-center justify-center w-full mb-1">
