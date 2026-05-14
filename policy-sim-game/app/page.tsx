@@ -56,7 +56,7 @@ const generateCycleSchedule = (cycle: ElectionCycle, available: Policy[]): Polic
 
   for (let t = 0; t < TURNS_PER_CYCLE; t++) {
     const turnPolicies: Policy[] = [];
-    for (let p = 0; p < 3; p++) {
+    for (let p = 0; p < 8; p++) { // <-- INCREASING THE DRAFT POOL TO 8
       if (pool.length === 0) pool = [...available]; 
       const index = Math.floor(pseudoRandom() * pool.length);
       turnPolicies.push(pool[index]);
@@ -176,6 +176,7 @@ export default function Home() {
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverages: calculateAverages(pop) }]);
     setShowElection(false);
     setSelectedPolicy(null);
+    setSelectedMinister(null);
   }, []);
 
   useEffect(() => {
@@ -250,6 +251,45 @@ export default function Home() {
   const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
+  // Dynamically filter the 8 drafted policies down to the 3 that best serve the selected minister
+  const presentedPolicies = useMemo(() => {
+    if (!selectedMinister) return [];
+
+    const filterMap: Record<string, (r: Respondent) => boolean> = {
+      "Welfare Secretary": r => r.demographics.wealth === 'Poor',
+      "Home Secretary": r => r.demographics.wealth === 'Middle',
+      "Chancellor": r => r.demographics.wealth === 'Wealthy',
+      "Education Secretary": r => r.demographics.age === 'Youth',
+      "Business Secretary": r => r.demographics.age === 'Adult',
+      "Pensions Secretary": r => r.demographics.age === 'Elderly'
+    };
+
+    const filterFn = filterMap[selectedMinister];
+    if (!filterFn) return currentDeck.slice(0, 3); // Fallback
+
+    const scoredPolicies = currentDeck.map(policy => {
+      // Simulate the policy to see its impact
+      const testPop = PolicyEngine.applyPolicy(population, policy);
+      const group = testPop.filter(filterFn);
+      
+      let score = 0;
+      if (group.length > 0) {
+        // Evaluate the outcome using the rules of the current cycle
+        score = group.reduce((s, r) => s + (
+          currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian 
+            ? r.currentLS 
+            : currentCycle === ElectionCycle.PersonalUtility 
+              ? WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities) 
+              : WelfareMetrics.evaluateDistribution(testPop.map(x => x.currentLS), r.societalUtilities)
+        ), 0) / group.length;
+      }
+      return { policy, score };
+    });
+
+    // Sort descending by score and slice the top 3
+    return scoredPolicies.sort((a, b) => b.score - a.score).slice(0, 3).map(sp => sp.policy);
+  }, [selectedMinister, currentDeck, population, currentCycle]);
+
   const ministers = useMemo(() => {
     const evalMin = (n: string, mandate: string, f: (r: Respondent) => boolean) => {
       const avg = (p: Respondent[]) => {
@@ -309,6 +349,7 @@ export default function Home() {
       setShowElection(true);
     }
     setSelectedPolicy(null);
+    setSelectedMinister(null);
   };
 
   const handleResetCycle = () => {
@@ -517,6 +558,8 @@ export default function Home() {
             previewHistogramData={previewHistogramData}
             ministers={ministers} 
             setSelectedMinister={setSelectedMinister} 
+            selectedMinister={selectedMinister}
+            presentedPolicies={presentedPolicies}
             selectedPolicy={selectedPolicy} 
             currentMetricScore={currentMetricScore} 
             initialMetricScore={initialMetricScore}
