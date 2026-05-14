@@ -65,6 +65,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                   xAxisType={AxisVariable.LifeSatisfaction} 
                   yAxisType={AxisVariable.LifeSatisfaction} 
                   color="#d4d4d8" 
+                  visualStyle='faces'
                 />
               </div>
             </div>
@@ -78,6 +79,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                   xAxisType={AxisVariable.LifeSatisfaction} 
                   yAxisType={AxisVariable.LifeSatisfaction} 
                   color="#d4d4d8" 
+                  visualStyle='faces'
                 />
               </div>
             </div>
