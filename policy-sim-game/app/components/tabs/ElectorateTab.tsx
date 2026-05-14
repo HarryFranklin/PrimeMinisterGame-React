@@ -16,20 +16,17 @@ const SORT_ORDERS = {
   age: { 'Youth': 1, 'Adult': 2, 'Elderly': 3 }
 };
 
-const DEMO_COLORS = {
-  wealth: { 'Poor': '#ef4444', 'Middle': '#3b82f6', 'Wealthy': '#10b981' }, 
-  age: { 'Youth': '#ec4899', 'Adult': '#8b5cf6', 'Elderly': '#7ff163' }    
-};
 
 const STATUS_COLORS = {
   intention: { 'Approves': '#10b981', 'Angry': '#f43f5e' },
   trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
 };
 
+type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
+
 export default function ElectorateTab({ initialPopulation, previewPopulation, currentCycle, approvalRating, isTutorialActive, tutorialStep }: ElectorateTabProps) {
+  const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
-  const [colorBy, setColorBy] = useState<'intention' | 'trajectory' | 'demographic'>('demographic');
-  const [viewMode, setViewMode] = useState<'chamber' | 'histogram'>('histogram'); 
   const [hoveredDot, setHoveredDot] = useState<any | null>(null);
   const [hoveredBin, setHoveredBin] = useState<any | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -45,6 +42,10 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl"
       : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
   };
+
+  // Derive internal drawing states from the active lens
+  const colorBy = activeLens === 'impact_ls' ? 'trajectory' : 'intention';
+  const viewMode = activeLens === 'approval_demo' ? 'chamber' : 'histogram';
 
   // #region Data Processing
   const processedVoters = useMemo(() => {
@@ -108,9 +109,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
       const lsBin = Math.min(10, Math.max(0, Math.round(v.currentLS)));
       let groupKey = "";
 
-      if (colorBy === 'demographic') {
-        groupKey = v.demographics[groupBy] as string;
-      } else if (colorBy === 'intention') {
+      if (colorBy === 'intention') {
         groupKey = v.isApproving ? 'Approves' : 'Angry';
       } else {
         if (v.lsTrajectory > 0.1125) groupKey = 'Will improve'; 
@@ -124,7 +123,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
 
     const maxCount = Math.max(...bins.map(b => b.total));
     return { bins, maxCount };
-  }, [processedVoters, groupBy, colorBy]);
+  }, [processedVoters, colorBy]);
   // #endregion
 
   // #region Layout Logic
@@ -173,91 +172,49 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
   const dots = processedVoters.map((voter, i) => ({ voter, seat: seats[i] || { x: 0, y: 0 } }));
   // #endregion
 
-  const colorOptions = [
-    { id: 'intention', label: 'Voting Intention' },
-    { id: 'trajectory', label: 'Wellbeing Impact' },
-    { id: 'demographic', label: 'Demographic' }
-  ];
-
   const renderGuidedAnalysis = () => {
-    if (colorBy === 'intention') {
+    if (activeLens === 'approval_ls') {
       return (
         <>
-          <p>You are currently viewing the population mapped by their <strong className="text-zinc-800">Voting Intention</strong>.</p>
+          <p>You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
           <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-            {isTurnZero ? (
-              <p>No policy selected. You are currently viewing the baseline government approval. The most satisfied {Math.round(approvalRating)}% of the population are content with the status quo.</p>
-            ) : (
-              <p>
-                {currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian 
-                  ? "Voters are currently acting on raw self-interest, voting to approve the policy if their own Life Satisfaction does not decrease." 
-                  : currentCycle === ElectionCycle.PersonalUtility
-                  ? "Voters operate on a rational choice model based on their own personal utility curve. If this policy decreases their personal wellbeing, they will vote against it."
-                  : "Voters evaluate the policy based on their individual societal fairness ideals. They will vote against the policy if it moves society away from their preferred distribution."}
-              </p>
-            )}
+            <p>Look at where the green blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?</p>
           </div>
-          {!isTurnZero && (
-            <>
-              <p className="font-bold text-pink-600 mt-4">Why might this be misleading?</p>
-              <p>
-                {currentCycle === ElectionCycle.Benthamite 
-                  ? "Your goal is total average happiness. A policy might make a minority very angry, but vastly improve the majority, passing your objective despite the red dots."
-                  : currentCycle === ElectionCycle.Rawlsian
-                  ? "Your goal is protecting the worst-off. A sea of green 'Approving' voters means nothing if the poorest individuals are in the red."
-                  : currentCycle === ElectionCycle.PersonalUtility
-                  ? "A voter might be 'Angry' even if their raw life satisfaction goes up, due to diminishing returns. Switch to Wellbeing Impact to see this divergence."
-                  : "A voter whose personal situation worsens might still vote 'Yes' because they prefer the new, fairer societal distribution. Not all green dots are selfish."}
-              </p>
-            </>
-          )}
+          <p className="font-bold text-pink-600 mt-4">Why it matters</p>
+          <p>
+            {currentCycle === ElectionCycle.Benthamite 
+              ? "If the majority is green, you are succeeding, regardless of where they sit on the spectrum."
+              : currentCycle === ElectionCycle.Rawlsian
+              ? "If the lowest bins (0-3) contain red voters, your policy is failing the Rawlsian test, even if your overall approval is high."
+              : "Voters on the lower end of the spectrum generally gain more utility from small boosts than those at the top. Target them to efficiently boost support."}
+          </p>
         </>
       );
     }
 
-    if (colorBy === 'trajectory') {
+    if (activeLens === 'approval_demo') {
       return (
         <>
-          <p>You are viewing the <strong className="text-zinc-800">Wellbeing Impact</strong> of the current policy. This strips away complex utility math and shows raw changes to life satisfaction.</p>
+          <p>You are viewing <strong className="text-zinc-800">Voting Intentions broken down by Demographics</strong>.</p>
           <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-            <p>{isTurnZero ? "No policy selected. Everyone's trajectory is currently completely stable." : "This view ignores how a voter feels about the policy, and purely maps whether they objectively gained or lost wellbeing."}</p>
-          </div>
-          {!isTurnZero && (
-            <>
-              <p className="font-bold text-pink-600 mt-4">Who is bearing the cost?</p>
-              <p>
-                {currentCycle === ElectionCycle.Benthamite
-                  ? "Under Bentham, it is acceptable for a minority to be 'Worsened' if the majority is 'Improved' enough to raise the average. Switch to Demographic to see who is paying the price."
-                  : currentCycle === ElectionCycle.Rawlsian
-                  ? "Look closely at the 'Worsened' (orange) dots. Under Rawlsian rules, if even one of the poorest voters is worsened, the policy is a failure."
-                  : "Do the 'Worsened' dots align with the 'Angry' voters from the Intention tab? Switch to Demographic to see who is actually bearing the real-world cost."}
-              </p>
-            </>
-          )}
-        </>
-      );
-    }
-
-    if (colorBy === 'demographic') {
-      return (
-        <>
-          <p>You are analysing the electorate by their <strong className="text-zinc-800">Demographic Breakdown</strong>.</p>
-          <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-            <p>Look at how the clusters of wealth and age are distributed. Are they grouped tightly together, or spread evenly across the chamber?</p>
+            <p>The chamber is physically divided into demographic blocks. Are there entire sections glowing red in anger, or is discontent spread evenly?</p>
           </div>
           <p className="font-bold text-pink-600 mt-4">Connect the dots</p>
-          <p>
-            {currentCycle === ElectionCycle.Benthamite
-              ? "Utilitarianism can sometimes punish specific minority groups to benefit the majority. Check if one demographic (e.g., the Poor or Elderly) is disproportionately bearing the cost of your decisions."
-              : currentCycle === ElectionCycle.Rawlsian
-              ? "Rawlsian ethics demands we focus on the worst-off. Look closely at the 'Poor' cluster. Are they isolated from the benefits of your policies?"
-              : currentCycle === ElectionCycle.PersonalUtility
-              ? "Different demographics have different baseline utilities. A wealthy person might barely notice a 0.5 LS drop, but it could devastate a poor person."
-              : "Fairness ideals often correlate with demographics. Do the wealthy prefer different distributions than the poor? Watch how different groups react to the exact same policy."}
-          </p>
+          <p>If you see a solid red block (e.g., all the 'Poor' voters), you need to consult the Welfare Secretary to sponsor a bill that directly addresses their needs in the next turn.</p>
+        </>
+      );
+    }
+
+    if (activeLens === 'impact_ls') {
+      return (
+        <>
+          <p>You are viewing the <strong className="text-zinc-800">Objective Wellbeing Impact</strong>, stripping away voting intentions.</p>
+          <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
+            <p>This reveals the mechanical truth of the policy. Some voters may be "Angry" (red) in the other tabs, despite their wellbeing objectively "Improving" (blue) here, due to their personal utility curves or fairness ideals.</p>
+          </div>
         </>
       );
     }
@@ -266,30 +223,43 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
   return (
     <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
       {/* Control Bar */}
-      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex justify-between items-center shrink-0 ${getTutorialClass(0)}`}>
-        <div className="flex gap-8 items-center">
+      <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0 ${getTutorialClass(0)}`}>
+        <div className="flex gap-4 items-center">
+          <div className="bg-zinc-900 text-white px-4 py-2 rounded-lg flex flex-col justify-center items-center">
+             <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">Approval</span>
+             <span className={`text-xl font-black ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
+          </div>
           <div>
-            <h2 className="text-xl font-bold text-zinc-800">Electorate Analysis</h2>
-            <p className="text-sm text-zinc-500">Visualising demographic distribution and individual voter sentiment.</p>
+            <h2 className="text-xl font-bold text-zinc-800">Polling & Electorate Analysis</h2>
+            <p className="text-sm text-zinc-500">Break down who is supporting your administration.</p>
           </div>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0">
-            {colorOptions.map(opt => (
-              <button 
-                key={opt.id} 
-                onClick={() => setColorBy(opt.id as any)} 
-                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${colorBy === opt.id ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            <button 
+              onClick={() => setActiveLens('approval_ls')} 
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
+            >
+              Support by Wellbeing
+            </button>
+            <button 
+              onClick={() => setActiveLens('approval_demo')} 
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'approval_demo' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
+            >
+              Support by Demographic
+            </button>
+            <button 
+              onClick={() => setActiveLens('impact_ls')} 
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeLens === 'impact_ls' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500'}`}
+            >
+              Objective Impact
+            </button>
           </div>
           
-          {/* Reserved space to prevent UI shifting */}
-          <div className="flex items-center gap-6 w-[280px]">
-            {colorBy === 'demographic' && (
+          {/* Group By Toggle - Only visible when in demographic lens */}
+          <div className="flex items-center gap-6 w-[200px]">
+            {activeLens === 'approval_demo' && (
               <>
                 <div className="w-px h-8 bg-zinc-200" />
                 <div className="flex bg-zinc-100 p-1 rounded-lg">
@@ -297,9 +267,9 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                     <button 
                       key={t} 
                       onClick={() => setGroupBy(t as any)} 
-                      className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
+                      className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all ${groupBy === t ? 'bg-white text-pink-600 shadow-sm' : 'text-zinc-500'}`}
                     >
-                      Group by {t.charAt(0).toUpperCase() + t.slice(1)}
+                      {t}
                     </button>
                   ))}
                 </div>
@@ -314,47 +284,33 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
         {/* Chart Area */}
         <div className={`flex-[3] bg-white rounded-xl border border-zinc-200 shadow-sm p-10 relative flex flex-col items-center justify-center min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
           {/* Dynamic Legend */}
-          <div className="absolute top-6 right-6 bg-white/80 backdrop-blur-sm border border-zinc-200 p-4 rounded-lg shadow-sm z-10">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3 text-center">Legend</h4>
-            <div className="space-y-2">
-              {colorBy === 'demographic' ? (
-                Object.entries(DEMO_COLORS[groupBy]).map(([name, color]) => (
+          <div className="absolute top-6 right-6 bg-white/80 backdrop-blur-sm border border-zinc-200 p-4 rounded-lg shadow-sm z-10 flex flex-col gap-4">
+            <div>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Dot Colors</h4>
+              <div className="space-y-1.5">
+                {Object.entries(colorBy === 'intention' ? STATUS_COLORS.intention : STATUS_COLORS.trajectory).map(([name, color]) => (
                   <div key={name} className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{backgroundColor: color}} />
+                    <div className="w-3 h-3 rounded-full shadow-sm" style={{backgroundColor: color}} />
                     <span className="text-xs font-bold text-zinc-700">{name}</span>
                   </div>
-                ))
-              ) : colorBy === 'intention' ? (
-                Object.entries(STATUS_COLORS.intention).map(([name, color]) => (
-                  <div key={name} className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{backgroundColor: color}} />
-                    <span className="text-xs font-bold text-zinc-700">{name}</span>
-                  </div>
-                ))
-              ) : (
-                Object.entries(STATUS_COLORS.trajectory).map(([name, color]) => (
-                  <div key={name} className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{backgroundColor: color}} />
-                    <span className="text-xs font-bold text-zinc-700">{name}</span>
-                  </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
+
+            {viewMode === 'chamber' && (
+              <div className="pt-3 border-t border-zinc-200">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Seating Groups</h4>
+
+              </div>
+            )}
           </div>
 
           {viewMode === 'chamber' ? (
             <svg viewBox="0 0 900 450" className="w-full h-full max-h-[80vh]" onMouseLeave={() => setHoveredDot(null)}>
               {dots.map((dot, i) => {
-                let fill = "#d4d4d8"; 
-                if (colorBy === 'demographic') {
-                  // @ts-ignore
-                  fill = DEMO_COLORS[groupBy][dot.voter.demographics[groupBy]];
-                } else if (colorBy === 'intention') {
-                  fill = dot.voter.isApproving ? "#10b981" : "#f43f5e";
-                } else {
-                  if (dot.voter.lsTrajectory > 0.05) fill = "#3b82f6";
-                  else if (dot.voter.lsTrajectory < -0.05) fill = "#f59e0b";
-                }
+                let fill = colorBy === 'intention' 
+                  ? (dot.voter.isApproving ? "#10b981" : "#f43f5e")
+                  : (dot.voter.lsTrajectory > 0.05 ? "#3b82f6" : dot.voter.lsTrajectory < -0.05 ? "#f59e0b" : "#d4d4d8");
 
                 return (
                   <circle 
@@ -363,7 +319,9 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                     cy={dot.seat.y} 
                     r="8"
                     fill={fill} 
-                    className="transition-all duration-500 cursor-crosshair hover:r-10 hover:stroke-zinc-900 hover:stroke-2" 
+                    stroke="rgba(0,0,0,0.1)" // Clean, subtle drop-shadow effect
+                    strokeWidth="1"
+                    className="transition-all duration-500 cursor-crosshair hover:r-[10px] hover:stroke-zinc-900 hover:stroke-[3px]" 
                     onMouseEnter={() => setHoveredDot(dot)} 
                   />
                 );
@@ -374,12 +332,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
               <div className="w-full flex-1 flex items-end gap-2 border-b border-zinc-200 pb-1">
                 {histogramData.bins.map((binData) => {
                   const totalHeight = (binData.total / histogramData.maxCount) * 100;
-                  
-                  const activeColorMap = colorBy === 'demographic' 
-                    ? DEMO_COLORS[groupBy] 
-                    : colorBy === 'intention' 
-                      ? STATUS_COLORS.intention 
-                      : STATUS_COLORS.trajectory;
+                  const activeColorMap = colorBy === 'intention' ? STATUS_COLORS.intention : STATUS_COLORS.trajectory;
 
                   return (
                     <div 
@@ -389,13 +342,10 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                       onMouseMove={(e) => {
                         let x = e.clientX + 15;
                         let y = e.clientY + 15;
-                        
-                        // Prevent clipping by clamping to window bounds
                         if (typeof window !== 'undefined') {
                           if (x + 200 > window.innerWidth) x = e.clientX - 215;
                           if (y + 150 > window.innerHeight) y = e.clientY - 165;
                         }
-                        
                         setHoveredBin(binData);
                         setMousePos({ x, y });
                       }}
@@ -438,11 +388,7 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
                 <p className="text-sm font-bold text-zinc-600">{hoveredBin.total} Residents</p>
               </div>
               <div className="space-y-2">
-                {Object.entries(
-                  colorBy === 'demographic' ? DEMO_COLORS[groupBy] : 
-                  colorBy === 'intention' ? STATUS_COLORS.intention : 
-                  STATUS_COLORS.trajectory
-                ).map(([groupName, color]) => {
+                {Object.entries(colorBy === 'intention' ? STATUS_COLORS.intention : STATUS_COLORS.trajectory).map(([groupName, color]) => {
                   const count = hoveredBin.groups[groupName] || 0;
                   if (count === 0) return null;
                   return (
@@ -483,7 +429,6 @@ export default function ElectorateTab({ initialPopulation, previewPopulation, cu
             <span className="text-xl">💡</span>
             <h3 className="text-sm font-black uppercase tracking-widest text-zinc-800">Guided Analysis</h3>
           </div>
-          
           <div className="text-sm text-zinc-600 space-y-4 leading-relaxed">
             {renderGuidedAnalysis()}
           </div>

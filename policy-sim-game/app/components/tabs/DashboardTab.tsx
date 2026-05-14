@@ -52,7 +52,7 @@ export default function DashboardTab(props: DashboardTabProps) {
   const {
     setActiveTab, currentCycle, currentChartData, previewChartData, currentHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
-    currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
+    currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
     population, previewPopulation,
     isTutorialActive, tutorialStep
   } = props;
@@ -244,15 +244,8 @@ export default function DashboardTab(props: DashboardTabProps) {
                   <div 
                     key={i} 
                     onClick={() => { 
-                      if (selectedMinister === minister.name) {
-                        // Toggle off if already selected
-                        setSelectedMinister(null);
-                        setSelectedPolicy(null); 
-                      } else {
-                        // Select new minister
-                        setSelectedMinister(minister.name);
-                        setSelectedPolicy(null); 
-                      }
+                      // Removed routing, keeps them on dashboard to continue the loop
+                      setSelectedMinister(minister.name); 
                     }} 
                     className={`flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full overflow-hidden ${highlightClasses}`}
                   >
@@ -338,7 +331,7 @@ export default function DashboardTab(props: DashboardTabProps) {
               </div>
             ) : (
               <>
-                {presentedPolicies.map((policy) => {
+                {currentDeck.slice(0, 3).map((policy) => {
                   const isSelected = selectedPolicy?.id === policy.id;
                   return (
                     <button
