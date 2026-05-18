@@ -15,6 +15,7 @@ interface ElectorateTabProps {
   onNavigateToPolicy?: () => void;
   selectedMinister?: any | null;
   presentedPolicies?: Policy[];  
+  setActiveTab: (tab: any) => void;
 }
 
 const SORT_ORDERS = {
@@ -39,7 +40,8 @@ export default function ElectorateTab({
   initialPopulation, previewPopulation, currentCycle, approvalRating, 
   isTutorialActive, tutorialStep,
   selectedPolicy, setSelectedPolicy, onNavigateToPolicy,
-  selectedMinister, presentedPolicies
+  selectedMinister, presentedPolicies,
+  setActiveTab
 }: ElectorateTabProps) {
 
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
@@ -245,10 +247,11 @@ export default function ElectorateTab({
         title="Electorate Analysis"
         subtitle="Break down who is supporting your administration."
         approvalRating={approvalRating}
-        selectedPolicy={selectedPolicy || null}
+        selectedPolicy={selectedPolicy ?? null}
         setSelectedPolicy={setSelectedPolicy}
         selectedMinister={selectedMinister}
         presentedPolicies={presentedPolicies}
+        onNavigateToMinisters={() => setActiveTab('ministers')}
         tutorialClass={getTutorialClass(0)}
       >
         <div className="flex items-center gap-4">

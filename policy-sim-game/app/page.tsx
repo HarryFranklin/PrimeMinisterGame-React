@@ -614,6 +614,8 @@ export default function Home() {
             approvalRating={turnApprovalRating}
             setSelectedPolicy={setSelectedPolicy}
             onNavigateToPolicy={handleNavigateToPolicy}
+            selectedMinister={selectedMinister}
+            presentedPolicies={presentedPolicies}
           />
         )}
         {activeTab === 'electorate' && (
@@ -627,6 +629,9 @@ export default function Home() {
             selectedPolicy={selectedPolicy}
             setSelectedPolicy={setSelectedPolicy}
             onNavigateToPolicy={handleNavigateToPolicy}
+            setActiveTab={setActiveTab}
+            selectedMinister={selectedMinister}
+            presentedPolicies={presentedPolicies}
           />
         )}
       </main>

@@ -50,10 +50,10 @@ export default function MinistersTab({
       
       {/* MODULARISED HEADER BANNER */}
       <SharedTabHeader
-        title="The Cabinet"
-        subtitle="Review departmental projections and ministerial reactions."
+        title="Electorate Analysis"
+        subtitle="Break down who is supporting your administration."
         approvalRating={approvalRating}
-        selectedPolicy={selectedPolicy || null}
+        selectedPolicy={selectedPolicy ?? null}
         setSelectedPolicy={setSelectedPolicy}
         selectedMinister={selectedMinister}
         presentedPolicies={presentedPolicies}
