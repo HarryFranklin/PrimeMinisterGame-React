@@ -60,8 +60,8 @@ export default function GraphsTab(props: GraphsTabProps) {
       
       {/* MODULARISED HEADER BANNER */}
       <SharedTabHeader
-        title="Electorate Analysis"
-        subtitle="Break down who is supporting your administration."
+        title="Distribution Analysis"
+        subtitle="Detailed side-by-side comparison of policy impacts."
         approvalRating={approvalRating}
         selectedPolicy={selectedPolicy ?? null}
         setSelectedPolicy={setSelectedPolicy}
@@ -70,7 +70,7 @@ export default function GraphsTab(props: GraphsTabProps) {
         onNavigateToMinisters={() => setActiveTab('ministers')}
         tutorialClass={getTutorialClass(0)}
       > 
-      <div className="text-right shrink-0">
+        <div className="text-right shrink-0">
           <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Current Framework</p>
           <p className="text-lg font-black leading-none mt-1" style={{ color: rule.graphColor }}>{rule.frameworkTitle}</p>
         </div>
