@@ -96,10 +96,10 @@ export default function SharedTabHeader({
             )}
 
             {/* Interactive Dropdown Menu */}
-            {isDropdownOpen && presentedPolicies.length > 0 && (
+            {isDropdownOpen && (
               <div 
                 className="absolute top-[calc(100%+8px)] left-0 w-[340px] bg-white border border-pink-300 rounded-xl shadow-2xl flex flex-col overflow-hidden z-[120] animate-in fade-in slide-in-from-top-2 duration-200"
-                onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing the menu immediately
+                onClick={(e) => e.stopPropagation()} 
               >
                 {/* Active Selection Header */}
                 <div className="p-4 bg-pink-50/50 border-b border-pink-100">
