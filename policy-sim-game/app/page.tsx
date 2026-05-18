@@ -121,6 +121,11 @@ export default function Home() {
     ],
     electorate: [
       { title: 'Electorate Controls', text: 'Switch between viewing raw demographics, voting intentions, and objective wellbeing impacts.', pos: 'bottom-10 left-10' },
+      { 
+        title: 'Unified Policy Header', 
+        text: 'The header now displays your active Policy Draft and consulting Minister. Hover or click the draft box to flick through alternative recommendations, or click the Minister button to jump straight to their Cabinet profile.', 
+        pos: 'bottom-10 left-10' 
+      },
       { title: 'The Chamber', text: 'Hover over individual bars to see the demographic make-up of each bar. This differs based on the toggles at the top of the page.', pos: 'bottom-10 right-10' },
       { title: 'Guided Analysis', text: 'This panel provides contextual hints about why the data looks the way it does.', pos: 'bottom-10 left-10' }
     ],

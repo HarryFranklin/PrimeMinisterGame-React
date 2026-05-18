@@ -57,7 +57,14 @@ export default function ElectorateTab({
 
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";
-    return tutorialStep === columnIndex 
+    
+    // Explicitly check which element should be highlighted based on the tutorial step
+    const isHighlighted = 
+      (columnIndex === 0 && (tutorialStep === 0 || tutorialStep === 1)) || // Step 0 & 1 focus on the Header Area
+      (columnIndex === 1 && tutorialStep === 2) ||                         // Step 2 focuses on the Chamber
+      (columnIndex === 2 && tutorialStep === 3);                         // Step 3 focuses on the Guided Analysis Sidebar
+
+    return isHighlighted 
       ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl"
       : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
   };
