@@ -13,6 +13,8 @@ import NarrativeModal from "./components/modals/NarrativeModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import IntroductionModal from "./components/modals/IntroductionModal";
 import { FRAMEWORK_RULES } from "./utils/frameworkRules";
+import DevPanel from "./components/DevPanel";
+import GameHeader from "./components/GameHeader";
 
 // Tab Imports
 import DashboardTab from "./components/tabs/DashboardTab";
@@ -422,7 +424,6 @@ export default function Home() {
       {/* --- MASTER TUTORIAL OVERLAY --- */}
       {isTutorialActive && currentStepData && (
         <>
-          {/* The backdrop has pointer-events-none so tabs can be clicked! */}
           <div className="fixed inset-0 z-[60] bg-zinc-900/60 backdrop-blur-[2px] transition-all duration-500 pointer-events-none" />
           
           <div className={`fixed z-[80] bg-white rounded-2xl shadow-2xl p-6 md:p-8 border-2 border-pink-200 max-w-lg w-full flex flex-col gap-4 animate-in fade-in duration-500 transition-all ${currentStepData.pos}`}>
@@ -431,7 +432,6 @@ export default function Home() {
               <p className="text-zinc-700 mt-2 leading-relaxed">{currentStepData.text}</p>
             </div>
             
-            {/* Step 3 on Dashboard: Tab Checklist */}
             {activeTab === 'dashboard' && tutorialStep === 3 && (
               <div className="flex gap-2 mt-2">
                 {tabs.map(t => (
@@ -447,18 +447,13 @@ export default function Home() {
                 Step {tutorialStep + 1} of {currentTutorialSequence.length}
               </span>
               <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsTutorialActive(false)} 
-                  className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors pointer-events-auto"
-                >
+                <button onClick={() => setIsTutorialActive(false)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors pointer-events-auto">
                   Close Tutorial
                 </button>
-                
                 <button 
                   disabled={targetNextTab !== null}
                   onClick={() => {
                     if (isLastTutorialStep && targetNextTab === null) {
-                      // If we are on the last step of the final tab, end the tutorial
                       setTutorialVisitedTabs(prev => prev.includes(activeTab) ? prev : [...prev, activeTab]);
                       setIsTutorialActive(false);
                       setActiveTab('dashboard'); 
@@ -466,11 +461,7 @@ export default function Home() {
                       setTutorialStep(s => s + 1);
                     }
                   }} 
-                  className={`px-6 py-2 text-sm font-bold rounded-xl shadow-md transition-all pointer-events-auto ${
-                    targetNextTab !== null 
-                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200' 
-                      : 'bg-pink-600 text-white hover:bg-pink-700 active:scale-95'
-                  }`}
+                  className={`px-6 py-2 text-sm font-bold rounded-xl shadow-md transition-all pointer-events-auto ${targetNextTab !== null ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200' : 'bg-pink-600 text-white hover:bg-pink-700 active:scale-95'}`}
                 >
                   {(() => {
                     if (!isLastTutorialStep) return 'Next Step';
@@ -484,82 +475,21 @@ export default function Home() {
         </>
       )}
 
-      {/* HEADER: Now permanently elevated (z-[70]) whenever tutorial is active */}
-      <header className={`bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm transition-all duration-500 ${isTutorialActive ? 'relative z-[70]' : 'relative z-10'}`}>
-        <div>
-          <h1 className="text-xl font-bold">Policy Simulator</h1>
-          <p className="text-xs font-bold text-pink-600 uppercase">
-            {FRAMEWORK_RULES[currentCycle].frameworkTitle}
-          </p>
-        </div>
-        
-        {/* TAB BAR */}
-        <nav className={`p-1 rounded-lg w-full max-w-3xl pointer-events-auto transition-all duration-500 ${isTutorialActive ? 'bg-zinc-200 ring-4 ring-pink-500/30 shadow-inner' : 'bg-zinc-100'}`}> 
-          <div className="relative grid grid-cols-4 gap-1">
-            <div 
-              className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
-              style={{
-                width: `calc((100% - 12px) / 4)`, 
-                transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
-              }}
-            />
-            {tabs.map((t) => {
-              const isTarget = t === targetNextTab;
-              // Lock all tabs EXCEPT the active one, and the one they are supposed to click next
-              const isLocked = isTutorialActive && t !== activeTab && !isTarget;
+      <GameHeader 
+        currentCycle={currentCycle}
+        isTutorialActive={isTutorialActive}
+        setIsTutorialActive={setIsTutorialActive}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        targetNextTab={targetNextTab}
+        tutorialVisitedTabs={tutorialVisitedTabs}
+        setTutorialVisitedTabs={setTutorialVisitedTabs}
+        setTutorialStep={setTutorialStep}
+        currentTurn={currentTurn}
+        turnsPerCycle={TURNS_PER_CYCLE}
+        tabs={tabs}
+      />
 
-              return (
-                <button 
-                  key={t} 
-                  disabled={isLocked}
-                  onClick={() => {
-                    if (isTutorialActive) {
-                      // Tick off the tab we are leaving
-                      setTutorialVisitedTabs(prev => prev.includes(activeTab) ? prev : [...prev, activeTab]);
-                      setTutorialStep(0); 
-                    }
-                    setActiveTab(t as any);
-                  }} 
-                  className={`relative z-10 w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold uppercase rounded-md transition-all duration-300 ${
-                    activeTab === t 
-                      ? 'text-pink-600' 
-                      : isTarget
-                        ? 'text-emerald-700 bg-emerald-100/50 ring-2 ring-emerald-400 animate-pulse shadow-sm'
-                        : isLocked 
-                          ? 'text-zinc-400 opacity-40 cursor-not-allowed' 
-                          : 'text-zinc-500 hover:text-zinc-700'
-                  }`}
-                >
-                  {t}
-                  {isLocked && <span className="text-[9px] opacity-70">🔒</span>}
-                  {isTarget && <span className="text-[10px] animate-bounce">🔓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-        
-        {/* Tutorial Toggle Button */}
-        <div className="flex items-center gap-6 text-right">
-          <button 
-            onClick={() => setIsTutorialActive(!isTutorialActive)}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase transition-colors border shadow-sm ${
-              isTutorialActive 
-                ? 'bg-pink-100 text-pink-700 border-pink-300' 
-                : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'
-            }`}
-          >
-            {isTutorialActive ? 'Tutorial: ON' : 'Tutorial: OFF'}
-          </button>
-
-          <div>
-            <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
-            <p className="text-lg font-mono font-bold">{TURNS_PER_CYCLE - currentTurn + 1} Turns</p>
-          </div>
-        </div>
-      </header>
-
-      {/* Package up all the state needed by the tabs */}
       <GameStateProvider value={{
         isTutorialActive, tutorialStep: safeTutorialStep, setActiveTab,
         currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
@@ -576,94 +506,22 @@ export default function Home() {
         </main>
       </GameStateProvider>
 
-      {showElection && (
-        <ElectionModal 
-          currentMetricScore={turnMetricScore} 
-          currentCycle={currentCycle} 
-          approvalRating={turnApprovalRating}
-          cycleAttempts={cycleAttempts}
-          onNextCycle={handleShowNarrative}
-          onReset={handleResetCycle} 
-          onFinish={handleFinishSimulation}
-        />
-      )}
+      {showElection && <ElectionModal currentMetricScore={turnMetricScore} currentCycle={currentCycle} approvalRating={turnApprovalRating} cycleAttempts={cycleAttempts} onNextCycle={handleShowNarrative} onReset={handleResetCycle} onFinish={handleFinishSimulation} />}
+      {showNarrative && <NarrativeModal completedCycle={currentCycle} population={population} onProceed={handleProceedFromNarrative} />}
+      {showFinalDebrief && <FinalDebriefModal baselinePopulation={baselinePopulation} finalPopulation={population} />}
 
-      {showNarrative && (
-        <NarrativeModal 
-          completedCycle={currentCycle}
-          population={population}
-          onProceed={handleProceedFromNarrative}
-        />
-      )}
-
-      {showFinalDebrief && (
-        <FinalDebriefModal 
-          baselinePopulation={baselinePopulation}
-          finalPopulation={population}
-        />
-      )}
-
-      <button 
-        onClick={() => setDevMode(!devMode)} 
-        className="fixed bottom-4 left-4 z-50 bg-zinc-800/80 backdrop-blur-sm text-zinc-400 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full hover:bg-zinc-700 hover:text-white transition-colors border border-zinc-600 shadow-lg"
-      >
-        Dev Mode {devMode ? 'ON' : 'OFF'}
-      </button>
-
-      {devMode && (
-        <div className="fixed bottom-14 left-4 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
-          <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2">Developer Panel</h3>
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Jump to Cycle</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => jumpToCycle(ElectionCycle.Benthamite)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">1. Benthamite</button>
-              <button onClick={() => jumpToCycle(ElectionCycle.Rawlsian)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">2. Rawlsian</button>
-              <button onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">3. Personal</button>
-              <button onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">4. Societal</button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Time Controls</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setCurrentTurn(prev => Math.min(TURNS_PER_CYCLE, prev + 1))} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">Skip 1 Turn</button>
-              <button onClick={() => setCurrentTurn(TURNS_PER_CYCLE)} className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors">Jump to End</button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">Cheat Codes</span>
-            <div className="grid grid-cols-1 gap-2">
-              <button 
-                onClick={() => setShowOptimalPath(!showOptimalPath)} 
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${showOptimalPath ? 'bg-pink-600 text-white' : 'bg-zinc-800 hover:bg-zinc-700'}`}
-              >
-                {showOptimalPath ? 'Hide Optimal Path' : 'Show Optimal Path'}
-              </button>
-            </div>
-          </div>
-
-          {/* --- OPTIMAL PATH DEV WIDGET --- */}
-          {devMode && showOptimalPath && optimalPath.length > 0 && (
-            <div className="fixed bottom-14 left-80 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
-              <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
-                Optimal Path (MAO: {cycleMAO.toFixed(2)})
-              </h3>
-              <ol className="flex flex-col gap-3 text-sm">
-                {optimalPath.map((policy, index) => {
-                  const isPast = index + 1 < currentTurn;
-                  const isCurrent = index + 1 === currentTurn;
-                  return (
-                    <li key={index} className={`flex items-start gap-3 transition-colors ${isPast ? 'opacity-30 line-through' : isCurrent ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>
-                      <span className="font-mono text-xs mt-0.5">{index + 1}.</span>
-                      <span className="leading-tight">{policy.policyName}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          )}
-        </div>
-      )}
+      <DevPanel 
+        devMode={devMode}
+        setDevMode={setDevMode}
+        jumpToCycle={jumpToCycle}
+        setCurrentTurn={setCurrentTurn}
+        currentTurn={currentTurn}
+        turnsPerCycle={TURNS_PER_CYCLE}
+        showOptimalPath={showOptimalPath}
+        setShowOptimalPath={setShowOptimalPath}
+        optimalPath={optimalPath}
+        cycleMAO={cycleMAO}
+      />
     </div>
   );
 }
