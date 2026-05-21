@@ -58,6 +58,16 @@ export default function DevPanel({
               >
                 {showOptimalPath ? 'Hide Optimal Path' : 'Show Optimal Path'}
               </button>
+
+              <button 
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.href = '/'; // Force a hard refresh
+                }} 
+                className="bg-red-900/50 hover:bg-red-800 text-red-200 px-3 py-2 rounded-lg text-xs font-bold transition-colors border border-red-900"
+              >
+                Wipe Save & Restart
+              </button>
             </div>
           </div>
 

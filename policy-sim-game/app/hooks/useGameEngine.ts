@@ -8,6 +8,8 @@ import { availablePolicies } from '../data/policies';
 
 const TURNS_PER_CYCLE = 5;
 
+const SAVE_KEY = 'policy-sim-save-v1';
+
 const calculateAverages = (pop: Respondent[]): DemographicAverages => {
   const getAvg = (filterFn?: (r: Respondent) => boolean) => {
     const group = filterFn ? pop.filter(filterFn) : pop;
@@ -97,6 +99,30 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   }, []);
 
   useEffect(() => {
+    const savedGame = localStorage.getItem(SAVE_KEY);
+    
+    if (savedGame) {
+      try {
+        const parsed = JSON.parse(savedGame);
+        setPopulation(parsed.population);
+        setInitialPopulation(parsed.initialPopulation);
+        setBaselinePopulation(parsed.baselinePopulation || parsed.initialPopulation);
+        setCurrentTurn(parsed.currentTurn);
+        setCurrentCycle(parsed.currentCycle);
+        setCycleAttempts(parsed.cycleAttempts);
+        setHistory(parsed.history);
+        setCycleSchedule(parsed.cycleSchedule);
+        setCycleMAO(parsed.cycleMAO);
+        setCurrentDeck(parsed.currentDeck);
+        setOptimalPath(parsed.optimalPath);
+        return; // Exit early so we don't overwrite the save!
+      } catch (e) {
+        console.error("Failed to load save file, starting fresh.", e);
+        localStorage.removeItem(SAVE_KEY);
+      }
+    }
+
+    // If no save exists (or it was corrupted), start a fresh game
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
@@ -104,6 +130,19 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     startCycle(ElectionCycle.Benthamite, data);
     setCycleAttempts(1);
   }, [startCycle]);
+
+  useEffect(() => {
+    // Prevent saving before the game has properly initialised
+    if (population.length === 0 || cycleSchedule.length === 0) return; 
+    
+    const saveData = {
+      population, initialPopulation, baselinePopulation,
+      currentTurn, currentCycle, cycleAttempts, history,
+      cycleSchedule, cycleMAO, currentDeck, optimalPath
+    };
+    
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+  }, [population, currentTurn, currentCycle]);
 
   const previewPopulation = useMemo(() => {
     if (!selectedPolicy) return population;
@@ -141,6 +180,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   };
 
   const handleResetCycle = () => {
+    localStorage.removeItem(SAVE_KEY); // Wipe save
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
@@ -149,6 +189,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   };
 
   const jumpToCycle = (cycle: ElectionCycle) => {
+    localStorage.removeItem(SAVE_KEY); // Wipe save
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);

@@ -24,10 +24,24 @@ const TUTORIAL_DATA: Record<string, { title: string; text: string; pos: string }
 };
 
 export function useTutorial(activeTab: string, tabs: readonly string[], setActiveTab: (tab: any) => void) {
-  const [showIntro, setShowIntro] = useState(true);
+  
+  // 1. Default to false so the server never draws the modal
+  const [showIntro, setShowIntro] = useState(false);
+  // 2. Add a flag to track when the browser has finished checking
+  const [hasCheckedSave, setHasCheckedSave] = useState(false);
+  
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [tutorialVisitedTabs, setTutorialVisitedTabs] = useState<string[]>(['dashboard']);
+
+  // 3. Run the check strictly on the client
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSave = !!localStorage.getItem('policy-sim-save-v1');
+      setShowIntro(!hasSave); // Only show if NO save exists
+      setHasCheckedSave(true); // Signal that it is safe to render
+    }
+  }, []);
 
   useEffect(() => {
     if (isTutorialActive) {
@@ -53,6 +67,7 @@ export function useTutorial(activeTab: string, tabs: readonly string[], setActiv
   return {
     showIntro,
     isTutorialActive,
+    hasCheckedSave,
     setIsTutorialActive,
     tutorialStep,
     setTutorialStep,

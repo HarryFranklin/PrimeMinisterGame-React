@@ -62,7 +62,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      {tut.showIntro && <IntroductionModal onStart={tut.handleStartGame} />}
+      {tut.hasCheckedSave && tut.showIntro && <IntroductionModal onStart={tut.handleStartGame} />}
 
       <TutorialOverlay 
         isTutorialActive={tut.isTutorialActive}
