@@ -228,18 +228,35 @@ export default function DashboardTab(props: DashboardTabProps) {
               </div>
             </div>
             
-            <div className="p-2 lg:p-3 grid grid-cols-3 grid-rows-2 gap-2 lg:gap-3 flex-1 min-h-0">
+              <div className="p-2 lg:p-3 grid grid-cols-3 grid-rows-2 gap-2 lg:gap-3 flex-1 min-h-0">
               {ministers.map((minister, i) => {
                 const isReacting = selectedPolicy !== null;
                 const reaction = isReacting ? getMinisterReaction(minister.policyDelta || 0) : null;
                 const displayEmoji = isReacting ? reaction?.emoji : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
                 const displayColor = isReacting && reaction ? reaction.circle : minister.color;
                 
-                // Highlight if hovered in graphs OR if officially selected as sponsor
-                const isHighlighted = highlightedMinisters.includes(minister.name) || selectedMinister === minister.name;
-                const highlightClasses = isHighlighted 
-                  ? "ring-2 ring-pink-500 shadow-md scale-[1.02] bg-pink-50/30 border-pink-200 z-10" 
-                  : "border-zinc-100 bg-zinc-50";
+                // 1. Evaluate both states independently
+                const isSelected = selectedMinister === minister.name;
+                const isHighlightedByGraph = highlightedMinisters.includes(minister.name);
+
+                // 2. Build the class string dynamically to handle combinations
+                let highlightClasses = "";
+                if (isSelected && isHighlightedByGraph) {
+                  // COMBINED STATE: Sponsor AND relevant to current graph hover
+                  // Solid pink background, but a dashed border to show the active graph link
+                  highlightClasses = "border-pink-500 border-dashed border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
+                } else if (isSelected) {
+                  // PERSISTENT STATE ONLY: Sponsor, but NOT relevant to current graph hover
+                  // Solid pink background, solid border
+                  highlightClasses = "border-pink-500 border-solid border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
+                } else if (isHighlightedByGraph) {
+                  // TRANSIENT STATE ONLY: Not sponsor, but relevant to graph hover
+                  // Lighter pink background, dashed border
+                  highlightClasses = "border-pink-400 border-dashed border-[2px] bg-pink-50/50 hover:bg-pink-50 shadow-sm scale-[1.02] z-10";
+                } else {
+                  // DEFAULT STATE
+                  highlightClasses = "border-zinc-200 border-solid border bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-300";
+                }
 
                 return (
                   <div 
@@ -255,8 +272,15 @@ export default function DashboardTab(props: DashboardTabProps) {
                         setSelectedPolicy(null); 
                       }
                     }}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer hover:bg-zinc-200 hover:border-zinc-300 transition-all active:scale-95 relative group/minister h-full overflow-hidden ${highlightClasses}`}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition-all active:scale-95 relative group/minister h-full ${highlightClasses}`}
                   >
+                    {/* 3. Floating pill badge */}
+                    {isSelected && (
+                      <div className="absolute -top-2.5 right-2 bg-pink-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-30 shadow-sm border border-pink-600">
+                        SPONSOR
+                      </div>
+                    )}
+
                     <div className="flex flex-col items-center justify-center w-full mb-1">
                       <h4 className="text-[10px] lg:text-xs font-black text-zinc-800 uppercase tracking-widest leading-tight text-center">
                         {minister.name.replace(' Secretary', '')}
