@@ -1,6 +1,8 @@
 "use client";
 
 import { GameStateProvider } from "./context/GameStateContext";
+import { useTutorial } from "./hooks/useTutorial";
+import TutorialOverlay from "./components/TutorialOverlay";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Respondent, AxisVariable, Policy, ElectionCycle, TurnHistory, DemographicAverages } from "./utils/types";
 import { loadPopulation } from "./utils/dataLoader";
@@ -111,65 +113,15 @@ export default function Home() {
   const [optimalPath, setOptimalPath] = useState<Policy[]>([]); 
   const [showOptimalPath, setShowOptimalPath] = useState(false);
 
-  // --- Tutorial & Onboarding States ---
-  const [showIntro, setShowIntro] = useState(true);
-  const [isTutorialActive, setIsTutorialActive] = useState(false);
-
-  const TUTORIAL_DATA: Record<string, { title: string; text: string; pos: string }[]> = {
-    dashboard: [
-      { title: 'Data & Demographics', text: 'This section visualises the life satisfaction of your electorate.', pos: 'bottom-10 right-10' },
-      { title: 'The Cabinet', text: 'Your ministers represent key voting blocs. Their reactions predict policy impacts.', pos: 'bottom-10 left-10' },
-      { title: 'Legislative Agenda', text: 'Here you select and enact policies. You can only pass one policy per turn.', pos: 'bottom-10 left-10' },
-      { title: 'Department Overviews', text: 'To finish your onboarding, click through each of the tabs at the top to explore them.', pos: 'top-24 left-1/2 -translate-x-1/2' }
-    ],
-    electorate: [
-      { title: 'Electorate Controls', text: 'Switch between viewing raw demographics, voting intentions, and objective wellbeing impacts.', pos: 'bottom-10 left-10' },
-      { 
-        title: 'Unified Policy Header', 
-        text: 'The header now displays your active Policy Draft and consulting Minister. Hover or click the draft box to flick through alternative recommendations, or click the Minister button to jump straight to their Cabinet profile.', 
-        pos: 'bottom-10 left-10' 
-      },
-      { title: 'The Chamber', text: 'Hover over individual bars to see the demographic make-up of each bar. This differs based on the toggles at the top of the page.', pos: 'bottom-10 right-10' },
-      { title: 'Guided Analysis', text: 'This panel provides contextual hints about why the data looks the way it does.', pos: 'bottom-10 left-10' }
-    ],
-    ministers: [
-      { title: 'Reading a Minister', text: 'Each minister protects a specific demographic. They will warn you if a policy disproportionately harms their constituents.', pos: 'bottom-10 right-10' },
-      { title: 'Cabinet Consensus', text: 'You must balance the competing demands of the entire cabinet. Satisfying one minister often angers another.', pos: 'bottom-10 left-10' }
-    ],
-    graphs: [
-      { title: 'Current State', text: 'This shows the life satisfaction distribution before your selected policy is enacted.', pos: 'bottom-10 right-10' },
-      { title: 'Projected State', text: 'This previews the exact distribution shifts caused by your policy. Use this to ensure you are meeting the cycle mandate.', pos: 'bottom-10 left-10' }
-    ]
-  };
-
   // Tabs
   const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'] as const;
   const activeTabIndex = tabs.indexOf(activeTab as any);
 
-  // --- NEW MASTER TUTORIAL STATES ---
-  const [tutorialStep, setTutorialStep] = useState(0);
-  const [tutorialVisitedTabs, setTutorialVisitedTabs] = useState<string[]>(['dashboard']);
-  const currentTutorialSequence = TUTORIAL_DATA[activeTab] || [];
-  // This ensures the step index can never go higher than the available steps for the current tab
-  const safeTutorialStep = Math.min(tutorialStep, Math.max(0, currentTutorialSequence.length - 1));
-  const currentStepData = currentTutorialSequence[safeTutorialStep];
-  // Logic to determine if we should lock the overlay and pulse the nav bar
-  const isLastTutorialStep = safeTutorialStep === currentTutorialSequence.length - 1;
-  const unvisitedTabs = tabs.filter(t => !tutorialVisitedTabs.includes(t) && t !== activeTab);
-  const targetNextTab = isLastTutorialStep && unvisitedTabs.length > 0 ? unvisitedTabs[0] : null;
-
-  useEffect(() => {
-    if (isTutorialActive) {
-      setTutorialStep(0);
-      setTutorialVisitedTabs(['dashboard']);
-      setActiveTab('dashboard'); // Force back to start
-    }
-  }, [isTutorialActive]);
-
-  const handleStartGame = () => {
-    setShowIntro(false);
-    setIsTutorialActive(true); 
-  };
+  const {
+    showIntro, isTutorialActive, setIsTutorialActive, tutorialStep, setTutorialStep,
+    tutorialVisitedTabs, setTutorialVisitedTabs, currentTutorialSequence, safeTutorialStep,
+    currentStepData, isLastTutorialStep, targetNextTab, handleStartGame
+  } = useTutorial(activeTab, tabs, setActiveTab);
 
   const handleNavigateToPolicy = useCallback(() => {
     setActiveTab('dashboard');
@@ -422,59 +374,23 @@ export default function Home() {
       {showIntro && <IntroductionModal onStart={handleStartGame} />}
 
       {/* --- MASTER TUTORIAL OVERLAY --- */}
-      {isTutorialActive && currentStepData && (
-        <>
-          <div className="fixed inset-0 z-[60] bg-zinc-900/60 backdrop-blur-[2px] transition-all duration-500 pointer-events-none" />
-          
-          <div className={`fixed z-[80] bg-white rounded-2xl shadow-2xl p-6 md:p-8 border-2 border-pink-200 max-w-lg w-full flex flex-col gap-4 animate-in fade-in duration-500 transition-all ${currentStepData.pos}`}>
-            <div>
-              <h3 className="text-2xl font-black text-pink-600 tracking-tight">{currentStepData.title}</h3>
-              <p className="text-zinc-700 mt-2 leading-relaxed">{currentStepData.text}</p>
-            </div>
-            
-            {activeTab === 'dashboard' && tutorialStep === 3 && (
-              <div className="flex gap-2 mt-2">
-                {tabs.map(t => (
-                  <span key={t} className={`text-[10px] font-bold uppercase px-2 py-1 rounded transition-colors ${tutorialVisitedTabs.includes(t) ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-400'}`}>
-                    {t} {tutorialVisitedTabs.includes(t) && '✓'}
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                Step {tutorialStep + 1} of {currentTutorialSequence.length}
-              </span>
-              <div className="flex gap-3">
-                <button onClick={() => setIsTutorialActive(false)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors pointer-events-auto">
-                  Close Tutorial
-                </button>
-                <button 
-                  disabled={targetNextTab !== null}
-                  onClick={() => {
-                    if (isLastTutorialStep && targetNextTab === null) {
-                      setTutorialVisitedTabs(prev => prev.includes(activeTab) ? prev : [...prev, activeTab]);
-                      setIsTutorialActive(false);
-                      setActiveTab('dashboard'); 
-                    } else {
-                      setTutorialStep(s => s + 1);
-                    }
-                  }} 
-                  className={`px-6 py-2 text-sm font-bold rounded-xl shadow-md transition-all pointer-events-auto ${targetNextTab !== null ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200' : 'bg-pink-600 text-white hover:bg-pink-700 active:scale-95'}`}
-                >
-                  {(() => {
-                    if (!isLastTutorialStep) return 'Next Step';
-                    if (targetNextTab) return `Select ${targetNextTab.charAt(0).toUpperCase() + targetNextTab.slice(1)} ☝️`;
-                    return 'Finish Onboarding';
-                  })()}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <TutorialOverlay 
+        isTutorialActive={isTutorialActive}
+        currentStepData={currentStepData}
+        activeTab={activeTab}
+        tutorialStep={tutorialStep}
+        tabs={tabs}
+        tutorialVisitedTabs={tutorialVisitedTabs}
+        currentTutorialSequence={currentTutorialSequence}
+        setIsTutorialActive={setIsTutorialActive}
+        targetNextTab={targetNextTab}
+        isLastTutorialStep={isLastTutorialStep}
+        setTutorialVisitedTabs={setTutorialVisitedTabs}
+        setActiveTab={setActiveTab}
+        setTutorialStep={setTutorialStep}
+      />
 
+      {/* --- GAME HEADER --- */}      
       <GameHeader 
         currentCycle={currentCycle}
         isTutorialActive={isTutorialActive}
