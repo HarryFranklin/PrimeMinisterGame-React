@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
 
@@ -70,10 +70,31 @@ export default function D3Chart({
   const prevXAxis = useRef<AxisVariable | null>(null);
   const prevYAxis = useRef<AxisVariable | null>(null);
 
+  // NEW: State to track container dimensions and trigger redraws on resize
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // NEW: ResizeObserver to watch the container div
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setDimensions({
+          width: entries[0].contentRect.width,
+          height: entries[0].contentRect.height
+        });
+      }
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
     const margin = { top: 20, right: 20, bottom: 45, left: 50 };
+    // We still read from clientWidth here to ensure we have the exact latest pixel count
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -121,18 +142,16 @@ export default function D3Chart({
       
       if (visualStyle === 'faces') {
         const bw = xScale.bandwidth();
-        
-        // 1. Calculate an ideal column count based on width, but clamp it strictly between 2 and 3
         const idealFaceSize = 18; 
         const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
-        
-        // 2. The face size is now perfectly derived from our constrained column count
         const faceSize = bw / cols; 
         
-        const patterns = defs.selectAll("pattern.face-pattern").data(histogramData, (d: any) => d.name);
-        
-        const patternsEnter = patterns.enter()
-          .append("pattern")
+        // Clear old patterns so they redraw with correct new sizes on window resize
+        defs.selectAll("*").remove(); 
+
+        const patterns = defs.selectAll("pattern.face-pattern")
+          .data(histogramData, (d: any) => d.name)
+          .join("pattern")
           .attr("class", "face-pattern")
           .attr("id", d => `face-${d.name}`)
           .attr("patternUnits", "userSpaceOnUse")
@@ -141,17 +160,17 @@ export default function D3Chart({
           .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("y", height); 
 
-        const faceGroup = patternsEnter.append("g");
+        const faceGroup = patterns.append("g");
         const cx = faceSize / 2;
         const cy = faceSize / 2;
 
         faceGroup.append("circle")
           .attr("cx", cx)
           .attr("cy", cy)
-          .attr("r", faceSize / 2 - 1) // Reduced the gap slightly for smaller faces
+          .attr("r", faceSize / 2 - 1) 
           .attr("fill", d => d3.interpolateRdYlGn(Number(d.name) / 10))
           .attr("stroke", d => d3.color(d3.interpolateRdYlGn(Number(d.name) / 10))?.darker(0.6)?.toString() || "#1f2937")
-          .attr("stroke-width", 1); // Thinner stroke for smaller faces
+          .attr("stroke-width", 1); 
 
         faceGroup.append("circle").attr("cx", cx - faceSize * 0.16).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
         faceGroup.append("circle").attr("cx", cx + faceSize * 0.16).attr("cy", cy - faceSize * 0.1).attr("r", faceSize * 0.08).attr("fill", "#1f2937");
@@ -167,30 +186,31 @@ export default function D3Chart({
             return `M ${startX} ${baseY} Q ${cx} ${controlY} ${endX} ${baseY}`;
           })
           .attr("stroke", "#1f2937")
-          .attr("stroke-width", 1) // Thinner stroke
+          .attr("stroke-width", 1) 
           .attr("fill", "none")
           .attr("stroke-linecap", "round");
       }
       // --- END PROCEDURAL GENERATOR ---
 
-      chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale) as any).call(styleAxis);
-      chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
+      // Use a faster transition (0ms) on resize to prevent the graph from "lagging" behind the window border
+      chart.select(".axis-x").transition().duration(dimensions.width ? 0 : 500).call(d3.axisBottom(xScale) as any).call(styleAxis);
+      chart.select(".axis-y").transition().duration(dimensions.width ? 0 : 500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 35).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
-      dataLayer.selectAll("g.bar-group").remove();
-      dataLayer.selectAll("rect.bar").remove();
-
       if (isStacked) {
-        const groups = dataLayer.selectAll("g.bar-group").data(histogramData, (d: any) => d.name);
-        const groupsEnter = groups.enter().append("g")
+        // Changed to .join() so existing groups update their translation when resized
+        const groups = dataLayer.selectAll("g.bar-group")
+          .data(histogramData, (d: any) => d.name)
+          .join("g")
           .attr("class", "bar-group")
           .attr("transform", d => `translate(${xScale(d.name.toString()) || 0}, 0)`);
 
-        groupsEnter.each(function(d) {
+        groups.each(function(d: any) {
           let cumulativeValue = 0;
+          // Changed to .join() so existing segments update their widths/positions
           d3.select(this).selectAll("rect")
             .data(d.segments || [])
-            .enter().append("rect")
+            .join("rect")
             .attr("width", xScale.bandwidth())
             .attr("x", 0)
             .attr("y", (seg: any) => {
@@ -205,8 +225,6 @@ export default function D3Chart({
         });
       } else {
         const bw = xScale.bandwidth();
-        
-        // Ensure this exactly matches the logic above
         const idealFaceSize = 18;
         const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
         const faceSize = bw / cols;
@@ -238,8 +256,8 @@ export default function D3Chart({
           .attr("rx", visualStyle === 'faces' ? 0 : 4);
       }
 
-      dataLayer.selectAll("rect.hit-area").remove();
-      dataLayer.selectAll("rect.hit-area").data(histogramData, (d: any) => d.name)
+      dataLayer.selectAll("rect.hit-area")
+        .data(histogramData, (d: any) => d.name)
         .join("rect")
         .attr("class", "hit-area")
         .attr("x", d => xScale(d.name.toString()) || 0)
@@ -316,7 +334,6 @@ export default function D3Chart({
                       <div class="flex gap-2">
                         ${entries.filter(([_, v]) => (v as number) > 0).map(([k, v]) => {
                           const color = type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500');
-                          // Explicitly set text-[9px] and font-bold on the span so it strictly matches the breakdown label
                           return `<span class="flex items-center gap-1 text-[9px] font-bold text-zinc-500"><span class="w-1.5 h-1.5 rounded-full ${color}"></span>${Math.round(v as number)}%</span>`;
                         }).join('')}
                       </div>
@@ -364,12 +381,12 @@ export default function D3Chart({
       annotationLayer.selectAll("*").remove(); 
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, width]);
       const yScale = d3.scaleLinear().domain(getAxisDomain(yAxisType)).range([height, 0]);
-      chart.select(".axis-x").transition().duration(500).call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)) as any).call(styleAxis);
-      chart.select(".axis-y").transition().duration(500).call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)) as any).call(styleAxis);
+      chart.select(".axis-x").transition().duration(dimensions.width ? 0 : 500).call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)) as any).call(styleAxis);
+      chart.select(".axis-y").transition().duration(dimensions.width ? 0 : 500).call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)) as any).call(styleAxis);
       dataLayer.selectAll("circle.dot").data(chartData, (d: any) => d.id).join("circle").attr("class", "dot").transition().duration(500).attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
     return () => { d3.selectAll(".chart-tooltip-global").remove(); };
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars, markerValue, markerLabel, isStacked]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, ministers, highlightBars, markerValue, markerLabel, isStacked, visualStyle, dimensions]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }
