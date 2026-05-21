@@ -231,10 +231,22 @@ export default function D3Chart({
         const faceSize = bw / cols;
 
         dataLayer.selectAll("rect.bar").data(histogramData, (d: any) => d.name)
-          .join("rect")
-          .attr("class", "bar")
-          .attr("rx", visualStyle === 'faces' ? 0 : 4)
-          // ANIMATION MAGIC: Smooth bouncy glide for standard bars
+          .join(
+            // 1. Initial State (The "Zero" position)
+            enter => enter.append("rect")
+              .attr("class", "bar")
+              .attr("x", d => xScale(d.name.toString()) || 0)
+              .attr("width", bw)
+              .attr("y", height) // Start at the bottom
+              .attr("height", 0), // Start with 0 height
+            
+            // 2. Update State
+            update => update,
+            
+            // 3. Exit State
+            exit => exit.remove()
+          )
+          // ANIMATION: Glide up from the bottom
           .transition().duration(600).ease(d3.easeCubicOut)
           .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("width", bw)
@@ -256,7 +268,8 @@ export default function D3Chart({
             }
             return height - yScale(d.count);
           })
-          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor);
+          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor)
+          .attr("rx", visualStyle === 'faces' ? 0 : 4);
       }
 
       dataLayer.selectAll("rect.hit-area")
