@@ -30,7 +30,7 @@ const DEMO_COLORS: Record<'wealth' | 'age', Record<string, string>> = {
 
 
 const STATUS_COLORS = {
-  intention: { 'Approves': '#10b981', 'Angry': '#f43f5e' },
+  intention: { 'Approves': '#3b82f6', 'Angry': '#f59e0b' },
   trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
 };
 
@@ -306,9 +306,9 @@ export default function ElectorateTab({
           {viewMode === 'chamber' ? (
             <svg viewBox="0 0 900 450" className="w-full h-full max-h-[80vh]" onMouseLeave={() => setHoveredDot(null)}>
               {dots.map((dot, i) => {
-                let fill = colorBy === 'intention' 
-                  ? (dot.voter.isApproving ? "#10b981" : "#f43f5e")
-                  : (dot.voter.lsTrajectory > 0.05 ? "#3b82f6" : dot.voter.lsTrajectory < -0.05 ? "#f59e0b" : "#d4d4d8");
+                let fill = colorBy === 'intention'
+                ? (dot.voter.isApproving ? "#3b82f6" : "#f59e0b")
+                : (dot.voter.lsTrajectory > 0.05 ? "#3b82f6" : dot.voter.lsTrajectory < -0.05 ? "#f59e0b" : "#d4d4d8")
                 
                 return (
                   <circle 
@@ -412,10 +412,14 @@ export default function ElectorateTab({
               <p className="text-zinc-800 font-bold text-sm mb-1">Voter ID: {String(hoveredDot.voter.id).substring(0, 6)}</p>
               <p className="text-zinc-500 text-[11px] uppercase tracking-wider mb-3">{hoveredDot.voter.demographics.wealth} Class • {hoveredDot.voter.demographics.age}</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-zinc-800">
-                <span className="text-zinc-500">Current LS:</span><span className="font-mono font-bold text-right">{hoveredDot.voter.currentLS.toFixed(1)}</span>
+                <span className={`font-mono font-bold text-right ${hoveredDot.voter.lsTrajectory >= 0 ? 'text-blue-500' : 'text-amber-500'}`}>
+                  {hoveredDot.voter.lsTrajectory >= 0 ? '+' : ''}{hoveredDot.voter.lsTrajectory.toFixed(1)}
+                  </span>
                 <span className="text-zinc-500">LS Change:</span><span className={`font-mono font-bold text-right ${hoveredDot.voter.lsTrajectory >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{hoveredDot.voter.lsTrajectory >= 0 ? '+' : ''}{hoveredDot.voter.lsTrajectory.toFixed(1)}</span>
                 <div className="col-span-2 h-px bg-zinc-100 my-1" />
-                <span className="text-zinc-500 font-bold">Government:</span><span className={`font-black text-right ${hoveredDot.voter.isApproving ? 'text-emerald-500' : 'text-rose-500'}`}>{hoveredDot.voter.isApproving ? 'APPROVES' : 'ANGRY'}</span>
+                <span className={`font-black text-right ${hoveredDot.voter.isApproving ? 'text-blue-500' : 'text-amber-500'}`}>
+                  {hoveredDot.voter.isApproving ? 'APPROVES' : 'ANGRY'}
+                </span>
               </div>
             </div>
           )}

@@ -9,9 +9,9 @@ const DEMO_COLORS = {
 };
 
 const IMPACT_COLORS = {
-  'Will improve': '#10b981',
+  'Will improve': '#3b82f6',
   'Will be stable': '#d4d4d8',
-  'Will be worsened': '#ef4444'
+  'Will be worsened': '#f59e0b'
 };
 
 interface DashboardTabProps {
