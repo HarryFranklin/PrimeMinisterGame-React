@@ -1,7 +1,7 @@
 "use client";
 
 import { UIProvider, GameProvider } from "./context/GameStateContext";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Modals & Layout
 import ElectionModal from "./components/modals/ElectionModal";
@@ -23,13 +23,42 @@ import { useTutorial } from "./hooks/useTutorial";
 import { useGameEngine } from "./hooks/useGameEngine";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'demographics' | 'ministers' | 'graphs' | 'electorate'>('dashboard');
+  const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'] as const;
+  type TabType = typeof tabs[number];
+
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
-  const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'] as const;
 
-  const tut = useTutorial(activeTab, tabs, setActiveTab);
-  const game = useGameEngine(setActiveTab);
+  // Read the URL when the page first loads
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab') as TabType;
+    if (urlTab && tabs.includes(urlTab)) {
+      setActiveTab(urlTab);
+    }
+  }, []);
+
+  // Listen for the browser's Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get('tab') as TabType;
+      setActiveTab((urlTab && tabs.includes(urlTab)) ? urlTab : 'dashboard');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Wrap this in useCallback so it doesn't trigger infinite re-renders in your hooks!
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+    window.history.pushState(null, '', `/?tab=${tab}`);
+  }, []);
+
+  // Update the hooks to receive handleTabChange
+  const tut = useTutorial(activeTab, tabs, handleTabChange);
+  const game = useGameEngine(handleTabChange);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
@@ -47,7 +76,7 @@ export default function Home() {
         targetNextTab={tut.targetNextTab}
         isLastTutorialStep={tut.isLastTutorialStep}
         setTutorialVisitedTabs={tut.setTutorialVisitedTabs}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         setTutorialStep={tut.setTutorialStep}
       />
 
@@ -56,7 +85,7 @@ export default function Home() {
         isTutorialActive={tut.isTutorialActive}
         setIsTutorialActive={tut.setIsTutorialActive}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         targetNextTab={tut.targetNextTab}
         tutorialVisitedTabs={tut.tutorialVisitedTabs}
         setTutorialVisitedTabs={tut.setTutorialVisitedTabs}
@@ -69,7 +98,7 @@ export default function Home() {
       <UIProvider value={{
         isTutorialActive: tut.isTutorialActive, 
         tutorialStep: tut.safeTutorialStep, 
-        setActiveTab,
+        setActiveTab: handleTabChange,
         pulsePolicy: game.pulsePolicy, 
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
