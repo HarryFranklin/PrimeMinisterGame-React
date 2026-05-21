@@ -3,31 +3,19 @@ import { Respondent, ElectionCycle, Policy, Minister } from "../../utils/types";
 import { WelfareMetrics } from "../../utils/WelfareMetrics";
 import SharedTabHeader from "./../SharedTabHeader"; 
 import { DEMO_COLORS, STATUS_COLORS, SORT_ORDERS } from "../../utils/uiHelpers";
-
-interface ElectorateTabProps {
-  initialPopulation: Respondent[];
-  previewPopulation: Respondent[];
-  currentCycle: ElectionCycle;
-  approvalRating: number;
-  isTutorialActive?: boolean; 
-  tutorialStep?: number;      
-  selectedPolicy?: Policy | null;           
-  setSelectedPolicy?: any;        
-  onNavigateToPolicy?: () => void;
-  selectedMinister?: Minister | string | null;
-  presentedPolicies?: Policy[];  
-  setActiveTab: (tab: any) => void;
-}
+import { useGameState } from "../../context/GameStateContext";
 
 type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
 
-export default function ElectorateTab({ 
-  initialPopulation, previewPopulation, currentCycle, approvalRating, 
-  isTutorialActive, tutorialStep,
-  selectedPolicy, setSelectedPolicy, onNavigateToPolicy,
-  selectedMinister, presentedPolicies,
-  setActiveTab
-}: ElectorateTabProps) {
+export default function ElectorateTab()
+{
+  const {
+    initialPopulation, previewPopulation, currentCycle, approvalRating, 
+    isTutorialActive, tutorialStep,
+    selectedPolicy, setSelectedPolicy, onNavigateToPolicy,
+    selectedMinister, presentedPolicies,
+    setActiveTab
+} = useGameState();
 
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');

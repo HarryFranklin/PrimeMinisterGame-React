@@ -3,29 +3,10 @@ import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import SharedTabHeader from "./../SharedTabHeader";
+import { useGameState } from "../../context/GameStateContext";
 
-interface GraphsTabProps {
-  setActiveTab: (tab: any) => void;
-  currentCycle: ElectionCycle;
-  currentChartData: any[];
-  previewChartData: any[];
-  currentHistogramData: any[];
-  previewHistogramData: any[];
-  selectedPolicy: Policy | null;
-  ministers: any[];
-  currentMetricScore: number;
-  turnMetricScore: number;
-  initialMetricScore: number;
-  isTutorialActive?: boolean;
-  tutorialStep?: number;
-  setSelectedPolicy?: any;        
-  onNavigateToPolicy?: () => void;
-  approvalRating: number;
-  selectedMinister?: any | null;
-  presentedPolicies?: Policy[];
-}
-
-export default function GraphsTab(props: GraphsTabProps) {
+export default function GraphsTab()
+{
   const { 
     setActiveTab,
     currentCycle, 
@@ -40,7 +21,7 @@ export default function GraphsTab(props: GraphsTabProps) {
     approvalRating,
     selectedMinister,
     presentedPolicies
-  } = props;
+  } = useGameState();
 
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";

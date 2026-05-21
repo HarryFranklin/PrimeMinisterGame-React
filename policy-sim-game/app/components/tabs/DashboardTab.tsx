@@ -1,44 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import D3Chart from "../D3Chart";
 import { AxisVariable, ElectionCycle, Policy, Respondent, Minister } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
+import { useGameState } from "../../context/GameStateContext";
 import { DEMO_COLORS, IMPACT_COLORS, getMinisterReaction } from "../../utils/uiHelpers";
 
-interface DashboardTabProps {
-  setActiveTab: (tab: any) => void;
-  currentCycle: ElectionCycle;
-  currentChartData: any[];
-  previewChartData: any[];
-  currentHistogramData: any[];
-  previewHistogramData: any[];
-  ministers: Minister[];
-  selectedMinister: Minister | string | null; 
-  setSelectedMinister: (m: string | null) => void;
-  selectedPolicy: Policy | null;
-  currentMetricScore: number;
-  initialMetricScore: number;
-  turnMetricScore: number;
-  currentDeck: Policy[];
-  presentedPolicies: Policy[];
-  setSelectedPolicy: React.Dispatch<React.SetStateAction<Policy | null>>;
-  handleApplyPolicy: () => void;
-  cycleMAO: number;
-  approvalRating: number;
-  population: Respondent[];
-  previewPopulation: Respondent[];
-  isTutorialActive: boolean;
-  tutorialStep: number;
-  pulsePolicy?: boolean;
-}
 
-export default function DashboardTab(props: DashboardTabProps) {
+export default function DashboardTab() {
   const {
     setActiveTab, currentCycle, currentChartData, previewChartData, currentHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
     currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    population, previewPopulation,
-    isTutorialActive, tutorialStep, pulsePolicy 
-  } = props;;
+    population, previewPopulation, isTutorialActive, tutorialStep, pulsePolicy
+  } = useGameState();
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
@@ -352,7 +326,7 @@ export default function DashboardTab(props: DashboardTabProps) {
                   return (
                     <button
                       key={policy.id}
-                      onClick={() => setSelectedPolicy(prev => prev?.id === policy.id ? null : policy)}
+                      onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
                       className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-300 group ${
                         isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                       } ${

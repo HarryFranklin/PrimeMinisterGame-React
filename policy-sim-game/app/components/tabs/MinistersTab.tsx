@@ -2,23 +2,14 @@ import React from "react";
 import SharedTabHeader from "./../SharedTabHeader";
 import { Policy, Minister } from "../../utils/types";
 import { getMinisterReaction } from "../../utils/uiHelpers";
+import { useGameState } from "../../context/GameStateContext";
 
-interface MinistersTabProps {
-  ministers: Minister[];
-  selectedMinister?: Minister | string | null;
-  selectedPolicy?: Policy | null;   
-  isTutorialActive?: boolean; 
-  tutorialStep?: number;
-  setSelectedPolicy?: any;
-  onNavigateToPolicy?: () => void;
-  approvalRating: number;
-  presentedPolicies?: Policy[];
-}
-
-export default function MinistersTab({ 
-  ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, 
-  setSelectedPolicy, onNavigateToPolicy, approvalRating, presentedPolicies 
-}: MinistersTabProps) {
+export default function MinistersTab()
+{
+  const { 
+    ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, 
+    setSelectedPolicy, onNavigateToPolicy, approvalRating, presentedPolicies 
+  } = useGameState();
 
   const selectedName = typeof selectedMinister === 'string' ? selectedMinister : selectedMinister?.name;
 

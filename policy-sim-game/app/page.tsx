@@ -1,5 +1,6 @@
 "use client";
 
+import { GameStateProvider } from "./context/GameStateContext";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Respondent, AxisVariable, Policy, ElectionCycle, TurnHistory, DemographicAverages } from "./utils/types";
 import { loadPopulation } from "./utils/dataLoader";
@@ -323,7 +324,7 @@ export default function Home() {
       const delta = proj - base;
       const policyDelta = proj - current;
       
-      let status = 'neutral';
+      let status: 'happy' | 'neutral' | 'angry' = 'neutral';
       if (policyDelta > 0.05) status = 'happy';
       else if (policyDelta < -0.05) status = 'angry';
       
@@ -558,88 +559,22 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden p-6 flex flex-col">
-        {activeTab === 'dashboard' && (
-          <DashboardTab 
-            isTutorialActive={isTutorialActive}
-            tutorialStep={safeTutorialStep}
-            setActiveTab={setActiveTab} 
-            currentCycle={currentCycle} 
-            currentChartData={currentChartData}
-            previewChartData={previewChartData}
-            currentHistogramData={currentHistogramData}
-            previewHistogramData={previewHistogramData}
-            ministers={ministers} 
-            setSelectedMinister={setSelectedMinister} 
-            selectedMinister={selectedMinister}
-            presentedPolicies={presentedPolicies}
-            selectedPolicy={selectedPolicy} 
-            currentMetricScore={currentMetricScore} 
-            initialMetricScore={initialMetricScore}
-            turnMetricScore={turnMetricScore}
-            currentDeck={currentDeck} 
-            setSelectedPolicy={setSelectedPolicy} 
-            handleApplyPolicy={handleApplyPolicy} 
-            cycleMAO={cycleMAO}
-            approvalRating={turnApprovalRating}
-            population={population}
-            previewPopulation={previewPopulation}
-            pulsePolicy={pulsePolicy}
-          />
-        )}
-
-        {activeTab === 'ministers' && (
-          <MinistersTab 
-            isTutorialActive={isTutorialActive} 
-            tutorialStep={safeTutorialStep}
-            ministers={ministers} 
-            selectedMinister={selectedMinister} 
-            selectedPolicy={selectedPolicy}
-            setSelectedPolicy={setSelectedPolicy}
-            onNavigateToPolicy={handleNavigateToPolicy}
-            approvalRating={turnApprovalRating}
-          />
-        )}
-        
-        {activeTab === 'graphs' && (
-          <GraphsTab
-            isTutorialActive={isTutorialActive} 
-            tutorialStep={safeTutorialStep}
-            setActiveTab={setActiveTab} 
-            currentCycle={currentCycle} 
-            currentChartData={currentChartData} 
-            previewChartData={previewChartData} 
-            selectedPolicy={selectedPolicy}
-            currentHistogramData={currentHistogramData} 
-            previewHistogramData={previewHistogramData} 
-            currentMetricScore={currentMetricScore}
-            initialMetricScore={initialMetricScore} 
-            turnMetricScore={turnMetricScore}
-            ministers={ministers}
-            approvalRating={turnApprovalRating}
-            setSelectedPolicy={setSelectedPolicy}
-            onNavigateToPolicy={handleNavigateToPolicy}
-            selectedMinister={selectedMinister}
-            presentedPolicies={presentedPolicies}
-          />
-        )}
-        {activeTab === 'electorate' && (
-          <ElectorateTab 
-            isTutorialActive={isTutorialActive} 
-            tutorialStep={safeTutorialStep}
-            initialPopulation={initialPopulation}
-            previewPopulation={previewPopulation}
-            currentCycle={currentCycle}
-            approvalRating={turnApprovalRating}
-            selectedPolicy={selectedPolicy}
-            setSelectedPolicy={setSelectedPolicy}
-            onNavigateToPolicy={handleNavigateToPolicy}
-            setActiveTab={setActiveTab}
-            selectedMinister={selectedMinister}
-            presentedPolicies={presentedPolicies}
-          />
-        )}
-      </main>
+      {/* Package up all the state needed by the tabs */}
+      <GameStateProvider value={{
+        isTutorialActive, tutorialStep: safeTutorialStep, setActiveTab,
+        currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
+        ministers, selectedMinister, setSelectedMinister, presentedPolicies, selectedPolicy, setSelectedPolicy,
+        currentMetricScore, initialMetricScore, turnMetricScore, currentDeck, handleApplyPolicy,
+        cycleMAO, approvalRating: turnApprovalRating, population, previewPopulation, pulsePolicy,
+        initialPopulation, onNavigateToPolicy: handleNavigateToPolicy
+      }}>
+        <main className="flex-1 overflow-hidden p-6 flex flex-col">
+          {activeTab === 'dashboard' && <DashboardTab />}
+          {activeTab === 'ministers' && <MinistersTab />}
+          {activeTab === 'graphs' && <GraphsTab />}
+          {activeTab === 'electorate' && <ElectorateTab />}
+        </main>
+      </GameStateProvider>
 
       {showElection && (
         <ElectionModal 
