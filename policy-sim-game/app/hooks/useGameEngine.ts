@@ -162,6 +162,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
 
   const handleApplyPolicy = () => {
     if (!selectedPolicy) return;
+    
     setPopulation(previewPopulation);
     setHistory(prev => [...prev, {
       turn: currentTurn + 1,
@@ -169,12 +170,20 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
       enactedPolicyName: selectedPolicy.policyName,
       lsAverages: calculateAverages(previewPopulation)
     }]);
+    
+    const updatedSchedule = cycleSchedule.map((deck, idx) => 
+      idx >= currentTurn ? deck.filter(p => p.id !== selectedPolicy.id) : deck
+    );
+    setCycleSchedule(updatedSchedule);
+    
     if (currentTurn < TURNS_PER_CYCLE) {
-      setCurrentDeck(cycleSchedule[currentTurn]); 
+      // Pull the next deck from our newly filtered schedule
+      setCurrentDeck(updatedSchedule[currentTurn]); 
       setCurrentTurn(prev => prev + 1);
     } else {
       setShowElection(true);
     }
+    
     setSelectedPolicy(null);
     setSelectedMinister(null);
   };
