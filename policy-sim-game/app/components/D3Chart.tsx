@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useId } from 'react';
 import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
+
 
 interface HistogramEntry {
   name: string | number;
@@ -66,14 +67,14 @@ export default function D3Chart({
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const prevPlotType = useRef<string | null>(null);
+  
+  const prevPlotType = useRef<string | null>(null); 
   const prevXAxis = useRef<AxisVariable | null>(null);
   const prevYAxis = useRef<AxisVariable | null>(null);
-
-  // NEW: State to track container dimensions and trigger redraws on resize
+  
+  const chartId = useId().replace(/:/g, '');
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // NEW: ResizeObserver to watch the container div
   useEffect(() => {
     if (!containerRef.current) return;
     
@@ -153,7 +154,7 @@ export default function D3Chart({
           .data(histogramData, (d: any) => d.name)
           .join("pattern")
           .attr("class", "face-pattern")
-          .attr("id", d => `face-${d.name}`)
+          .attr("id", d => `face-${d.name}-${chartId}`)
           .attr("patternUnits", "userSpaceOnUse")
           .attr("width", faceSize)   
           .attr("height", faceSize)  
@@ -252,7 +253,7 @@ export default function D3Chart({
             }
             return height - yScale(d.count);
           })
-          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name})` : chartColor)
+          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor)
           .attr("rx", visualStyle === 'faces' ? 0 : 4);
       }
 
