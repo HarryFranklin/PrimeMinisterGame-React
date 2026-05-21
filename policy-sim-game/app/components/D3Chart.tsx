@@ -199,7 +199,6 @@ export default function D3Chart({
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 35).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       if (isStacked) {
-        // Changed to .join() so existing groups update their translation when resized
         const groups = dataLayer.selectAll("g.bar-group")
           .data(histogramData, (d: any) => d.name)
           .join("g")
@@ -208,21 +207,22 @@ export default function D3Chart({
 
         groups.each(function(d: any) {
           let cumulativeValue = 0;
-          // Changed to .join() so existing segments update their widths/positions
           d3.select(this).selectAll("rect")
             .data(d.segments || [])
             .join("rect")
             .attr("width", xScale.bandwidth())
             .attr("x", 0)
+            .attr("stroke", (seg: any) => seg.color)
+            .attr("stroke-width", 0.5)
+            // ANIMATION MAGIC: Smooth glide for stacked segments
+            .transition().duration(600).ease(d3.easeCubicOut)
             .attr("y", (seg: any) => {
               const yPos = yScale(cumulativeValue + seg.value);
               cumulativeValue += seg.value;
               return yPos;
             })
             .attr("height", (seg: any) => height - yScale(seg.value))
-            .attr("fill", (seg: any) => seg.color)
-            .attr("stroke", (seg: any) => seg.color)
-            .attr("stroke-width", 0.5);
+            .attr("fill", (seg: any) => seg.color);
         });
       } else {
         const bw = xScale.bandwidth();
@@ -233,6 +233,9 @@ export default function D3Chart({
         dataLayer.selectAll("rect.bar").data(histogramData, (d: any) => d.name)
           .join("rect")
           .attr("class", "bar")
+          .attr("rx", visualStyle === 'faces' ? 0 : 4)
+          // ANIMATION MAGIC: Smooth bouncy glide for standard bars
+          .transition().duration(600).ease(d3.easeCubicOut)
           .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("width", bw)
           .attr("y", d => {
@@ -253,8 +256,7 @@ export default function D3Chart({
             }
             return height - yScale(d.count);
           })
-          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor)
-          .attr("rx", visualStyle === 'faces' ? 0 : 4);
+          .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor);
       }
 
       dataLayer.selectAll("rect.hit-area")
