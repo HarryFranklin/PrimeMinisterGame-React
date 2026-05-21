@@ -1,15 +1,16 @@
-import React from "react";
-import SharedTabHeader from "./../SharedTabHeader";
-import { Policy, Minister } from "../../utils/types";
+import { useGame, useUI } from "../../context/GameStateContext";
 import { getMinisterReaction } from "../../utils/uiHelpers";
-import { useGameState } from "../../context/GameStateContext";
+import SharedTabHeader from "./../SharedTabHeader";
 
-export default function MinistersTab()
-{
+export default function MinistersTab() {
+  // 1. UI Context
+  const { setActiveTab, tutorialStep, isTutorialActive } = useUI();
+  
+  // 2. Game Context
   const { 
-    ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, 
-    setSelectedPolicy, onNavigateToPolicy, approvalRating, presentedPolicies 
-  } = useGameState();
+    ministers, selectedMinister, setSelectedMinister, 
+    selectedPolicy, setSelectedPolicy, presentedPolicies, approvalRating 
+  } = useGame();
 
   const selectedName = typeof selectedMinister === 'string' ? selectedMinister : selectedMinister?.name;
 

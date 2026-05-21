@@ -1,27 +1,20 @@
-import React from "react";
-import D3Chart from "../D3Chart";
-import { AxisVariable, ElectionCycle, Policy } from "../../utils/types";
+import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
+import { AxisVariable, ElectionCycle } from "../../utils/types";
+import D3Chart from "../D3Chart";
 import SharedTabHeader from "./../SharedTabHeader";
-import { useGameState } from "../../context/GameStateContext";
 
-export default function GraphsTab()
-{
-  const { 
-    setActiveTab,
-    currentCycle, 
-    currentChartData, previewChartData, 
-    currentHistogramData, previewHistogramData, 
-    turnMetricScore,
-    selectedPolicy,
-    ministers,
-    isTutorialActive,
-    tutorialStep,
-    setSelectedPolicy, onNavigateToPolicy,
-    approvalRating,
-    selectedMinister,
-    presentedPolicies
-  } = useGameState();
+export default function GraphsTab() {
+  // 1. UI Context
+  const { setActiveTab, isTutorialActive, tutorialStep } = useUI();
+  
+  // 2. Game Context
+  const {
+    currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
+    ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
+    currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
+    population, previewPopulation
+  } = useGame();
 
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";

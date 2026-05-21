@@ -1,21 +1,22 @@
-import React, { useState, useMemo } from "react";
-import { Respondent, ElectionCycle, Policy, Minister } from "../../utils/types";
+import { useMemo, useState } from "react";
+import { useGame, useUI } from "../../context/GameStateContext";
+import { ElectionCycle } from "../../utils/types";
+import { DEMO_COLORS, SORT_ORDERS, STATUS_COLORS } from "../../utils/uiHelpers";
 import { WelfareMetrics } from "../../utils/WelfareMetrics";
-import SharedTabHeader from "./../SharedTabHeader"; 
-import { DEMO_COLORS, STATUS_COLORS, SORT_ORDERS } from "../../utils/uiHelpers";
-import { useGameState } from "../../context/GameStateContext";
+import SharedTabHeader from "./../SharedTabHeader";
+
+export default function ElectorateTab() {
+  // 1. UI Context
+  const { setActiveTab, isTutorialActive, tutorialStep } = useUI();
+  
+  // 2. Game Context
+  const { 
+    population, previewPopulation, initialPopulation, currentCycle, 
+    selectedPolicy, setSelectedPolicy, selectedMinister, 
+    approvalRating, presentedPolicies 
+  } = useGame();
 
 type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
-
-export default function ElectorateTab()
-{
-  const {
-    initialPopulation, previewPopulation, currentCycle, approvalRating, 
-    isTutorialActive, tutorialStep,
-    selectedPolicy, setSelectedPolicy, onNavigateToPolicy,
-    selectedMinister, presentedPolicies,
-    setActiveTab
-} = useGameState();
 
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');

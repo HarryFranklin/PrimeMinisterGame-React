@@ -1,18 +1,21 @@
-import React, { useState, useMemo } from "react";
-import D3Chart from "../D3Chart";
-import { AxisVariable, ElectionCycle, Policy, Respondent, Minister } from "../../utils/types";
+import { useMemo, useState } from "react";
+import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
-import { useGameState } from "../../context/GameStateContext";
+import { AxisVariable, ElectionCycle } from "../../utils/types";
 import { DEMO_COLORS, IMPACT_COLORS, getMinisterReaction } from "../../utils/uiHelpers";
-
+import D3Chart from "../D3Chart";
 
 export default function DashboardTab() {
+  // 1. UI Context
+  const { setActiveTab, isTutorialActive, tutorialStep, pulsePolicy } = useUI();
+  
+  // 2. Game Context
   const {
-    setActiveTab, currentCycle, currentChartData, previewChartData, currentHistogramData,
+    currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
     currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    population, previewPopulation, isTutorialActive, tutorialStep, pulsePolicy
-  } = useGameState();
+    population, previewPopulation
+  } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');

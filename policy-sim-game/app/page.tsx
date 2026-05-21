@@ -1,8 +1,7 @@
 "use client";
 
-import { GameStateProvider } from "./context/GameStateContext";
+import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState } from "react";
-import { ElectionCycle } from "./utils/types";
 
 // Modals & Layout
 import ElectionModal from "./components/modals/ElectionModal";
@@ -67,24 +66,44 @@ export default function Home() {
         tabs={tabs}
       />
 
-      <GameStateProvider value={{
-        isTutorialActive: tut.isTutorialActive, tutorialStep: tut.safeTutorialStep, setActiveTab,
-        currentCycle: game.currentCycle, currentChartData: game.currentChartData, previewChartData: game.previewChartData, 
-        currentHistogramData: game.currentHistogramData, previewHistogramData: game.previewHistogramData,
-        ministers: game.ministers, selectedMinister: game.selectedMinister, setSelectedMinister: game.setSelectedMinister, 
-        presentedPolicies: game.presentedPolicies, selectedPolicy: game.selectedPolicy, setSelectedPolicy: game.setSelectedPolicy,
-        currentMetricScore: game.currentMetricScore, initialMetricScore: game.initialMetricScore, turnMetricScore: game.turnMetricScore, 
-        currentDeck: game.currentDeck, handleApplyPolicy: game.handleApplyPolicy, cycleMAO: game.cycleMAO, 
-        approvalRating: game.turnApprovalRating, population: game.population, previewPopulation: game.previewPopulation, 
-        pulsePolicy: game.pulsePolicy, initialPopulation: game.initialPopulation, onNavigateToPolicy: game.handleNavigateToPolicy
+      <UIProvider value={{
+        isTutorialActive: tut.isTutorialActive, 
+        tutorialStep: tut.safeTutorialStep, 
+        setActiveTab,
+        pulsePolicy: game.pulsePolicy, 
+        onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
-        <main className="flex-1 overflow-hidden p-6 flex flex-col">
-          {activeTab === 'dashboard' && <DashboardTab />}
-          {activeTab === 'ministers' && <MinistersTab />}
-          {activeTab === 'graphs' && <GraphsTab />}
-          {activeTab === 'electorate' && <ElectorateTab />}
-        </main>
-      </GameStateProvider>
+        <GameProvider value={{
+          currentCycle: game.currentCycle, 
+          currentChartData: game.currentChartData, 
+          previewChartData: game.previewChartData, 
+          currentHistogramData: game.currentHistogramData, 
+          previewHistogramData: game.previewHistogramData,
+          ministers: game.ministers, 
+          selectedMinister: game.selectedMinister, 
+          setSelectedMinister: game.setSelectedMinister, 
+          presentedPolicies: game.presentedPolicies, 
+          selectedPolicy: game.selectedPolicy, 
+          setSelectedPolicy: game.setSelectedPolicy,
+          currentMetricScore: game.currentMetricScore, 
+          initialMetricScore: game.initialMetricScore, 
+          turnMetricScore: game.turnMetricScore, 
+          currentDeck: game.currentDeck, 
+          handleApplyPolicy: game.handleApplyPolicy, 
+          cycleMAO: game.cycleMAO, 
+          approvalRating: game.turnApprovalRating, 
+          population: game.population, 
+          previewPopulation: game.previewPopulation, 
+          initialPopulation: game.initialPopulation // <-- Fixed here
+        }}>
+          <main className="flex-1 overflow-hidden p-6 flex flex-col">
+            {activeTab === 'dashboard' && <DashboardTab />}
+            {activeTab === 'ministers' && <MinistersTab />}
+            {activeTab === 'graphs' && <GraphsTab />}
+            {activeTab === 'electorate' && <ElectorateTab />}
+          </main>
+        </GameProvider>
+      </UIProvider>
 
       {game.showElection && <ElectionModal currentMetricScore={game.turnMetricScore} currentCycle={game.currentCycle} approvalRating={game.turnApprovalRating} cycleAttempts={game.cycleAttempts} onNextCycle={() => { game.setShowElection(false); game.setShowNarrative(true); }} onReset={game.handleResetCycle} onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }} />}
       {game.showNarrative && <NarrativeModal completedCycle={game.currentCycle} population={game.population} onProceed={game.handleProceedFromNarrative} />}
