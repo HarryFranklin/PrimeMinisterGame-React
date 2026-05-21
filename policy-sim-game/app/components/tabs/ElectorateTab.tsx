@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { Respondent, ElectionCycle, Policy } from "../../utils/types";
+import { Respondent, ElectionCycle, Policy, Minister } from "../../utils/types";
 import { WelfareMetrics } from "../../utils/WelfareMetrics";
 import SharedTabHeader from "./../SharedTabHeader"; 
+import { DEMO_COLORS, STATUS_COLORS, SORT_ORDERS } from "../../utils/uiHelpers";
 
 interface ElectorateTabProps {
   initialPopulation: Respondent[];
@@ -13,26 +14,10 @@ interface ElectorateTabProps {
   selectedPolicy?: Policy | null;           
   setSelectedPolicy?: any;        
   onNavigateToPolicy?: () => void;
-  selectedMinister?: any | null;
+  selectedMinister?: Minister | string | null;
   presentedPolicies?: Policy[];  
   setActiveTab: (tab: any) => void;
 }
-
-const SORT_ORDERS = {
-  wealth: { 'Poor': 1, 'Middle': 2, 'Wealthy': 3 },
-  age: { 'Youth': 1, 'Adult': 2, 'Elderly': 3 }
-};
-
-const DEMO_COLORS: Record<'wealth' | 'age', Record<string, string>> = {
-  wealth: { 'Poor': '#ef4444', 'Middle': '#3b82f6', 'Wealthy': '#10b981' }, 
-  age: { 'Youth': '#ec4899', 'Adult': '#8b5cf6', 'Elderly': '#7ff163' }    
-};
-
-
-const STATUS_COLORS = {
-  intention: { 'Approves': '#3b82f6', 'Angry': '#f59e0b' },
-  trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
-};
 
 type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
 

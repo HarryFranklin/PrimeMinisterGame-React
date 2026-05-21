@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Policy } from "../utils/types";
+import { Policy, Minister } from "../utils/types";
 
 interface SharedTabHeaderProps {
   title: string;
@@ -7,7 +7,7 @@ interface SharedTabHeaderProps {
   approvalRating: number;
   selectedPolicy: Policy | null;
   setSelectedPolicy?: (policy: Policy | null) => void;
-  selectedMinister?: any | null;
+  selectedMinister?: Minister | string | null;
   presentedPolicies?: Policy[];
   tutorialClass?: string;
   onNavigateToMinisters?: () => void; 
@@ -101,7 +101,7 @@ export default function SharedTabHeader({
                title={`Consulting: ${ministerName}`}
              >
                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-zinc-100 flex items-center justify-center text-base sm:text-lg shadow-inner group-hover:scale-105 transition-transform border border-zinc-200 shrink-0">
-                 {selectedMinister.emoji || '👤'} 
+                 {(typeof selectedMinister !== 'string' && selectedMinister?.emoji) || '👤'} 
                </div>
                <div className="flex flex-col items-start pr-1 hidden md:flex min-w-0">
                  <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-zinc-400 leading-none mb-1">Consulting</span>

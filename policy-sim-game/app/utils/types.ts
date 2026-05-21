@@ -19,6 +19,18 @@ export interface Respondent {
   demographics: Demographics;
 }
 
+export interface Minister {
+  name: string;
+  mandate: string;
+  status: 'happy' | 'neutral' | 'angry';
+  color: string;
+  currentScore?: number;
+  projectedScore?: number;
+  policyDelta?: number;
+  quote?: string;
+  emoji?: string;
+}
+
 export interface PolicyRule {
   note: string;
   minLS?: number;

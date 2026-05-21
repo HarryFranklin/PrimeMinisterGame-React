@@ -1,18 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import D3Chart from "../D3Chart";
-import { AxisVariable, ElectionCycle, Policy, Respondent } from "../../utils/types";
+import { AxisVariable, ElectionCycle, Policy, Respondent, Minister } from "../../utils/types";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
-
-const DEMO_COLORS = {
-  wealth: { 'Poor': '#ef4444', 'Middle': '#3b82f6', 'Wealthy': '#10b981' },
-  age: { 'Youth': '#fbbf24', 'Adult': '#6366f1', 'Elderly': '#14b8a6' }
-};
-
-const IMPACT_COLORS = {
-  'Will improve': '#3b82f6',
-  'Will be stable': '#d4d4d8',
-  'Will be worsened': '#f59e0b'
-};
+import { DEMO_COLORS, IMPACT_COLORS, getMinisterReaction } from "../../utils/uiHelpers";
 
 interface DashboardTabProps {
   setActiveTab: (tab: any) => void;
@@ -21,9 +11,9 @@ interface DashboardTabProps {
   previewChartData: any[];
   currentHistogramData: any[];
   previewHistogramData: any[];
-  ministers: any[];
-  selectedMinister: any | null; 
-  setSelectedMinister: (m: any) => void;
+  ministers: Minister[];
+  selectedMinister: Minister | string | null; 
+  setSelectedMinister: (m: string | null) => void;
   selectedPolicy: Policy | null;
   currentMetricScore: number;
   initialMetricScore: number;
@@ -40,14 +30,6 @@ interface DashboardTabProps {
   tutorialStep: number;
   pulsePolicy?: boolean;
 }
-
-const getMinisterReaction = (delta: number) => {
-  if (delta >= 0.05) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊" };
-  if (delta >= 0.005) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂" };
-  if (delta <= -0.05) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠" };
-  if (delta <= -0.005) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁" };
-  return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐" };
-};
 
 export default function DashboardTab(props: DashboardTabProps) {
   const {
@@ -333,7 +315,9 @@ export default function DashboardTab(props: DashboardTabProps) {
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
             <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
             {selectedMinister ? (
-              <p className="text-sm text-emerald-600 font-medium mt-1">Sponsorship locked: {selectedMinister}</p>
+              <p className="text-sm text-emerald-600 font-medium mt-1">
+                Sponsorship locked: {typeof selectedMinister === 'string' ? selectedMinister : selectedMinister.name}
+              </p>
             ) : (
               <p className="text-sm text-zinc-500 mt-1">Pending ministerial sponsorship.</p>
             )}

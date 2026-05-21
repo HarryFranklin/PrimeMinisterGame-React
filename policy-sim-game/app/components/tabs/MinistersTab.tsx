@@ -1,10 +1,11 @@
 import React from "react";
 import SharedTabHeader from "./../SharedTabHeader";
-import { Policy } from "../../utils/types";
+import { Policy, Minister } from "../../utils/types";
+import { getMinisterReaction } from "../../utils/uiHelpers";
 
 interface MinistersTabProps {
-  ministers: any[];
-  selectedMinister?: any | null; 
+  ministers: Minister[];
+  selectedMinister?: Minister | string | null;
   selectedPolicy?: Policy | null;   
   isTutorialActive?: boolean; 
   tutorialStep?: number;
@@ -13,14 +14,6 @@ interface MinistersTabProps {
   approvalRating: number;
   presentedPolicies?: Policy[];
 }
-
-const getMinisterReaction = (delta: number) => {
-  if (delta >= 0.5) return { text: "Brilliant!", badge: "text-emerald-700 bg-emerald-100", circle: "bg-emerald-500", emoji: "😊", statusName: "happy" };
-  if (delta >= 0.05) return { text: "Approves.", badge: "text-emerald-700 bg-emerald-50", circle: "bg-emerald-400", emoji: "🙂", statusName: "happy" };
-  if (delta <= -0.5) return { text: "Disastrous!", badge: "text-rose-700 bg-rose-100", circle: "bg-rose-500", emoji: "😠", statusName: "angry" };
-  if (delta <= -0.05) return { text: "Objects.", badge: "text-rose-700 bg-rose-50", circle: "bg-rose-400", emoji: "🙁", statusName: "angry" };
-  return { text: "No impact.", badge: "text-zinc-600 bg-zinc-100", circle: "bg-zinc-300", emoji: "😐", statusName: "neutral" };
-};
 
 export default function MinistersTab({ 
   ministers, selectedMinister, selectedPolicy, isTutorialActive, tutorialStep, 
