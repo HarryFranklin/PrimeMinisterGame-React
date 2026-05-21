@@ -3,6 +3,8 @@
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect, useCallback } from "react";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 // Modals & Layout
 import ElectionModal from "./components/modals/ElectionModal";
 import NarrativeModal from "./components/modals/NarrativeModal";
@@ -125,12 +127,23 @@ export default function Home() {
           previewPopulation: game.previewPopulation, 
           initialPopulation: game.initialPopulation // <-- Fixed here
         }}>
-          <main className="flex-1 overflow-hidden p-6 flex flex-col">
-            {activeTab === 'dashboard' && <DashboardTab />}
-            {activeTab === 'ministers' && <MinistersTab />}
-            {activeTab === 'graphs' && <GraphsTab />}
-            {activeTab === 'electorate' && <ElectorateTab />}
-          </main>
+          <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab} // This key tells Framer Motion to animate when the tab changes
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="h-full flex flex-col w-full"
+            >
+              {activeTab === 'dashboard' && <DashboardTab />}
+              {activeTab === 'ministers' && <MinistersTab />}
+              {activeTab === 'graphs' && <GraphsTab />}
+              {activeTab === 'electorate' && <ElectorateTab />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
         </GameProvider>
       </UIProvider>
 
