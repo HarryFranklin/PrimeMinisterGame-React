@@ -33,3 +33,5 @@ The "Run Simulator" button tests how easily a player could accidentally stumble 
 - Calculating the Probability:
     - It compares the final score of each random walk against the target score. 
     - If 1,800 out of 10,000 random walks beat the target, the simulator outputs an 18% random win chance.
+
+----
