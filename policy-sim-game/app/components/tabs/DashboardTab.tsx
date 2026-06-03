@@ -6,10 +6,8 @@ import { DEMO_COLORS, IMPACT_COLORS, getMinisterReaction } from "../../utils/uiH
 import D3Chart, { ChartMarker } from "../D3Chart";
 
 export default function DashboardTab() {
-  // 1. UI Context
   const { setActiveTab, isTutorialActive, tutorialStep, pulsePolicy } = useUI();
   
-  // 2. Game Context
   const {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
@@ -17,21 +15,19 @@ export default function DashboardTab() {
     population, previewPopulation, cycleMAO
   } = useGame();
 
-  // Local State (Restored)
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
   const [highlightedMinisters, setHighlightedMinisters] = useState<string[]>([]);
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
-  // Build the markers array
   const activeMarkers: ChartMarker[] = [];
   if (currentCycle === ElectionCycle.Benthamite) {
-    activeMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false });
-    activeMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+    activeMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true, hideLabelText: true });
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    activeMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false });
-    activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+    activeMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
   const getTutorialClass = (columnIndex: number) => {
@@ -99,16 +95,6 @@ export default function DashboardTab() {
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300 relative">
       
-      {/* TOP BANNER: GUIDED ANALYSIS (Temporarily Hidden)
-      <div className={`shrink-0 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start gap-4 shadow-sm ${getTutorialClass(0)}`}>
-        <span className="text-xl mt-0.5">🧭</span>
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-widest text-indigo-900 mb-1">Guided Analysis: {rule.frameworkTitle}</h3>
-          <p className="text-sm text-indigo-800 leading-relaxed">{getGuidedAnalysis()}</p>
-        </div>
-      </div>
-      */}
-
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT COLUMN: Split Graphs */}
@@ -120,7 +106,9 @@ export default function DashboardTab() {
               </h3>
               <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
             </div>
-            <div className="flex-1 p-3 min-h-0">
+            
+            {/* IDENTICAL PADDING FOR BOTH GRAPHS */}
+            <div className="flex-1 p-3 pb-0 min-h-0 relative">
               <D3Chart 
                 plotType="1D" 
                 chartData={currentChartData}
@@ -133,6 +121,18 @@ export default function DashboardTab() {
                 onHoverMinisters={setHighlightedMinisters}
                 visualStyle={'faces'}
               />
+            </div>
+            
+            {/* IDENTICAL LEGEND FOR BOTH GRAPHS */}
+            <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2 shrink-0">
+              {activeMarkers.map((marker, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <svg width="16" height="4" className="shrink-0">
+                    <line x1="0" y1="2" x2="16" y2="2" stroke={marker.color || '#3f3f46'} strokeWidth="2" strokeDasharray={marker.dashed ? "4,2" : "none"} />
+                  </svg>
+                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{marker.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -163,6 +163,8 @@ export default function DashboardTab() {
                 <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
               </div>
             </div>
+            
+            {/* IDENTICAL PADDING FOR BOTH GRAPHS */}
             <div className="flex-1 p-3 pb-0 min-h-0 relative">
               <D3Chart 
                 plotType="1D" 
@@ -175,6 +177,8 @@ export default function DashboardTab() {
                 onHoverMinisters={setHighlightedMinisters}
               />
             </div>
+            
+            {/* IDENTICAL LEGEND FOR BOTH GRAPHS */}
             <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2 shrink-0">
               {(selectedPolicy ? Object.entries(IMPACT_COLORS) : Object.entries(DEMO_COLORS[groupBy])).map(([label, color]) => (
                 <div key={label} className="flex items-center gap-1.5">

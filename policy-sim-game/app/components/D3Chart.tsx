@@ -7,6 +7,7 @@ export interface ChartMarker {
   label: string;
   color?: string;
   dashed?: boolean;
+  hideLabelText?: boolean;
 }
 
 interface HistogramEntry {
@@ -100,7 +101,8 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 20, right: 20, bottom: 45, left: 50 };
+    // Tightened the bottom margin to reclaim vertical space for the graph
+    const margin = { top: 20, right: 20, bottom: 38, left: 50 };
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -145,7 +147,6 @@ export default function D3Chart({
       
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
 
-      // --- PROCEDURAL FACE GENERATOR ---
       const defs = svg.selectAll("defs").data([0]).join("defs");
       
       if (visualStyle === 'faces') {
@@ -199,7 +200,9 @@ export default function D3Chart({
 
       chart.select(".axis-x").transition().duration(dimensions.width ? 0 : 500).call(d3.axisBottom(xScale) as any).call(styleAxis);
       chart.select(".axis-y").transition().duration(dimensions.width ? 0 : 500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
-      chart.select(".label-x").attr("x", width / 2).attr("y", height + 35).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
+      
+      // Pulled the label tighter to the axis (from height + 35 down to height + 32)
+      chart.select(".label-x").attr("x", width / 2).attr("y", height + 32).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       if (isStacked) {
         const groups = dataLayer.selectAll("g.bar-group")
@@ -400,15 +403,15 @@ export default function D3Chart({
 
           annotationLayer.append("text")
             .attr("y", yPos)
-            .attr("x", markerX - 8) // Ensuring text renders firmly to the left of the line
+            .attr("x", markerX - 8) 
             .attr("fill", markerColor)
             .attr("font-size", "12px")
             .attr("font-weight", "900")
             .attr("stroke", "white")
             .attr("stroke-width", 4)
             .style("paint-order", "stroke")
-            .attr("text-anchor", "end") // Anchoring at the end stops it traversing over the dashed line
-            .text(`${marker.label}: ${marker.value.toFixed(2)}`);
+            .attr("text-anchor", "end") 
+            .text(marker.hideLabelText ? marker.value.toFixed(2) : `${marker.label}: ${marker.value.toFixed(2)}`); 
         });
       }
 

@@ -5,10 +5,8 @@ import SharedTabHeader from "./../SharedTabHeader";
 import D3Chart, { ChartMarker } from "../D3Chart";
 
 export default function GraphsTab() {
-  // 1. UI Context
   const { setActiveTab, isTutorialActive, tutorialStep } = useUI();
   
-  // 2. Game Context
   const {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore, currentMetricScore,
@@ -26,28 +24,26 @@ export default function GraphsTab() {
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
-  // Build current state markers
   const currentMarkers: ChartMarker[] = [];
   const projectedMarkers: ChartMarker[] = [];
 
   if (currentCycle === ElectionCycle.Benthamite) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false });
-    currentMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+    currentMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false, hideLabelText: true });
+    currentMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true, hideLabelText: true });
 
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Mean", color: "#3f3f46", dashed: false });
-    projectedMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+    projectedMarkers.push({ value: currentMetricScore, label: "Projected Mean", color: "#3f3f46", dashed: false, hideLabelText: true });
+    projectedMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true, hideLabelText: true });
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false });
-    currentMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+    currentMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false, hideLabelText: true });
+    currentMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
 
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Floor", color: "#3f3f46", dashed: false });
-    projectedMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+    projectedMarkers.push({ value: currentMetricScore, label: "Projected Floor", color: "#3f3f46", dashed: false, hideLabelText: true });
+    projectedMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
   return (
     <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
       
-      {/* MODULARISED HEADER BANNER */}
       <SharedTabHeader
         title="Distribution Analysis"
         subtitle="Detailed side-by-side comparison of policy impacts."
@@ -65,7 +61,6 @@ export default function GraphsTab() {
         </div>
       </SharedTabHeader>
 
-      {/* Side-by-Side Graphs */}
       <div className="grid grid-cols-2 gap-6 flex-1 min-h-0">
         
         {/* Left Column: Current State */}
@@ -76,7 +71,8 @@ export default function GraphsTab() {
                <p className="text-xs text-zinc-400 font-medium mt-1">Before policy enactment</p>
              </div>
           </div>
-          <div className="flex-1 p-6 min-h-0">
+          
+          <div className="flex-1 p-6 pb-0 min-h-0 relative">
             <D3Chart 
                plotType={rule.plotType} 
                chartData={currentChartData}
@@ -89,6 +85,17 @@ export default function GraphsTab() {
                visualStyle={'faces'}
             />
           </div>
+          
+          <div className="px-6 pb-4 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-3 shrink-0">
+            {currentMarkers.map((marker, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                <svg width="16" height="4" className="shrink-0">
+                  <line x1="0" y1="2" x2="16" y2="2" stroke={marker.color || '#3f3f46'} strokeWidth="2" strokeDasharray={marker.dashed ? "4,2" : "none"} />
+                </svg>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{marker.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Right Column: Projected State */}
@@ -99,7 +106,8 @@ export default function GraphsTab() {
                <p className="text-xs text-zinc-500 font-medium mt-1">Estimated impact of selected policy</p>
              </div>
           </div>
-          <div className="flex-1 p-6 min-h-0 relative">
+          
+          <div className="flex-1 p-6 pb-0 min-h-0 relative">
             <D3Chart 
               plotType={rule.plotType} 
               chartData={previewChartData} 
@@ -111,7 +119,6 @@ export default function GraphsTab() {
               markers={projectedMarkers}
             />
 
-            {/* Frosted Glass Overlay */}
             {!selectedPolicy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-b-xl z-10 animate-in fade-in duration-300">
                 <div className="bg-white px-6 py-5 rounded-2xl shadow-xl border border-zinc-200 text-center max-w-sm">
@@ -125,6 +132,17 @@ export default function GraphsTab() {
                 </div>
               </div>
             )}
+          </div>
+          
+          <div className="px-6 pb-4 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-3 shrink-0">
+            {projectedMarkers.map((marker, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                <svg width="16" height="4" className="shrink-0">
+                  <line x1="0" y1="2" x2="16" y2="2" stroke={marker.color || '#3f3f46'} strokeWidth="2" strokeDasharray={marker.dashed ? "4,2" : "none"} />
+                </svg>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{marker.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
