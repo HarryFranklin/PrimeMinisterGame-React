@@ -1,8 +1,6 @@
 "use client";
-
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect, useCallback } from "react";
-
 import { motion, AnimatePresence } from "framer-motion";
 
 // Modals & Layout
@@ -27,7 +25,6 @@ import { useGameEngine } from "./hooks/useGameEngine";
 export default function Home() {
   const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'] as const;
   type TabType = typeof tabs[number];
-
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
@@ -52,7 +49,19 @@ export default function Home() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Wrap this in useCallback so it doesn't trigger infinite re-renders in your hooks!
+  // Intercept page refreshes and closures to protect study data
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome requires returnValue to be set to trigger the dialogue
+      e.returnValue = ''; 
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Wrap this in useCallback so it doesn't trigger infinite re-renders in your hooks
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
     window.history.pushState(null, '', `/?tab=${tab}`);
@@ -65,7 +74,6 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
       {tut.hasCheckedSave && tut.showIntro && <IntroductionModal onStart={tut.handleStartGame} />}
-
       <TutorialOverlay 
         isTutorialActive={tut.isTutorialActive}
         currentStepData={tut.currentStepData}
@@ -81,7 +89,6 @@ export default function Home() {
         setActiveTab={handleTabChange}
         setTutorialStep={tut.setTutorialStep}
       />
-
       <GameHeader 
         currentCycle={game.currentCycle}
         isTutorialActive={tut.isTutorialActive}
@@ -125,12 +132,12 @@ export default function Home() {
           approvalRating: game.turnApprovalRating, 
           population: game.population, 
           previewPopulation: game.previewPopulation, 
-          initialPopulation: game.initialPopulation // <-- Fixed here
+          initialPopulation: game.initialPopulation
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab} // This key tells Framer Motion to animate when the tab changes
+              key={activeTab}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
