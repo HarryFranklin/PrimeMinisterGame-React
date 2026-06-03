@@ -4,6 +4,7 @@ import { WelfareMetrics } from "./WelfareMetrics";
 import { PolicyEngine } from "./PolicyEngine";
 import { MAOEngine } from "./MAOEngine";
 import { availablePolicies } from "../data/policies";
+import { FRAMEWORK_RULES } from "./frameworkRules";
 
 export class DifficultySimulator {
   private static getMetricScore(pop: Respondent[], cycle: ElectionCycle): number {
@@ -63,10 +64,11 @@ export class DifficultySimulator {
     for (const cycle of cycles) {
       // Get the exact schedule the actual players will use
       const staticSchedule = this.generateCycleSchedule(cycle, availablePolicies);
-      
-      // Calculate the true MAO ceiling for this exact layout
       const maoResult = MAOEngine.calculateMAO(population, staticSchedule, cycle, this.getMetricScore);
-      const winThreshold = maoResult.maxScore * 0.90; // The current target rule
+      
+      // Pull the dynamic scalar from the central rules file
+      const scalar = FRAMEWORK_RULES[cycle].winThresholdScalar;
+      const winThreshold = maoResult.maxScore * scalar; 
       
       let winCount = 0;
       let totalRandomScore = 0;

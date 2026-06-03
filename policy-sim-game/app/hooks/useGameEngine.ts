@@ -5,6 +5,7 @@ import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { PolicyEngine } from '../utils/PolicyEngine';
 import { MAOEngine } from '../utils/MAOEngine';
 import { availablePolicies } from '../data/policies';
+import { FRAMEWORK_RULES } from "../utils/frameworkRules";
 
 const TURNS_PER_CYCLE = 5;
 
@@ -152,7 +153,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const initialMetricScore = useMemo(() => getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const turnMetricScore = useMemo(() => getMetricScore(population, currentCycle), [population, currentCycle]);
   const currentMetricScore = useMemo(() => getMetricScore(previewPopulation, currentCycle), [previewPopulation, currentCycle]);
-  const turnApprovalRating = useMemo(() => WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO), [turnMetricScore, cycleMAO]);
+  const turnApprovalRating = useMemo(() => WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar), [turnMetricScore, cycleMAO, currentCycle]);
 
   const handleNavigateToPolicy = useCallback(() => {
     setActiveTab('dashboard');

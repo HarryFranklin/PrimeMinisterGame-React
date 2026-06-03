@@ -45,9 +45,9 @@ export class WelfareMetrics {
     return Math.min(...population.map(r => r.currentLS));
   }
 
-  static calculateApprovalRating(currentScore: number, cycleMAO: number): number {
+  static calculateApprovalRating(currentScore: number, cycleMAO: number, scalar: number): number {
     if (cycleMAO <= 0) return 0; // Fallback safety
-    const threshold = cycleMAO * 0.90;
+    const threshold = cycleMAO * scalar; // Now dynamic based on the framework rule
     
     let approvalRating = 0;
     if (currentScore >= threshold) {
@@ -60,6 +60,6 @@ export class WelfareMetrics {
     }
     
     const finalRating = Math.max(0, Math.min(100, approvalRating));
-    return Math.round(finalRating * 10) / 10; 
+    return Math.round(finalRating * 10) / 10;
   }
 }
