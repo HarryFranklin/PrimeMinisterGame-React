@@ -17,21 +17,22 @@ export class MAOEngine {
         const score = metricFunction(currentPop, cycle);
         if (score > maxScore) {
           maxScore = score;
-          bestPath = [...currentPath]; 
+          bestPath = [...currentPath];
         }
         return;
       }
 
-      const options = turnDecks[turnIndex];
-      
+      // Filter out any policies that have already been selected in this specific path
+      const options = turnDecks[turnIndex].filter(opt => !currentPath.some(p => p.id === opt.id));
+
       // --- BEAM SEARCH OPTIMISATION ---
-      // Evaluate the immediate impact of all 8 options
+      // Evaluate the immediate impact of all remaining valid options
       const evaluatedOptions = options.map(opt => {
         const nextPop = PolicyEngine.applyPolicy(currentPop, opt);
         const score = metricFunction(nextPop, cycle);
         return { opt, nextPop, score };
       });
-      
+
       // Sort by best immediate score and slice the top 3.
       // This trims the DFS tree from 32,768 paths back down to 243.
       evaluatedOptions.sort((a, b) => b.score - a.score);
@@ -39,13 +40,14 @@ export class MAOEngine {
 
       // Recursive Case: Only test the 3 most viable paths
       for (let i = 0; i < bestOptions.length; i++) {
-        currentPath.push(bestOptions[i].opt); 
+        currentPath.push(bestOptions[i].opt);
         search(turnIndex + 1, bestOptions[i].nextPop, currentPath);
         currentPath.pop(); 
       }
     }
 
     search(0, initialPopulation, []);
+
     return { maxScore, optimalPath: bestPath };
   }
 }
