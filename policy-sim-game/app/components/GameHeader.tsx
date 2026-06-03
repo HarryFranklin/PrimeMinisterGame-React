@@ -28,7 +28,7 @@ export default function GameHeader({
   return (
     <header className={`bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm transition-all duration-500 ${isTutorialActive ? 'relative z-[70]' : 'relative z-10'}`}>
       <div>
-        <h1 className="text-xl font-bold">Policy Simulator</h1>
+        <h1 className="text-xl font-bold">Policy Simulator - Test</h1>
         <p className="text-xs font-bold text-pink-600 uppercase">
           {FRAMEWORK_RULES[currentCycle]?.frameworkTitle || "Loading..."}
         </p>
