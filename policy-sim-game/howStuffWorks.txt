@@ -1,0 +1,35 @@
+1. MAO Engine and Optimal Path Calculation
+
+The MAO (maximum achievable outcome) is the absolute highest score possible for a given cycle given the policies in place - acting as the mathematical ceiling.
+- The Problem:
+    - Every turn, the player is presented with eight hidden policy options in the "in-tray" area, and there are five per cycle, so there are 8^5 pathways a player can take.
+- Beam Search Optimisation:
+    - To calculate the absolute best path without freezing the browser, the MAO engine uses a beam search. 
+    - Instead of exploring all paths to the end, it evaluates the immmedate impact of the 8 policies on turn one, sorts them by score, and only explores the top 3 policies.
+- The Result:
+    - By repeating this process, the engine navigates down to the optimal combination of five policies.
+    - The final score of the perfect path becomes the cycleMAO, and the sequence of policies becomes the optimalPath (seen in Dev Panel).
+
+2. The Difficulty Calculation (Target Score)
+
+If the game demanded perfection, players would have to match the MAO exactly to win, which would be incredibly frustrating. 
+The difficulty calculation gives them a margin for error.
+- The Scalar:
+    - In utils/frameworkRules.ts, each framework has a winThresholdScalar (e.g., 0.95 for Benthamite, 0.65 for Rawlsian).
+- Target Threshold:
+    - The engine multiplies the cycleMAO by this scalar to determine the actual passing grade. 
+    - If the Benthamite MAO is 9.444 and the scalar is 0.95, the target score becomes roughly 8.97.
+- Approval Rating Translation:
+    - The WelfareMetrics.calculateApprovalRating function uses this target. If the player's final score meets or exceeds this target-
+    - The game translates their score into an approval rating of 51.0% or higher, securing a win.
+
+3. The Dev Panel Simulator
+
+The "Run Simulator" button tests how easily a player could accidentally stumble into a win without engaging with the learning objectives.
+- Deterministic Nature:
+    - When clicked, it generates the exact sequence of policies that the player will get, using the same deterministic seed logic.
+- Random Walk:
+    - It plays 10,000 dummy games for each cycle and blindly picks 1 of the available policies randomly per turn.
+- Calculating the Probability:
+    - It compares the final score of each random walk against the target score. 
+    - If 1,800 out of 10,000 random walks beat the target, the simulator outputs an 18% random win chance.
