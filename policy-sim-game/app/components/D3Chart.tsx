@@ -28,7 +28,7 @@ interface D3ChartProps {
   color?: string; 
   highlightBars?: number[];
   ministers?: any[]; 
-  markers?: ChartMarker[]; // Replaced markerValue and markerLabel with markers array
+  markers?: ChartMarker[];
   onHoverMinisters?: (ministerNames: string[]) => void;
   isStacked?: boolean;
   visualStyle?: 'solid' | 'faces';
@@ -95,7 +95,7 @@ export default function D3Chart({
     return () => resizeObserver.disconnect();
   }, []);
 
-  const markersJson = JSON.stringify(markers); // Used for safe dependency comparison
+  const markersJson = JSON.stringify(markers); 
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
@@ -278,18 +278,118 @@ export default function D3Chart({
         .attr("height", height)
         .style("fill", "transparent")
         .style("cursor", "crosshair")
-        // ... (Tooltip logic remains the same, safely omitted for brevity) ...
+        .on("mouseenter", (event, d: HistogramEntry) => {
+          if (d.count === 0) return;
+          
+          let tooltip = d3.select("body").select<HTMLDivElement>(".chart-tooltip-global");
+          if (tooltip.empty()) {
+            tooltip = d3.select("body").append("div")
+              .attr("class", "chart-tooltip-global fixed pointer-events-none z-[9999] bg-white border border-zinc-200 shadow-xl rounded-xl p-4 min-w-[260px] text-zinc-800 transition-opacity duration-150");
+          }
+
+          let stakeholderHtml = "";
+          if (onHoverMinisters) onHoverMinisters([]); 
+
+          if (ministers && ministers.length > 0) {
+            const nationalShares = { Poor: 0.21, Middle: 0.69, Wealthy: 0.10, Youth: 0.186, Adult: 0.581, Elderly: 0.233 };
+            const wealthTraits = { Poor: (d.breakdown.wealth.Poor || 0) / 100, Middle: (d.breakdown.wealth.Middle || 0) / 100, Wealthy: (d.breakdown.wealth.Wealthy || 0) / 100 };
+            const ageTraits = { Youth: (d.breakdown.age.Youth || 0) / 100, Adult: (d.breakdown.age.Adult || 0) / 100, Elderly: (d.breakdown.age.Elderly || 0) / 100 };
+
+            const getTopTrait = (traits: Record<string, number>) => {
+              let maxTrait = null; let maxScore = 0;
+              Object.entries(traits).forEach(([t, share]) => {
+                const lq = share / (nationalShares as any)[t];
+                if (share * lq > maxScore) { maxScore = share * lq; maxTrait = t; }
+              });
+              return maxTrait;
+            };
+
+            const topWealth = getTopTrait(wealthTraits);
+            const topAge = getTopTrait(ageTraits);
+            const ministerMap: any = { Poor: 'Welfare Secretary', Middle: 'Home Secretary', Wealthy: 'Chancellor', Youth: 'Education Secretary', Adult: 'Business Secretary', Elderly: 'Pensions Secretary' };
+            
+            const hoveredMins: string[] = [];
+            const blocks = [topWealth, topAge].map(trait => {
+              const min = ministers.find((m: any) => m.name === ministerMap[trait || '']);
+              if (!min) return "";
+              hoveredMins.push(min.name);
+              return `
+                <div class="bg-pink-50 border border-pink-100 p-2.5 rounded-lg mb-2 flex justify-between items-center">
+                  <div class="flex flex-col">
+                    <span class="text-xs font-black text-zinc-800 uppercase">${trait}</span>
+                    <span class="text-[11px] text-zinc-500 mt-0.5">${min.name}</span>
+                  </div>
+                  <div class="w-7 h-7 rounded-full flex items-center justify-center ${min.status === 'happy' ? 'bg-emerald-500' : min.status === 'angry' ? 'bg-rose-500' : 'bg-amber-400'} border-2 border-white shadow-sm text-xs">
+                    ${min.status === 'happy' ? '😊' : min.status === 'angry' ? '😠' : '😐'}
+                  </div>
+                </div>`;
+            }).join('');
+
+            if (onHoverMinisters) onHoverMinisters(hoveredMins);
+            stakeholderHtml = `<div class="mt-4 pt-3 border-t border-zinc-100"><p class="text-[9px] font-bold uppercase text-pink-500 mb-2">Key Stakeholders</p>${blocks}</div>`;
+          }
+
+          tooltip.style("opacity", 1).html(`
+            <div class="space-y-4">
+              <div class="border-b border-zinc-100 pb-2">
+                <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400">LS Score ${d.name}</p>
+                <p class="text-sm font-bold text-zinc-600">${d.count} Residents</p>
+              </div>
+              <div class="space-y-3">
+                ${['wealth', 'age'].map(type => {
+                  const breakdown = d.breakdown[type as 'wealth' | 'age'];
+                  const entries = Object.entries(breakdown);
+                  return `
+                  <div>
+                    <div class="flex justify-between items-end mb-1">
+                      <p class="text-[9px] font-bold uppercase text-zinc-400">${type} Breakdown</p>
+                      <div class="flex gap-2">
+                        ${entries.filter(([_, v]) => (v as number) > 0).map(([k, v]) => {
+                          const color = type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500');
+                          return `<span class="flex items-center gap-1 text-[9px] font-bold text-zinc-500"><span class="w-1.5 h-1.5 rounded-full ${color}"></span>${Math.round(v as number)}%</span>`;
+                        }).join('')}
+                      </div>
+                    </div>
+                    <div class="flex h-1.5 w-full rounded-full overflow-hidden bg-zinc-100">
+                      ${entries.map(([k, v]) => `<div style="width: ${v}%" class="${type === 'wealth' ? (k === 'Poor' ? 'bg-rose-500' : k === 'Middle' ? 'bg-blue-500' : 'bg-emerald-500') : (k === 'Youth' ? 'bg-amber-400' : k === 'Adult' ? 'bg-indigo-500' : 'bg-teal-500')}"></div>`).join('')}
+                    </div>
+                  </div>`
+                }).join('')}
+              </div>
+              ${stakeholderHtml}
+            </div>`);
+        })
+        .on("mousemove", (event) => {
+          const tooltip = d3.select(".chart-tooltip-global");
+          const node = tooltip.node() as HTMLElement;
+          if (!node) return;
+          const tooltipWidth = node.offsetWidth;
+          const tooltipHeight = node.offsetHeight;
+          const padding = 20;
+
+          let x = event.clientX + padding;
+          let y = event.clientY - padding;
+
+          if (x + tooltipWidth > window.innerWidth) x = event.clientX - tooltipWidth - padding;
+          if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - 10;
+          if (y < 10) y = 10;
+
+          tooltip.style("left", `${x}px`).style("top", `${y}px`);
+        })
+        .on("mouseleave", () => {
+          d3.select(".chart-tooltip-global").style("opacity", 0);
+          if (onHoverMinisters) onHoverMinisters([]);
+        });
 
       annotationLayer.selectAll("*").remove();
 
-      // Plot all active markers
       if (markers && markers.length > 0) {
         const continuousXScale = d3.scaleLinear().domain([0, 10]).range([(xScale("0") || 0) + xScale.bandwidth() / 2, (xScale("10") || 0) + xScale.bandwidth() / 2]);
 
         markers.forEach((marker, index) => {
           const markerX = continuousXScale(Math.max(0, Math.min(10, marker.value)));
           const markerColor = marker.color || "#3f3f46";
-          const yPos = 12 + (index * 16); // Stagger text to avoid overlapping
+          const yPos = 12 + (index * 16); 
 
           annotationLayer.append("line")
             .attr("x1", markerX).attr("x2", markerX)
@@ -300,14 +400,14 @@ export default function D3Chart({
 
           annotationLayer.append("text")
             .attr("y", yPos)
-            .attr("x", marker.value > 8 ? markerX - 8 : markerX + 8)
+            .attr("x", markerX - 8) // Ensuring text renders firmly to the left of the line
             .attr("fill", markerColor)
             .attr("font-size", "12px")
             .attr("font-weight", "900")
             .attr("stroke", "white")
             .attr("stroke-width", 4)
             .style("paint-order", "stroke")
-            .attr("text-anchor", marker.value > 8 ? "end" : "start")
+            .attr("text-anchor", "end") // Anchoring at the end stops it traversing over the dashed line
             .text(`${marker.label}: ${marker.value.toFixed(2)}`);
         });
       }
