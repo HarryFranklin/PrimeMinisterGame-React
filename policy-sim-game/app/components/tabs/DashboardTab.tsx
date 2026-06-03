@@ -3,7 +3,7 @@ import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
 import { DEMO_COLORS, IMPACT_COLORS, getMinisterReaction } from "../../utils/uiHelpers";
-import D3Chart from "../D3Chart";
+import D3Chart, { ChartMarker } from "../D3Chart";
 
 export default function DashboardTab() {
   // 1. UI Context
@@ -14,16 +14,25 @@ export default function DashboardTab() {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
     currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    population, previewPopulation
+    population, previewPopulation, cycleMAO
   } = useGame();
 
-  const rule = FRAMEWORK_RULES[currentCycle];
+  // Local State (Restored)
   const [groupBy, setGroupBy] = useState<'wealth' | 'age'>('wealth');
   const [highlightedMinisters, setHighlightedMinisters] = useState<string[]>([]);
 
-  let markerLabel = undefined;
-  if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
-  else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
+  const rule = FRAMEWORK_RULES[currentCycle];
+  const targetScore = cycleMAO * rule.winThresholdScalar;
+
+  // Build the markers array
+  const activeMarkers: ChartMarker[] = [];
+  if (currentCycle === ElectionCycle.Benthamite) {
+    activeMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false });
+    activeMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+  } else if (currentCycle === ElectionCycle.Rawlsian) {
+    activeMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false });
+    activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+  }
 
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";
@@ -119,8 +128,7 @@ export default function DashboardTab() {
                 yAxisType={rule.yAxisType} 
                 color="#d4d4d8"
                 ministers={ministers}
-                markerValue={markerLabel ? turnMetricScore : undefined}
-                markerLabel={markerLabel}
+                markers={activeMarkers} 
                 onHoverMinisters={setHighlightedMinisters}
                 visualStyle={'faces'}
               />
@@ -169,7 +177,7 @@ export default function DashboardTab() {
             <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2">
               {(selectedPolicy ? Object.entries(IMPACT_COLORS) : Object.entries(DEMO_COLORS[groupBy])).map(([label, color]) => (
                 <div key={label} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color as string }} />
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-tight">{label}</span>
                 </div>
               ))}
@@ -201,19 +209,12 @@ export default function DashboardTab() {
                 // 2. Build the class string dynamically to handle combinations
                 let highlightClasses = "";
                 if (isSelected && isHighlightedByGraph) {
-                  // COMBINED STATE: Sponsor AND relevant to current graph hover
-                  // Solid pink background, but a dashed border to show the active graph link
                   highlightClasses = "border-pink-500 border-dashed border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
                 } else if (isSelected) {
-                  // PERSISTENT STATE ONLY: Sponsor, but NOT relevant to current graph hover
-                  // Solid pink background, solid border
                   highlightClasses = "border-pink-500 border-solid border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
                 } else if (isHighlightedByGraph) {
-                  // TRANSIENT STATE ONLY: Not sponsor, but relevant to graph hover
-                  // Lighter pink background, dashed border
                   highlightClasses = "border-pink-400 border-dashed border-[2px] bg-pink-50/50 hover:bg-pink-50 shadow-sm scale-[1.02] z-10";
                 } else {
-                  // DEFAULT STATE
                   highlightClasses = "border-zinc-200 border-solid border bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-300";
                 }
 
@@ -222,18 +223,15 @@ export default function DashboardTab() {
                     key={i} 
                     onClick={() => { 
                       if (selectedMinister === minister.name) {
-                        // Toggle off: Revert to unfiltered tray and clear active policy
                         setSelectedMinister(null);
                         setSelectedPolicy(null); 
                       } else {
-                        // Select new minister: Sponsorship locks and reveals 3 policies
                         setSelectedMinister(minister.name);
                         setSelectedPolicy(null); 
                       }
                     }}
                     className={`flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition-all active:scale-95 relative group/minister h-full ${highlightClasses}`}
                   >
-                    {/* 3. Floating pill badge */}
                     {isSelected && (
                       <div className="absolute -top-2.5 right-2 bg-pink-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-30 shadow-sm border border-pink-600">
                         SPONSOR

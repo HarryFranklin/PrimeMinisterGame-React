@@ -1,8 +1,8 @@
 import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
-import D3Chart from "../D3Chart";
 import SharedTabHeader from "./../SharedTabHeader";
+import D3Chart, { ChartMarker } from "../D3Chart";
 
 export default function GraphsTab() {
   // 1. UI Context
@@ -11,9 +11,9 @@ export default function GraphsTab() {
   // 2. Game Context
   const {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
-    ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore,
+    ministers, selectedMinister, setSelectedMinister, selectedPolicy, turnMetricScore, currentMetricScore,
     currentDeck, presentedPolicies, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    population, previewPopulation
+    population, previewPopulation, cycleMAO
   } = useGame();
 
   const getTutorialClass = (columnIndex: number) => {
@@ -24,10 +24,25 @@ export default function GraphsTab() {
   };
 
   const rule = FRAMEWORK_RULES[currentCycle];
+  const targetScore = cycleMAO * rule.winThresholdScalar;
 
-  let markerLabel = undefined;
-  if (currentCycle === ElectionCycle.Benthamite) markerLabel = "Mean";
-  else if (currentCycle === ElectionCycle.Rawlsian) markerLabel = "Floor";
+  // Build current state markers
+  const currentMarkers: ChartMarker[] = [];
+  const projectedMarkers: ChartMarker[] = [];
+
+  if (currentCycle === ElectionCycle.Benthamite) {
+    currentMarkers.push({ value: turnMetricScore, label: "Current Mean", color: "#3f3f46", dashed: false });
+    currentMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+
+    projectedMarkers.push({ value: currentMetricScore, label: "Projected Mean", color: "#3f3f46", dashed: false });
+    projectedMarkers.push({ value: targetScore, label: "Target Mean", color: rule.graphColor, dashed: true });
+  } else if (currentCycle === ElectionCycle.Rawlsian) {
+    currentMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false });
+    currentMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+
+    projectedMarkers.push({ value: currentMetricScore, label: "Projected Floor", color: "#3f3f46", dashed: false });
+    projectedMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true });
+  }
 
   return (
     <div className={`h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0`}>
@@ -63,16 +78,15 @@ export default function GraphsTab() {
           </div>
           <div className="flex-1 p-6 min-h-0">
             <D3Chart 
-              plotType={rule.plotType} 
-              chartData={currentChartData} 
-              histogramData={currentHistogramData} 
-              xAxisType={AxisVariable.LifeSatisfaction} 
-              yAxisType={rule.yAxisType} 
-              color="#d4d4d8"
-              ministers={ministers}
-              markerValue={markerLabel ? turnMetricScore : undefined}
-              markerLabel={markerLabel}
-              visualStyle={'faces'}
+               plotType={rule.plotType} 
+               chartData={currentChartData}
+               histogramData={currentHistogramData} 
+               xAxisType={AxisVariable.LifeSatisfaction}
+               yAxisType={rule.yAxisType} 
+               color="#d4d4d8"
+               ministers={ministers}
+               markers={currentMarkers}
+               visualStyle={'faces'}
             />
           </div>
         </div>
@@ -94,6 +108,7 @@ export default function GraphsTab() {
               yAxisType={rule.yAxisType} 
               color={rule.graphColor}
               ministers={ministers}
+              markers={projectedMarkers}
             />
 
             {/* Frosted Glass Overlay */}
