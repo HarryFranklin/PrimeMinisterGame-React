@@ -1,13 +1,11 @@
-import type { NextConfig } from "next";
-
-// Check if we are building for production (GitHub Pages) or running locally
-const isProd = process.env.NODE_ENV === 'production';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: 'export',
-  // Only apply the GitHub Pages paths if we are doing a production build
-  basePath: isProd ? '/PrimeMinisterGame-React' : '',
-  assetPrefix: isProd ? '/PrimeMinisterGame-React/' : '', 
+  // This tells Next.js to use relative paths for all your CSS and JS
+  assetPrefix: './',
+  images: {
+    unoptimized: true, // Often needed for static exports
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
