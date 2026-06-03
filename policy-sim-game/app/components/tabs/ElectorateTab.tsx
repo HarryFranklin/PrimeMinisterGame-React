@@ -10,7 +10,6 @@ type AnalyticalLens = 'approval_ls' | 'approval_demo' | 'impact_ls';
 
 export default function ElectorateTab() {
   const { setActiveTab, isTutorialActive, tutorialStep } = useUI();
-  
   const { 
     population, previewPopulation, initialPopulation, currentCycle, 
     selectedPolicy, setSelectedPolicy, selectedMinister, 
@@ -28,12 +27,20 @@ export default function ElectorateTab() {
 
   const getTutorialClass = (columnIndex: number) => {
     if (!isTutorialActive) return "relative z-10";
-    const isHighlighted = (columnIndex === 0 && (tutorialStep === 0 || tutorialStep === 1)) || (columnIndex === 1 && tutorialStep === 2) || (columnIndex === 2 && tutorialStep === 3);
-    return isHighlighted ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl" : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
+    
+    const isHighlighted = 
+      (columnIndex === 0 && tutorialStep === 0) || 
+      (columnIndex === 1 && (tutorialStep === 0 || tutorialStep === 1)) || 
+      (columnIndex === 2 && tutorialStep === 2);
+
+    return isHighlighted 
+      ? "relative z-[70] ring-4 ring-pink-500/50 rounded-2xl bg-white transition-all duration-500 shadow-2xl" 
+      : "relative z-10 pointer-events-none opacity-40 grayscale transition-all duration-500";
   };
 
   const processedVoters = useMemo(() => {
     if (!initialPopulation || initialPopulation.length === 0) return [];
+    
     const allInitialLS = initialPopulation.map(p => p.currentLS);
     const allPreviewLS = previewPopulation.map(p => p.currentLS);
 
@@ -47,6 +54,7 @@ export default function ElectorateTab() {
       const currentVoter = currentPop.find(v => v.id === p.id) || p;
 
       let initialUtil = 0; let currentUtil = 0;
+
       if (currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian) {
         initialUtil = p.currentLS;
         currentUtil = currentVoter.currentLS;
@@ -73,11 +81,11 @@ export default function ElectorateTab() {
 
   const histogramData = useMemo(() => {
     const bins = Array.from({ length: 11 }, (_, i) => ({ bin: i, groups: {} as Record<string, number>, total: 0 }));
-
+    
     processedVoters.forEach(v => {
       const lsBin = Math.min(10, Math.max(0, Math.round(v.currentLS)));
+      
       let groupKey = "";
-
       if (activeLens === 'approval_ls') {
         groupKey = v.isApproving ? 'Approves' : 'Angry';
       } else if (activeLens === 'impact_ls') {
@@ -85,7 +93,6 @@ export default function ElectorateTab() {
         else if (v.lsTrajectory < -0.05) groupKey = 'Will be worsened';
         else groupKey = 'Will be stable';
       } else if (activeLens === 'approval_demo') {
-        // Group by Wealth Class instead of approval
         groupKey = v.demographics.wealth; 
       }
 
@@ -103,19 +110,20 @@ export default function ElectorateTab() {
     return demoKey ? DEMO_COLORS[demoKey] : DEMO_COLORS.wealth; 
   };
 
-  // Reusable histogram renderer so we can draw it twice for demographics
   const renderHistogram = (title: string, demoKey?: 'wealth' | 'age') => {
     const activeColors = getActiveColors(demoKey);
 
     return (
-      <div className="flex-1 flex flex-col h-full min-w-[300px]">
+      <div className="flex-1 flex flex-col h-full min-w-[300px] min-h-0">
         {activeLens === 'approval_demo' && (
-          <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4 text-center">{title}</h4>
+          <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-2 text-center shrink-0">{title}</h4>
         )}
-        <div className="w-full flex-1 flex flex-col items-center justify-end px-4 pb-4 border-b border-zinc-200 min-h-[250px]">
+        
+        <div className="w-full flex-1 flex flex-col items-center justify-end px-4 pb-4 border-b border-zinc-200 min-h-0 overflow-hidden">
           <div className="w-full h-full flex items-end gap-1.5">
             {histogramData.bins.map((binData) => {
               const totalHeight = (binData.total / histogramData.maxCount) * 100;
+              
               return (
                 <div 
                   key={binData.bin} 
@@ -124,25 +132,23 @@ export default function ElectorateTab() {
                   onMouseMove={(e) => {
                     let x = e.clientX + 15; let y = e.clientY + 15;
                     if (x + 200 > window.innerWidth) x = e.clientX - 215;
-                    // Pass the demoKey so the tooltip knows which data to show
                     setHoveredBin({ ...binData, activeDemo: demoKey }); 
                     setMousePos({ x, y });
                   }}
                   onMouseLeave={() => setHoveredBin(null)}
                 >
                   {Object.entries(activeColors).map(([groupName, color]) => {
-                    // If we are looking at demographics, we have to calculate the segment size manually from the breakdown
                     let count = 0;
                     if (activeLens === 'approval_demo' && demoKey) {
                       count = processedVoters.filter(v => Math.round(v.currentLS) === binData.bin && v.demographics[demoKey] === groupName).length;
                     } else {
                       count = binData.groups[groupName] || 0;
                     }
-
                     if (count === 0) return null;
                     const segmentHeight = (count / binData.total) * 100;
+                    
                     return (
-                      <div key={groupName} style={{ height: `${segmentHeight}%`, backgroundColor: color }} className="w-full transition-all duration-300 hover:brightness-110 border-b border-white/20" />
+                      <div key={groupName} style={{ height: `${segmentHeight}%`, backgroundColor: color as string }} className="w-full transition-all duration-300 hover:brightness-110 border-b border-white/20" />
                     );
                   })}
                 </div>
@@ -150,73 +156,72 @@ export default function ElectorateTab() {
             })}
           </div>
         </div>
-        <div className="w-full flex justify-between pt-3 px-1 text-[10px] font-bold text-zinc-400">
+        <div className="w-full flex justify-between pt-2 px-1 text-[10px] font-bold text-zinc-400 shrink-0">
           {histogramData.bins.map(b => <span key={b.bin} className="flex-1 text-center">{b.bin}</span>)}
         </div>
-        <div className="mt-1 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-300">Life Satisfaction Score</div>
+        <div className="mt-1 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-300 shrink-0">Life Satisfaction Score</div>
       </div>
     );
   };
 
   const renderGuidedAnalysis = () => {
     if (activeLens === 'approval_ls') return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p>You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
-        <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-          <p>Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?</p>
+        <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400 mb-1">Notice</p>
+          <p className="text-xs">Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?</p>
         </div>
       </div>
     );
     if (activeLens === 'approval_demo') return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p>You are viewing the <strong className="text-zinc-800">Demographic Breakdown</strong> of the electorate.</p>
-        <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-          <p>You can clearly see how wealth classes are distributed across the wellbeing spectrum. Use this to identify which demographics are dominating the lowest scores.</p>
+        <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400 mb-1">Notice</p>
+          <p className="text-xs">You can clearly see how wealth classes are distributed across the wellbeing spectrum. Use this to identify which demographics are dominating the lowest scores.</p>
         </div>
       </div>
     );
     if (activeLens === 'impact_ls') return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <p>You are viewing the <strong className="text-zinc-800">Objective Wellbeing Impact</strong>, stripping away voting intentions.</p>
-        <div className="bg-white p-4 rounded-lg border border-zinc-200 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-400 mb-2">Notice</p>
-          <p>This reveals the mechanical truth of the policy. Some voters may be "Angry" in other tabs, despite their wellbeing objectively "Improving" here, due to fairness ideals.</p>
+        <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400 mb-1">Notice</p>
+          <p className="text-xs">This reveals the mechanical truth of the policy. Some voters may be "Angry" in other tabs, despite their wellbeing objectively "Improving" here, due to fairness ideals.</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div className={`h-full flex flex-col gap-6 min-h-0`}>
+    <div className={`h-full flex flex-col gap-4 lg:gap-6 min-h-0 overflow-hidden`}>
       <SharedTabHeader
         title="Electorate Analysis" subtitle="Break down who is supporting your administration."
         approvalRating={approvalRating} selectedPolicy={selectedPolicy ?? null} setSelectedPolicy={setSelectedPolicy}
         selectedMinister={selectedMinister} presentedPolicies={presentedPolicies} onNavigateToMinisters={() => setActiveTab('ministers')}
         tutorialClass={getTutorialClass(0)}
       >
-        <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0 relative w-[450px]"> {/* 1. Add fixed width */}
+        <div className="flex bg-zinc-100 p-1 rounded-lg shrink-0 relative w-[380px] lg:w-[450px]"> 
           <button 
             onClick={() => setActiveLens('approval_ls')} 
-            className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'approval_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
+            className={`flex-1 px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'approval_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
           >
             Wellbeing
           </button>
           <button 
             onClick={() => setActiveLens('approval_demo')} 
-            className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'approval_demo' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
+            className={`flex-1 px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'approval_demo' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
           >
             Demographics
           </button>
           <button 
             onClick={() => setActiveLens('impact_ls')} 
-            className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'impact_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
+            className={`flex-1 px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'impact_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
           >
             Impact
           </button>
           
-          {/* Framer Motion Background Pill */}
           <div className="absolute inset-1 pointer-events-none flex" style={{ justifyContent: activeLens === 'approval_ls' ? 'flex-start' : activeLens === 'approval_demo' ? 'center' : 'flex-end' }}>
             <motion.div 
               layout 
@@ -224,40 +229,40 @@ export default function ElectorateTab() {
               className="bg-white rounded-md shadow-sm h-full w-1/3" 
             />
           </div>
-</div>
+        </div>
       </SharedTabHeader>
 
       <AnimatePresence mode="wait">
         <motion.div 
           key={activeLens}
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}
-          className="flex-1 flex gap-6 min-h-0"
+          className="flex-1 flex gap-4 lg:gap-6 min-h-0 overflow-hidden"
         >
           {/* Chart Area */}
-          <div className={`flex-[3] bg-white rounded-xl border border-zinc-200 shadow-sm p-8 relative flex flex-col min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
+          <div className={`flex-[3] bg-white rounded-xl border border-zinc-200 shadow-sm p-4 lg:p-8 relative flex flex-col min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
             
             {/* Dynamic Legend */}
-            <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md border border-zinc-200 p-3 rounded-lg shadow-sm z-10 flex flex-col gap-4 max-h-[90%] overflow-y-auto">
+            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-zinc-200 p-2 lg:p-3 rounded-lg shadow-sm z-10 flex flex-col gap-2 lg:gap-4 shrink-0">
               <div>
-                <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2">{activeLens === 'approval_demo' ? 'Wealth Classes' : 'Legend'}</h4>
-                <div className="space-y-1.5">
+                <h4 className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1 lg:mb-2">{activeLens === 'approval_demo' ? 'Wealth Classes' : 'Legend'}</h4>
+                <div className="space-y-1">
                   {Object.entries(getActiveColors('wealth')).map(([name, color]) => (
                     <div key={name} className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded shadow-sm" style={{backgroundColor: color}} />
-                      <span className="text-[11px] font-bold text-zinc-700">{name}</span>
+                      <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded shadow-sm" style={{backgroundColor: color as string}} />
+                      <span className="text-[10px] lg:text-[11px] font-bold text-zinc-700">{name}</span>
                     </div>
                   ))}
                 </div>
               </div>
               
               {activeLens === 'approval_demo' && (
-                <div className="pt-3 border-t border-zinc-100">
-                  <h4 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-2">Age Groups</h4>
-                  <div className="space-y-1.5">
+                <div className="pt-2 border-t border-zinc-100">
+                  <h4 className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-1 lg:mb-2">Age Groups</h4>
+                  <div className="space-y-1">
                     {Object.entries(getActiveColors('age')).map(([name, color]) => (
                       <div key={name} className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded shadow-sm" style={{backgroundColor: color}} />
-                        <span className="text-[11px] font-bold text-zinc-700">{name}</span>
+                        <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded shadow-sm" style={{backgroundColor: color as string}} />
+                        <span className="text-[10px] lg:text-[11px] font-bold text-zinc-700">{name}</span>
                       </div>
                     ))}
                   </div>
@@ -266,7 +271,7 @@ export default function ElectorateTab() {
             </div>
 
             {/* Render One or Two Histograms based on active lens */}
-            <div className="flex-1 flex gap-8 w-full h-full pb-4">
+            <div className="flex-1 flex gap-4 lg:gap-8 w-full h-full pb-2 min-h-0">
               {activeLens === 'approval_demo' ? (
                 <>
                   {renderHistogram("Wealth Breakdown", 'wealth')}
@@ -292,11 +297,10 @@ export default function ElectorateTab() {
                     } else {
                       count = hoveredBin.groups[groupName] || 0;
                     }
-
                     if (count === 0) return null;
                     return (
                       <div key={groupName} className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} /><span className="text-zinc-600 text-[11px] font-medium">{groupName}</span></div>
+                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color as string }} /><span className="text-zinc-600 text-[11px] font-medium">{groupName}</span></div>
                         <span className="font-mono font-bold text-zinc-800 text-[11px]">{count}</span>
                       </div>
                     );
@@ -304,14 +308,16 @@ export default function ElectorateTab() {
                 </div>
               </div>
             )}
+
           </div>
 
-          <div className={`flex-1 max-w-[380px] bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col gap-4 overflow-y-auto shrink-0 shadow-inner ${getTutorialClass(2)}`}>
-            <div className="flex items-center gap-2 mb-2"><span className="text-xl">💡</span><h3 className="text-sm font-black uppercase tracking-widest text-zinc-800">Guided Analysis</h3></div>
-            <div className="text-sm text-zinc-600 space-y-4 leading-relaxed">
+          <div className={`flex-1 max-w-[280px] lg:max-w-[380px] bg-zinc-50 rounded-xl border border-zinc-200 p-4 lg:p-6 flex flex-col gap-3 shrink-0 shadow-inner ${getTutorialClass(2)}`}>
+            <div className="flex items-center gap-2 mb-1 shrink-0"><span className="text-lg">💡</span><h3 className="text-xs lg:text-sm font-black uppercase tracking-widest text-zinc-800">Guided Analysis</h3></div>
+            <div className="text-xs lg:text-sm text-zinc-600 space-y-3 leading-relaxed flex-1 min-h-0">
               {renderGuidedAnalysis()}
             </div>
           </div>
+
         </motion.div>
       </AnimatePresence>
     </div>

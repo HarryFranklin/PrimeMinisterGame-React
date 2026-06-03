@@ -51,13 +51,13 @@ export default function DashboardTab() {
   const getGuidedAnalysis = () => {
     switch(currentCycle) {
       case ElectionCycle.Benthamite: 
-        return "Benthamite Objective: Maximise total societal happiness. Identify policies that benefit the largest groups, even if a minority suffers. Find a minister to champion the majority.";
+        return "Benthamite Objective: Maximise total societal happiness. Identify policies that benefit the largest groups. Find a minister to champion the majority.";
       case ElectionCycle.Rawlsian: 
-        return "Rawlsian Objective: Raise the societal floor. Look at the graphs to identify the demographic with the lowest Life Satisfaction, then select their representative Minister to sponsor a bill.";
+        return "Rawlsian Objective: Raise the societal floor. Identify the demographic with the lowest Life Satisfaction, then select their Minister to sponsor a bill.";
       case ElectionCycle.PersonalUtility: 
-        return "Personal Utility Objective: Voters act on self-interest with diminishing returns. Target groups whose baseline utility gives the highest yield. Sponsor bills through ministers of vulnerable groups.";
+        return "Personal Utility Objective: Target groups whose baseline utility gives the highest yield. Sponsor bills through ministers of vulnerable groups.";
       case ElectionCycle.SocietalUtility: 
-        return "Societal Utility Objective: Voters hold ideals about fairness. You must balance actual wellbeing with the population's preferred distribution. Consult ministers to find acceptable compromises.";
+        return "Societal Utility Objective: Balance actual wellbeing with the population's preferred distribution. Consult ministers to find acceptable compromises.";
       default: return "";
     }
   };
@@ -97,29 +97,30 @@ export default function DashboardTab() {
   }, [population, previewPopulation, selectedPolicy, groupBy, currentHistogramData]);
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0 animate-in fade-in duration-300 relative">
+    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300 relative">
       
-      {/* TOP BANNER: GUIDED ANALYSIS */}
+      {/* TOP BANNER: GUIDED ANALYSIS (Temporarily Hidden)
       <div className={`shrink-0 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start gap-4 shadow-sm ${getTutorialClass(0)}`}>
-        <span className="text-2xl mt-0.5">🧭</span>
+        <span className="text-xl mt-0.5">🧭</span>
         <div>
-          <h3 className="text-sm font-black uppercase tracking-widest text-indigo-900 mb-1">Guided Analysis: {rule.frameworkTitle}</h3>
+          <h3 className="text-xs font-black uppercase tracking-widest text-indigo-900 mb-1">Guided Analysis: {rule.frameworkTitle}</h3>
           <p className="text-sm text-indigo-800 leading-relaxed">{getGuidedAnalysis()}</p>
         </div>
       </div>
+      */}
 
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT COLUMN: Split Graphs */}
-        <div className={`col-span-4 flex flex-col gap-4 h-full min-h-0 ${getTutorialClass(0)}`}>
-          <div onClick={() => setActiveTab('graphs')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
-            <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800">
-                Current Life Satisfaction Distribution
+        <div className={`col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden ${getTutorialClass(0)}`}>
+          <div onClick={() => setActiveTab('graphs')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
+            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
+                Current Distribution
               </h3>
               <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
             </div>
-            <div className="flex-1 p-4 min-h-0">
+            <div className="flex-1 p-3 min-h-0">
               <D3Chart 
                 plotType="1D" 
                 chartData={currentChartData}
@@ -135,14 +136,14 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          <div onClick={() => setActiveTab('electorate')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
-            <div className="px-4 py-2 h-[42px] border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-[12px] font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
-                {selectedPolicy ? "Wellbeing Impact" : "Demographic Breakdown"}
+          <div onClick={() => setActiveTab('electorate')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
+            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
+                {selectedPolicy ? "Impact" : "Demographics"}
               </h3>
               <div className="flex items-center gap-3">
                 {!selectedPolicy && (
-                  <div className="flex bg-zinc-200/50 p-0.5 rounded-md shrink-0">
+                  <div className="flex bg-zinc-200/50 p-1 rounded-md shrink-0">
                     {(['wealth', 'age'] as const).map(type => (
                       <button 
                         key={type}
@@ -150,7 +151,7 @@ export default function DashboardTab() {
                           e.stopPropagation(); 
                           setGroupBy(type);
                         }}
-                        className={`px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all ${
+                        className={`px-2 py-1 text-[9px] font-black uppercase rounded transition-all ${
                           groupBy === type ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
                         }`}
                       >
@@ -162,7 +163,7 @@ export default function DashboardTab() {
                 <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
               </div>
             </div>
-            <div className="flex-1 p-4 pb-1 min-h-0 relative">
+            <div className="flex-1 p-3 pb-0 min-h-0 relative">
               <D3Chart 
                 plotType="1D" 
                 chartData={currentChartData} 
@@ -174,7 +175,7 @@ export default function DashboardTab() {
                 onHoverMinisters={setHighlightedMinisters}
               />
             </div>
-            <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2">
+            <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2 shrink-0">
               {(selectedPolicy ? Object.entries(IMPACT_COLORS) : Object.entries(DEMO_COLORS[groupBy])).map(([label, color]) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color as string }} />
@@ -186,34 +187,32 @@ export default function DashboardTab() {
         </div>
 
         {/* MIDDLE COLUMN: CABINET */}
-        <div className={`col-span-4 flex flex-col gap-6 h-full min-h-0 ${getTutorialClass(1)}`}>
-          <div className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col transition-all group min-h-0 ${getCardHighlight(1)}`}>
-            <div className="px-4 pt-5 pb-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0">
+        <div className={`col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
+          <div className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex-1 flex flex-col overflow-hidden transition-all group min-h-0 ${getCardHighlight(1)}`}>
+            <div className="px-4 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-start shrink-0">
               <div>
                 <h3 className="text-base font-bold uppercase tracking-widest text-zinc-800">The Cabinet</h3>
-                <p className="text-sm text-zinc-500 mt-1">Select a minister below to sponsor a bill.</p>
+                <p className="text-sm text-zinc-500 mt-1">Select a minister to sponsor a bill.</p>
               </div>
             </div>
             
-              <div className="p-2 lg:p-3 grid grid-cols-3 grid-rows-2 gap-2 lg:gap-3 flex-1 min-h-0">
+            <div className="p-3 grid grid-cols-3 grid-rows-2 gap-3 flex-1 min-h-0">
               {ministers.map((minister, i) => {
                 const isReacting = selectedPolicy !== null;
                 const reaction = isReacting ? getMinisterReaction(minister.policyDelta || 0) : null;
                 const displayEmoji = isReacting ? reaction?.emoji : (minister.status === 'happy' ? '😊' : minister.status === 'neutral' ? '😐' : '😠');
                 const displayColor = isReacting && reaction ? reaction.circle : minister.color;
                 
-                // 1. Evaluate both states independently
                 const isSelected = selectedMinister === minister.name;
                 const isHighlightedByGraph = highlightedMinisters.includes(minister.name);
 
-                // 2. Build the class string dynamically to handle combinations
                 let highlightClasses = "";
                 if (isSelected && isHighlightedByGraph) {
-                  highlightClasses = "border-pink-500 border-dashed border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
+                  highlightClasses = "border-pink-500 border-dashed border-[2px] bg-pink-100 shadow-md scale-[1.02] z-20";
                 } else if (isSelected) {
-                  highlightClasses = "border-pink-500 border-solid border-[2px] bg-pink-100 hover:bg-pink-200 shadow-md scale-[1.02] z-20";
+                  highlightClasses = "border-pink-500 border-solid border-[2px] bg-pink-100 shadow-md scale-[1.02] z-20";
                 } else if (isHighlightedByGraph) {
-                  highlightClasses = "border-pink-400 border-dashed border-[2px] bg-pink-50/50 hover:bg-pink-50 shadow-sm scale-[1.02] z-10";
+                  highlightClasses = "border-pink-400 border-dashed border-[2px] bg-pink-50/50 shadow-sm scale-[1.02] z-10";
                 } else {
                   highlightClasses = "border-zinc-200 border-solid border bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-300";
                 }
@@ -230,7 +229,7 @@ export default function DashboardTab() {
                         setSelectedPolicy(null); 
                       }
                     }}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition-all active:scale-95 relative group/minister h-full ${highlightClasses}`}
+                    className={`flex flex-col items-center justify-between p-2 rounded-xl cursor-pointer transition-all active:scale-95 relative group/minister h-full min-h-0 ${highlightClasses}`}
                   >
                     {isSelected && (
                       <div className="absolute -top-2.5 right-2 bg-pink-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-30 shadow-sm border border-pink-600">
@@ -238,18 +237,17 @@ export default function DashboardTab() {
                       </div>
                     )}
 
-                    <div className="flex flex-col items-center justify-center w-full mb-1">
+                    <div className="flex-1 flex flex-col items-center justify-end w-full pb-1.5">
                       <h4 className="text-[10px] lg:text-xs font-black text-zinc-800 uppercase tracking-widest leading-tight text-center">
                         {minister.name.replace(' Secretary', '')}
-                        {minister.name.includes('Secretary') && (
-                          <span className="block text-[8px] lg:text-[10px] text-zinc-600 mt-0.5">Secretary</span>
-                        )}
                       </h4>
                     </div>
-                    <div className={`w-12 h-12 lg:w-14 lg:h-14 my-1 rounded-full flex items-center justify-center ${displayColor} border-2 lg:border-4 border-white shadow-md text-2xl lg:text-3xl transition-colors shrink-0`}>
+                    
+                    <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center ${displayColor} border-2 border-white shadow-md text-2xl transition-colors shrink-0`}>
                         {displayEmoji}
                     </div>
-                    <div className="h-4 lg:h-5 flex items-center justify-center mt-1 lg:mt-2 shrink-0 w-full px-1">
+                    
+                    <div className="flex-1 flex flex-col items-center justify-start w-full pt-1.5 px-1">
                       {isReacting && reaction ? (
                         <span className={`text-[9px] lg:text-[10px] font-bold px-2 py-0.5 rounded shadow-sm w-full text-center truncate ${reaction.badge}`}>
                           {reaction.text}
@@ -262,24 +260,24 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          <div onClick={() => setActiveTab('electorate')} className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group ${getCardHighlight(1)}`}>
-            <div className="absolute top-2 right-3 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
-            <div className="absolute top-0 left-0 w-full h-1" style={{backgroundColor: rule.graphColor}} />
-            <p className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
+          <div onClick={() => setActiveTab('electorate')} className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group ${getCardHighlight(1)}`}>
+            <div className="absolute top-3 right-4 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
+            <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
+            <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
             <div className="flex items-baseline gap-1">
-              <p className={`text-5xl font-black tracking-tighter transition-colors duration-500 ${
+              <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${
                 approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'
               }`}>
                 {approvalRating.toFixed(1)}%
               </p>
             </div>
             {selectedPolicy ? (
-               <p className="text-[12px] text-pink-400 font-bold uppercase tracking-widest mt-2 animate-pulse">
+               <p className="text-xs text-pink-400 font-bold uppercase tracking-widest mt-2 animate-pulse">
                  Predicted Outcome Hidden
                </p>
             ) : (
               <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-                Public Approval: <strong className="text-zinc-300">51.0%</strong>
+                Requirement: <strong className="text-zinc-300">51.0%</strong>
               </p>
             )}
           </div>
@@ -317,7 +315,7 @@ export default function DashboardTab() {
                 </div>
                 <div className="relative z-20 text-center">
                   <h4 className="font-bold text-zinc-800 text-sm">Unfiltered In-Tray</h4>
-                  <p className="text-xs text-zinc-500 mt-2">Dozens of drafts await review. Select a Minister from the Cabinet to sponsor a demographic's needs and reveal viable policies.</p>
+                  <p className="text-xs text-zinc-500 mt-2">Select a Minister from the Cabinet to sponsor a demographic's needs and reveal viable policies.</p>
                 </div>
               </div>
             ) : (
@@ -328,17 +326,17 @@ export default function DashboardTab() {
                     <button
                       key={policy.id}
                       onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                      className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-300 group ${
+                      className={`relative flex-1 flex flex-col justify-center w-full text-left p-4 rounded-xl border transition-all duration-300 group min-h-0 overflow-hidden ${
                         isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                       } ${
                         isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
                       }`}
                     >
                       {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                      <p className={`font-bold text-base leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                      <p className={`font-bold text-base leading-tight mb-1.5 truncate ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
                         {policy.policyName}
                       </p>
-                      <p className={`text-sm ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                      <p className={`text-sm line-clamp-2 ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
                         {policy.description}
                       </p>
                     </button>
@@ -352,7 +350,7 @@ export default function DashboardTab() {
             <button 
               onClick={handleApplyPolicy}
               disabled={!selectedPolicy || !selectedMinister}
-              className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-lg"
+              className="w-full py-4 bg-zinc-900 text-white text-base font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-md"
             >
               Enact Policy
             </button>

@@ -1,3 +1,4 @@
+// hooks/useTutorial.ts
 import { useState, useEffect } from 'react';
 
 const TUTORIAL_DATA: Record<string, { title: string; text: string; pos: string }[]> = {
@@ -8,14 +9,12 @@ const TUTORIAL_DATA: Record<string, { title: string; text: string; pos: string }
     { title: 'Department Overviews', text: 'To finish your onboarding, click through each of the tabs at the top to explore them.', pos: 'top-24 left-1/2 -translate-x-1/2' }
   ],
   electorate: [
-    { title: 'Electorate Controls', text: 'Switch between viewing raw demographics, voting intentions, and objective wellbeing impacts.', pos: 'bottom-10 left-10' },
-    { title: 'Unified Policy Header', text: 'The header now displays your active Policy Draft and consulting Minister. Hover or click the draft box to flick through alternative recommendations, or click the Minister button to jump straight to their Cabinet profile.', pos: 'bottom-10 left-10' },
-    { title: 'The Chamber', text: 'Hover over individual bars to see the demographic make-up of each bar. This differs based on the toggles at the top of the page.', pos: 'bottom-10 right-10' },
-    { title: 'Guided Analysis', text: 'This panel provides contextual hints about why the data looks the way it does.', pos: 'bottom-10 left-10' }
+    { title: 'Analytical Lenses', text: 'Use these controls to switch between viewing raw demographics, voting intentions, and objective wellbeing impacts.', pos: 'bottom-10 left-10' },
+    { title: 'Distribution Chart', text: 'This chart dynamically updates based on your selected lens. Hover over the blocks to see detailed breakdowns of the citizens in each Life Satisfaction bracket.', pos: 'bottom-10 right-10' },
+    { title: 'Guided Analysis', text: 'This panel provides contextual hints about why the data behaves the way it does under the current framework.', pos: 'bottom-10 left-10' }
   ],
   ministers: [
-    { title: 'Reading a Minister', text: 'Each minister protects a specific demographic. They will warn you if a policy disproportionately harms their constituents.', pos: 'bottom-10 right-10' },
-    { title: 'Cabinet Consensus', text: 'You must balance the competing demands of the entire cabinet. Satisfying one minister often angers another.', pos: 'bottom-10 left-10' }
+    { title: 'Reading a Minister', text: 'Each minister protects a specific demographic. They will warn you if a policy disproportionately harms their constituents.', pos: 'bottom-10 right-10' }
   ],
   graphs: [
     { title: 'Current State', text: 'This shows the life satisfaction distribution before your selected policy is enacted.', pos: 'bottom-10 right-10' },
@@ -24,22 +23,17 @@ const TUTORIAL_DATA: Record<string, { title: string; text: string; pos: string }
 };
 
 export function useTutorial(activeTab: string, tabs: readonly string[], setActiveTab: (tab: any) => void) {
-  
-  // 1. Default to false so the server never draws the modal
   const [showIntro, setShowIntro] = useState(false);
-  // 2. Add a flag to track when the browser has finished checking
   const [hasCheckedSave, setHasCheckedSave] = useState(false);
-  
   const [isTutorialActive, setIsTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [tutorialVisitedTabs, setTutorialVisitedTabs] = useState<string[]>(['dashboard']);
 
-  // 3. Run the check strictly on the client
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hasSave = !!localStorage.getItem('policy-sim-save-v1');
-      setShowIntro(!hasSave); // Only show if NO save exists
-      setHasCheckedSave(true); // Signal that it is safe to render
+      setShowIntro(!hasSave); 
+      setHasCheckedSave(true); 
     }
   }, []);
 
@@ -59,8 +53,8 @@ export function useTutorial(activeTab: string, tabs: readonly string[], setActiv
   const currentTutorialSequence = TUTORIAL_DATA[activeTab] || [];
   const safeTutorialStep = Math.min(tutorialStep, Math.max(0, currentTutorialSequence.length - 1));
   const currentStepData = currentTutorialSequence[safeTutorialStep];
-  
   const isLastTutorialStep = safeTutorialStep === currentTutorialSequence.length - 1;
+
   const unvisitedTabs = tabs.filter(t => !tutorialVisitedTabs.includes(t) && t !== activeTab);
   const targetNextTab = isLastTutorialStep && unvisitedTabs.length > 0 ? unvisitedTabs[0] : null;
 
