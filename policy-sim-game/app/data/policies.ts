@@ -1,8 +1,9 @@
+// data/policies.ts
 import { Policy } from "../utils/types";
 
 export const availablePolicies: Policy[] = [
   // ==========================================
-  // WEALTH & REDISTRIBUTION (Rawlsian focus)
+  // WEALTH & REDISTRIBUTION (Rawlsian Focus)
   // ==========================================
   {
     id: "universal-credit-uplift",
@@ -17,7 +18,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "wealth-tax",
     policyName: "Mansion & Wealth Tax",
-    description: "Heavily taxes the wealthiest 10% to fund local services. Popular with the working class, but panics the markets.",
+    description: "Heavily taxes the wealthiest 10% to fund local community services. Popular with the working class, but causes market anxiety.",
     specificRules: [
       { note: "Severe penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -1.5 },
       { note: "Boost to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 1.5 },
@@ -27,16 +28,16 @@ export const availablePolicies: Policy[] = [
   {
     id: "capital-gains-hike",
     policyName: "Equalise Capital Gains",
-    description: "Taxes wealth generation at the same rate as income. Closes loopholes for the rich to fund social housing.",
+    description: "Taxes wealth generation from investments at the same rate as earned income to fund local social housing initiatives.",
     specificRules: [
       { note: "Penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -1.0 },
-      { note: "Housing boost to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 0.5, impact: 1.5 }, 
+      { note: "Housing boost to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 0.5, impact: 1.5 }
     ]
   },
   {
     id: "minimum-wage-surge",
     policyName: "Aggressive Minimum Wage Hike",
-    description: "Forces businesses to significantly raise baseline pay. Great for the lowest earners, but causes some business closures.",
+    description: "Forces businesses to significantly raise baseline statutory pay. Great for the lowest earners, but squeezes corporate margins.",
     specificRules: [
       { note: "Boost to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 2.2 },
       { note: "Profit penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
@@ -46,21 +47,39 @@ export const availablePolicies: Policy[] = [
   {
     id: "universal-basic-income",
     policyName: "Universal Basic Income Pilot",
-    description: "A guaranteed baseline income for all. Eradicates extreme poverty but triggers inflation and aggressive tax hikes.",
+    description: "A guaranteed baseline income for all citizens. Directly alleviates extreme poverty but triggers aggressive tax corrections.",
     specificRules: [
       { note: "Massive boost to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 3.0 },
       { note: "Inflation penalty to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.5 },
       { note: "Severe tax penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -1.5 }
     ]
   },
+  {
+    id: "social-housing-blitz",
+    policyName: "Social Housing Expansion",
+    description: "A state-funded building programme for affordable housing units. Funded via luxury stamp duty adjustments.",
+    specificRules: [
+      { note: "Massive security for Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 2.5 },
+      { note: "Property tax penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.7 }
+    ]
+  },
+  {
+    id: "energy-bill-subsidy",
+    policyName: "Targeted Energy Tariffs",
+    description: "Imposes price caps on domestic energy for lower-income households, subsidised by windfall taxes on energy giants.",
+    specificRules: [
+      { note: "Relief to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 1.2 },
+      { note: "Windfall penalty to Wealthy investors", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.4 }
+    ]
+  },
 
   // ==========================================
-  // ECONOMY & AUSTERITY (Benthamite focus)
+  // ECONOMY & BUDGET CONTROL (Benthamite Focus)
   // ==========================================
   {
     id: "middle-income-tax-cut",
     policyName: "Middle-Income Tax Cut",
-    description: "Reduces the tax burden for the majority, boosting market confidence. Paid for by freezing welfare budgets.",
+    description: "Reduces the basic tax rate for the majority of working citizens, boosting market confidence at the expense of social budgets.",
     specificRules: [
       { note: "Boost to Middle wealth", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 1.5 },
       { note: "Boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 0.8 },
@@ -70,94 +89,325 @@ export const availablePolicies: Policy[] = [
   {
     id: "austerity-measures",
     policyName: "General Austerity Measures",
-    description: "Slashes public services to balance the national budget and cut taxes. Adored by fiscal conservatives, devastating to the vulnerable.",
+    description: "Slashes public service spending to balance the national budget and reduce borrowing requirements.",
     specificRules: [
-      { note: "Severe penalty to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -1.5 },
-      { note: "Tax relief boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
-      { note: "Tax relief boost to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.8 }
+      { note: "Severe service cut penalty to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -1.5 },
+      { note: "Market confidence boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
+      { note: "Tax reduction potential for Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.8 }
     ]
   },
   {
     id: "corporate-deregulation",
     policyName: "Corporate Deregulation",
-    description: "Removes red tape to spur rapid economic growth. Highly profitable for business owners, but erodes worker protections.",
+    description: "Removes red tape and statutory compliance barriers to spur rapid gross domestic product growth.",
     specificRules: [
-      { note: "Major boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 2.5 },
-      { note: "Worker protection penalty to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
-      { note: "Worker protection penalty to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.3 }
+      { note: "Major business profit boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 2.5 },
+      { note: "Protection erosion penalty to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
+      { note: "Protection erosion penalty to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.3 }
     ]
   },
   {
     id: "vat-increase",
-    policyName: "Increase VAT",
-    description: "A flat tax increase on goods and services to pay down national debt. Disproportionately affects lower earners.",
+    policyName: "Increase Value Added Tax",
+    description: "Raises a flat consumption tax on goods and services to aggressively pay down national debt obligations.",
     specificRules: [
-      { note: "Penalty to Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -1.0 },
-      { note: "Penalty to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.5 },
-      { note: "Slight penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.1 }
+      { note: "Regressive tax burden on Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: -1.0 },
+      { note: "Consumption penalty to Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.5 },
+      { note: "Negligible penalty to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.1 }
+    ]
+  },
+  {
+    id: "infrastructure-bonds",
+    policyName: "Special Enterprise Zones",
+    description: "Launches high-yield regional business zones. Drives aggregate job metrics upward while disrupting local green spaces.",
+    specificRules: [
+      { note: "Investment gains for Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 1.8 },
+      { note: "Employment options for Middle", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 1.2 },
+      { note: "Displacement penalty to local Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 0.3, impact: -0.4 }
+    ]
+  },
+  {
+    id: "foreign-investment-incentives",
+    policyName: "Foreign Investment Subsidies",
+    description: "Offers tax breaks to multinational tech companies establishing headquarters in major urban centers.",
+    specificRules: [
+      { note: "High-paying jobs for Middle class", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 0.4, impact: 1.6 },
+      { note: "Commercial real estate asset boost to Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: 1.4 }
     ]
   },
 
   // ==========================================
-  // AGE DEMOGRAPHICS: YOUTH VS ADULT VS ELDERLY
+  // AGE DEMOGRAPHICS: YOUTH FOCUS
   // ==========================================
   {
-    id: "triple-lock-pension",
-    policyName: "State Pension Triple-Lock",
-    description: "Guarantees pension increases outpace inflation. Secures the elderly, but frustrates the working youth bearing the tax burden.",
+    id: "abolish-tuition-fees",
+    policyName: "Abolish Higher Education Fees",
+    description: "Erases state university tuition debt caps for future students. Highly popular among younger age cohorts.",
     specificRules: [
-      { note: "Major boost to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
-      { note: "Frustration penalty to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: -0.4 },
-      { note: "Tax penalty to working Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.2 }
+      { note: "Massive cost relief to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 2.5 },
+      { note: "Tax adjustments for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.3 },
+      { note: "Tax adjustments for Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.2 }
     ]
   },
   {
-    id: "abolish-tuition-fees",
-    policyName: "Abolish Tuition Fees",
-    description: "Erases university debt for the next generation. Transformative for youth, but the cost is absorbed by older taxpayers.",
+    id: "first-time-buyer-grant",
+    policyName: "First-Time Buyer Equity Grants",
+    description: "Provides state-backed cash deposits to help young people buy their first residential property.",
     specificRules: [
-      { note: "Massive boost to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 2.5 },
-      { note: "Tax penalty to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.3 },
-      { note: "Tax penalty to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.2 }
+      { note: "Asset access boost for Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 1.8 },
+      { note: "Market inflation penalty to renting Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.4, impact: -0.5 },
+      { note: "Portfolio valuation boost to property-owning Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 0.8, impact: 0.8 }
+    ]
+  },
+  {
+    id: "youth-mental-health",
+    policyName: "School Mental Health Support Centres",
+    description: "Establishes a dedicated resilience counsellor network across public secondary educational institutions.",
+    specificRules: [
+      { note: "Targeted clinical support for Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
+      { note: "Slight tax coverage from Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.1 }
+    ]
+  },
+  {
+    id: "apprenticeship-guarantee",
+    policyName: "National Apprenticeship Expansion",
+    description: "Subsidises technical job placement schemes for 18-24 year olds struggling to enter competitive job pathways.",
+    specificRules: [
+      { note: "Career path unlock for Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 1.7 },
+      { note: "Levy cost adjustments for corporate Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.5, impact: -0.3 }
+    ]
+  },
+  {
+    id: "digital-skills-bounty",
+    policyName: "Young Software Creators Grant",
+    description: "Distributes software development kits and prototyping micro-grants directly to students in state code clubs.",
+    specificRules: [
+      { note: "Skills capital for Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 1.4 }
+    ]
+  },
+
+  // ==========================================
+  // AGE DEMOGRAPHICS: WORKING ADULTS FOCUS
+  // ==========================================
+  {
+    id: "free-childcare",
+    policyName: "Universal Free Childcare Expansion",
+    description: "Implements substantial state subsidies for child nursery placement, enabling parent career flexibility.",
+    specificRules: [
+      { note: "Workplace liberation and financial relief for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
+      { note: "Fiscal burden offset via non-working Elderly asset rates", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.8 }
+    ]
+  },
+  {
+    id: "commuter-rail-subsidies",
+    policyName: "Commuter Fare Hard Caps",
+    description: "Imposes strict national rail season ticket price limits to alleviate transit stress for daily suburban professionals.",
+    specificRules: [
+      { note: "Transit cost reduction for working Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 1.5 },
+      { note: "Infrastructure development drag for Youth future lines", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: -0.3 }
+    ]
+  },
+  {
+    id: "working-tax-credits",
+    policyName: "Working Tax Credit Adjustments",
+    description: "Boosts secondary earner allowances to support dual-income working households managing high mortgages.",
+    specificRules: [
+      { note: "Disposable margin boost for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 1.3 }
+    ]
+  },
+  {
+    id: "mid-career-retraining",
+    policyName: "Mid-Career Skills Bootcamps",
+    description: "Funded evening and weekend modern manufacturing workshops designed to help structural workers pivot fields.",
+    specificRules: [
+      { note: "Redundancy protection safety net for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.6, impact: 1.4 }
+    ]
+  },
+  {
+    id: "flexible-working-mandate",
+    policyName: "Statutory Flexible Working Rights",
+    description: "Legal protections securing compressed hour requests for standard corporate office contract positions.",
+    specificRules: [
+      { note: "Work-life balance optimization for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 1.1 }
+    ]
+  },
+
+  // ==========================================
+  // AGE DEMOGRAPHICS: ELDERLY FOCUS
+  // ==========================================
+  {
+    id: "triple-lock-pension",
+    policyName: "State Pension Triple-Lock Protect",
+    description: "Guarantees base state pension increases consistently outpace the cost of consumer product indexing metrics.",
+    specificRules: [
+      { note: "Protected cost insulation for Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
+      { note: "Opportunity cost frustration for Youth allocations", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: -0.4 },
+      { note: "Tax contributions burdening working Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.2 }
     ]
   },
   {
     id: "social-care-levy",
     policyName: "National Social Care Levy",
-    description: "A tax specifically on working-age adults to properly fund care homes and support for the ageing population.",
+    description: "Directs a structural payroll tax adjustment exclusively toward care home support systems.",
     specificRules: [
-      { note: "Major boost to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 2.2 },
-      { note: "Tax penalty to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.6 },
-      { note: "Tax penalty to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: -0.3 }
-    ]
-  },
-  {
-    id: "free-childcare",
-    policyName: "Universal Free Childcare",
-    description: "Massive state subsidy for childcare. Highly liberates working-age adults, paid for by taxing pension pots.",
-    specificRules: [
-      { note: "Major boost to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 2.0 },
-      { note: "Pension tax penalty to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.8 }
-    ]
-  },
-  {
-    id: "first-time-buyer-grant",
-    policyName: "First-Time Buyer Grant",
-    description: "State grants to help young people get on the property ladder. Drives up house prices, frustrating older renters.",
-    specificRules: [
-      { note: "Boost to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 1.8 },
-      { note: "House price penalty to renting Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.4, impact: -0.5 }, 
-      { note: "Wealth boost to property-owning Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 0.8, impact: 0.8 }
+      { note: "Substantial welfare and residency stability for Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 2.2 },
+      { note: "Net take-home cash reduction for standard Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: -0.6 },
+      { note: "Net entry wage adjustment for Youth roles", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: -0.3 }
     ]
   },
   {
     id: "winter-fuel-cuts",
     policyName: "Means-Test Winter Fuel Allowance",
-    description: "Strips the winter heating subsidy from wealthier pensioners to save money for the national budget.",
+    description: "Strips universal winter heating allowances from wealthier retirees to reclaim baseline treasury capacity.",
     specificRules: [
-      { note: "Penalty to Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
-      { note: "Slight economic relief to Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 0.125 },
-      { note: "Slight economic relief to Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 0.125 }
+      { note: "Financial utility loss for affected Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: -0.8 },
+      { note: "Marginal reallocated fiscal relief for Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 0.125 },
+      { note: "Marginal reallocated fiscal relief for Youth services", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 0.125 }
+    ]
+  },
+  {
+    id: "sheltered-housing-subsidies",
+    policyName: "Sheltered Wardened Living Capital",
+    description: "Invests in specialised community bungalows featuring linked on-call emergency response telemetry loops.",
+    specificRules: [
+      { note: "Loneliness drop and health safety for Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 1.9 }
+    ]
+  },
+  {
+    id: "cataract-backlog-blitz",
+    policyName: "Elective Surgery Backlog Drive",
+    description: "Surges regional hospital theatre funding blocks exclusively to eliminate ophthalmology waiting queues.",
+    specificRules: [
+      { note: "Vision clarity and life mobility restored for Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 0.7, impact: 2.1 }
+    ]
+  },
+
+  // ==========================================
+  // HYBRID & TRADE-OFF SCENARIOS (Societal Utility)
+  // ==========================================
+  {
+    id: "green-transition-levy",
+    policyName: "Carbon Emission Fuel Levy",
+    description: "Imposes a direct surcharge on aviation fuel to fund decarbonisation tech. Hits holidaying classes while pleasing green idealists.",
+    specificRules: [
+      { note: "Cost surge penalty to travel-heavy Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.6 },
+      { note: "Cost adjustment friction for baseline Middle families", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.3 },
+      { note: "Air filtration environmental equity reward for Poor urban belts", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 0.8 }
+    ]
+  },
+  {
+    id: "community-policing-surge",
+    policyName: "Neighbourhood Policing Revival",
+    description: "Deploys foot-patrol officers to high-density council estates. Alleviates urban vulnerability indexes significantly.",
+    specificRules: [
+      { note: "High safety value to vulnerable urban Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 1.6 },
+      { note: "Property protection clarity for urban Middle businesses", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.6 }
+    ]
+  },
+  {
+    id: "rural-bus-nationalisation",
+    policyName: "Rural Bus Route Subsidisation",
+    description: "Restores unprofitable transit connections linking isolated towns. Vital lifeline for non-driving pensioners and youth.",
+    specificRules: [
+      { note: "Isolation reduction for rural Elderly", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 0.5, impact: 1.4 },
+      { note: "Transit autonomy boost for rural Youth cohorts", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 0.5, impact: 1.4 }
+    ]
+  },
+  {
+    id: "arts-funding-redirection",
+    policyName: "Metropolitan Arts Council Pivot",
+    description: "Defunds central opera houses in major cities to allocate micro-grants for community visual art programmes across town libraries.",
+    specificRules: [
+      { note: "Loss of prestige luxury events for high-end Wealthy", targetDemographic: { wealth: 'Wealthy' }, affectEveryone: true, proportion: 1.0, impact: -0.5 },
+      { note: "Grassroots access and local hobby groups for Poor communities", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 0.9 }
+    ]
+  },
+  {
+    id: "agricultural-tech-grants",
+    policyName: "Sustainable Farm Technology Grants",
+    description: "Funds high-tech vertical farming trials. Helps secure long-term food chains while causing corporate land-lease resets.",
+    specificRules: [
+      { note: "Farming management security for regional Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.2, impact: 1.2 }
+    ]
+  },
+  {
+    id: "leisure-centre-renovation",
+    policyName: "Municipal Leisure Centre Rebuilds",
+    description: "Replaces decaying council pool architecture with highly efficient multi-sport gyms available via community referral cards.",
+    specificRules: [
+      { note: "Affordable recreational activity for local Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 1.1 },
+      { note: "Health and social mixing hub for local Middle users", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.7 }
+    ]
+  },
+  {
+    id: "high-street-regeneration",
+    policyName: "Town Centre High Street Reclamation",
+    description: "Imposes compulsory state purchase orders on long-term derelict mega-storefronts to transform them into indoor markets.",
+    specificRules: [
+      { note: "Trading incubator spaces for entrepreneurial Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.3, impact: 1.5 },
+      { note: "Community destination space for nearby Elderly folks", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 0.8 }
+    ]
+  },
+  {
+    id: "clean-air-zones",
+    policyName: "Low Emission Congestion Boundaries",
+    description: "Charges older inner-city delivery vans a transit fee. Cleans toxic playground corridors but spikes transport fleet operating budgets.",
+    specificRules: [
+      { note: "Asthma risk drop for inner-city primary Youth groups", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 1.0, impact: 1.3 },
+      { note: "Fleet overhead compliance tension for trading Adults", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 0.8, impact: -0.4 }
+    ]
+  },
+  {
+    id: "hospital-parking-free",
+    policyName: "Abolish Hospital Visitor Parking Fees",
+    description: "Makes all regional health institution vehicle space free. Removes transactional stress for visiting families, paid from core nursing staff allowances.",
+    specificRules: [
+      { note: "Visiting relief for treating Adults with chronic relations", targetDemographic: { age: 'Adult' }, affectEveryone: true, proportion: 1.0, impact: 0.8 },
+      { note: "Frequent clinic transit savings for medical Elderly patients", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 1.0 }
+    ]
+  },
+  {
+    id: "gig-economy-rights",
+    policyName: "Gig-Worker Statutory Sick Pay Caps",
+    description: "Forces fast-food distribution couriers to register structured base sick allocations. Increases courier baseline health security but raises meal ordering apps costs.",
+    specificRules: [
+      { note: "Safety net coverage for student-age Youth riders", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 0.6, impact: 1.5 },
+      { note: "Ordering premium cost adjustments on takeaway Middle food items", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: -0.2 }
+    ]
+  },
+  {
+    id: "library-digital-hubs",
+    policyName: "Library Network Tech Infrastructure",
+    description: "Surges regional capital blocks to install modern fiber pipelines inside every community archive facility.",
+    specificRules: [
+      { note: "Quiet workspace and learning nodes for low-income Youth", targetDemographic: { age: 'Youth' }, affectEveryone: true, proportion: 0.8, impact: 1.2 },
+      { note: "IT literacy group sessions for offline Elderly individuals", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 1.1 }
+    ]
+  },
+  {
+    id: "cooperative-energy-grants",
+    policyName: "Community Owned Solar Cooperative Grants",
+    description: "Directs seed funding to let village groups collectively buy and exploit fields with solar panels.",
+    specificRules: [
+      { note: "Long-term localized electric billing drops for Middle owners", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 0.4, impact: 0.9 }
+    ]
+  },
+  {
+    id: "prescription-charge-exemption",
+    policyName: "Universal Prescription Fee Exemptions",
+    description: "Bypasses all standard drug dispensing transaction charges across public pharmacies completely.",
+    specificRules: [
+      { note: "Regular medical budget ease for low-wealth Middle layers", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.6 },
+      { note: "Immediate health budget relief for basic working Poor", targetDemographic: { wealth: 'Poor' }, affectEveryone: true, proportion: 1.0, impact: 1.0 }
+    ]
+  },
+  {
+    id: "heritage-site-access",
+    policyName: "Free Historic Landmark Passes",
+    description: "Provides zero-cost entry tokens allowing all households access to nationally managed castles and parks.",
+    specificRules: [
+      { note: "Weekend family travel enrichment for Middle groups", targetDemographic: { wealth: 'Middle' }, affectEveryone: true, proportion: 1.0, impact: 0.5 },
+      { note: "Healthy walking activities for active Elderly retired groups", targetDemographic: { age: 'Elderly' }, affectEveryone: true, proportion: 1.0, impact: 0.7 }
     ]
   }
 ];
