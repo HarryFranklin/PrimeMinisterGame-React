@@ -6,29 +6,11 @@ export enum AxisVariable {
   DeltaSocietalFairness
 }
 
-export interface Demographics {
-  wealth: 'Poor' | 'Middle' | 'Wealthy';
-  age: 'Youth' | 'Adult' | 'Elderly';
-}
-
 export interface Respondent {
   id: number;
-  personalUtilities: number[]; 
-  societalUtilities: number[]; 
+  personalUtilities: number[];
+  societalUtilities: number[];
   currentLS: number;
-  demographics: Demographics;
-}
-
-export interface Minister {
-  name: string;
-  mandate: string;
-  status: 'happy' | 'neutral' | 'angry';
-  color: string;
-  currentScore?: number;
-  projectedScore?: number;
-  policyDelta?: number;
-  quote?: string;
-  emoji?: string;
 }
 
 export interface PolicyRule {
@@ -38,7 +20,6 @@ export interface PolicyRule {
   affectEveryone?: boolean;
   proportion: number;
   impact: number;
-  targetDemographic?: Partial<Demographics>;
 }
 
 export interface Policy {
@@ -55,15 +36,9 @@ export enum ElectionCycle {
   PersonalUtility
 }
 
-export interface DemographicAverages {
-  national: number;
-  wealth: { poor: number; middle: number; wealthy: number };
-  age: { youth: number; adult: number; elderly: number };
-}
-
 export interface TurnHistory {
   turn: number;
   enactedPolicyId: string | null;
   enactedPolicyName: string | null;
-  lsAverages: DemographicAverages;
+  lsAverage: number; 
 }

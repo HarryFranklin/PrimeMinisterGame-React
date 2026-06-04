@@ -14,7 +14,6 @@ import TutorialOverlay from "./components/TutorialOverlay";
 
 // Tabs
 import DashboardTab from "./components/tabs/DashboardTab";
-import MinistersTab from "./components/tabs/MinistersTab";
 import GraphsTab from "./components/tabs/GraphsTab";
 import ElectorateTab from "./components/tabs/ElectorateTab";
 
@@ -23,7 +22,7 @@ import { useTutorial } from "./hooks/useTutorial";
 import { useGameEngine } from "./hooks/useGameEngine";
 
 export default function Home() {
-  const tabs = ['dashboard', 'electorate', 'ministers', 'graphs'] as const;
+  const tabs = ['dashboard', 'electorate', 'graphs'] as const;
   type TabType = typeof tabs[number];
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
@@ -117,10 +116,6 @@ export default function Home() {
           previewChartData: game.previewChartData, 
           currentHistogramData: game.currentHistogramData, 
           previewHistogramData: game.previewHistogramData,
-          ministers: game.ministers, 
-          selectedMinister: game.selectedMinister, 
-          setSelectedMinister: game.setSelectedMinister, 
-          presentedPolicies: game.presentedPolicies, 
           selectedPolicy: game.selectedPolicy, 
           setSelectedPolicy: game.setSelectedPolicy,
           currentMetricScore: game.currentMetricScore, 
@@ -145,7 +140,6 @@ export default function Home() {
               className="h-full flex flex-col w-full"
             >
               {activeTab === 'dashboard' && <DashboardTab />}
-              {activeTab === 'ministers' && <MinistersTab />}
               {activeTab === 'graphs' && <GraphsTab />}
               {activeTab === 'electorate' && <ElectorateTab />}
             </motion.div>

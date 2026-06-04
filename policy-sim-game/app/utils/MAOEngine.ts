@@ -22,8 +22,11 @@ export class MAOEngine {
         return;
       }
 
-      // Filter out any policies that have already been selected in this specific path
-      const options = turnDecks[turnIndex].filter(opt => !currentPath.some(p => p.id === opt.id));
+      // Filter out any policies that have already been selected in this specific path, 
+      // AND restrict the engine to only evaluate the top 4 (matching the UI)
+      const options = turnDecks[turnIndex]
+        .filter(opt => !currentPath.some(p => p.id === opt.id))
+        .slice(0, 4);
 
       // --- BEAM SEARCH OPTIMISATION ---
       // Evaluate the immediate impact of all remaining valid options
@@ -47,7 +50,6 @@ export class MAOEngine {
     }
 
     search(0, initialPopulation, []);
-
     return { maxScore, optimalPath: bestPath };
   }
 }

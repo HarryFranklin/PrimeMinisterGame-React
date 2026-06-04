@@ -1,11 +1,11 @@
 "use client";
-
 import { createContext, ReactNode, useContext } from 'react';
-import { ElectionCycle, Minister, Policy, Respondent } from '../utils/types';
+import { ElectionCycle, Policy, Respondent } from '../utils/types';
 
 // ==========================================
 // 1. UI CONTEXT (Lightweight, stable state)
 // ==========================================
+
 export interface UIState {
   isTutorialActive: boolean;
   tutorialStep: number;
@@ -29,16 +29,13 @@ export function useUI() {
 // ==========================================
 // 2. GAME CONTEXT (Heavy simulation data)
 // ==========================================
+
 export interface GameState {
   currentCycle: ElectionCycle;
   currentChartData: any[];
   previewChartData: any[];
   currentHistogramData: any[];
   previewHistogramData: any[];
-  ministers: Minister[];
-  selectedMinister: Minister | string | null;
-  setSelectedMinister: (m: Minister | string | null) => void;
-  presentedPolicies: Policy[];
   selectedPolicy: Policy | null;
   setSelectedPolicy: (p: Policy | null) => void;
   currentMetricScore: number;
