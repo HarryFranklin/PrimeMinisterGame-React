@@ -1,15 +1,18 @@
+import { useMemo } from "react";
 import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
+import { IMPACT_COLORS } from "../../utils/uiHelpers";
 import D3Chart, { ChartMarker } from "../D3Chart";
 import DPMCard from "../DPMCard";
 
 export default function DashboardTab() {
   const { setActiveTab, pulsePolicy } = useUI();
   const {
-    currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
-    selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    cycleMAO, isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax
+    currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
+    selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
+    approvalRating, cycleMAO, isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax,
+    population, previewPopulation
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -24,27 +27,48 @@ export default function DashboardTab() {
     activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
+  const stackedData = useMemo(() => {
+    return Array.from({ length: 11 }, (_, i) => {
+      const name = i.toString();
+      const residentsInBin = population.filter(r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
+      const segments: any[] = [];
+
+      if (selectedPolicy) {
+        ['Will be worsened', 'Will be stable', 'Will improve'].forEach(key => {
+          const count = residentsInBin.filter(r => {
+            const index = population.indexOf(r);
+            const delta = previewPopulation[index].currentLS - r.currentLS;
+            if (key === 'Will improve') return delta > 0.05;
+            if (key === 'Will be worsened') return delta < -0.05;
+            return delta >= -0.05 && delta <= 0.05;
+          }).length;
+          if (count > 0) segments.push({ label: key, value: count, color: (IMPACT_COLORS as any)[key] });
+        });
+      } else {
+        segments.push({ label: "Residents", value: residentsInBin.length, color: "#d4d4d8" });
+      }
+
+      return { name, count: residentsInBin.length, segments };
+    });
+  }, [population, previewPopulation, selectedPolicy]);
+
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
-      
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
-        {/* LEFT COLUMN: Split Graphs (4 Cols wide) */}
+        {/* LEFT COLUMN: Stacked Graphs (4 Cols wide) */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
+          {/* TOP: Current Distribution */}
           <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group">
             <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
-                Current Distribution
-              </h3>
-              <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
             </div>
-            
             <div className="flex-1 p-3 pb-0 min-h-0 relative">
               <D3Chart 
                 plotType="1D" 
                 chartData={currentChartData}
-                histogramData={currentHistogramData} 
+                histogramData={currentHistogramData.map(d => ({ name: d.name, count: d.count }))} 
                 xAxisType={AxisVariable.LifeSatisfaction}
                 yAxisType={rule.yAxisType} 
                 color="#d4d4d8"
@@ -53,7 +77,6 @@ export default function DashboardTab() {
                 yAxisMax={yAxisMax}
               />
             </div>
-            
             <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2 shrink-0">
               {activeMarkers.map((marker, idx) => (
                 <div key={idx} className="flex items-center gap-1.5">
@@ -66,23 +89,22 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group">
+          {/* BOTTOM: Impact Analysis (Electorate View) */}
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden group">
             <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
-                Projected Impact
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
+                {selectedPolicy ? "Projected Impact" : "No Policy Selected"}
               </h3>
-              <span className="text-zinc-300 group-hover:text-pink-500 font-bold text-lg leading-none">↗</span>
             </div>
-            
             <div className="flex-1 p-3 pb-0 min-h-0 relative">
               <D3Chart 
                 plotType="1D" 
-                chartData={previewChartData} 
-                histogramData={previewHistogramData} 
+                chartData={[]}
+                histogramData={stackedData} 
                 xAxisType={AxisVariable.LifeSatisfaction}
-                yAxisType={rule.yAxisType}
-                color={selectedPolicy ? rule.graphColor : "#d4d4d8"}
-                visualStyle={'faces'}
+                yAxisType={rule.yAxisType} 
+                color="#d4d4d8"
+                visualStyle={'solid'} // Solid stacked bars are better for impact segments
                 yAxisMax={yAxisMax}
               />
 
@@ -104,9 +126,8 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: DPM & Approval (4 Cols wide) */}
+        {/* MIDDLE COLUMN: DPM & Approval (4 Cols) */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
-          
           <DPMCard 
             currentCycle={currentCycle} 
             currentTurn={currentTurn}
@@ -116,26 +137,19 @@ export default function DashboardTab() {
           />
 
           <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
-            <div className="absolute top-3 right-4 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
-            <div className="flex items-baseline gap-1">
-              <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${
-                approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
-                {approvalRating.toFixed(1)}%
-              </p>
-            </div>
+            <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {approvalRating.toFixed(1)}%
+            </p>
             <p className="text-sm text-zinc-500 mt-2 text-center px-4">
               Requirement: <strong className="text-zinc-300">51.0%</strong>
             </p>
           </div>
-
         </div>
 
-        {/* RIGHT COLUMN: Legislative Agenda (4 Cols wide) */}
+        {/* RIGHT COLUMN: Legislative Agenda (4 Cols) */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
-          
           <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
             <p className="text-xs text-zinc-500 mt-0.5">Select a policy to forecast its impact.</p>
@@ -202,9 +216,7 @@ export default function DashboardTab() {
               Enact Policy
             </button>
           </div>
-          
         </div>
-
       </div>
     </div>
   );
