@@ -2,13 +2,14 @@ import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
 import D3Chart, { ChartMarker } from "../D3Chart";
+import DPMCard from "../DPMCard";
 
 export default function DashboardTab() {
   const { setActiveTab, pulsePolicy } = useUI();
   const {
-    currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
+    currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
-    cycleMAO
+    cycleMAO, isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -49,6 +50,7 @@ export default function DashboardTab() {
                 color="#d4d4d8"
                 markers={activeMarkers} 
                 visualStyle={'faces'}
+                yAxisMax={yAxisMax}
               />
             </div>
             
@@ -81,6 +83,7 @@ export default function DashboardTab() {
                 yAxisType={rule.yAxisType}
                 color={selectedPolicy ? rule.graphColor : "#d4d4d8"}
                 visualStyle={'faces'}
+                yAxisMax={yAxisMax}
               />
 
               {/* Overlay that hides the graph until a policy is selected */}
@@ -101,17 +104,16 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: Placeholder & Approval (4 Cols wide) */}
+        {/* MIDDLE COLUMN: DPM & Approval (4 Cols wide) */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
-          <div className="flex-1 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 flex items-center justify-center shrink-0 min-h-0">
-            {/* Placeholder for the Deputy Prime Minister component */}
-            <div className="text-center p-6 text-zinc-400">
-              <span className="text-3xl block mb-2">👤</span>
-              <p className="text-xs font-bold uppercase tracking-widest">Deputy Prime Minister</p>
-              <p className="text-xs mt-2">DPM Guidance UI will live here.</p>
-            </div>
-          </div>
+          <DPMCard 
+            currentCycle={currentCycle} 
+            currentTurn={currentTurn}
+            isAgendaUnlocked={isAgendaUnlocked}
+            setIsAgendaUnlocked={setIsAgendaUnlocked}
+            selectedPolicy={selectedPolicy}
+          />
 
           <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
             <div className="absolute top-3 right-4 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
@@ -140,12 +142,38 @@ export default function DashboardTab() {
           </div>
           
           <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-hidden relative">
-            {/* FORCE EXACTLY 4 POLICIES TO DISPLAY */}
+            
+            {/* IN-TRAY LOCK OVERLAY */}
+            {!isAgendaUnlocked && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-50/80 backdrop-blur-[2px] z-10 px-6 animate-in fade-in duration-300">
+                <div className="relative w-full max-w-[220px] h-32 mb-4">
+                  {Array.from({length: 4}).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="absolute top-0 left-0 right-0 bg-white border border-zinc-200 rounded-xl shadow-sm transition-all"
+                      style={{ 
+                        height: '70px', 
+                        transform: `translateY(${i * 8}px) scale(${1 - i * 0.04})`, 
+                        zIndex: 10 - i,
+                        opacity: 1 - i * 0.1
+                      }} 
+                    />
+                  ))}
+                </div>
+                <div className="relative z-20 text-center bg-white p-4 rounded-xl shadow-md border border-zinc-200">
+                  <span className="text-2xl block mb-1">🔒</span>
+                  <h4 className="font-bold text-zinc-800 text-xs uppercase tracking-widest">Unfiltered Policy Options</h4>
+                  <p className="text-xs text-zinc-500 mt-1 font-medium">Review the Deputy Prime Minister's briefing to unlock policies.</p>
+                </div>
+              </div>
+            )}
+
             {currentDeck.slice(0, 4).map((policy) => {
               const isSelected = selectedPolicy?.id === policy.id;
               return (
                 <button
                   key={policy.id}
+                  disabled={!isAgendaUnlocked}
                   onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
                   className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-3 rounded-xl border transition-all duration-300 group overflow-hidden ${
                     isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
@@ -168,7 +196,7 @@ export default function DashboardTab() {
           <div className="p-3 border-t border-zinc-100 bg-zinc-50 shrink-0">
             <button 
               onClick={handleApplyPolicy}
-              disabled={!selectedPolicy}
+              disabled={!selectedPolicy || !isAgendaUnlocked}
               className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-md"
             >
               Enact Policy

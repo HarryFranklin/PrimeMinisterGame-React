@@ -83,6 +83,7 @@ export default function Home() {
       }}>
         <GameProvider value={{
           currentCycle: game.currentCycle, 
+          currentTurn: game.currentTurn,
           currentChartData: game.currentChartData, 
           previewChartData: game.previewChartData, 
           currentHistogramData: game.currentHistogramData, 
@@ -98,7 +99,10 @@ export default function Home() {
           approvalRating: game.turnApprovalRating, 
           population: game.population, 
           previewPopulation: game.previewPopulation, 
-          initialPopulation: game.initialPopulation
+          initialPopulation: game.initialPopulation,
+          isAgendaUnlocked: game.isAgendaUnlocked,
+          setIsAgendaUnlocked: game.setIsAgendaUnlocked,
+          yAxisMax: game.yAxisMax
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">
@@ -120,8 +124,8 @@ export default function Home() {
       </UIProvider>
 
       {game.showElection && <ElectionModal currentMetricScore={game.turnMetricScore} currentCycle={game.currentCycle} approvalRating={game.turnApprovalRating} cycleAttempts={game.cycleAttempts} onNextCycle={() => { game.setShowElection(false); game.setShowNarrative(true); }} onReset={game.handleResetCycle} onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }} />}
-      {game.showNarrative && <NarrativeModal completedCycle={game.currentCycle} population={game.population} onProceed={game.handleProceedFromNarrative} />}
-      {game.showFinalDebrief && <FinalDebriefModal baselinePopulation={game.baselinePopulation} finalPopulation={game.population} />}
+      {game.showNarrative && <NarrativeModal completedCycle={game.currentCycle} population={game.population} yAxisMax={game.yAxisMax} onProceed={game.handleProceedFromNarrative} />}
+      {game.showFinalDebrief && <FinalDebriefModal baselinePopulation={game.baselinePopulation} finalPopulation={game.population} yAxisMax={game.yAxisMax} />}
 
       <DevPanel 
         devMode={devMode} setDevMode={setDevMode} jumpToCycle={game.jumpToCycle}

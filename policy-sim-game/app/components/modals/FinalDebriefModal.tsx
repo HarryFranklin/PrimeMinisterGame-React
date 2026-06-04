@@ -5,9 +5,10 @@ import D3Chart from '../D3Chart';
 interface FinalDebriefModalProps {
   baselinePopulation: Respondent[];
   finalPopulation: Respondent[];
+  yAxisMax: number;
 }
 
-export default function FinalDebriefModal({ baselinePopulation, finalPopulation }: FinalDebriefModalProps) {
+export default function FinalDebriefModal({ baselinePopulation, finalPopulation, yAxisMax }: FinalDebriefModalProps) {
   
   const generateHistogramData = (targetPopulation: Respondent[]) => {
     if (!targetPopulation || targetPopulation.length === 0) return [];
@@ -25,18 +26,22 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
   const finalHistogram = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-zinc-900/90 backdrop-blur-md p-4 transition-all">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden animate-in zoom-in duration-500">
-        
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-zinc-900/90 backdrop-blur-md p-4 transition-all">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden animate-in zoom-in duration-500">
           
-          <div className="text-center shrink-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-pink-600 mb-1">Simulation Complete</p>
-            <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-2">The Complexity of Governance</h2>
-            <p className="text-sm text-zinc-600 max-w-3xl mx-auto leading-relaxed">
-              Compare your starting society with your final outcome below.
-            </p>
-          </div>
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            
+            {/* STANDARDISED DPM HEADER (Large Variant) */}
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mb-2 border-b border-zinc-200/60 pb-4 shrink-0">
+              <span className="text-5xl bg-white border border-zinc-200 w-20 h-20 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
+              <div className="text-center md:text-left">
+                <p className="text-xs font-black uppercase tracking-widest text-pink-600 mb-1">Deputy Prime Minister</p>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 mb-2">Final Debrief: The Complexity of Governance</h2>
+                <p className="text-sm md:text-base text-zinc-600 max-w-3xl leading-relaxed italic">
+                  "Prime Minister, you have successfully navigated four distinct mathematical frameworks for measuring societal success. Compare your starting society with your final outcome below."
+                </p>
+              </div>
+            </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
             <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 flex flex-col">
@@ -50,6 +55,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                   yAxisType={AxisVariable.LifeSatisfaction} 
                   color="#d4d4d8" 
                   visualStyle='faces'
+                  yAxisMax={yAxisMax}
                 />
               </div>
             </div>
@@ -64,6 +70,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
                   yAxisType={AxisVariable.LifeSatisfaction} 
                   color="#d4d4d8" 
                   visualStyle='faces'
+                  yAxisMax={yAxisMax}
                 />
               </div>
             </div>
@@ -107,6 +114,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation 
             </div>
           </div>
 
+          {/* System Sign-off */}
           <div className="p-4 bg-zinc-900 rounded-2xl text-center text-white relative overflow-hidden shadow-xl shrink-0 mt-2">
             <h3 className="text-base font-bold mb-1">Ready for Phase 3</h3>
             <p className="text-zinc-400 mb-2 text-[10px] max-w-lg mx-auto">

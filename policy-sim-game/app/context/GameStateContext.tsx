@@ -30,6 +30,7 @@ export function useUI() {
 
 export interface GameState {
   currentCycle: ElectionCycle;
+  currentTurn: number;
   currentChartData: any[];
   previewChartData: any[];
   currentHistogramData: any[];
@@ -46,6 +47,9 @@ export interface GameState {
   population: Respondent[];
   previewPopulation: Respondent[];
   initialPopulation: Respondent[];
+  isAgendaUnlocked: boolean;
+  setIsAgendaUnlocked: (unlocked: boolean) => void;
+  yAxisMax: number;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);

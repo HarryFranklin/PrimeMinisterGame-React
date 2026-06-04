@@ -6,6 +6,7 @@ import D3Chart from '../D3Chart';
 interface NarrativeModalProps {
   completedCycle: ElectionCycle;
   population: Respondent[];
+  yAxisMax: number;
   onProceed: () => void;
 }
 
@@ -15,7 +16,21 @@ const getDummyHistogram = (distribution: Record<number, number>) => {
   }));
 };
 
-export default function NarrativeModal({ completedCycle, population, onProceed }: NarrativeModalProps) {
+// STANDARDISED DPM HEADER (Helper Component)
+const DPMMessage = ({ title, children, className = "mb-4" }: { title: string, children: React.ReactNode, className?: string }) => (
+  <div className={`p-4 md:p-5 bg-zinc-50 rounded-xl border border-zinc-200 text-left ${className}`}>
+    <div className="flex items-center gap-3 mb-3 border-b border-zinc-200/60 pb-3">
+      <span className="text-3xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
+      <div>
+        <span className="text-xs font-black uppercase tracking-widest text-pink-600 leading-tight block mb-0.5">Deputy Prime Minister</span>
+        <span className="font-bold text-zinc-800 text-sm md:text-base">{title}</span>
+      </div>
+    </div>
+    <div className="italic text-zinc-700 text-sm md:text-base leading-relaxed">{children}</div>
+  </div>
+);
+
+export default function NarrativeModal({ completedCycle, population, onProceed, yAxisMax }: NarrativeModalProps) {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
@@ -79,12 +94,12 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
       case ElectionCycle.Benthamite:
         const bothBenthamRevealed = revealedBenthamA && revealedBenthamB;
         return (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="text-center max-w-2xl mx-auto mb-1">
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-1">Challenges with Aggregation</h2>
-              <p className="text-zinc-600 leading-relaxed text-sm">
-                Before examining your society, click to calculate the Benthamite average for these theoretical societies.
-              </p>
+              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-2">Challenges with Aggregation</h2>
+              <DPMMessage title="Theoretical Comparison">
+                "Prime Minister, before examining the society you built, consider this comparison. Click to calculate the Benthamite average for these two theoretical societies."
+              </DPMMessage>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-1">
@@ -94,7 +109,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
               >
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-1">Society A</h3>
                 <div className={`h-[140px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' />
+                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax}/>
                 </div>
                 
                 {!revealedBenthamA && (
@@ -136,11 +151,10 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             </div>
 
             {bothBenthamRevealed && (
-              <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 max-w-3xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-zinc-800 font-bold mb-2 text-base">Mathematically Identical Outcomes</p>
-                <p className="text-zinc-600 text-xs leading-relaxed mb-4">
-                  Under a strictly Benthamite framework, these societies are equally successful. Society A is perfectly equal, while Society B is entirely polarised. Maximising the average efficiently increases total wellbeing, but it does not account for how that wellbeing is distributed. 
-                </p>
+              <div className="max-w-3xl mx-auto w-full text-center animate-in fade-in slide-in-from-bottom-4">
+                <DPMMessage title="Mathematically Identical Outcomes" className="mb-4 border-pink-200 bg-pink-50/30">
+                  "Under a strictly Benthamite framework, these societies are equally successful. Society A is perfectly equal, while Society B is entirely polarised. Maximising the average efficiently increases total wellbeing, but it completely ignores how that wellbeing is distributed."
+                </DPMMessage>
                 <button onClick={onProceed} className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md">
                   Restart Simulation: Cycle 2 (Rawlsian)
                 </button>
@@ -153,11 +167,11 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
         const bothRawlsRevealed = revealedCitizen1 && revealedCitizen2;
         return (
           <div className="flex flex-col">
-            <div className="mb-4 text-center max-w-2xl mx-auto">
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-1">Objective Metrics vs. Personal Utility</h2>
-              <p className="text-zinc-600 leading-relaxed text-sm">
-                You successfully raised the floor. Click on these two citizens to reveal their Personal Utility scores.
-              </p>
+            <div className="mb-2 text-center max-w-2xl mx-auto">
+              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-2">Objective Metrics vs. Utility</h2>
+              <DPMMessage title="Subjective Experience">
+                "Prime Minister, you successfully raised the floor. But the data presents a new variable. Click on these two citizens to reveal their Personal Utility scores."
+              </DPMMessage>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
@@ -197,22 +211,24 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             </div>
 
             {bothRawlsRevealed && !rawlsExplanation && (
-              <div className="bg-zinc-100 border border-zinc-200 rounded-xl p-4 max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-zinc-800 font-bold mb-3 text-base">What do you notice?</p>
+              <div className="max-w-2xl mx-auto w-full text-center animate-in fade-in slide-in-from-bottom-4">
+                <DPMMessage title="Observation">
+                  "Notice the stark difference in their utility despite identical living standards. Are you ready to proceed?"
+                </DPMMessage>
                 <button 
                   onClick={() => setRawlsExplanation(true)} 
-                  className="px-8 py-2 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
+                  className="w-full py-2 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
                 >
-                  Continue
+                  Review Findings
                 </button>
               </div>
             )}
 
             {rawlsExplanation && (
-              <div className="max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-zinc-600 text-xs mb-4 leading-relaxed">
-                  Despite having identical objective Life Satisfaction scores, their true Personal Utility is markedly different. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience.
-                </p>
+              <div className="max-w-2xl mx-auto w-full text-center animate-in fade-in slide-in-from-bottom-4">
+                <DPMMessage title="The Flaw in Objective Metrics" className="mb-4 border-pink-200 bg-pink-50/30">
+                  "Despite having identical objective Life Satisfaction scores, their true Personal Utility is markedly different. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience."
+                </DPMMessage>
                 <button 
                   onClick={onProceed} 
                   className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
@@ -232,11 +248,11 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
 
         return (
           <div className="flex flex-col">
-            <div className="mb-4 text-center max-w-2xl mx-auto">
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-1">The Individual vs The Collective</h2>
-              <p className="text-zinc-600 leading-relaxed text-sm">
-                Click on the citizen below to reveal how their perspective shifts when accounting for the broader society.
-              </p>
+            <div className="mb-2 text-center max-w-2xl mx-auto">
+              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-2">The Individual vs The Collective</h2>
+              <DPMMessage title="Societal Evaluation">
+                "Personal Utility models citizens making choices based purely on their own outcomes. Click on the citizen below to reveal how their perspective shifts when accounting for the broader society."
+              </DPMMessage>
             </div>
 
             <div className="max-w-xl mx-auto w-full mb-4">
@@ -277,22 +293,24 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
             </div>
 
             {revealedEmpathy && !personalExplanation && (
-              <div className="bg-zinc-100 border border-zinc-200 rounded-xl p-4 max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-zinc-800 font-bold mb-3 text-base">What do you notice?</p>
+              <div className="max-w-2xl mx-auto w-full text-center animate-in fade-in slide-in-from-bottom-4">
+                <DPMMessage title="Observation">
+                  "Notice the downward adjustment. Shall we review why this occurs?"
+                </DPMMessage>
                 <button 
                   onClick={() => setPersonalExplanation(true)} 
-                  className="px-8 py-2 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
+                  className="w-full py-2 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
                 >
-                  Continue
+                  Review Findings
                 </button>
               </div>
             )}
 
             {personalExplanation && (
-              <div className="max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-bottom-4">
-                <p className="text-zinc-600 text-xs mb-4 leading-relaxed">
-                  When citizens evaluate policy strictly to protect their personal utility (influenced by loss aversion), widespread redistribution becomes difficult to enact—a phenomenon known as the Status Quo Trap. For your final term, let's incorporate <strong>Societal Utility</strong>.
-                </p>
+              <div className="max-w-2xl mx-auto w-full text-center animate-in fade-in slide-in-from-bottom-4">
+                <DPMMessage title="The Status Quo Trap" className="mb-4 border-emerald-200 bg-emerald-50/30">
+                  "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes difficult to enact due to loss aversion. For your final term, we will incorporate <strong>Societal Utility</strong> into their voting logic."
+                </DPMMessage>
                 <button 
                   onClick={onProceed} 
                   className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-md"
@@ -308,14 +326,14 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
       case ElectionCycle.SocietalUtility:
         return (
           <div className="flex flex-col">
-            <div className="mb-4 text-center max-w-2xl mx-auto">
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-1">Personal vs. Societal Utility</h2>
-              <p className="text-zinc-600 leading-relaxed text-sm">
-                Let's directly compare how the society you just built is evaluated under each philosophy.
-              </p>
+            <div className="mb-2 text-center max-w-2xl mx-auto">
+              <h2 className="text-2xl font-black tracking-tight text-zinc-900 mb-2">Personal vs. Societal Utility</h2>
+              <DPMMessage title="Final Comparison">
+                "Prime Minister, you have now tested both utility frameworks. Let's directly compare how the society you just built is evaluated under each philosophy."
+              </DPMMessage>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Cycle 3: Personal Utility</h3>
                 <div className="text-center mb-3">
@@ -341,12 +359,12 @@ export default function NarrativeModal({ completedCycle, population, onProceed }
               </div>
             </div>
 
-            <div className="max-w-2xl mx-auto text-center">
-              <p className="text-zinc-600 text-xs mb-4 leading-relaxed">
-                As you proceed to the final debrief, consider which of these four frameworks provides the most effective—and ethical—blueprint for real-world governance.
-              </p>
+            <div className="max-w-2xl mx-auto w-full text-center">
+              <DPMMessage title="Next Steps" className="mb-4">
+                "As you proceed to the final debrief, consider which of these four frameworks provides the most effective—and ethical—blueprint for real-world governance."
+              </DPMMessage>
               <button onClick={onProceed} className="w-full py-3 bg-pink-600 text-white text-sm font-bold rounded-xl hover:bg-pink-700 transition-all shadow-md">
-                Proceed to Final Debrief: The Complexity of Governance
+                Proceed to Final Debrief
               </button>
             </div>
           </div>

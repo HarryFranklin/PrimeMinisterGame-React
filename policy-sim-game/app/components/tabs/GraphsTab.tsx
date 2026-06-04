@@ -9,7 +9,7 @@ export default function GraphsTab() {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     selectedPolicy, turnMetricScore, currentMetricScore,
     currentDeck, setSelectedPolicy, approvalRating,
-    cycleMAO
+    cycleMAO, yAxisMax
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -66,6 +66,7 @@ export default function GraphsTab() {
               color="#d4d4d8"
               markers={currentMarkers}
               visualStyle={'faces'}
+              yAxisMax={yAxisMax}
             />
           </div>
           
@@ -100,6 +101,7 @@ export default function GraphsTab() {
               color={rule.graphColor}
               markers={projectedMarkers}
               visualStyle={'faces'}
+              yAxisMax={yAxisMax}
             />
             {!selectedPolicy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-b-xl z-10 animate-in fade-in duration-300">

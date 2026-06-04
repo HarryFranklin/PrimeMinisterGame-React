@@ -26,7 +26,6 @@ const generateCycleSchedule = (cycle: ElectionCycle, available: Policy[]): Polic
   let pool = [...available];
   for (let t = 0; t < TURNS_PER_CYCLE; t++) {
     const turnPolicies: Policy[] = [];
-    // Generate 8 so we have a buffer when policies are filtered out
     for (let p = 0; p < 8; p++) {
       if (pool.length === 0) pool = [...available];
       const index = Math.floor(pseudoRandom() * pool.length);
@@ -55,6 +54,10 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [pulsePolicy, setPulsePolicy] = useState(false);
+  const [isAgendaUnlocked, setIsAgendaUnlocked] = useState(false);
+  
+  // NEW: Global Y-Axis tracking for minimal-shift hysteresis
+  const [yAxisMax, setYAxisMax] = useState(80);
   
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
@@ -80,6 +83,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
     setCurrentCycle(cycle);
+    setIsAgendaUnlocked(false);
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(pop) }]);
     setShowElection(false);
     setSelectedPolicy(null);
@@ -133,6 +137,42 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     if (!selectedPolicy) return population;
     return PolicyEngine.applyPolicy(population, selectedPolicy);
   }, [population, selectedPolicy]);
+
+  const generateHistogramData = useCallback((targetPopulation: Respondent[]) => {
+    return Array.from({ length: 11 }, (_, i) => {
+      const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
+      return {
+        name: i, 
+        count: peopleInBar.length
+      };
+    });
+  }, []);
+
+  const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
+  const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
+
+  // Hysteresis loop effect to calculate yAxisMax
+  useEffect(() => {
+    const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
+    const maxPreview = Math.max(...previewHistogramData.map(d => d.count), 0);
+    const globalMax = Math.max(maxCurrent, maxPreview);
+
+    setYAxisMax(prev => {
+      if (globalMax > prev) {
+        // Step up in intervals of 40 if exceeded
+        return Math.ceil(globalMax / 40) * 40;
+      } else {
+        // Calculate the absolute tightest interval we could use (minimum 80)
+        const tightestTier = Math.max(80, Math.ceil(globalMax / 40) * 40);
+        
+        // Only step down if the data drops safely below the tightest tier's boundary minus a 5-unit buffer
+        if (prev > tightestTier && globalMax < tightestTier - 5) {
+          return tightestTier;
+        }
+      }
+      return prev; // Maintain current height
+    });
+  }, [currentHistogramData, previewHistogramData]);
 
   const initialMetricScore = useMemo(() => getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const turnMetricScore = useMemo(() => getMetricScore(population, currentCycle), [population, currentCycle]);
@@ -231,19 +271,6 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     });
   }, [previewPopulation, currentCycle]);
 
-  const generateHistogramData = useCallback((targetPopulation: Respondent[]) => {
-    return Array.from({ length: 11 }, (_, i) => {
-      const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
-      return {
-        name: i, 
-        count: peopleInBar.length
-      };
-    });
-  }, []);
-
-  const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
-  const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
-
   return {
     population, initialPopulation, baselinePopulation, previewPopulation,
     currentTurn, currentCycle, cycleAttempts,
@@ -253,6 +280,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     turnMetricScore, initialMetricScore, currentMetricScore, turnApprovalRating,
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleProceedFromNarrative, setCurrentTurn, handleNavigateToPolicy,
+    isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax,
     TURNS_PER_CYCLE
   };
 }

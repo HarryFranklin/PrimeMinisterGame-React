@@ -24,6 +24,7 @@ interface D3ChartProps {
   color?: string; 
   markers?: ChartMarker[];
   visualStyle?: 'solid' | 'faces';
+  yAxisMax?: number;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -60,7 +61,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, visualStyle = 'faces' 
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces' 
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -132,10 +133,7 @@ export default function D3Chart({
       const xDomain = histogramData.map(d => d.name.toString());
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
       
-      const totalPop = d3.sum(histogramData, d => d.count);
-      const currentHighestBar = d3.max(histogramData, d => d.count) || 0;
-      const baselineMax = Math.ceil(totalPop * 0.30);
-      const yDomainMax = Math.max(baselineMax, currentHighestBar);
+      const yDomainMax = yAxisMax; 
       
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
 
