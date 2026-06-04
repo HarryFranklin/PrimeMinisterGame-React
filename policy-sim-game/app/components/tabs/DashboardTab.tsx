@@ -82,6 +82,21 @@ export default function DashboardTab() {
                 color={selectedPolicy ? rule.graphColor : "#d4d4d8"}
                 visualStyle={'faces'}
               />
+
+              {/* Overlay that hides the graph until a policy is selected */}
+              {!selectedPolicy && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
+                  <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-zinc-400 text-lg">📄</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Awaiting Policy</h4>
+                    <p className="text-xs text-zinc-500 font-medium">
+                      Select a policy from the Legislative Agenda to forecast its impact.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
