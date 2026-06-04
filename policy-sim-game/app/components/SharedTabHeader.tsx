@@ -8,7 +8,6 @@ interface SharedTabHeaderProps {
   selectedPolicy: Policy | null;
   setSelectedPolicy?: (policy: Policy | null) => void;
   presentedPolicies?: Policy[];
-  tutorialClass?: string;
   children?: React.ReactNode;
 }
 
@@ -19,7 +18,6 @@ export default function SharedTabHeader({
   selectedPolicy,
   setSelectedPolicy,
   presentedPolicies = [],
-  tutorialClass = "relative z-10",
   children
 }: SharedTabHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -38,7 +36,7 @@ export default function SharedTabHeader({
   const otherPolicies = presentedPolicies.filter(p => p.id !== selectedPolicy?.id);
 
   return (
-    <div className={`bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-wrap xl:flex-nowrap justify-between items-center gap-4 shrink-0 relative z-[60] ${tutorialClass}`}>
+    <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-wrap xl:flex-nowrap justify-between items-center gap-4 shrink-0">
       
       {/* Left Side: Standardised Status Indicators */}
       <div className="flex items-stretch gap-2 sm:gap-3 h-[52px] shrink min-w-0 max-w-full">
@@ -86,7 +84,7 @@ export default function SharedTabHeader({
 
           {/* Interactive Dropdown Menu */}
           {selectedPolicy && setSelectedPolicy && isDropdownOpen && (
-            <div className="absolute top-full left-0 w-[calc(100vw-32px)] sm:w-full min-w-[280px] sm:min-w-[340px] pt-2 z-[120]">
+            <div className="absolute top-full left-0 w-[calc(100vw-32px)] sm:w-full min-w-[280px] sm:min-w-[340px] pt-2 z-[50]">
               <div 
                 className="bg-white border border-pink-300 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                 onClick={(e) => e.stopPropagation()}

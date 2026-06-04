@@ -7,8 +7,6 @@ import { ElectionCycle, Policy, Respondent } from '../utils/types';
 // ==========================================
 
 export interface UIState {
-  isTutorialActive: boolean;
-  tutorialStep: number;
   setActiveTab: (tab: any) => void;
   pulsePolicy: boolean;
   onNavigateToPolicy: () => void;

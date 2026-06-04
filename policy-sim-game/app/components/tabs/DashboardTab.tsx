@@ -4,7 +4,7 @@ import { AxisVariable, ElectionCycle } from "../../utils/types";
 import D3Chart, { ChartMarker } from "../D3Chart";
 
 export default function DashboardTab() {
-  const { setActiveTab, isTutorialActive, tutorialStep, pulsePolicy } = useUI();
+  const { setActiveTab, pulsePolicy } = useUI();
   const {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, approvalRating,
@@ -23,29 +23,15 @@ export default function DashboardTab() {
     activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
-  const getTutorialClass = (columnIndex: number) => {
-    if (!isTutorialActive) return "relative z-10";
-    if (tutorialStep === 3) return "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500";
-    return tutorialStep === columnIndex 
-      ? "relative z-[70] transition-all duration-500" 
-      : "relative z-10 pointer-events-none opacity-40 grayscale-[30%] transition-all duration-500";
-  };
-
-  const getCardHighlight = (columnIndex: number) => {
-    return isTutorialActive && tutorialStep === columnIndex 
-      ? "ring-4 ring-pink-500/50 shadow-2xl z-20" 
-      : "";
-  };
-
   return (
-    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300 relative">
+    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
       
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT COLUMN: Split Graphs (4 Cols wide) */}
-        <div className={`col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden ${getTutorialClass(0)}`}>
+        <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
-          <div onClick={() => setActiveTab('graphs')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
+          <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group">
             <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
               <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
                 Current Distribution
@@ -78,7 +64,7 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          <div onClick={() => setActiveTab('graphs')} className={`bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group ${getCardHighlight(0)}`}>
+          <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group">
             <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
               <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 whitespace-nowrap">
                 Projected Impact
@@ -101,9 +87,9 @@ export default function DashboardTab() {
         </div>
 
         {/* MIDDLE COLUMN: Placeholder & Approval (4 Cols wide) */}
-        <div className={`col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden ${getTutorialClass(1)}`}>
+        <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
-          <div className={`flex-1 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 flex items-center justify-center shrink-0 min-h-0 ${getCardHighlight(1)}`}>
+          <div className="flex-1 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 flex items-center justify-center shrink-0 min-h-0">
             {/* Placeholder for the Deputy Prime Minister component */}
             <div className="text-center p-6 text-zinc-400">
               <span className="text-3xl block mb-2">👤</span>
@@ -112,7 +98,7 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          <div onClick={() => setActiveTab('electorate')} className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group ${getCardHighlight(1)}`}>
+          <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
             <div className="absolute top-3 right-4 opacity-0 group-hover:opacity-100 text-zinc-500 text-xl font-bold transition-opacity">↗</div>
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
@@ -131,14 +117,14 @@ export default function DashboardTab() {
         </div>
 
         {/* RIGHT COLUMN: Legislative Agenda (4 Cols wide) */}
-        <div className={`col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 ${getTutorialClass(2)} ${getCardHighlight(2)}`}>
+        <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
           
           <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
             <p className="text-xs text-zinc-500 mt-0.5">Select a policy to forecast its impact.</p>
           </div>
           
-          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-y-auto relative">
+          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-hidden relative">
             {/* FORCE EXACTLY 4 POLICIES TO DISPLAY */}
             {currentDeck.slice(0, 4).map((policy) => {
               const isSelected = selectedPolicy?.id === policy.id;
@@ -146,14 +132,14 @@ export default function DashboardTab() {
                 <button
                   key={policy.id}
                   onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                  className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
+                  className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-3 rounded-xl border transition-all duration-300 group overflow-hidden ${
                     isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                   } ${
                     isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
                   }`}
                 >
                   {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                  <p className={`font-bold text-sm leading-tight mb-1.5 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                  <p className={`font-bold text-sm leading-tight mb-1 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
                     {policy.policyName}
                   </p>
                   <p className={`text-xs leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>

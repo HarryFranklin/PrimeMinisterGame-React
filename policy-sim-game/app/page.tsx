@@ -1,4 +1,5 @@
 "use client";
+
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,10 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import ElectionModal from "./components/modals/ElectionModal";
 import NarrativeModal from "./components/modals/NarrativeModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
-import IntroductionModal from "./components/modals/IntroductionModal";
 import DevPanel from "./components/DevPanel";
 import GameHeader from "./components/GameHeader";
-import TutorialOverlay from "./components/TutorialOverlay";
 
 // Tabs
 import DashboardTab from "./components/tabs/DashboardTab";
@@ -18,12 +17,12 @@ import GraphsTab from "./components/tabs/GraphsTab";
 import ElectorateTab from "./components/tabs/ElectorateTab";
 
 // Custom Hooks
-import { useTutorial } from "./hooks/useTutorial";
 import { useGameEngine } from "./hooks/useGameEngine";
 
 export default function Home() {
   const tabs = ['dashboard', 'electorate', 'graphs'] as const;
   type TabType = typeof tabs[number];
+
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
@@ -52,7 +51,6 @@ export default function Home() {
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      // Chrome requires returnValue to be set to trigger the dialogue
       e.returnValue = ''; 
     };
     
@@ -60,52 +58,25 @@ export default function Home() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Wrap this in useCallback so it doesn't trigger infinite re-renders in your hooks
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
     window.history.pushState(null, '', `/?tab=${tab}`);
   }, []);
 
-  // Update the hooks to receive handleTabChange
-  const tut = useTutorial(activeTab, tabs, handleTabChange);
   const game = useGameEngine(handleTabChange);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      {tut.hasCheckedSave && tut.showIntro && <IntroductionModal onStart={tut.handleStartGame} />}
-      <TutorialOverlay 
-        isTutorialActive={tut.isTutorialActive}
-        currentStepData={tut.currentStepData}
-        activeTab={activeTab}
-        tutorialStep={tut.tutorialStep}
-        tabs={tabs}
-        tutorialVisitedTabs={tut.tutorialVisitedTabs}
-        currentTutorialSequence={tut.currentTutorialSequence}
-        setIsTutorialActive={tut.setIsTutorialActive}
-        targetNextTab={tut.targetNextTab}
-        isLastTutorialStep={tut.isLastTutorialStep}
-        setTutorialVisitedTabs={tut.setTutorialVisitedTabs}
-        setActiveTab={handleTabChange}
-        setTutorialStep={tut.setTutorialStep}
-      />
       <GameHeader 
         currentCycle={game.currentCycle}
-        isTutorialActive={tut.isTutorialActive}
-        setIsTutorialActive={tut.setIsTutorialActive}
         activeTab={activeTab}
         setActiveTab={handleTabChange}
-        targetNextTab={tut.targetNextTab}
-        tutorialVisitedTabs={tut.tutorialVisitedTabs}
-        setTutorialVisitedTabs={tut.setTutorialVisitedTabs}
-        setTutorialStep={tut.setTutorialStep}
         currentTurn={game.currentTurn}
         turnsPerCycle={game.TURNS_PER_CYCLE}
         tabs={tabs}
       />
 
       <UIProvider value={{
-        isTutorialActive: tut.isTutorialActive, 
-        tutorialStep: tut.safeTutorialStep, 
         setActiveTab: handleTabChange,
         pulsePolicy: game.pulsePolicy, 
         onNavigateToPolicy: game.handleNavigateToPolicy
@@ -130,21 +101,21 @@ export default function Home() {
           initialPopulation: game.initialPopulation
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="h-full flex flex-col w-full"
-            >
-              {activeTab === 'dashboard' && <DashboardTab />}
-              {activeTab === 'graphs' && <GraphsTab />}
-              {activeTab === 'electorate' && <ElectorateTab />}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="h-full flex flex-col w-full"
+              >
+                {activeTab === 'dashboard' && <DashboardTab />}
+                {activeTab === 'graphs' && <GraphsTab />}
+                {activeTab === 'electorate' && <ElectorateTab />}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </GameProvider>
       </UIProvider>
 
