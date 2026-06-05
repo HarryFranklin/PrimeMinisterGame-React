@@ -71,7 +71,6 @@ export class DifficultySimulator {
       const winThreshold = maoResult.maxScore * scalar; 
       
       let winCount = 0;
-      let totalRandomScore = 0;
 
       for (let i = 0; i < iterations; i++) {
         let currentPop = population;
@@ -89,7 +88,6 @@ export class DifficultySimulator {
         }
 
         const randomWalkScore = this.getMetricScore(currentPop, cycle);
-        totalRandomScore += randomWalkScore;
         
         if (randomWalkScore >= winThreshold) {
           winCount++;
@@ -97,10 +95,7 @@ export class DifficultySimulator {
       }
 
       results[ElectionCycle[cycle]] = {
-        "Optimal Score (MAO)": maoResult.maxScore.toFixed(3),
-        "Target Score (90%)": winThreshold.toFixed(3),
-        "Avg Random Walk Score": (totalRandomScore / iterations).toFixed(3),
-        "Random Win Chance": ((winCount / iterations) * 100).toFixed(2) + "%"
+        "Random Win Probability": ((winCount / iterations) * 100).toFixed(2) + "%"
       };
     }
 

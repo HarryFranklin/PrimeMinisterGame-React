@@ -20,7 +20,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#ec4899",
-    winThresholdScalar: 0.945,
+    winThresholdScalar: 0.855,
   },
   [ElectionCycle.Rawlsian]: {
     frameworkTitle: "Rawlsian Framework",
@@ -30,7 +30,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#3b82f6",
-    winThresholdScalar: 0.65,
+    winThresholdScalar: 0.83,
   },
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",
@@ -40,7 +40,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: "#10b981",
-    winThresholdScalar: 0.985,
+    winThresholdScalar: 0.97,
   },
   [ElectionCycle.PersonalUtility]: {
     frameworkTitle: "Personal Utility Framework",
@@ -50,6 +50,6 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     graphColor: "#8b5cf6",
-    winThresholdScalar: 0.975,
+    winThresholdScalar: 0.98,
   }
 };
