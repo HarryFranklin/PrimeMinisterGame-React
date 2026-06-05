@@ -2,10 +2,6 @@
 import { createContext, ReactNode, useContext } from 'react';
 import { ElectionCycle, Policy, Respondent } from '../utils/types';
 
-// ==========================================
-// 1. UI CONTEXT (Lightweight, stable state)
-// ==========================================
-
 export interface UIState {
   setActiveTab: (tab: any) => void;
   pulsePolicy: boolean;
@@ -23,10 +19,6 @@ export function useUI() {
   if (context === undefined) throw new Error('useUI must be used within a UIProvider');
   return context;
 }
-
-// ==========================================
-// 2. GAME CONTEXT (Heavy simulation data)
-// ==========================================
 
 export interface GameState {
   currentCycle: ElectionCycle;
@@ -50,6 +42,8 @@ export interface GameState {
   isAgendaUnlocked: boolean;
   setIsAgendaUnlocked: (unlocked: boolean) => void;
   yAxisMax: number;
+  isParliamentDissolved: boolean;
+  handleFaceElectorate: () => void;
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);

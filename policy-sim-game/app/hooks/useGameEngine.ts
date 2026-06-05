@@ -1,3 +1,4 @@
+// hooks/useGameEngine.ts
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Respondent, ElectionCycle, Policy, TurnHistory } from '../utils/types';
 import { loadPopulation } from '../utils/dataLoader';
@@ -17,12 +18,10 @@ const calculateAverage = (pop: Respondent[]): number => {
 const generateCycleSchedule = (cycle: ElectionCycle, available: Policy[]): Policy[][] => {
   const schedule: Policy[][] = [];
   let seed = cycle * 12345 + 1;
-  
   const pseudoRandom = () => {
     const x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
   };
-  
   let pool = [...available];
   for (let t = 0; t < TURNS_PER_CYCLE; t++) {
     const turnPolicies: Policy[] = [];
@@ -44,7 +43,6 @@ const getMetricScore = (pop: Respondent[], cycle: ElectionCycle) => {
   
   const allLS = pop.map(p => p.currentLS);
   if (cycle === ElectionCycle.SocietalUtility) return pop.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / pop.length;
-  
   return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
 };
 
@@ -52,22 +50,20 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const [population, setPopulation] = useState<Respondent[]>([]);
   const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]); 
   const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
-  
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [isAgendaUnlocked, setIsAgendaUnlocked] = useState(false);
-  
-  // Locked Y-Axis tracking for minimal-shift hysteresis
   const [yAxisMax, setYAxisMax] = useState(100);
   
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
   
+  // Election Tension & Modal States
+  const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
   const [showElection, setShowElection] = useState(false);
-  const [showNarrative, setShowNarrative] = useState(false);
   const [showFinalDebrief, setShowFinalDebrief] = useState(false);
-  
+
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
   const [cycleMAO, setCycleMAO] = useState<number>(0);
@@ -86,10 +82,11 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setCurrentTurn(1);
     setCurrentCycle(cycle);
     setIsAgendaUnlocked(false);
+    setIsParliamentDissolved(false);
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(pop) }]);
     setShowElection(false);
     setSelectedPolicy(null);
-    setYAxisMax(100); // Reset y-axis to baseline for the new cycle
+    setYAxisMax(100);
   }, []);
 
   useEffect(() => {
@@ -109,6 +106,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
         setCycleMAO(parsed.cycleMAO);
         setCurrentDeck(parsed.currentDeck);
         setOptimalPath(parsed.optimalPath);
+        setIsParliamentDissolved(parsed.isParliamentDissolved || false);
         return; 
       } catch (e) {
         console.error("Failed to load save file, starting fresh.", e);
@@ -130,11 +128,12 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     const saveData = {
       population, initialPopulation, baselinePopulation,
       currentTurn, currentCycle, cycleAttempts, history,
-      cycleSchedule, cycleMAO, currentDeck, optimalPath
+      cycleSchedule, cycleMAO, currentDeck, optimalPath,
+      isParliamentDissolved
     };
     
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-  }, [population, currentTurn, currentCycle]);
+  }, [population, currentTurn, currentCycle, isParliamentDissolved]);
 
   const previewPopulation = useMemo(() => {
     if (!selectedPolicy) return population;
@@ -144,27 +143,20 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const generateHistogramData = useCallback((targetPopulation: Respondent[]) => {
     return Array.from({ length: 11 }, (_, i) => {
       const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
-      return {
-        name: i, 
-        count: peopleInBar.length
-      };
+      return { name: i, count: peopleInBar.length };
     });
   }, []);
 
   const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
-  // Stable Hysteresis Loop
   useEffect(() => {
     const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
     const maxPreview = Math.max(...previewHistogramData.map(d => d.count), 0);
     const globalMax = Math.max(maxCurrent, maxPreview);
     
     setYAxisMax(prev => {
-      // Calculate a comfortable headroom target
       const targetMax = Math.max(100, Math.ceil(globalMax / 20) * 20);
-      
-      // Only expand the axis. Never shrink it mid-cycle to avoid visual jumping when clicking policies.
       if (targetMax > prev) {
         return targetMax;
       }
@@ -201,14 +193,18 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setCycleSchedule(updatedSchedule);
     
     if (currentTurn < TURNS_PER_CYCLE) {
-      setCurrentDeck(updatedSchedule[currentTurn]); 
+      setCurrentDeck(updatedSchedule[currentTurn]);
       setCurrentTurn(prev => prev + 1);
     } else {
-      setShowElection(true);
+      setIsParliamentDissolved(true);
     }
     
     setSelectedPolicy(null);
   };
+
+  const handleFaceElectorate = useCallback(() => {
+    setShowElection(true);
+  }, []);
 
   const handleResetCycle = () => {
     localStorage.removeItem(SAVE_KEY); 
@@ -230,15 +226,14 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
 
   const handleProceedFromNarrative = () => {
     if (currentCycle === ElectionCycle.SocietalUtility) {
-      setShowNarrative(false);
+      setShowElection(false);
       setShowFinalDebrief(true);
       return;
     }
-
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
-
+    
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
@@ -246,7 +241,6 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     
     startCycle(nextCycle, data);
     setCycleAttempts(1);
-    setShowNarrative(false);
   };
 
   const currentChartData = useMemo(() => {
@@ -275,7 +269,8 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     population, initialPopulation, baselinePopulation, previewPopulation,
     currentTurn, currentCycle, cycleAttempts,
     selectedPolicy, setSelectedPolicy, pulsePolicy,
-    showElection, setShowElection, showNarrative, setShowNarrative, showFinalDebrief, setShowFinalDebrief,
+    isParliamentDissolved, handleFaceElectorate,
+    showElection, setShowElection, showFinalDebrief, setShowFinalDebrief,
     history, currentDeck, cycleMAO, optimalPath,
     turnMetricScore, initialMetricScore, currentMetricScore, turnApprovalRating,
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,

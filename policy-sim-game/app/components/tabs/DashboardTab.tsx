@@ -11,8 +11,8 @@ export default function DashboardTab() {
   const {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
-    approvalRating, cycleMAO, isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax,
-    population, previewPopulation
+    approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax,
+    population, previewPopulation, isParliamentDissolved, handleFaceElectorate
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -32,26 +32,22 @@ export default function DashboardTab() {
       const name = i.toString();
       const residentsInBin = population.filter(r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
       const segments: any[] = [];
-
       if (selectedPolicy) {
         const improveCount = residentsInBin.filter(r => {
           const idx = population.indexOf(r);
           return previewPopulation[idx].currentLS - r.currentLS > 0.05;
         }).length;
-
         const worsenCount = residentsInBin.filter(r => {
           const idx = population.indexOf(r);
           return previewPopulation[idx].currentLS - r.currentLS < -0.05;
         }).length;
-
         const stableCount = residentsInBin.length - improveCount - worsenCount;
-
+        
         if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
         if (stableCount > 0) segments.push({ label: 'Will be stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
         if (worsenCount > 0) segments.push({ label: 'Will be worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
       }
       
-      // Returning empty segments here when no policy is selected causes the D3 engine to smoothly collapse the bars to zero.
       return { name, count: residentsInBin.length, segments };
     });
   }, [population, previewPopulation, selectedPolicy]);
@@ -62,7 +58,7 @@ export default function DashboardTab() {
         
         {/* LEFT COLUMN: Stacked Graphs (4 Cols wide) */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
-          
+            
           {/* TOP: Current Distribution */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
             <div 
@@ -132,7 +128,7 @@ export default function DashboardTab() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">📄</span>
+                      <span className="text-zinc-400 text-lg">📝</span>
                     </div>
                     <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Awaiting Policy</h4>
                     <p className="text-xs text-zinc-500 font-medium">
@@ -143,7 +139,6 @@ export default function DashboardTab() {
               )}
             </div>
 
-            {/* 3-Colour Legend (Always visible to prevent layout shift) */}
             <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${selectedPolicy ? 'opacity-100' : 'opacity-40 grayscale'}`}>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
@@ -166,12 +161,17 @@ export default function DashboardTab() {
           <DPMCard 
             currentCycle={currentCycle} 
             currentTurn={currentTurn}
-            isAgendaUnlocked={isAgendaUnlocked}
-            setIsAgendaUnlocked={setIsAgendaUnlocked}
+            isParliamentDissolved={isParliamentDissolved}
             selectedPolicy={selectedPolicy}
+            cycleMAO={cycleMAO}
           />
 
-          <div onClick={() => setActiveTab('electorate')} className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer hover:bg-black transition-colors group">
+          <div 
+            onClick={() => setActiveTab('electorate')} 
+            className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer transition-all group ${
+              isParliamentDissolved ? 'animate-pulse ring-4 ring-rose-500/80 bg-zinc-800' : 'hover:bg-black'
+            }`}
+          >
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
             <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -190,39 +190,13 @@ export default function DashboardTab() {
             <p className="text-xs text-zinc-500 mt-0.5">Select a policy to forecast its impact.</p>
           </div>
           
-          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-hidden relative">
-            
-            {/* IN-TRAY LOCK OVERLAY */}
-            {!isAgendaUnlocked && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-50/80 backdrop-blur-[2px] z-10 px-6 animate-in fade-in duration-300">
-                <div className="relative w-full max-w-[220px] h-32 mb-4">
-                  {Array.from({length: 4}).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className="absolute top-0 left-0 right-0 bg-white border border-zinc-200 rounded-xl shadow-sm transition-all"
-                      style={{ 
-                        height: '70px', 
-                        transform: `translateY(${i * 8}px) scale(${1 - i * 0.04})`, 
-                        zIndex: 10 - i,
-                        opacity: 1 - i * 0.1
-                      }} 
-                    />
-                  ))}
-                </div>
-                <div className="relative z-20 text-center bg-white p-4 rounded-xl shadow-md border border-zinc-200">
-                  <span className="text-2xl block mb-1">🔒</span>
-                  <h4 className="font-bold text-zinc-800 text-xs uppercase tracking-widest">Unfiltered Policy Options</h4>
-                  <p className="text-xs text-zinc-500 mt-1 font-medium">Review the Deputy Prime Minister's briefing to unlock policies.</p>
-                </div>
-              </div>
-            )}
-
+          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-hidden relative">             
             {currentDeck.slice(0, 4).map((policy) => {
               const isSelected = selectedPolicy?.id === policy.id;
               return (
                 <button
                   key={policy.id}
-                  disabled={!isAgendaUnlocked}
+                  disabled={!isAgendaUnlocked || isParliamentDissolved}
                   onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
                   className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
                     isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
@@ -243,13 +217,22 @@ export default function DashboardTab() {
           </div>
           
           <div className="p-3 border-t border-zinc-100 bg-zinc-50 shrink-0">
-            <button 
-              onClick={handleApplyPolicy}
-              disabled={!selectedPolicy || !isAgendaUnlocked}
-              className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-md"
-            >
-              Enact Policy
-            </button>
+            {isParliamentDissolved ? (
+              <button 
+                onClick={handleFaceElectorate}
+                className="w-full py-4 bg-rose-600 text-white text-base font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 transition-all shadow-lg animate-pulse"
+              >
+                Face the Electorate
+              </button>
+            ) : (
+              <button 
+                onClick={handleApplyPolicy}
+                disabled={!selectedPolicy || !isAgendaUnlocked}
+                className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-md"
+              >
+                Enact Policy
+              </button>
+            )}
           </div>
         </div>
       </div>

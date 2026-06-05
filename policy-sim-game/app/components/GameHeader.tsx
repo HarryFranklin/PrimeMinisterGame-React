@@ -1,3 +1,4 @@
+// components/GameHeader.tsx
 import React from 'react';
 import { ElectionCycle } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
@@ -9,10 +10,11 @@ interface GameHeaderProps {
   currentTurn: number;
   turnsPerCycle: number;
   tabs: readonly string[];
+  isParliamentDissolved: boolean;
 }
 
 export default function GameHeader({
-  currentCycle, activeTab, setActiveTab, currentTurn, turnsPerCycle, tabs
+  currentCycle, activeTab, setActiveTab, currentTurn, turnsPerCycle, tabs, isParliamentDissolved
 }: GameHeaderProps) {
   const activeTabIndex = tabs.indexOf(activeTab);
 
@@ -53,8 +55,12 @@ export default function GameHeader({
       
       {/* Turn Counter */}
       <div className="text-right">
-        <p className="text-xs font-bold text-zinc-400 uppercase">Election In</p>
-        <p className="text-lg font-mono font-bold">{Math.max(0, turnsPerCycle - currentTurn + 1)} Turns</p>
+        <p className="text-xs font-bold text-zinc-400 uppercase">
+          {isParliamentDissolved ? "Status" : "Election In"}
+        </p>
+        <p className={`text-lg font-mono font-bold ${isParliamentDissolved ? 'text-rose-600 animate-pulse' : ''}`}>
+          {isParliamentDissolved ? "POLLS OPEN" : `${Math.max(0, turnsPerCycle - currentTurn + 1)} Turns`}
+        </p>
       </div>
     </header>
   );

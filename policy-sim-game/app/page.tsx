@@ -1,12 +1,11 @@
 "use client";
-
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Modals & Layout
+import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
-import NarrativeModal from "./components/modals/NarrativeModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import DevPanel from "./components/DevPanel";
 import GameHeader from "./components/GameHeader";
@@ -22,12 +21,10 @@ import { useGameEngine } from "./hooks/useGameEngine";
 export default function Home() {
   const tabs = ['dashboard', 'electorate', 'graphs'] as const;
   type TabType = typeof tabs[number];
-
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
 
-  // Read the URL when the page first loads
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get('tab') as TabType;
@@ -36,7 +33,6 @@ export default function Home() {
     }
   }, []);
 
-  // Listen for the browser's Back/Forward buttons
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -47,7 +43,6 @@ export default function Home() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Intercept page refreshes and closures to protect study data
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -74,6 +69,7 @@ export default function Home() {
         currentTurn={game.currentTurn}
         turnsPerCycle={game.TURNS_PER_CYCLE}
         tabs={tabs}
+        isParliamentDissolved={game.isParliamentDissolved}
       />
 
       <UIProvider value={{
@@ -102,7 +98,9 @@ export default function Home() {
           initialPopulation: game.initialPopulation,
           isAgendaUnlocked: game.isAgendaUnlocked,
           setIsAgendaUnlocked: game.setIsAgendaUnlocked,
-          yAxisMax: game.yAxisMax
+          yAxisMax: game.yAxisMax,
+          isParliamentDissolved: game.isParliamentDissolved,
+          handleFaceElectorate: game.handleFaceElectorate
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">
@@ -123,9 +121,36 @@ export default function Home() {
         </GameProvider>
       </UIProvider>
 
-      {game.showElection && <ElectionModal currentMetricScore={game.turnMetricScore} currentCycle={game.currentCycle} approvalRating={game.turnApprovalRating} cycleAttempts={game.cycleAttempts} onNextCycle={() => { game.setShowElection(false); game.setShowNarrative(true); }} onReset={game.handleResetCycle} onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }} />}
-      {game.showNarrative && <NarrativeModal completedCycle={game.currentCycle} population={game.population} yAxisMax={game.yAxisMax} onProceed={game.handleProceedFromNarrative} />}
-      {game.showFinalDebrief && <FinalDebriefModal baselinePopulation={game.baselinePopulation} finalPopulation={game.population} yAxisMax={game.yAxisMax} />}
+      {/* Modals */}
+      {!game.isAgendaUnlocked && (
+        <BriefingModal 
+          currentCycle={game.currentCycle} 
+          onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
+        />
+      )}
+
+      {game.showElection && (
+        <ElectionModal
+          currentMetricScore={game.turnMetricScore}
+          currentCycle={game.currentCycle}
+          approvalRating={game.turnApprovalRating}
+          cycleAttempts={game.cycleAttempts}
+          initialPopulation={game.initialPopulation}
+          finalPopulation={game.population}
+          yAxisMax={game.yAxisMax}
+          onNextCycle={game.handleProceedFromNarrative}
+          onReset={game.handleResetCycle}
+          onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
+        />
+      )}
+
+      {game.showFinalDebrief && (
+        <FinalDebriefModal
+          baselinePopulation={game.baselinePopulation}
+          finalPopulation={game.population}
+          yAxisMax={game.yAxisMax}
+        />
+      )}
 
       <DevPanel 
         devMode={devMode} setDevMode={setDevMode} jumpToCycle={game.jumpToCycle}
