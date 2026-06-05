@@ -253,7 +253,6 @@ export default function D3Chart({
           .attr("y", d => d.yPos)
           .attr("height", d => d.h)
           .attr("fill", d => d.color)
-          .attr("rx", 2); 
       }
 
       annotationLayer.selectAll("*").remove();
