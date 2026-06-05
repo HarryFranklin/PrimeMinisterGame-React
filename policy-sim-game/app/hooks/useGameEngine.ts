@@ -1,4 +1,3 @@
-// hooks/useGameEngine.ts
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Respondent, ElectionCycle, Policy, TurnHistory } from '../utils/types';
 import { loadPopulation } from '../utils/dataLoader';
@@ -59,7 +58,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
   
-  // Election Tension & Modal States
+  const [isEnacting, setIsEnacting] = useState(false);
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
   const [showElection, setShowElection] = useState(false);
   const [showFinalDebrief, setShowFinalDebrief] = useState(false);
@@ -177,29 +176,35 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   }, [setActiveTab]);
 
   const handleApplyPolicy = () => {
-    if (!selectedPolicy) return;
+    if (!selectedPolicy || isEnacting) return;
     
-    setPopulation(previewPopulation);
-    setHistory(prev => [...prev, {
-      turn: currentTurn + 1,
-      enactedPolicyId: selectedPolicy.id,
-      enactedPolicyName: selectedPolicy.policyName,
-      lsAverage: calculateAverage(previewPopulation)
-    }]);
+    // Trigger the sequence delay and UI lock
+    setIsEnacting(true);
     
-    const updatedSchedule = cycleSchedule.map((deck, idx) => 
-      idx >= currentTurn ? deck.filter(p => p.id !== selectedPolicy.id) : deck
-    );
-    setCycleSchedule(updatedSchedule);
-    
-    if (currentTurn < TURNS_PER_CYCLE) {
-      setCurrentDeck(updatedSchedule[currentTurn]);
-      setCurrentTurn(prev => prev + 1);
-    } else {
-      setIsParliamentDissolved(true);
-    }
-    
-    setSelectedPolicy(null);
+    setTimeout(() => {
+      setPopulation(previewPopulation);
+      setHistory(prev => [...prev, {
+        turn: currentTurn + 1,
+        enactedPolicyId: selectedPolicy.id,
+        enactedPolicyName: selectedPolicy.policyName,
+        lsAverage: calculateAverage(previewPopulation)
+      }]);
+      
+      const updatedSchedule = cycleSchedule.map((deck, idx) => 
+        idx >= currentTurn ? deck.filter(p => p.id !== selectedPolicy.id) : deck
+      );
+      setCycleSchedule(updatedSchedule);
+      
+      if (currentTurn < TURNS_PER_CYCLE) {
+        setCurrentDeck(updatedSchedule[currentTurn]);
+        setCurrentTurn(prev => prev + 1);
+      } else {
+        setIsParliamentDissolved(true);
+      }
+      
+      setSelectedPolicy(null);
+      setIsEnacting(false);
+    }, 800);
   };
 
   const handleFaceElectorate = useCallback(() => {
@@ -268,7 +273,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   return {
     population, initialPopulation, baselinePopulation, previewPopulation,
     currentTurn, currentCycle, cycleAttempts,
-    selectedPolicy, setSelectedPolicy, pulsePolicy,
+    selectedPolicy, setSelectedPolicy, pulsePolicy, isEnacting,
     isParliamentDissolved, handleFaceElectorate,
     showElection, setShowElection, showFinalDebrief, setShowFinalDebrief,
     history, currentDeck, cycleMAO, optimalPath,

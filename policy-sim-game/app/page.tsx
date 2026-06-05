@@ -101,7 +101,8 @@ export default function Home() {
           yAxisMax: game.yAxisMax,
           isParliamentDissolved: game.isParliamentDissolved,
           handleFaceElectorate: game.handleFaceElectorate,
-          history: game.history
+          history: game.history,
+          isEnacting: game.isEnacting
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">

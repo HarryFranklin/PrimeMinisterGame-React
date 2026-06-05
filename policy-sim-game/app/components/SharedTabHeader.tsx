@@ -23,6 +23,39 @@ export default function SharedTabHeader({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Animated ticking component for Approval
+  const [displayApproval, setDisplayApproval] = useState(approvalRating);
+  
+  useEffect(() => {
+    let animationFrameId: number;
+    let startTime: number;
+    const startValue = displayApproval;
+    const change = approvalRating - startValue;
+    
+    if (Math.abs(change) < 0.01) {
+      setDisplayApproval(approvalRating);
+      return;
+    }
+
+    const duration = 1200; // 1.2s tick
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      setDisplayApproval(startValue + change * easeProgress);
+      
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        setDisplayApproval(approvalRating);
+      }
+    };
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [approvalRating]);
+
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -37,14 +70,16 @@ export default function SharedTabHeader({
 
   return (
     <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-wrap xl:flex-nowrap justify-between items-center gap-4 shrink-0">
-      
+             
       {/* Left Side: Standardised Status Indicators */}
       <div className="flex items-stretch gap-2 sm:gap-3 h-[52px] shrink min-w-0 max-w-full">
-        
+                 
         {/* Approval Box */}
-        <div className="bg-zinc-900 text-white px-3 sm:px-4 rounded-lg flex flex-col justify-center items-center shrink-0 shadow-sm">
+        <div className="bg-zinc-900 text-white px-3 sm:px-4 rounded-lg flex flex-col justify-center items-center shrink-0 shadow-sm transition-colors duration-500">
           <span className="text-[9px] uppercase font-bold tracking-widest text-zinc-400 mb-0.5">Approval</span>
-          <span className={`text-base sm:text-lg font-black leading-none ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>{approvalRating.toFixed(1)}%</span>
+          <span className={`text-base sm:text-lg font-black leading-none ${displayApproval >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {displayApproval.toFixed(1)}%
+          </span>
         </div>
 
         {/* Policy Widget */}
@@ -94,6 +129,7 @@ export default function SharedTabHeader({
                   <p className="font-bold text-pink-900 mb-1">{selectedPolicy.policyName}</p>
                   <p className="text-sm text-pink-700/80 leading-relaxed">{selectedPolicy.description}</p>
                 </div>
+
                 {otherPolicies.length > 0 && (
                   <>
                     <div className="bg-zinc-50 border-b border-zinc-100 px-4 py-2">

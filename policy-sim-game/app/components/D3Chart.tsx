@@ -187,10 +187,10 @@ export default function D3Chart({
           .attr("stroke-linecap", "round");
       }
 
+      // We slow down the axis transitions slightly to match the 1.2s UI tick
       chart.select(".axis-x").transition().duration(dimensions.width ? 0 : 500).call(d3.axisBottom(xScale) as any).call(styleAxis);
       chart.select(".axis-y").transition().duration(dimensions.width ? 0 : 500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
       
-      // Increased Y offset for label spacing
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       const bw = xScale.bandwidth();
@@ -216,7 +216,8 @@ export default function D3Chart({
             update => update,
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
-          .transition().duration(600).ease(d3.easeCubicOut)
+          // Boosted transition time to 1200ms to match the tension tick
+          .transition().duration(1200).ease(d3.easeCubicOut)
           .attr("y", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
@@ -254,7 +255,8 @@ export default function D3Chart({
             update => update,
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
-          .transition().duration(600).ease(d3.easeCubicOut)
+          // Boosted transition time to 1200ms to match the tension tick
+          .transition().duration(1200).ease(d3.easeCubicOut)
           .attr("x", 0)
           .attr("width", bw)
           .attr("y", d => d.yPos)

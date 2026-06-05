@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
@@ -12,12 +12,43 @@ export default function DashboardTab() {
   const {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
-    approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax,
+    approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, handleFaceElectorate, history
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
+
+  // Custom hook logic directly injected to animate the Approval Rating
+  const [displayApproval, setDisplayApproval] = useState(approvalRating);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let startTime: number;
+    const startValue = displayApproval;
+    const change = approvalRating - startValue;
+    
+    if (Math.abs(change) < 0.01) {
+      setDisplayApproval(approvalRating);
+      return;
+    }
+
+    const duration = 1200; // 1.2 second ticking animation
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+      setDisplayApproval(startValue + change * easeProgress);
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        setDisplayApproval(approvalRating);
+      }
+    };
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [approvalRating]);
 
   const activeMarkers: ChartMarker[] = [];
   if (currentCycle === ElectionCycle.Benthamite) {
@@ -205,7 +236,7 @@ export default function DashboardTab() {
             ) : (
               <>
                 <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {approvalRating.toFixed(1)}%
+                  {displayApproval.toFixed(1)}%
                 </p>
                 <p className="text-sm text-zinc-500 mt-2 text-center px-4">
                   Requirement: <strong className="text-zinc-300">51.0%</strong>
@@ -234,13 +265,13 @@ export default function DashboardTab() {
                 return (
                   <button
                     key={policy.id}
-                    disabled={!isAgendaUnlocked}
+                    disabled={!isAgendaUnlocked || isEnacting}
                     onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
                     className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
                       isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                     } ${
                       isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
-                    }`}
+                    } ${isEnacting && 'opacity-50 cursor-not-allowed'}`}
                   >
                     {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
                     <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
@@ -281,10 +312,12 @@ export default function DashboardTab() {
             ) : (
               <button 
                 onClick={handleApplyPolicy}
-                disabled={!selectedPolicy || !isAgendaUnlocked}
-                className="w-full py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed transition-all shadow-md"
+                disabled={!selectedPolicy || !isAgendaUnlocked || isEnacting}
+                className={`w-full py-3 text-white text-sm font-bold rounded-xl transition-all shadow-md ${
+                  isEnacting ? 'bg-pink-600 animate-pulse' : 'bg-zinc-900 hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed'
+                }`}
               >
-                Enact Policy
+                {isEnacting ? 'Enacting Legislation...' : 'Enact Policy'}
               </button>
             )}
           </div>
