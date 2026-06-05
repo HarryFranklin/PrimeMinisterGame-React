@@ -13,6 +13,7 @@ export interface ChartMarker {
 interface HistogramEntry {
   name: string | number;
   count: number;
+  segments?: { label: string, value: number, color: string }[];
 }
 
 interface D3ChartProps {
@@ -25,6 +26,7 @@ interface D3ChartProps {
   markers?: ChartMarker[];
   visualStyle?: 'solid' | 'faces';
   yAxisMax?: number;
+  faceCols?: number;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -61,11 +63,10 @@ const getAxisLabel = (axisType: AxisVariable): string => {
 };
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces' 
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2 
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  
   const prevPlotType = useRef<string | null>(null);
   const prevXAxis = useRef<AxisVariable | null>(null);
   const prevYAxis = useRef<AxisVariable | null>(null);
@@ -133,19 +134,17 @@ export default function D3Chart({
       const xDomain = histogramData.map(d => d.name.toString());
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
       
-      const yDomainMax = yAxisMax; 
-      
+      const yDomainMax = yAxisMax;               
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
 
       const defs = svg.selectAll("defs").data([0]).join("defs");
       
       if (visualStyle === 'faces') {
         const bw = xScale.bandwidth();
-        const idealFaceSize = 18; 
-        const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
-        const faceSize = bw / cols;
-          
+        const faceSize = bw / faceCols;  
+        
         defs.selectAll("*").remove(); 
+
         const patterns = defs.selectAll("pattern.face-pattern")
           .data(histogramData, (d: any) => d.name)
           .join("pattern")
@@ -154,8 +153,8 @@ export default function D3Chart({
           .attr("patternUnits", "userSpaceOnUse")
           .attr("width", faceSize)   
           .attr("height", faceSize)  
-          .attr("x", d => xScale(d.name.toString()) || 0)
-          .attr("y", height);
+          .attr("x", 0) // Perfect horizontal alignment relative to the bar's container
+          .attr("y", height); // Perfect vertical alignment anchored to the chart baseline
 
         const faceGroup = patterns.append("g");
         const cx = faceSize / 2;
@@ -193,50 +192,75 @@ export default function D3Chart({
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 32).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       const bw = xScale.bandwidth();
-      const idealFaceSize = 18;
-      const cols = Math.max(2, Math.min(3, Math.floor(bw / idealFaceSize)));
-      const faceSize = bw / cols;
 
-      dataLayer.selectAll("rect.bar").data(histogramData, (d: any) => d.name)
-        .join(
-          enter => enter.append("rect")
-            .attr("class", "bar")
-            .attr("x", d => xScale(d.name.toString()) || 0)
-            .attr("width", bw)
-            .attr("y", height)
-            .attr("height", 0),
-          update => update,
-          exit => exit.remove()
-        )
-        .transition().duration(600).ease(d3.easeCubicOut)
-        .attr("x", d => xScale(d.name.toString()) || 0)
-        .attr("width", bw)
-        .attr("y", d => {
-          if (visualStyle === 'faces') {
+      dataLayer.selectAll("rect.bar").remove(); 
+
+      const cols = dataLayer.selectAll("g.col").data(histogramData, (d: any) => d.name)
+        .join("g")
+        .attr("class", "col")
+        .attr("transform", d => `translate(${xScale(d.name.toString()) || 0}, 0)`);
+
+      if (visualStyle === 'faces') {
+        const faceSize = bw / faceCols;
+
+        cols.selectAll("rect.segment").remove();
+        cols.selectAll("rect.face-bar").data(d => [d])
+          .join("rect")
+          .attr("class", "face-bar")
+          .attr("width", bw)
+          .attr("fill", d => `url(#face-${d.name}-${chartId})`)
+          .transition().duration(600).ease(d3.easeCubicOut)
+          .attr("y", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
             if (d.count > 0 && faceCount === 0) faceCount = 1;
             return height - (faceCount * faceSize);
-          }
-          return yScale(d.count);
-        })
-        .attr("height", d => {
-          if (visualStyle === 'faces') {
+          })
+          .attr("height", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
             if (d.count > 0 && faceCount === 0) faceCount = 1;
             return faceCount * faceSize;
-          }
-          return height - yScale(d.count);
-        })
-        .attr("fill", d => visualStyle === 'faces' ? `url(#face-${d.name}-${chartId})` : chartColor)
-        .attr("rx", visualStyle === 'faces' ? 0 : 4);
+          });
+      } else {
+        cols.selectAll("rect.face-bar").remove();
+        cols.selectAll("rect.segment")
+          .data(d => {
+            if (d.segments && d.segments.length > 0) {
+              let currentY = height;
+              return d.segments.map((seg: any) => {
+                const segH = height - yScale(seg.value);
+                currentY -= segH;
+                return { ...seg, key: seg.label, yPos: currentY, h: segH };
+              });
+            }
+            return [{ key: 'single', color: chartColor, yPos: yScale(d.count), h: height - yScale(d.count) }];
+          }, (d: any) => d.key)
+          .join(
+            enter => enter.append("rect")
+              .attr("class", "segment")
+              .attr("x", 0)
+              .attr("width", bw)
+              .attr("y", height)
+              .attr("height", 0)
+              .attr("fill", d => d.color),
+            update => update,
+            exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
+          )
+          .transition().duration(600).ease(d3.easeCubicOut)
+          .attr("x", 0)
+          .attr("width", bw)
+          .attr("y", d => d.yPos)
+          .attr("height", d => d.h)
+          .attr("fill", d => d.color)
+          .attr("rx", 2); 
+      }
 
       annotationLayer.selectAll("*").remove();
 
       if (markers && markers.length > 0) {
         const continuousXScale = d3.scaleLinear().domain([0, 10]).range([(xScale("0") || 0) + xScale.bandwidth() / 2, (xScale("10") || 0) + xScale.bandwidth() / 2]);
-
+        
         markers.forEach((marker, index) => {
           const markerX = continuousXScale(Math.max(0, Math.min(10, marker.value)));
           const markerColor = marker.color || "#3f3f46";
@@ -273,7 +297,7 @@ export default function D3Chart({
 
       dataLayer.selectAll("circle.dot").data(chartData, (d: any) => d.id).join("circle").attr("class", "dot").transition().duration(500).attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, visualStyle, dimensions]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, visualStyle, dimensions, faceCols]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }

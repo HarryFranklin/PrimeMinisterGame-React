@@ -27,6 +27,7 @@ export default function DashboardTab() {
     activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
+  // Calculates Wellbeing Impact based on Life Satisfaction trajectory
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
       const name = i.toString();
@@ -34,16 +35,21 @@ export default function DashboardTab() {
       const segments: any[] = [];
 
       if (selectedPolicy) {
-        ['Will be worsened', 'Will be stable', 'Will improve'].forEach(key => {
-          const count = residentsInBin.filter(r => {
-            const index = population.indexOf(r);
-            const delta = previewPopulation[index].currentLS - r.currentLS;
-            if (key === 'Will improve') return delta > 0.05;
-            if (key === 'Will be worsened') return delta < -0.05;
-            return delta >= -0.05 && delta <= 0.05;
-          }).length;
-          if (count > 0) segments.push({ label: key, value: count, color: (IMPACT_COLORS as any)[key] });
-        });
+        const improveCount = residentsInBin.filter(r => {
+          const idx = population.indexOf(r);
+          return previewPopulation[idx].currentLS - r.currentLS > 0.05;
+        }).length;
+
+        const worsenCount = residentsInBin.filter(r => {
+          const idx = population.indexOf(r);
+          return previewPopulation[idx].currentLS - r.currentLS < -0.05;
+        }).length;
+
+        const stableCount = residentsInBin.length - improveCount - worsenCount;
+
+        if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
+        if (stableCount > 0) segments.push({ label: 'Will be stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
+        if (worsenCount > 0) segments.push({ label: 'Will be worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
       } else {
         segments.push({ label: "Residents", value: residentsInBin.length, color: "#d4d4d8" });
       }
@@ -59,11 +65,18 @@ export default function DashboardTab() {
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           
           {/* TOP: Current Distribution */}
-          <div onClick={() => setActiveTab('graphs')} className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden cursor-pointer hover:border-zinc-300 transition-all group">
-            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
+            <div 
+              onClick={() => setActiveTab('graphs')} 
+              className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
+            >
               <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
+                <path d="M7 17l9.2-9.2M17 17V7H7"/>
+              </svg>
             </div>
-            <div className="flex-1 p-3 pb-0 min-h-0 relative">
+            
+            <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
               <D3Chart 
                 plotType="1D" 
                 chartData={currentChartData}
@@ -74,8 +87,10 @@ export default function DashboardTab() {
                 markers={activeMarkers} 
                 visualStyle={'faces'}
                 yAxisMax={yAxisMax}
+                faceCols={2}
               />
             </div>
+            
             <div className="px-4 pb-3 flex flex-wrap gap-3 justify-center border-t border-zinc-50 pt-2 shrink-0">
               {activeMarkers.map((marker, idx) => (
                 <div key={idx} className="flex items-center gap-1.5">
@@ -88,14 +103,21 @@ export default function DashboardTab() {
             </div>
           </div>
 
-          {/* BOTTOM: Impact Analysis (Electorate View) */}
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden group">
-            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
+          {/* BOTTOM: Wellbeing Impact Forecast */}
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
+            <div 
+              onClick={() => setActiveTab('electorate')} 
+              className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
+            >
               <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
-                {selectedPolicy ? "Projected Impact" : "No Policy Selected"}
+                {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
+                <path d="M7 17l9.2-9.2M17 17V7H7"/>
+              </svg>
             </div>
-            <div className="flex-1 p-3 pb-0 min-h-0 relative">
+            
+            <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
               <D3Chart 
                 plotType="1D" 
                 chartData={[]}
@@ -120,6 +142,22 @@ export default function DashboardTab() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* 3-Colour Legend (Always visible to prevent layout shift) */}
+            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${selectedPolicy ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Improve</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be stable'] }} />
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Stable</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be worsened'] }} />
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Worsen</span>
+              </div>
             </div>
           </div>
         </div>
@@ -194,7 +232,6 @@ export default function DashboardTab() {
                   }`}
                 >
                   {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                  {/* Text sizes boosted for better readability here */}
                   <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
                     {policy.policyName}
                   </p>

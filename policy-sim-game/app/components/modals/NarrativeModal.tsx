@@ -109,9 +109,8 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-                {/* VITAL: Fixed Y Axis to 120 so both graphs are identical in scale */}
                 <div className={`h-[220px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120}/>
+                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={2}/>
                 </div>
                 
                 {!revealedBenthamA && (
@@ -133,9 +132,8 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-                {/* VITAL: Fixed Y Axis to 120 so both graphs are identical in scale */}
                 <div className={`h-[220px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
-                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120}/>
+                  <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={2}/>
                 </div>
 
                 {!revealedBenthamB && (

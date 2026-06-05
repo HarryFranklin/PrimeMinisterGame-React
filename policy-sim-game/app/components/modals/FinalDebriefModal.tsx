@@ -64,6 +64,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
                     color="#d4d4d8" 
                     visualStyle='faces'
                     yAxisMax={debriefYAxisMax}
+                    faceCols={2}
                   />
                 </div>
               </div>
@@ -80,6 +81,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
                     color="#d4d4d8" 
                     visualStyle='faces'
                     yAxisMax={debriefYAxisMax}
+                    faceCols={2}
                   />
                 </div>
               </div>

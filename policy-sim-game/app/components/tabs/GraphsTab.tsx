@@ -67,6 +67,7 @@ export default function GraphsTab() {
               markers={currentMarkers}
               visualStyle={'faces'}
               yAxisMax={yAxisMax}
+              faceCols={3}
             />
           </div>
           
@@ -102,6 +103,7 @@ export default function GraphsTab() {
               markers={projectedMarkers}
               visualStyle={'faces'}
               yAxisMax={yAxisMax}
+              faceCols={3}
             />
             {!selectedPolicy && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-b-xl z-10 animate-in fade-in duration-300">
