@@ -153,8 +153,8 @@ export default function D3Chart({
           .attr("patternUnits", "userSpaceOnUse")
           .attr("width", faceSize)   
           .attr("height", faceSize)  
-          .attr("x", 0) // Perfect horizontal alignment relative to the bar's container
-          .attr("y", height); // Perfect vertical alignment anchored to the chart baseline
+          .attr("x", 0)
+          .attr("y", height);
 
         const faceGroup = patterns.append("g");
         const cx = faceSize / 2;
@@ -205,10 +205,17 @@ export default function D3Chart({
 
         cols.selectAll("rect.segment").remove();
         cols.selectAll("rect.face-bar").data(d => [d])
-          .join("rect")
-          .attr("class", "face-bar")
-          .attr("width", bw)
-          .attr("fill", d => `url(#face-${d.name}-${chartId})`)
+          .join(
+            enter => enter.append("rect")
+              .attr("class", "face-bar")
+              .attr("width", bw)
+              .attr("fill", d => `url(#face-${d.name}-${chartId})`)
+              // Explicit starting coordinates for the smooth upward animation
+              .attr("y", height)
+              .attr("height", 0),
+            update => update,
+            exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
+          )
           .transition().duration(600).ease(d3.easeCubicOut)
           .attr("y", d => {
             const rawHeight = height - yScale(d.count);
@@ -226,7 +233,8 @@ export default function D3Chart({
         cols.selectAll("rect.face-bar").remove();
         cols.selectAll("rect.segment")
           .data(d => {
-            if (d.segments && d.segments.length > 0) {
+            // By strictly reading the segments array, if an empty array is passed, 0 rects will be drawn.
+            if (d.segments !== undefined) {
               let currentY = height;
               return d.segments.map((seg: any) => {
                 const segH = height - yScale(seg.value);
@@ -241,6 +249,7 @@ export default function D3Chart({
               .attr("class", "segment")
               .attr("x", 0)
               .attr("width", bw)
+              // Explicit starting coordinates for the smooth upward animation
               .attr("y", height)
               .attr("height", 0)
               .attr("fill", d => d.color),
@@ -252,7 +261,7 @@ export default function D3Chart({
           .attr("width", bw)
           .attr("y", d => d.yPos)
           .attr("height", d => d.h)
-          .attr("fill", d => d.color)
+          .attr("fill", d => d.color);
       }
 
       annotationLayer.selectAll("*").remove();

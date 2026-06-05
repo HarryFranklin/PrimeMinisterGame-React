@@ -27,7 +27,6 @@ export default function DashboardTab() {
     activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
 
-  // Calculates Wellbeing Impact based on Life Satisfaction trajectory
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
       const name = i.toString();
@@ -50,9 +49,9 @@ export default function DashboardTab() {
         if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
         if (stableCount > 0) segments.push({ label: 'Will be stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
         if (worsenCount > 0) segments.push({ label: 'Will be worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
-      } else {
-        segments.push({ label: "Residents", value: residentsInBin.length, color: "#d4d4d8" });
       }
+      
+      // Returning empty segments here when no policy is selected causes the D3 engine to smoothly collapse the bars to zero.
       return { name, count: residentsInBin.length, segments };
     });
   }, [population, previewPopulation, selectedPolicy]);
@@ -70,7 +69,7 @@ export default function DashboardTab() {
               onClick={() => setActiveTab('graphs')} 
               className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
             >
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">Current Life Satisfaction Distribution</h3>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
                 <path d="M7 17l9.2-9.2M17 17V7H7"/>
               </svg>
