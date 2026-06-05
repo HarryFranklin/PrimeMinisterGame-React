@@ -145,6 +145,20 @@ export default function DashboardTab() {
                   </div>
                 </div>
               )}
+
+              {isParliamentDissolved && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
+                  <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-zinc-400 text-lg">🗳️</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Forecast Unavailable</h4>
+                    <p className="text-xs text-zinc-500 font-medium">
+                      No forecast available due to the impending election.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${selectedPolicy ? 'opacity-100' : 'opacity-40 grayscale'}`}>
@@ -175,34 +189,44 @@ export default function DashboardTab() {
           />
 
           <div 
-            onClick={() => setActiveTab('electorate')} 
-            className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer transition-all group ${
-              isParliamentDissolved ? 'ring-4 ring-rose-500/80 bg-zinc-800' : 'hover:bg-black'
+            onClick={() => !isParliamentDissolved && setActiveTab('electorate')} 
+            className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all group ${
+              isParliamentDissolved ? 'bg-zinc-800 border border-zinc-700' : 'cursor-pointer hover:bg-black'
             }`}
           >
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
-            <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {approvalRating.toFixed(1)}%
-            </p>
-            <p className="text-sm text-zinc-500 mt-2 text-center px-4">
-              Requirement: <strong className="text-zinc-300">51.0%</strong>
-            </p>
+            
+            {/* HIDE APPROVAL RATING WHEN DISSOLVED TO BUILD TENSION */}
+            {isParliamentDissolved ? (
+              <p className="text-3xl lg:text-4xl font-black tracking-widest text-zinc-500 mt-2">
+                UNCLEAR
+              </p>
+            ) : (
+              <>
+                <p className={`text-5xl lg:text-6xl font-black tracking-tighter transition-colors duration-500 ${approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {approvalRating.toFixed(1)}%
+                </p>
+                <p className="text-sm text-zinc-500 mt-2 text-center px-4">
+                  Requirement: <strong className="text-zinc-300">51.0%</strong>
+                </p>
+              </>
+            )}
           </div>
         </div>
 
         {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (4 Cols) */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
-          <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
+          <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
               {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
             </h3>
-            <p className="text-xs text-zinc-500 mt-0.5">
+            <p className="text-xs text-zinc-500 mt-1">
               {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
             </p>
           </div>
           
-          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-y-auto relative">             
+          <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>             
             {!isParliamentDissolved ? (
               // Standard Agenda View
               currentDeck.slice(0, 4).map((policy) => {
@@ -229,16 +253,16 @@ export default function DashboardTab() {
                 );
               })
             ) : (
-              // History View (When Parliament Dissolved)
-              <div className="flex flex-col gap-2 p-2">
+              // History View (When Parliament Dissolved - Compacted to fit)
+              <div className="flex flex-col gap-2.5">
                 {enactedLegislation.map((leg, index) => (
-                  <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                  <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200 shadow-sm">
+                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-800 text-sm mb-1">{leg.enactedPolicyName}</p>
-                      <p className="text-xs text-zinc-500">{leg.description}</p>
+                      <p className="font-bold text-zinc-900 text-sm mb-0.5">{leg.enactedPolicyName}</p>
+                      <p className="text-xs text-zinc-600 leading-snug line-clamp-2">{leg.description}</p>
                     </div>
                   </div>
                 ))}
@@ -246,7 +270,7 @@ export default function DashboardTab() {
             )}
           </div>
           
-          <div className="p-3 border-t border-zinc-100 bg-zinc-50 shrink-0">
+          <div className="p-4 border-t border-zinc-100 bg-zinc-50 shrink-0">
             {isParliamentDissolved ? (
               <button 
                 onClick={handleFaceElectorate}

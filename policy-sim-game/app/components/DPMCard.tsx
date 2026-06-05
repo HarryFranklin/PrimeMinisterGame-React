@@ -93,8 +93,8 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         <div className="mt-auto bg-zinc-50 border border-zinc-200 p-3 rounded-lg flex gap-3 items-start">
           <span className="text-lg opacity-50 shrink-0">💬</span>
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Advisory Note</span>
-            <span className="text-xs font-medium text-zinc-600 italic">"{getAdvisory()}"</span>
+            <span className="text-[12px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Advisory Note</span>
+            <span className="text-sm font-medium text-zinc-600 italic">"{getAdvisory()}"</span>
           </div>
         </div>
       </div>
