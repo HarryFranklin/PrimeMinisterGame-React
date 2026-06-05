@@ -100,7 +100,8 @@ export default function Home() {
           setIsAgendaUnlocked: game.setIsAgendaUnlocked,
           yAxisMax: game.yAxisMax,
           isParliamentDissolved: game.isParliamentDissolved,
-          handleFaceElectorate: game.handleFaceElectorate
+          handleFaceElectorate: game.handleFaceElectorate,
+          history: game.history
         }}>
           <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">

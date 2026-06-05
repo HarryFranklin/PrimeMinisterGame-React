@@ -38,7 +38,7 @@ const getAxisDomain = (axisType: AxisVariable): [number, number] => {
     case AxisVariable.DeltaSocietalFairness: return [-10, 10];
     default: return [0, 10];
   }
-};
+}
 
 const getTicks = (axisType: AxisVariable) => {
   switch (axisType) {
@@ -49,7 +49,7 @@ const getTicks = (axisType: AxisVariable) => {
     case AxisVariable.DeltaSocietalFairness: return [-10, -5, 0, 5, 10];
     default: return [];
   }
-};
+}
 
 const getAxisLabel = (axisType: AxisVariable): string => {
   switch (axisType) {
@@ -60,7 +60,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
     case AxisVariable.DeltaSocietalFairness: return "Change in Societal Fairness";
     default: return "Value";
   }
-};
+}
 
 export default function D3Chart({ 
   plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2 
@@ -95,7 +95,8 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 20, right: 20, bottom: 38, left: 50 };
+    // Increased bottom margin to provide room for text
+    const margin = { top: 20, right: 20, bottom: 45, left: 50 };
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
     const chartColor = color || "#ec4899"; 
@@ -135,24 +136,24 @@ export default function D3Chart({
       const xScale = d3.scaleBand().domain(xDomain).range([0, width]).padding(0.1);
       
       const yDomainMax = yAxisMax;               
+      
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
 
       const defs = svg.selectAll("defs").data([0]).join("defs");
       
       if (visualStyle === 'faces') {
         const bw = xScale.bandwidth();
-        const faceSize = bw / faceCols;  
-        
+        const faceSize = bw / faceCols;
+           
         defs.selectAll("*").remove(); 
-
         const patterns = defs.selectAll("pattern.face-pattern")
           .data(histogramData, (d: any) => d.name)
           .join("pattern")
           .attr("class", "face-pattern")
           .attr("id", d => `face-${d.name}-${chartId}`)
           .attr("patternUnits", "userSpaceOnUse")
-          .attr("width", faceSize)   
-          .attr("height", faceSize)  
+          .attr("width", faceSize)     
+          .attr("height", faceSize)    
           .attr("x", 0)
           .attr("y", height);
 
@@ -189,10 +190,10 @@ export default function D3Chart({
       chart.select(".axis-x").transition().duration(dimensions.width ? 0 : 500).call(d3.axisBottom(xScale) as any).call(styleAxis);
       chart.select(".axis-y").transition().duration(dimensions.width ? 0 : 500).call(d3.axisLeft(yScale).ticks(5) as any).call(styleAxis);
       
-      chart.select(".label-x").attr("x", width / 2).attr("y", height + 32).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
+      // Increased Y offset for label spacing
+      chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       const bw = xScale.bandwidth();
-
       dataLayer.selectAll("rect.bar").remove(); 
 
       const cols = dataLayer.selectAll("g.col").data(histogramData, (d: any) => d.name)
@@ -202,15 +203,14 @@ export default function D3Chart({
 
       if (visualStyle === 'faces') {
         const faceSize = bw / faceCols;
-
         cols.selectAll("rect.segment").remove();
+
         cols.selectAll("rect.face-bar").data(d => [d])
           .join(
             enter => enter.append("rect")
               .attr("class", "face-bar")
               .attr("width", bw)
               .attr("fill", d => `url(#face-${d.name}-${chartId})`)
-              // Explicit starting coordinates for the smooth upward animation
               .attr("y", height)
               .attr("height", 0),
             update => update,
@@ -233,7 +233,6 @@ export default function D3Chart({
         cols.selectAll("rect.face-bar").remove();
         cols.selectAll("rect.segment")
           .data(d => {
-            // By strictly reading the segments array, if an empty array is passed, 0 rects will be drawn.
             if (d.segments !== undefined) {
               let currentY = height;
               return d.segments.map((seg: any) => {
@@ -249,7 +248,6 @@ export default function D3Chart({
               .attr("class", "segment")
               .attr("x", 0)
               .attr("width", bw)
-              // Explicit starting coordinates for the smooth upward animation
               .attr("y", height)
               .attr("height", 0)
               .attr("fill", d => d.color),
@@ -265,15 +263,14 @@ export default function D3Chart({
       }
 
       annotationLayer.selectAll("*").remove();
-
       if (markers && markers.length > 0) {
         const continuousXScale = d3.scaleLinear().domain([0, 10]).range([(xScale("0") || 0) + xScale.bandwidth() / 2, (xScale("10") || 0) + xScale.bandwidth() / 2]);
         
         markers.forEach((marker, index) => {
           const markerX = continuousXScale(Math.max(0, Math.min(10, marker.value)));
           const markerColor = marker.color || "#3f3f46";
-          const yPos = 12 + (index * 16); 
-
+          const yPos = 12 + (index * 16);
+          
           annotationLayer.append("line")
             .attr("x1", markerX).attr("x2", markerX)
             .attr("y1", 0).attr("y2", height)
@@ -296,7 +293,8 @@ export default function D3Chart({
       }
 
     } else if (plotType === '2D') {
-      annotationLayer.selectAll("*").remove(); 
+      annotationLayer.selectAll("*").remove();
+      
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, width]);
       const yScale = d3.scaleLinear().domain(getAxisDomain(yAxisType)).range([height, 0]);
 

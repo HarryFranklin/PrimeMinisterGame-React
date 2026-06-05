@@ -1,6 +1,6 @@
 "use client";
 import { createContext, ReactNode, useContext } from 'react';
-import { ElectionCycle, Policy, Respondent } from '../utils/types';
+import { ElectionCycle, Policy, Respondent, TurnHistory } from '../utils/types'; 
 
 export interface UIState {
   setActiveTab: (tab: any) => void;
@@ -44,6 +44,7 @@ export interface GameState {
   yAxisMax: number;
   isParliamentDissolved: boolean;
   handleFaceElectorate: () => void;
+  history: TurnHistory[];
 }
 
 const GameContext = createContext<GameState | undefined>(undefined);

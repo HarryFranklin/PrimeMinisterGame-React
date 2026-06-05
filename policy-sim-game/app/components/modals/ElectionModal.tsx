@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+// components/modals/ElectionModal.tsx
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
-import { ModalOverlay, ModalContent, ModalHeader, DPMMessage, ModalActionBtn } from './SharedModalComponents';
+import { ModalOverlay, ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -31,6 +33,46 @@ const getDummyHistogram = (distribution: Record<number, number>) => {
   }));
 };
 
+const getFakeName = (id: number) => {
+  const names = [
+    "Arthur Pendelton", "Sarah Jenkins", "Marcus Thorne", "Fiona Gallagher", 
+    "David Chowdhury", "Chloe Davies", "James O'Connor", "Eleanor Hughes", 
+    "Liam Patel", "Grace Smith", "Thomas Wright", "Olivia Newton", "Jack Evans"
+  ];
+  return names[id % names.length];
+};
+
+const Confetti = () => {
+  const colors = ['#ec4899', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-[9999] flex justify-center">
+      {Array.from({ length: 100 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ y: -50, x: 0, opacity: 1, rotate: 0 }}
+          animate={{ 
+            y: window.innerHeight + 50, 
+            x: (Math.random() - 0.5) * window.innerWidth * 0.8,
+            opacity: [1, 1, 0],
+            rotate: 360 + Math.random() * 720
+          }}
+          transition={{ 
+            duration: 2.5 + Math.random() * 2, 
+            ease: "easeOut",
+            delay: Math.random() * 0.4
+          }}
+          className="absolute w-3 h-3"
+          style={{ 
+            backgroundColor: colors[i % colors.length],
+            borderRadius: i % 3 === 0 ? '50%' : '2px',
+            top: '-20px'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export default function ElectionModal({ 
   currentMetricScore, currentCycle, approvalRating, cycleAttempts, 
   initialPopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
@@ -41,13 +83,10 @@ export default function ElectionModal({
   const won = approvalRating >= 51.0;
   const isFinalCycle = currentCycle === ElectionCycle.SocietalUtility;
 
-  // Calculate logic for Debriefing
   let canProceed = true;
   if (!won && cycleAttempts < 3) canProceed = false;
   
   const totalPages = canProceed ? 4 : 3;
-
-  // --- Sub-Components for Pages --- //
 
   const PageMacro = () => {
     const initialHist = useMemo(() => generateHistogramData(initialPopulation), []);
@@ -77,23 +116,54 @@ export default function ElectionModal({
   };
 
   const PageVerdict = () => {
+    const [displayScore, setDisplayScore] = useState(0);
+    const [isDone, setIsDone] = useState(false);
+
+    useEffect(() => {
+      let start = 0;
+      const duration = 2000; 
+      const startTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3); 
+        
+        setDisplayScore(easeProgress * approvalRating);
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setIsDone(true);
+        }
+      };
+      requestAnimationFrame(animate);
+    }, []);
+
+    const showSuccess = isDone && won;
+    const showFailure = isDone && !won;
+
     return (
-      <div className="flex flex-col items-center justify-center py-12 min-h-[300px] relative animate-in zoom-in duration-500">
-        {won && (
+      <div className="flex flex-col items-center justify-center py-6 w-full relative animate-in zoom-in duration-500">
+        {showSuccess && <Confetti />}
+        
+        {showSuccess && (
           <div className="absolute -top-4 bg-emerald-500 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg animate-bounce z-10">
             Majority Secured
           </div>
         )}
-        <div className={`p-10 w-full max-w-lg text-center rounded-3xl border-4 transition-all duration-700 transform ${won ? 'bg-emerald-50 border-emerald-200 scale-105 shadow-xl' : 'bg-rose-50 border-rose-200 scale-100 shadow-md'}`}>
-          <h1 className={`text-4xl md:text-5xl font-black mb-2 ${won ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {won ? 'Re-Elected' : 'Voted Out'}
+        <div className={`p-10 w-full max-w-lg text-center rounded-3xl border-4 transition-all duration-700 transform ${showSuccess ? 'bg-emerald-50 border-emerald-200 scale-105 shadow-xl' : showFailure ? 'bg-rose-50 border-rose-200 scale-100 shadow-md' : 'bg-zinc-50 border-zinc-200 scale-100'}`}>
+          <h1 className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${showSuccess ? 'text-emerald-700' : showFailure ? 'text-rose-700' : 'text-zinc-800'}`}>
+            {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes...'}
           </h1>
-          <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6">
-            {won ? 'The public endorses your mandate' : 'You failed to deliver the mandate'}
+          <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">
+            {showSuccess ? 'The public endorses your mandate' : showFailure ? 'You failed to deliver the mandate' : 'Awaiting final tally'}
           </p>
           <div className="flex flex-col items-center justify-center gap-1">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Final Approval</span>
-            <span className={`text-7xl font-black ${won ? 'text-emerald-600' : 'text-rose-600'}`}>{approvalRating.toFixed(1)}%</span>
+            <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">Final Approval</span>
+            <span className={`text-8xl font-black tabular-nums transition-colors duration-300 ${showSuccess ? 'text-emerald-600' : showFailure ? 'text-rose-600' : 'text-zinc-800'}`}>
+              {displayScore.toFixed(1)}%
+            </span>
             <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
           </div>
         </div>
@@ -110,12 +180,16 @@ export default function ElectionModal({
 
       const a = sorted[0]; 
       const c = sorted[sorted.length - 1]; 
-      const b = sorted.find(s => Math.abs(s.lsDiff) < 0.1) || sorted[Math.floor(sorted.length / 2)]; 
+      
+      let b = sorted.find(s => Math.abs(s.lsDiff) < 0.1 && s.id !== a.id && s.id !== c.id);
+      if (!b) {
+        b = sorted.find(s => s.id !== a.id && s.id !== c.id) || sorted[1];
+      }
 
       return [
-        { id: a.id, title: `Citizen #${String(a.id).substring(0,4)}`, diff: a.lsDiff, emoji: '📉', text: `Since the government took office, my situation has severely worsened. The policies completely ignored me.` },
-        { id: b.id, title: `Citizen #${String(b.id).substring(0,4)}`, diff: b.lsDiff, emoji: '⚖️', text: `My own circumstances have remained fairly stable, but looking at the overall distribution of wealth, I have strong opinions on fairness.` },
-        { id: c.id, title: `Citizen #${String(c.id).substring(0,4)}`, diff: c.lsDiff, emoji: '📈', text: `I have seen massive improvements! The agenda has directly enhanced my quality of life.` }
+        { id: a.id, name: getFakeName(0), diff: a.lsDiff, emoji: '📉', text: `Since the government took office, my situation has severely worsened. The policies completely ignored me.` },
+        { id: b.id, name: getFakeName(1), diff: b.lsDiff, emoji: '⚖️', text: `My own circumstances have remained fairly stable, but looking at the overall distribution of wealth, I have strong opinions on fairness.` },
+        { id: c.id, name: getFakeName(2), diff: c.lsDiff, emoji: '📈', text: `I have seen massive improvements! The agenda has directly enhanced my quality of life.` }
       ];
     }, []);
 
@@ -131,7 +205,7 @@ export default function ElectionModal({
                 <span className="text-xl">{vp.emoji}</span>
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.title} <span className="text-zinc-400 font-normal ml-2 text-xs">Trajectory: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
+                <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.name} <span className="text-zinc-400 font-normal ml-2 text-xs">Trajectory: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
                 <p className="text-sm text-zinc-600 italic">"{vp.text}"</p>
               </div>
             </div>
@@ -141,7 +215,6 @@ export default function ElectionModal({
     );
   };
 
-  // State hooks specific to the Academic Debrief
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
@@ -149,7 +222,6 @@ export default function ElectionModal({
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
 
   const PageDebrief = () => {
-    // Memoized data needed for Academic Debrief
     const benthamGraphA = useMemo(() => getDummyHistogram({ 5: 100 }), []);
     const benthamGraphB = useMemo(() => getDummyHistogram({ 0: 50, 10: 50 }), []);
 
@@ -195,7 +267,7 @@ export default function ElectionModal({
       return (
         <div className="flex flex-col gap-4 animate-in fade-in">
           <DPMMessage title="Academic Debrief: Benthamite Aggregation">
-            "You successfully increased average Life Satisfaction, but aggregating data can be dangerous. Click to calculate the averages for these two theoretical societies."
+            "You successfully increased average Life Satisfaction, but our new data science indicates that relying solely on averages can be dangerous. Click to calculate the averages for these two theoretical societies."
           </DPMMessage>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div 
@@ -203,8 +275,8 @@ export default function ElectionModal({
               className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
             >
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-              <div className={`h-[180px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={3}/>
+              <div className={`h-[340px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
+                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/>
               </div>
               {!revealedBenthamA && (
                 <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
@@ -224,8 +296,8 @@ export default function ElectionModal({
               className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
             >
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-              <div className={`h-[180px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
-                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={3}/>
+              <div className={`h-[340px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
+                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/>
               </div>
               {!revealedBenthamB && (
                 <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
@@ -269,7 +341,7 @@ export default function ElectionModal({
                     isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'
                   }`}
                 >
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Citizen #{String(citizen.id).substring(0,4)}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(citizen.id)}</p>
                   
                   <div className="mb-2">
                     <span className="text-xs text-zinc-400">Objective Life Satisfaction: </span>
@@ -315,7 +387,7 @@ export default function ElectionModal({
               revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50'
             }`}
           >
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">Citizen #{String(empathyCitizen.id).substring(0,4)}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">{getFakeName(empathyCitizen.id)}</p>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <span className="text-xs text-zinc-400 block mb-1">Life Satisfaction</span>
@@ -386,12 +458,19 @@ export default function ElectionModal({
     return null;
   };
 
+  const getButtonText = () => {
+    if (page === 0) return "Continue to Election Results \u2192";
+    if (page === 1) return "Continue to Electorate Feedback \u2192";
+    if (page === 2) return "Continue to Academic Debrief \u2192";
+    return "Continue \u2192";
+  };
+
   return (
     <ModalOverlay>
-      <ModalContent maxWidth="max-w-3xl">
-        <ModalHeader title="Election Sequence" subtitle={rule.frameworkTitle} />
+      <ModalContent maxWidth="max-w-4xl">
+        <ModalHeader title="Election Results" subtitle={rule.frameworkTitle} />
         
-        <div className="flex-1 min-h-[300px]">
+        <div className="flex-1">
           {page === 0 && <PageMacro />}
           {page === 1 && <PageVerdict />}
           {page === 2 && <PageMicro />}
@@ -400,14 +479,14 @@ export default function ElectionModal({
 
         <div className="flex justify-between items-center mt-6 pt-4 border-t border-zinc-100 shrink-0">
           {page > 0 ? (
-            <button onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800">
+            <button onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors">
               &larr; Back
             </button>
           ) : <div />}
 
           {page < totalPages - 1 ? (
-            <button onClick={() => setPage(p => p + 1)} className="px-6 py-2.5 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md">
-              Continue Sequence &rarr;
+            <button onClick={() => setPage(p => p + 1)} className="px-6 py-3 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md transition-all">
+              {getButtonText()}
             </button>
           ) : (
             <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">

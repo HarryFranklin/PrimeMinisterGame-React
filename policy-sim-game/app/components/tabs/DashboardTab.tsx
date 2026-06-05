@@ -3,6 +3,7 @@ import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, ElectionCycle } from "../../utils/types";
 import { IMPACT_COLORS } from "../../utils/uiHelpers";
+import { availablePolicies } from "../../data/policies";
 import D3Chart, { ChartMarker } from "../D3Chart";
 import DPMCard from "../DPMCard";
 
@@ -12,7 +13,7 @@ export default function DashboardTab() {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
     approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax,
-    population, previewPopulation, isParliamentDissolved, handleFaceElectorate
+    population, previewPopulation, isParliamentDissolved, handleFaceElectorate, history
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -51,6 +52,13 @@ export default function DashboardTab() {
       return { name, count: residentsInBin.length, segments };
     });
   }, [population, previewPopulation, selectedPolicy]);
+
+  const enactedLegislation = useMemo(() => {
+    return history.filter(h => h.turn > 1).map(h => {
+      const pDetails = availablePolicies.find(pol => pol.id === h.enactedPolicyId);
+      return { ...h, description: pDetails?.description };
+    });
+  }, [history]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
@@ -124,7 +132,7 @@ export default function DashboardTab() {
                 yAxisMax={yAxisMax}
               />
               
-              {!selectedPolicy && (
+              {!selectedPolicy && !isParliamentDissolved && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -169,7 +177,7 @@ export default function DashboardTab() {
           <div 
             onClick={() => setActiveTab('electorate')} 
             className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden cursor-pointer transition-all group ${
-              isParliamentDissolved ? 'animate-pulse ring-4 ring-rose-500/80 bg-zinc-800' : 'hover:bg-black'
+              isParliamentDissolved ? 'ring-4 ring-rose-500/80 bg-zinc-800' : 'hover:bg-black'
             }`}
           >
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
@@ -183,37 +191,59 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Legislative Agenda (4 Cols) */}
+        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (4 Cols) */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
           <div className="p-3 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Legislative Agenda</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">Select a policy to forecast its impact.</p>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
+              {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
+            </h3>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
+            </p>
           </div>
           
-          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-hidden relative">             
-            {currentDeck.slice(0, 4).map((policy) => {
-              const isSelected = selectedPolicy?.id === policy.id;
-              return (
-                <button
-                  key={policy.id}
-                  disabled={!isAgendaUnlocked || isParliamentDissolved}
-                  onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                  className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
-                    isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
-                  } ${
-                    isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
-                  }`}
-                >
-                  {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                  <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
-                    {policy.policyName}
-                  </p>
-                  <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
-                    {policy.description}
-                  </p>
-                </button>
-              );
-            })}
+          <div className="flex-1 flex flex-col p-2 gap-2 min-h-0 overflow-y-auto relative">             
+            {!isParliamentDissolved ? (
+              // Standard Agenda View
+              currentDeck.slice(0, 4).map((policy) => {
+                const isSelected = selectedPolicy?.id === policy.id;
+                return (
+                  <button
+                    key={policy.id}
+                    disabled={!isAgendaUnlocked}
+                    onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
+                    className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
+                      isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                    } ${
+                      isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
+                    }`}
+                  >
+                    {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
+                    <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                      {policy.policyName}
+                    </p>
+                    <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                      {policy.description}
+                    </p>
+                  </button>
+                );
+              })
+            ) : (
+              // History View (When Parliament Dissolved)
+              <div className="flex flex-col gap-2 p-2">
+                {enactedLegislation.map((leg, index) => (
+                  <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200">
+                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-bold text-zinc-800 text-sm mb-1">{leg.enactedPolicyName}</p>
+                      <p className="text-xs text-zinc-500">{leg.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="p-3 border-t border-zinc-100 bg-zinc-50 shrink-0">
