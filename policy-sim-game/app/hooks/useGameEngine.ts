@@ -16,7 +16,7 @@ const calculateAverage = (pop: Respondent[]): number => {
 
 const generateCycleSchedule = (cycle: ElectionCycle, available: Policy[]): Policy[][] => {
   const schedule: Policy[][] = [];
-  let seed = cycle * 12345 + 1; 
+  let seed = cycle * 12345 + 1;
   
   const pseudoRandom = () => {
     const x = Math.sin(seed++) * 10000;
@@ -44,6 +44,7 @@ const getMetricScore = (pop: Respondent[], cycle: ElectionCycle) => {
   
   const allLS = pop.map(p => p.currentLS);
   if (cycle === ElectionCycle.SocietalUtility) return pop.reduce((s, r) => s + WelfareMetrics.evaluateDistribution(allLS, r.societalUtilities), 0) / pop.length;
+  
   return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
 };
 
@@ -56,12 +57,13 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [isAgendaUnlocked, setIsAgendaUnlocked] = useState(false);
   
-  // NEW: Global Y-Axis tracking for minimal-shift hysteresis
-  const [yAxisMax, setYAxisMax] = useState(80);
+  // Locked Y-Axis tracking for minimal-shift hysteresis
+  const [yAxisMax, setYAxisMax] = useState(100);
   
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
+  
   const [showElection, setShowElection] = useState(false);
   const [showNarrative, setShowNarrative] = useState(false);
   const [showFinalDebrief, setShowFinalDebrief] = useState(false);
@@ -70,7 +72,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
   const [cycleMAO, setCycleMAO] = useState<number>(0);
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
-  const [optimalPath, setOptimalPath] = useState<Policy[]>([]); 
+  const [optimalPath, setOptimalPath] = useState<Policy[]>([]);
 
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
     const schedule = generateCycleSchedule(cycle, availablePolicies);
@@ -87,6 +89,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(pop) }]);
     setShowElection(false);
     setSelectedPolicy(null);
+    setYAxisMax(100); // Reset y-axis to baseline for the new cycle
   }, []);
 
   useEffect(() => {
@@ -123,7 +126,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
 
   useEffect(() => {
     if (population.length === 0 || cycleSchedule.length === 0) return;
-      
+    
     const saveData = {
       population, initialPopulation, baselinePopulation,
       currentTurn, currentCycle, cycleAttempts, history,
@@ -151,26 +154,21 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
-  // Hysteresis loop effect to calculate yAxisMax
+  // Stable Hysteresis Loop
   useEffect(() => {
     const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
     const maxPreview = Math.max(...previewHistogramData.map(d => d.count), 0);
     const globalMax = Math.max(maxCurrent, maxPreview);
-
+    
     setYAxisMax(prev => {
-      if (globalMax > prev) {
-        // Step up in intervals of 40 if exceeded
-        return Math.ceil(globalMax / 40) * 40;
-      } else {
-        // Calculate the absolute tightest interval we could use (minimum 80)
-        const tightestTier = Math.max(80, Math.ceil(globalMax / 40) * 40);
-        
-        // Only step down if the data drops safely below the tightest tier's boundary minus a 5-unit buffer
-        if (prev > tightestTier && globalMax < tightestTier - 5) {
-          return tightestTier;
-        }
+      // Calculate a comfortable headroom target
+      const targetMax = Math.max(100, Math.ceil(globalMax / 20) * 20);
+      
+      // Only expand the axis. Never shrink it mid-cycle to avoid visual jumping when clicking policies.
+      if (targetMax > prev) {
+        return targetMax;
       }
-      return prev; // Maintain current height
+      return prev; 
     });
   }, [currentHistogramData, previewHistogramData]);
 
@@ -236,9 +234,11 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
       setShowFinalDebrief(true);
       return;
     }
+
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
+
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;

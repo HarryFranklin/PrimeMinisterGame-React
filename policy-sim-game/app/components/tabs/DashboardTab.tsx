@@ -47,7 +47,6 @@ export default function DashboardTab() {
       } else {
         segments.push({ label: "Residents", value: residentsInBin.length, color: "#d4d4d8" });
       }
-
       return { name, count: residentsInBin.length, segments };
     });
   }, [population, previewPopulation, selectedPolicy]);
@@ -104,11 +103,10 @@ export default function DashboardTab() {
                 xAxisType={AxisVariable.LifeSatisfaction}
                 yAxisType={rule.yAxisType} 
                 color="#d4d4d8"
-                visualStyle={'solid'} // Solid stacked bars are better for impact segments
+                visualStyle={'solid'} 
                 yAxisMax={yAxisMax}
               />
-
-              {/* Overlay that hides the graph until a policy is selected */}
+              
               {!selectedPolicy && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
@@ -189,17 +187,18 @@ export default function DashboardTab() {
                   key={policy.id}
                   disabled={!isAgendaUnlocked}
                   onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                  className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-3 rounded-xl border transition-all duration-300 group overflow-hidden ${
+                  className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
                     isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                   } ${
                     isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
                   }`}
                 >
                   {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                  <p className={`font-bold text-sm leading-tight mb-1 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                  {/* Text sizes boosted for better readability here */}
+                  <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
                     {policy.policyName}
                   </p>
-                  <p className={`text-xs leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                  <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
                     {policy.description}
                   </p>
                 </button>
