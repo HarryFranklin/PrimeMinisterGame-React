@@ -216,8 +216,7 @@ export default function D3Chart({
             update => update,
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
-          // Boosted transition time to 1200ms to match the tension tick
-          .transition().duration(1200).ease(d3.easeCubicOut)
+          .transition().duration(1000).ease(d3.easeCubicOut)
           .attr("y", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
