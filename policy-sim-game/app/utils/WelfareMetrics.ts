@@ -3,24 +3,50 @@ import { Respondent } from './types';
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 export class WelfareMetrics {
-  
   // Maps a Life Satisfaction score to a Utility value using the respondent's unique curve
   static getUtilityForPerson(lsScore: number, curve: number[]): number {
     if (lsScore <= -0.9) return curve[0] * 10; // Death state
-
     const score = Math.max(lsScore, 2.0); // Clamp to minimum available data
     const exactIndex = score / 2.0;
-    
+         
     let lowerIndex = Math.floor(exactIndex);
     let upperIndex = Math.ceil(exactIndex);
-    
+         
     // Safety clamp (indices 1 through 5 represent LS 2, 4, 6, 8, 10)
     if (lowerIndex < 1) lowerIndex = 1;
     if (upperIndex > 5) upperIndex = 5;
     if (lowerIndex > 5) lowerIndex = 5;
-
-    const t = exactIndex - lowerIndex; 
+    const t = exactIndex - lowerIndex;
     return lerp(curve[lowerIndex], curve[upperIndex], t) * 10;
+  }
+
+  /**
+   * Accumulates linear interpolation coefficients across the population.
+   * Converts the O(N^2) evaluation loop into an O(N) single-pass setup.
+   */
+  static getPopulationCurveMultipliers(populationLS: number[]): number[] {
+    const multipliers = [0, 0, 0, 0, 0, 0];
+    
+    for (let i = 0; i < populationLS.length; i++) {
+      const lsScore = populationLS[i];
+      if (lsScore <= -0.9) {
+        multipliers[0] += 10;
+        continue;
+      }
+      const score = Math.max(lsScore, 2.0);
+      const exactIndex = score / 2.0;
+      let lowerIndex = Math.floor(exactIndex);
+      let upperIndex = Math.ceil(exactIndex);
+      
+      if (lowerIndex < 1) lowerIndex = 1;
+      if (upperIndex > 5) upperIndex = 5;
+      if (lowerIndex > 5) lowerIndex = 5;
+      
+      const t = exactIndex - lowerIndex;
+      multipliers[lowerIndex] += (1 - t) * 10;
+      multipliers[upperIndex] += t * 10;
+    }
+    return multipliers;
   }
 
   // Calculates Societal Fairness by evaluating the whole population against one respondent's empathy curve
@@ -48,7 +74,7 @@ export class WelfareMetrics {
   static calculateApprovalRating(currentScore: number, cycleMAO: number, scalar: number): number {
     if (cycleMAO <= 0) return 0; // Fallback safety
     const threshold = cycleMAO * scalar; // Now dynamic based on the framework rule
-    
+         
     let approvalRating = 0;
     if (currentScore >= threshold) {
       const range = cycleMAO - threshold;
@@ -58,7 +84,7 @@ export class WelfareMetrics {
       const progress = Math.max(0, currentScore) / threshold;
       approvalRating = progress * 51;
     }
-    
+         
     const finalRating = Math.max(0, Math.min(100, approvalRating));
     return Math.round(finalRating * 10) / 10;
   }
