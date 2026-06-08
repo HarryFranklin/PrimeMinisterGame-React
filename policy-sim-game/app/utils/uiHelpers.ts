@@ -18,11 +18,6 @@ export const STATUS_COLORS = {
   trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
 };
 
-export const SORT_ORDERS = {
-  wealth: { 'Poor': 1, 'Middle': 2, 'Wealthy': 3 },
-  age: { 'Youth': 1, 'Adult': 2, 'Elderly': 3 }
-};
-
 /**
  * Evaluates a minister's reaction based on the policy's impact on their demographic.
  * Standardised across the Dashboard and Ministers tab.
