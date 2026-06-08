@@ -14,7 +14,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
   const getBriefingText = () => {
     switch (currentCycle) {
       case ElectionCycle.Benthamite:
-        return "Prime Minister, our objective is simple: maximise total societal happiness.\n\nReview the distribution and find policies that push the largest mass of citizens to the right.";
+        return "Prime Minister, our objective is simple: maximise total societal happiness.\n\nReview the distribution and find policies that increase the life satisfaction of the largest mass of citizens.";
       case ElectionCycle.Rawlsian:
         return "The overall average is irrelevant if our most vulnerable are suffering.\n\nLook closely at the left side of the distribution. Your mandate is to raise that floor.";
       case ElectionCycle.PersonalUtility:
