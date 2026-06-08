@@ -150,18 +150,25 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
   useEffect(() => {
+    // Determine the peak count only from the enacted population state.
+    // We intentionally ignore previewHistogramData so the axis remains 
+    // static while the player is simply exploring their options.
     const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
-    const maxPreview = Math.max(...previewHistogramData.map(d => d.count), 0);
-    const globalMax = Math.max(maxCurrent, maxPreview);
     
     setYAxisMax(prev => {
-      const targetMax = Math.max(100, Math.ceil(globalMax / 20) * 20);
+      // Calculate a sensible upper bound, snapping to the nearest 20 
+      // with a minimum floor of 100 to maintain baseline consistency.
+      const targetMax = Math.max(100, Math.ceil(maxCurrent / 20) * 20);
+      
+      // Only expand the axis if the new data exceeds the current bounds.
+      // This prevents the axis from shrinking back down, which can be 
+      // jarring when visualising sequential policy impacts.
       if (targetMax > prev) {
         return targetMax;
       }
       return prev; 
     });
-  }, [currentHistogramData, previewHistogramData]);
+  }, [currentHistogramData]);
 
   const initialMetricScore = useMemo(() => getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const turnMetricScore = useMemo(() => getMetricScore(population, currentCycle), [population, currentCycle]);
