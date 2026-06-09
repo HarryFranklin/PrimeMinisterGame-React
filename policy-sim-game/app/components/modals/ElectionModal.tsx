@@ -488,55 +488,53 @@ export default function ElectionModal({
   };
 
   return (
-    <ModalOverlay>
-      <ModalContent maxWidth="max-w-4xl">
-        <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
-        
-        <div className="flex-1">
-          {page === 0 && <PageMacro />}
-          {page === 1 && <PageVerdict />}
-          {page === 2 && <PageMicro />}
-          {page === 3 && <PageDebrief />}
-        </div>
+    <ModalContent maxWidth="max-w-4xl">
+      <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
+      
+      <div className="flex-1">
+        {page === 0 && <PageMacro />}
+        {page === 1 && <PageVerdict />}
+        {page === 2 && <PageMicro />}
+        {page === 3 && <PageDebrief />}
+      </div>
 
-        <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0">
-          {page > 0 ? (
-            <button onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors">
-              &larr; Back
-            </button>
-          ) : <div />}
+      <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0">
+        {page > 0 ? (
+          <button onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors">
+            &larr; Back
+          </button>
+        ) : <div />}
 
-          {page < totalPages - 1 ? (
-            <button onClick={() => setPage(p => p + 1)} className="px-6 py-3 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md transition-all">
-              {getButtonText()}
-            </button>
-          ) : (
-            <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
-              {!canProceed ? (
-                <button onClick={onReset} className="px-6 py-2.5 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md">
-                  Try Again ({3 - cycleAttempts} attempts left)
+        {page < totalPages - 1 ? (
+          <button onClick={() => setPage(p => p + 1)} className="px-6 py-3 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md transition-all">
+            {getButtonText()}
+          </button>
+        ) : (
+          <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
+            {!canProceed ? (
+              <button onClick={onReset} className="px-6 py-2.5 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md">
+                Try Again ({3 - cycleAttempts} attempts left)
+              </button>
+            ) : (
+              <>
+                <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200">
+                  Restart Cycle
                 </button>
-              ) : (
-                <>
-                  <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200">
-                    Restart Cycle
+                {!isFinalCycle && (
+                  <button onClick={onNextCycle} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">
+                    Proceed to Next Term
                   </button>
-                  {!isFinalCycle && (
-                    <button onClick={onNextCycle} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">
-                      Proceed to Next Term
-                    </button>
-                  )}
-                  {isFinalCycle && onFinish && (
-                    <button onClick={onFinish} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">
-                      Finish Simulation
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </ModalContent>
-    </ModalOverlay>
+                )}
+                {isFinalCycle && onFinish && (
+                  <button onClick={onFinish} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">
+                    Finish Simulation
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </ModalContent>
   );
 }

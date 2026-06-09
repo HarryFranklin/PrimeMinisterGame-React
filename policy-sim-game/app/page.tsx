@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
+import WelcomeModal from "./components/modals/WelcomeModal";
 import DevPanel from "./components/DevPanel";
 import GameHeader from "./components/GameHeader";
 
@@ -24,6 +25,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
+
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -77,34 +80,8 @@ export default function Home() {
         pulsePolicy: game.pulsePolicy, 
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
-        <GameProvider value={{
-          currentCycle: game.currentCycle, 
-          currentTurn: game.currentTurn,
-          currentChartData: game.currentChartData, 
-          previewChartData: game.previewChartData, 
-          currentHistogramData: game.currentHistogramData, 
-          previewHistogramData: game.previewHistogramData,
-          selectedPolicy: game.selectedPolicy, 
-          setSelectedPolicy: game.setSelectedPolicy,
-          currentMetricScore: game.currentMetricScore, 
-          initialMetricScore: game.initialMetricScore, 
-          turnMetricScore: game.turnMetricScore, 
-          currentDeck: game.currentDeck, 
-          handleApplyPolicy: game.handleApplyPolicy, 
-          cycleMAO: game.cycleMAO, 
-          approvalRating: game.turnApprovalRating, 
-          population: game.population, 
-          previewPopulation: game.previewPopulation, 
-          initialPopulation: game.initialPopulation,
-          isAgendaUnlocked: game.isAgendaUnlocked,
-          setIsAgendaUnlocked: game.setIsAgendaUnlocked,
-          yAxisMax: game.yAxisMax,
-          isParliamentDissolved: game.isParliamentDissolved,
-          handleFaceElectorate: game.handleFaceElectorate,
-          history: game.history,
-          isEnacting: game.isEnacting
-        }}>
-          <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
+        <GameProvider value={game}>
+            <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -124,35 +101,56 @@ export default function Home() {
       </UIProvider>
 
       {/* Modals */}
-      {!game.isAgendaUnlocked && (
-        <BriefingModal 
-          currentCycle={game.currentCycle} 
-          onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
-        />
-      )}
+      <AnimatePresence>
+        {(!hasSeenWelcome || !game.isAgendaUnlocked || game.showElection || game.showFinalDebrief) && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
+          >
+            <AnimatePresence mode="wait">
+              {!hasSeenWelcome && (
+                <WelcomeModal key="welcome" onAcknowledge={() => setHasSeenWelcome(true)} />
+              )}
 
-      {game.showElection && (
-        <ElectionModal
-          currentMetricScore={game.turnMetricScore}
-          currentCycle={game.currentCycle}
-          approvalRating={game.turnApprovalRating}
-          cycleAttempts={game.cycleAttempts}
-          initialPopulation={game.initialPopulation}
-          finalPopulation={game.population}
-          yAxisMax={game.yAxisMax}
-          onNextCycle={game.handleProceedFromNarrative}
-          onReset={game.handleResetCycle}
-          onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
-        />
-      )}
+              {hasSeenWelcome && !game.isAgendaUnlocked && (
+                <BriefingModal 
+                  key="briefing"
+                  currentCycle={game.currentCycle} 
+                  onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
+                />
+              )}
 
-      {game.showFinalDebrief && (
-        <FinalDebriefModal
-          baselinePopulation={game.baselinePopulation}
-          finalPopulation={game.population}
-          yAxisMax={game.yAxisMax}
-        />
-      )}
+              {game.showElection && (
+                <ElectionModal
+                  key="election"
+                  currentMetricScore={game.turnMetricScore}
+                  currentCycle={game.currentCycle}
+                  approvalRating={game.turnApprovalRating}
+                  cycleAttempts={game.cycleAttempts}
+                  initialPopulation={game.initialPopulation}
+                  finalPopulation={game.population}
+                  yAxisMax={game.yAxisMax}
+                  onNextCycle={game.handleProceedFromNarrative}
+                  onReset={game.handleResetCycle}
+                  onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
+                />
+              )}
+
+              {game.showFinalDebrief && (
+                <FinalDebriefModal
+                  key="debrief"
+                  baselinePopulation={game.baselinePopulation}
+                  finalPopulation={game.population}
+                  yAxisMax={game.yAxisMax}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <DevPanel 
         devMode={devMode} setDevMode={setDevMode} jumpToCycle={game.jumpToCycle}

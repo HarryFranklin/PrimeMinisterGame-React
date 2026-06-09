@@ -11,7 +11,7 @@ type AnalyticalLens = 'approval_ls' | 'impact_ls';
 export default function ElectorateTab() {
   const { 
     population, previewPopulation, initialPopulation, currentCycle, 
-    selectedPolicy, setSelectedPolicy, approvalRating, currentDeck 
+    selectedPolicy, setSelectedPolicy, turnApprovalRating: approvalRating, currentDeck 
   } = useGame();
 
   const [activeLens, setActiveLens] = useState<AnalyticalLens>('approval_ls');

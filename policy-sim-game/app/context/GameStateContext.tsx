@@ -1,6 +1,6 @@
 "use client";
 import { createContext, ReactNode, useContext } from 'react';
-import { ElectionCycle, Policy, Respondent, TurnHistory } from '../utils/types';
+import { useGameEngine } from '../hooks/useGameEngine';
 
 export interface UIState {
   setActiveTab: (tab: any) => void;
@@ -20,33 +20,7 @@ export function useUI() {
   return context;
 }
 
-export interface GameState {
-  currentCycle: ElectionCycle;
-  currentTurn: number;
-  currentChartData: any[];
-  previewChartData: any[];
-  currentHistogramData: any[];
-  previewHistogramData: any[];
-  selectedPolicy: Policy | null;
-  setSelectedPolicy: (p: Policy | null) => void;
-  currentMetricScore: number;
-  initialMetricScore: number;
-  turnMetricScore: number;
-  currentDeck: Policy[];
-  handleApplyPolicy: () => void;
-  cycleMAO: number;
-  approvalRating: number;
-  population: Respondent[];
-  previewPopulation: Respondent[];
-  initialPopulation: Respondent[];
-  isAgendaUnlocked: boolean;
-  setIsAgendaUnlocked: (unlocked: boolean) => void;
-  yAxisMax: number;
-  isParliamentDissolved: boolean;
-  handleFaceElectorate: () => void;
-  history: TurnHistory[];
-  isEnacting: boolean;
-}
+export type GameState = ReturnType<typeof useGameEngine>;
 
 const GameContext = createContext<GameState | undefined>(undefined);
 

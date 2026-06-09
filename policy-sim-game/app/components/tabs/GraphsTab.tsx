@@ -8,7 +8,7 @@ export default function GraphsTab() {
   const {
     currentCycle, currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     selectedPolicy, turnMetricScore, currentMetricScore,
-    currentDeck, setSelectedPolicy, approvalRating,
+    currentDeck, setSelectedPolicy, turnApprovalRating: approvalRating,
     cycleMAO, yAxisMax
   } = useGame();
 

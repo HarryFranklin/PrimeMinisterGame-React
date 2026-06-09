@@ -12,7 +12,7 @@ export default function DashboardTab() {
   const {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
-    approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
+    turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, handleFaceElectorate, history
   } = useGame();
 
