@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
@@ -37,11 +37,95 @@ const Confetti = () => {
   );
 };
 
+// --- Extracted Components ---
+
 const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax, setPageReady }: any) => {
-  const [contentReady, setContentReady] = useState(false);
+  const [step, setStep] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rule = FRAMEWORK_RULES[currentCycle as ElectionCycle];
+  
   const initialHist = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
   const finalHist = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
+
+  useEffect(() => {
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, []);
+
+  // Now, only the final analysis message auto-sequences AFTER you click the button
+  useEffect(() => {
+    if (step === 2) {
+      timeoutRef.current = setTimeout(() => setStep(3), 1000); 
+    }
+  }, [step]);
+
+  const getMetric = React.useCallback((pop: any[]) => {
+    if (currentCycle === ElectionCycle.Benthamite) return pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length;
+    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...pop.map(r => r.currentLS));
+    if (currentCycle === ElectionCycle.PersonalUtility) return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
+    if (currentCycle === ElectionCycle.SocietalUtility) {
+      const allLS = pop.map(p => p.currentLS);
+      return pop.reduce((sum, p) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / pop.length;
+    }
+    return 0;
+  }, [currentCycle]);
+
+  const startMetric = useMemo(() => getMetric(initialPopulation), [getMetric, initialPopulation]);
+  const endMetric = useMemo(() => getMetric(finalPopulation), [getMetric, finalPopulation]);
+  const improved = endMetric >= startMetric;
+
+  const showMarkers = currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian;
+  const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : "Floor";
+  
+  // Markers are strictly locked behind Step 2
+  const initialMarkers = step >= 2 && showMarkers ? [{ value: startMetric, label: `Start ${markerLabel}`, color: "#000000", dashed: true }] : [];
+  const finalMarkers = step >= 2 && showMarkers ? [{ value: endMetric, label: `End ${markerLabel}`, color: rule.graphColor, dashed: false }] : [];
+
+  const getAnalysisMessage = () => {
+    const s = startMetric.toFixed(2);
+    const e = endMetric.toFixed(2);
+    
+    let directionStr = "";
+    let intro = "";
+
+    if (Math.abs(endMetric - startMetric) < 0.01) {
+      directionStr = `remained stable at ${s}`;
+      intro = "A stagnant term.\n\n";
+    } else if (improved) {
+      directionStr = `increased from ${s} to ${e}`;
+      intro = currentCycle === ElectionCycle.Benthamite ? "Excellent work!\n\n" :
+              currentCycle === ElectionCycle.Rawlsian ? "Well done!\n\n" :
+              currentCycle === ElectionCycle.PersonalUtility ? "A successful navigation of voter self-interest.\n\n" :
+              "An impressive balancing act.\n\n";
+    } else {
+      directionStr = `decreased from ${s} to ${e}`;
+      intro = currentCycle === ElectionCycle.Benthamite ? "Unfortunately,\n\n" :
+              currentCycle === ElectionCycle.Rawlsian ? "A difficult outcome.\n\n" :
+              currentCycle === ElectionCycle.PersonalUtility ? "A challenging term.\n\n" :
+              "A disappointing evaluation.\n\n";
+    }
+
+    if (currentCycle === ElectionCycle.Benthamite) {
+      return `${intro}The societal average ${directionStr}. Look at the effect your policies had on the central mass of the electorate. We will break down exactly who won and lost in the next stages.`;
+    }
+    if (currentCycle === ElectionCycle.Rawlsian) {
+      return `${intro}The societal floor ${directionStr}. Look at the far left of the distribution to see how your policies impacted our most vulnerable citizens.`;
+    }
+    if (currentCycle === ElectionCycle.PersonalUtility) {
+      return `${intro}Under a Personal Utility lens, the average evaluation ${directionStr}. The raw distribution above doesn't show the whole picture, as citizens are now fiercely guarding their own wealth.`;
+    }
+    if (currentCycle === ElectionCycle.SocietalUtility) {
+      return `${intro}Accounting for empathy and fairness, the societal evaluation ${directionStr}. Look at how the shape of the distribution affected their overall sense of justice.`;
+    }
+    return "";
+  };
+
+  const getButtonLabel = () => {
+    if (currentCycle === ElectionCycle.Benthamite) return "Reveal Averages";
+    if (currentCycle === ElectionCycle.Rawlsian) return "Reveal Societal Floor";
+    if (currentCycle === ElectionCycle.PersonalUtility) return "Analyse Subjective Utility";
+    if (currentCycle === ElectionCycle.SocietalUtility) return "Analyse Societal Evaluation";
+    return "Reveal Data";
+  };
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
@@ -49,21 +133,49 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
         persistenceId={`election_macro_${currentCycle}`}
         title="Term Summary"
         message="Review the macro shifts in our society between the start of our term and today. Notice how the distribution has changed."
-        onComplete={() => {
-          setContentReady(true);
-          setTimeout(() => setPageReady(true), 2500); 
-        }}
+        onComplete={() => { if (step === 0) setStep(1); }}
       />
-      {contentReady && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Turn 1 (Baseline)</h3>
-            <div className="h-[200px]"><D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} /></div>
+      
+      {step >= 1 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Turn 1 (Baseline)</h3>
+              <div className="h-[200px]">
+                <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={initialMarkers} />
+              </div>
+            </div>
+            <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Turn 5 (Election)</h3>
+              <div className="h-[200px]">
+                <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={finalMarkers} />
+              </div>
+            </div>
           </div>
-          <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Turn 5 (Election)</h3>
-            <div className="h-[200px]"><D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} /></div>
-          </div>
+
+          {/* The Interactive Reveal Button */}
+          {step === 1 && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center mt-2 mb-2">
+              <button 
+                onClick={() => setStep(2)}
+                className="px-8 py-3.5 bg-zinc-900 text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-md group flex items-center gap-2 cursor-pointer"
+              >
+                <span className="text-lg opacity-80 group-hover:opacity-100 transition-opacity">📊</span>
+                {getButtonLabel()}
+              </button>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {step >= 3 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <InlineDPMMessage 
+            persistenceId={`election_macro_analysis_${currentCycle}`}
+            title="Metric Analysis"
+            message={getAnalysisMessage()}
+            onComplete={() => setPageReady(true)}
+          />
         </motion.div>
       )}
     </div>
@@ -73,6 +185,7 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
 const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
   const [displayScore, setDisplayScore] = useState(0);
   const [isDone, setIsDone] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let start = 0;
@@ -97,12 +210,17 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
         animationFrameId = requestAnimationFrame(animate);
       } else {
         setIsDone(true);
-        setTimeout(() => setPageReady(true), 2000); 
+        timeoutRef.current = setTimeout(() => setPageReady(true), 2000); 
       }
     };
+    
     animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [approvalRating]);
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [approvalRating, setPageReady]);
 
   const showSuccess = isDone && won;
   const showFailure = isDone && !won;
@@ -128,6 +246,11 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
 
 const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageReady }: any) => {
   const [contentReady, setContentReady] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, []);
 
   const getVoxPopContent = (diff: number) => {
     if (diff <= -0.5) return { emoji: '🤬', text: `Since the government took office, my situation has severely worsened. The policies completely ignored me.` };
@@ -159,7 +282,7 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
         message="The mathematics hide the human cost. We have selected three citizens to review their personal trajectories under your term."
         onComplete={() => {
           setContentReady(true);
-          setTimeout(() => setPageReady(true), 3000); 
+          timeoutRef.current = setTimeout(() => setPageReady(true), 3000); 
         }}
       />
       {contentReady && (
@@ -186,6 +309,25 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
+
+  useEffect(() => {
+    if (!contentReady) return;
+    
+    let isReady = false;
+    if (currentCycle === ElectionCycle.Benthamite) {
+      isReady = revealedBenthamA && revealedBenthamB;
+    } else if (currentCycle === ElectionCycle.Rawlsian) {
+      isReady = revealedCitizen1 && revealedCitizen2;
+    } else if (currentCycle === ElectionCycle.PersonalUtility) {
+      isReady = revealedEmpathy;
+    } else if (currentCycle === ElectionCycle.SocietalUtility) {
+      isReady = true; 
+    }
+
+    if (isReady) {
+      setPageReady(true);
+    }
+  }, [contentReady, revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, currentCycle, setPageReady]);
 
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: 100 }), []);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: 50, 10: 50 }), []);
@@ -243,7 +385,6 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
         message={getDpmMessage()}
         onComplete={() => {
           setContentReady(true);
-          setPageReady(true); 
         }}
       />
       
@@ -309,7 +450,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
                 <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
                   <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
-                  <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: Respondent) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
+                  <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
                   <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
                 </div>
                 {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span></div>}
@@ -381,7 +522,6 @@ export default function ElectionModal({
     <ModalContent maxWidth="max-w-4xl">
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
       
-      {/* Removed the fixed min-h height so the modal dynamically scales to its content */}
       <motion.div layout className="flex-1">
         {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
         {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
@@ -408,8 +548,27 @@ export default function ElectionModal({
               <button onClick={onReset} className="px-6 py-2.5 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md">Try Again</button>
             ) : (
               <>
-                {!isFinalCycle && <button onClick={onNextCycle} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">Proceed to Next Term</button>}
-                {isFinalCycle && onFinish && <button onClick={onFinish} className="px-6 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-bold hover:bg-pink-700 shadow-md">Finish Simulation</button>}
+                <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors">Restart Cycle</button>
+                
+                {!isFinalCycle && (
+                  <button 
+                    onClick={onNextCycle} 
+                    disabled={!pageReady}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
+                  >
+                    Proceed to Next Term
+                  </button>
+                )}
+                
+                {isFinalCycle && onFinish && (
+                  <button 
+                    onClick={onFinish} 
+                    disabled={!pageReady}
+                    className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
+                  >
+                    Finish Simulation
+                  </button>
+                )}
               </>
             )}
           </div>

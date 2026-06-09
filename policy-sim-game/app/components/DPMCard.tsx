@@ -52,7 +52,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     if (selectedPolicy) return "Review the projected impact on the Electorate Analysis tab before enacting this bill.";
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "Do not let the lowest percentiles distract you if the middle can be boosted more efficiently.";
-      case ElectionCycle.Rawlsian: return "The upper and middle percentiles are irrelevant. Focus entirely on the left side of the graph.";
+      case ElectionCycle.Rawlsian: return "While your focus should be on those at the lower percentiles, don't neglect those in the middle, as they could slip down too!";
       case ElectionCycle.PersonalUtility: return "Beware of loss aversion. Citizens will protect their current status fiercely.";
       case ElectionCycle.SocietalUtility: return "Equality matters. An unhappy society will reject policies even if their personal outcomes improve.";
       default: return "";
@@ -66,11 +66,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
 
   return (
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
-      
-      {/* Subtle Background Watermark */}
-      <div className="absolute -right-8 -bottom-8 text-[180px] opacity-[0.03] pointer-events-none select-none z-[-1] grayscale">
-        🇬🇧
-      </div>
 
       <div className="p-4 border-b border-zinc-100 bg-zinc-50/80 flex items-center gap-3 shrink-0 relative z-10">
         <span className="text-3xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">📁</span>

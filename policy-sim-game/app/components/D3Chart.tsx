@@ -272,13 +272,18 @@ export default function D3Chart({
           const markerColor = marker.color || "#3f3f46";
           const yPos = 12 + (index * 16);
           
+          // Animate the line fading in
           annotationLayer.append("line")
             .attr("x1", markerX).attr("x2", markerX)
             .attr("y1", 0).attr("y2", height)
             .attr("stroke", markerColor)
             .attr("stroke-width", 2)
-            .attr("stroke-dasharray", marker.dashed ? "6,4" : "none");
+            .attr("stroke-dasharray", marker.dashed ? "6,4" : "none")
+            .style("opacity", 0)
+            .transition().duration(1000).ease(d3.easeCubicOut)
+            .style("opacity", 1);
 
+          // Animate the text fading in with a slight delay
           annotationLayer.append("text")
             .attr("y", yPos)
             .attr("x", markerX - 8) 
@@ -289,7 +294,10 @@ export default function D3Chart({
             .attr("stroke-width", 4)
             .style("paint-order", "stroke")
             .attr("text-anchor", "end") 
-            .text(marker.hideLabelText ? marker.value.toFixed(2) : `${marker.label}: ${marker.value.toFixed(2)}`);
+            .text(marker.hideLabelText ? marker.value.toFixed(2) : `${marker.label}: ${marker.value.toFixed(2)}`)
+            .style("opacity", 0)
+            .transition().duration(1000).delay(200).ease(d3.easeCubicOut)
+            .style("opacity", 1);
         });
       }
 

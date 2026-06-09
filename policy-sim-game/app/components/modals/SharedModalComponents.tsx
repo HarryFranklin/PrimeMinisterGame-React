@@ -181,7 +181,7 @@ export const InlineDPMMessage = ({
   const textToShow = isInstant ? message : displayedText;
 
   return (
-    <div className="w-full flex flex-col shrink-0">
+    <motion.div layout className="w-full relative flex flex-col shrink-0">
       <AnimatePresence mode="popLayout" initial={false}>
         {!isOpen ? (
           <motion.button 
@@ -221,6 +221,6 @@ export const InlineDPMMessage = ({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
