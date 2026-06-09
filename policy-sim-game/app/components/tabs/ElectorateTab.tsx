@@ -5,6 +5,7 @@ import SharedTabHeader from "./../SharedTabHeader";
 import { STATUS_COLORS } from "../../utils/uiHelpers";
 import { useGame } from "../../context/GameStateContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { InlineDPMMessage } from "../modals/SharedModalComponents";
 
 type AnalyticalLens = 'approval_ls' | 'impact_ls';
 
@@ -137,25 +138,27 @@ export default function ElectorateTab() {
   };
 
   const renderGuidedAnalysis = () => {
-    if (activeLens === 'approval_ls') return (
-      <div className="space-y-3">
-        <p>You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
-        <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-zinc-400 mb-1">Notice</p>
-          <p className="text-sm">Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?</p>
+      if (activeLens === 'approval_ls') return (
+        <div className="space-y-4">
+          <p>You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
+          <InlineDPMMessage 
+            persistenceId={`cycle_${currentCycle}_electorate_approval`}
+            title="Analysis Notice"
+            message="Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?"
+          />
         </div>
-      </div>
-    );
-    if (activeLens === 'impact_ls') return (
-      <div className="space-y-3">
-        <p>You are viewing the <strong className="text-zinc-800">Objective Wellbeing Impact</strong>, stripping away voting intentions.</p>
-        <div className="bg-white p-3 rounded-lg border border-zinc-200 shadow-sm">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-zinc-400 mb-1">Notice</p>
-          <p className="text-sm">This reveals the mechanical truth of the policy. Some voters may be "Angry" in other tabs, despite their wellbeing objectively "Improving" here, due to fairness ideals.</p>
+      );
+      if (activeLens === 'impact_ls') return (
+        <div className="space-y-4">
+          <p>You are viewing the <strong className="text-zinc-800">Objective Wellbeing Impact</strong>, stripping away voting intentions.</p>
+          <InlineDPMMessage 
+            persistenceId={`cycle_${currentCycle}_electorate_impact`}
+            title="Mechanical Reality"
+            message="This reveals the mechanical truth of the policy. Some voters may be 'Angry' in other tabs, despite their wellbeing objectively 'Improving' here, due to fairness ideals."
+          />
         </div>
-      </div>
-    );
-  };
+      );
+    };
 
   return (
     <div className="h-full flex flex-col gap-4 lg:gap-6 min-h-0 overflow-hidden">
@@ -172,12 +175,13 @@ export default function ElectorateTab() {
             onClick={() => setActiveLens('approval_ls')} 
             className={`flex-1 px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'approval_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
           >
-            Wellbeing Impact
+            Voting Intention
           </button>
           <button 
             onClick={() => setActiveLens('impact_ls')} 
             className={`flex-1 px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs font-bold rounded-md transition-colors relative z-10 ${activeLens === 'impact_ls' ? 'text-zinc-800' : 'text-zinc-500 hover:text-zinc-700'}`}
-          >Voting Intention
+          >
+            Wellbeing Impact
           </button>
           
           <div className="absolute inset-1 pointer-events-none flex" style={{ justifyContent: activeLens === 'approval_ls' ? 'flex-start' : 'flex-end' }}>

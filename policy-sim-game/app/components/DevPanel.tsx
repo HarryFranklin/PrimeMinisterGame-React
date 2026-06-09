@@ -31,13 +31,13 @@ export default function DevPanel({
     <>
       <button
         onClick={() => setDevMode(!devMode)}
-        className="fixed bottom-4 left-4 z-50 bg-zinc-800/80 backdrop-blur-sm text-zinc-400 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full hover:bg-zinc-700 hover:text-white transition-colors border border-zinc-600 shadow-lg"
+        className="fixed bottom-4 left-4 z-[100] bg-zinc-800/80 backdrop-blur-sm text-zinc-400 text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full hover:bg-zinc-700 hover:text-white transition-colors border border-zinc-600 shadow-lg"
       >
         Dev Mode {devMode ? 'ON' : 'OFF'}
       </button>
 
       {devMode && (
-        <div className="fixed bottom-14 left-4 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-14 left-4 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
           <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2">
             Developer Panel
           </h3>
@@ -131,7 +131,7 @@ export default function DevPanel({
 
           {/* OPTIMAL PATH DEV WIDGET */}
           {showOptimalPath && optimalPath.length > 0 && (
-            <div className="fixed bottom-14 left-80 z-50 bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
+            <div className="fixed bottom-14 left-80 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
               <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
                 Optimal Path (MAO: {cycleMAO.toFixed(2)})
               </h3>

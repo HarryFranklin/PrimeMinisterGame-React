@@ -1,12 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useTypewriter(text: string, baseSpeed: number = 70, start: boolean = true) {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   
-  // Keep track of the timeout so we can clean it up if the component unmounts
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentIndexRef = useRef(0);
+
+  const skip = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setDisplayedText(text);
+    setIsTyping(false);
+    setIsComplete(true);
+  }, [text]);
 
   useEffect(() => {
     if (!start || !text) return;
@@ -14,26 +21,26 @@ export function useTypewriter(text: string, baseSpeed: number = 70, start: boole
     setDisplayedText('');
     setIsTyping(true);
     setIsComplete(false);
-
-    let currentIndex = 0;
+    currentIndexRef.current = 0;
 
     const typeNextChar = () => {
-      if (currentIndex < text.length) {
-        setDisplayedText(text.slice(0, currentIndex + 1));
+      if (currentIndexRef.current < text.length) {
+        setDisplayedText(text.slice(0, currentIndexRef.current + 1));
         
-        const currentChar = text[currentIndex];
+        const currentChar = text[currentIndexRef.current];
         let delay = baseSpeed;
         
-        // Increased pause multipliers for more "dramatic" pauses
         if (['.', '!', '?'].includes(currentChar)) {
-          delay = baseSpeed + 800; // Longer pause at full stops
+          delay = baseSpeed + 800; 
         } else if ([',', ':', ';'].includes(currentChar)) {
-          delay = baseSpeed + 400; // Longer pause for clauses
+          delay = baseSpeed + 400; 
         } else if (currentChar === '\n') {
-          delay = baseSpeed + 500; // Longer pause for new paragraphs
+          delay = baseSpeed + 500; 
         }
 
-        currentIndex++;
+        delay += Math.random() * 30; // Jitter for realism
+
+        currentIndexRef.current++;
         timeoutRef.current = setTimeout(typeNextChar, delay);
       } else {
         setIsTyping(false);
@@ -41,7 +48,6 @@ export function useTypewriter(text: string, baseSpeed: number = 70, start: boole
       }
     };
 
-    // Kick off the typing
     timeoutRef.current = setTimeout(typeNextChar, baseSpeed);
 
     return () => {
@@ -49,5 +55,5 @@ export function useTypewriter(text: string, baseSpeed: number = 70, start: boole
     };
   }, [text, baseSpeed, start]);
 
-  return { displayedText, isTyping, isComplete };
+  return { displayedText, isTyping, isComplete, skip };
 }

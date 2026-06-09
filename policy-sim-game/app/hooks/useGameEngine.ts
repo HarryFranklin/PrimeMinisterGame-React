@@ -80,6 +80,16 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
   const [optimalPath, setOptimalPath] = useState<Policy[]>([]);
 
+  const [dpmConsulted, setDpmConsultedState] = useState<Record<string, boolean>>({});
+
+  const setDpmConsulted = useCallback((id: string, value: boolean) => {
+    setDpmConsultedState(prev => ({ ...prev, [id]: value }));
+  }, []);
+
+  const resetDpmConsulted = useCallback(() => {
+    setDpmConsultedState({});
+  }, []);
+
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
     const schedule = generateCycleSchedule(cycle, availablePolicies);
     setCycleSchedule(schedule);
@@ -97,7 +107,9 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setShowElection(false);
     setSelectedPolicy(null);
     setYAxisMax(100);
-  }, []);
+
+    resetDpmConsulted();
+  }, [resetDpmConsulted]);
 
   useEffect(() => {
     const savedGame = localStorage.getItem(SAVE_KEY);
@@ -218,14 +230,16 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     setShowElection(true);
   }, []);
 
-  const handleResetCycle = () => {
+  const handleResetCycle = useCallback(() => {
     localStorage.removeItem(SAVE_KEY);
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
     startCycle(currentCycle, data);
     setCycleAttempts(prev => prev + 1);
-  };
+
+    resetDpmConsulted();
+  }, [resetDpmConsulted]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
     localStorage.removeItem(SAVE_KEY);
@@ -304,6 +318,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleProceedFromNarrative, setCurrentTurn, handleNavigateToPolicy,
     isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax,
-    TURNS_PER_CYCLE
+    TURNS_PER_CYCLE,
+    dpmConsulted, setDpmConsulted, resetDpmConsulted
   };
 }

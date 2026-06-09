@@ -17,7 +17,7 @@ export default function WelcomeModal({ onAcknowledge }: WelcomeModalProps) {
           title="Orientation"
           message={welcomeText}
           onAcknowledge={onAcknowledge}
-          buttonText="Commence Term"
+          buttonText="Understood"
           typeSpeed={25}
         />
       </div>

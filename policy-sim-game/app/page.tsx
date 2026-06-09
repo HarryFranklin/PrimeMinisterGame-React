@@ -81,7 +81,7 @@ export default function Home() {
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
         <GameProvider value={game}>
-            <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
+          <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -97,60 +97,61 @@ export default function Home() {
               </motion.div>
             </AnimatePresence>
           </main>
-        </GameProvider>
+
+          {/* Modals */}
+          <AnimatePresence>
+            {(!hasSeenWelcome || !game.isAgendaUnlocked || game.showElection || game.showFinalDebrief) && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
+              >
+                <AnimatePresence mode="wait">
+                  {!hasSeenWelcome && (
+                    <WelcomeModal key="welcome" onAcknowledge={() => setHasSeenWelcome(true)} />
+                  )}
+
+                  {hasSeenWelcome && !game.isAgendaUnlocked && (
+                    <BriefingModal 
+                      key="briefing"
+                      currentCycle={game.currentCycle} 
+                      onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
+                    />
+                  )}
+
+                  {game.showElection && (
+                    <ElectionModal
+                      key="election"
+                      currentMetricScore={game.turnMetricScore}
+                      currentCycle={game.currentCycle}
+                      approvalRating={game.turnApprovalRating}
+                      cycleAttempts={game.cycleAttempts}
+                      initialPopulation={game.initialPopulation}
+                      finalPopulation={game.population}
+                      yAxisMax={game.yAxisMax}
+                      onNextCycle={game.handleProceedFromNarrative}
+                      onReset={game.handleResetCycle}
+                      onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
+                    />
+                  )}
+
+                  {game.showFinalDebrief && (
+                    <FinalDebriefModal
+                      key="debrief"
+                      baselinePopulation={game.baselinePopulation}
+                      finalPopulation={game.population}
+                      yAxisMax={game.yAxisMax}
+                    />
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          </GameProvider>
       </UIProvider>
-
-      {/* Modals */}
-      <AnimatePresence>
-        {(!hasSeenWelcome || !game.isAgendaUnlocked || game.showElection || game.showFinalDebrief) && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
-          >
-            <AnimatePresence mode="wait">
-              {!hasSeenWelcome && (
-                <WelcomeModal key="welcome" onAcknowledge={() => setHasSeenWelcome(true)} />
-              )}
-
-              {hasSeenWelcome && !game.isAgendaUnlocked && (
-                <BriefingModal 
-                  key="briefing"
-                  currentCycle={game.currentCycle} 
-                  onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
-                />
-              )}
-
-              {game.showElection && (
-                <ElectionModal
-                  key="election"
-                  currentMetricScore={game.turnMetricScore}
-                  currentCycle={game.currentCycle}
-                  approvalRating={game.turnApprovalRating}
-                  cycleAttempts={game.cycleAttempts}
-                  initialPopulation={game.initialPopulation}
-                  finalPopulation={game.population}
-                  yAxisMax={game.yAxisMax}
-                  onNextCycle={game.handleProceedFromNarrative}
-                  onReset={game.handleResetCycle}
-                  onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
-                />
-              )}
-
-              {game.showFinalDebrief && (
-                <FinalDebriefModal
-                  key="debrief"
-                  baselinePopulation={game.baselinePopulation}
-                  finalPopulation={game.population}
-                  yAxisMax={game.yAxisMax}
-                />
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <DevPanel 
         devMode={devMode} setDevMode={setDevMode} jumpToCycle={game.jumpToCycle}

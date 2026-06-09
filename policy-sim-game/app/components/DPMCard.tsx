@@ -1,6 +1,7 @@
 import React from 'react';
 import { ElectionCycle, Policy } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
+import { InlineDPMMessage } from './modals/SharedModalComponents';
 
 interface DPMCardProps {
   currentCycle: ElectionCycle;
@@ -18,7 +19,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     return (
       <div className="flex-1 rounded-xl border-2 border-rose-400 bg-rose-50 flex flex-col shrink-0 min-h-0 overflow-hidden shadow-md">
         <div className="p-4 border-b border-rose-200/50 bg-white/50 flex items-center gap-3 shrink-0">
-          <span className="text-3xl bg-white border border-rose-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🚨</span>
+          <span className="text-3xl bg-white border border-rose-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
           <div>
             <p className="text-[11px] font-black uppercase tracking-widest text-rose-600 leading-tight">
               Deputy Prime Minister
@@ -58,16 +59,21 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     }
   };
 
+  // Create a dynamic ID that ignores turns, but tracks policy selection
+  const advisoryId = selectedPolicy 
+    ? `dashboard_advisory_policy_${currentCycle}_${selectedPolicy.id}`
+    : `dashboard_advisory_general_${currentCycle}`;
+
   return (
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
       
       {/* Subtle Background Watermark */}
       <div className="absolute -right-8 -bottom-8 text-[180px] opacity-[0.03] pointer-events-none select-none z-[-1] grayscale">
-        🏛️
+        🇬🇧
       </div>
 
       <div className="p-4 border-b border-zinc-100 bg-zinc-50/80 flex items-center gap-3 shrink-0 relative z-10">
-        <span className="text-3xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">💼</span>
+        <span className="text-3xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">📁</span>
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-zinc-400 leading-tight">
             Deputy Prime Minister
@@ -90,12 +96,12 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
           <span className="text-sm font-medium text-zinc-700 leading-relaxed block">{getFocus()}</span>
         </div>
 
-        <div className="mt-auto bg-zinc-50 border border-zinc-200 p-3 rounded-lg flex gap-3 items-start">
-          <span className="text-lg opacity-50 shrink-0">💬</span>
-          <div>
-            <span className="text-[12px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Advisory Note</span>
-            <span className="text-sm font-medium text-zinc-600 italic">"{getAdvisory()}"</span>
-          </div>
+        <div className="mt-auto shrink-0 z-20">
+          <InlineDPMMessage 
+            persistenceId={advisoryId} // Apply the dynamic ID here
+            title="Advisory Note"
+            message={getAdvisory()} 
+          />
         </div>
       </div>
     </div>
