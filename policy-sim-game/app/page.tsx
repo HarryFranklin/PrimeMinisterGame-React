@@ -27,6 +27,29 @@ export default function Home() {
   const [showOptimalPath, setShowOptimalPath] = useState(false);
 
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
+  
+  // State for mobile/low-resolution check
+  const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
+
+  // Responsive device and low-resolution detection hook
+  useEffect(() => {
+    const evaluateViewport = () => {
+      // Flag if user agent specifies a mobile environment
+      const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Flag if viewport width is less than 1024px (standard desktop layout minimum)
+      const isLowResolution = window.innerWidth < 1024;
+      
+      setIsUnsupportedScreen(isMobileDevice || isLowResolution);
+    };
+
+    // Run verification immediately upon mounting
+    evaluateViewport();
+
+    // Attach resize listener to handle active browser window changes dynamically
+    window.addEventListener('resize', evaluateViewport);
+    return () => window.removeEventListener('resize', evaluateViewport);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -65,6 +88,40 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
+      
+      {/* TOP LEVEL SCREEN GUARD OVERLAY */}
+      <AnimatePresence>
+        {isUnsupportedScreen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-zinc-950/95 flex flex-col items-center justify-center p-6 text-center select-none backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", bounce: 0.1, duration: 0.5 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md shadow-2xl flex flex-col items-center gap-4"
+            >
+              <div className="w-14 h-14 bg-zinc-800/50 border border-zinc-700/50 rounded-full flex items-center justify-center text-2xl shadow-inner mb-2">
+                🖥️
+              </div>
+              <h2 className="text-xl font-black tracking-tight text-white uppercase tracking-wider">
+                Desktop Display Required
+              </h2>
+              <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                This academic policy simulation uses intensive data visualisations and complex chart layouts that require a larger screen.
+              </p>
+              <div className="w-full h-px bg-zinc-800 my-2" />
+              <p className="text-xs text-pink-500 font-bold uppercase tracking-widest">
+                Minimum Resolution: 1024px Width
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <GameHeader 
         currentCycle={game.currentCycle}
         activeTab={activeTab}
