@@ -38,23 +38,23 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     );
   }
 
-  const getFocus = () => {
+const getFocus = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "Maximise overall utility across the entire distribution.";
-      case ElectionCycle.Rawlsian: return "Lift the most vulnerable citizens to raise the minimum standard of living.";
-      case ElectionCycle.PersonalUtility: return "Target groups whose personal utility yields the highest return.";
-      case ElectionCycle.SocietalUtility: return "Balance objective wellbeing with the electorate's demand for fairness.";
+      case ElectionCycle.Benthamite: return "Raise the national average happiness as high as possible.";
+      case ElectionCycle.Rawlsian: return "Improve the lives of the most miserable and vulnerable citizens.";
+      case ElectionCycle.PersonalUtility: return "Pass policies that benefit the largest number of selfish voters.";
+      case ElectionCycle.SocietalUtility: return "Keep the country wealthy, but ensure the wealth is shared fairly.";
       default: return "Awaiting instructions.";
     }
   };
 
   const getAdvisory = () => {
-    if (selectedPolicy) return "Review the projected impact on the Electorate Analysis tab before enacting this bill.";
+    if (selectedPolicy) return "Review the likely impact on the Electorate Analysis tab before enacting this policy.";
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "Do not let the lowest percentiles distract you if the middle can be boosted more efficiently.";
-      case ElectionCycle.Rawlsian: return "The upper and middle percentiles are irrelevant. Focus entirely on the left side of the graph.";
-      case ElectionCycle.PersonalUtility: return "Beware of loss aversion. Citizens will protect their current status fiercely.";
-      case ElectionCycle.SocietalUtility: return "Equality matters. An unhappy society will reject policies even if their personal outcomes improve.";
+      case ElectionCycle.Benthamite: return "We need to boost the national average happiness. Focus on the large middle-ground voters; they hold the keys to our success.";
+      case ElectionCycle.Rawlsian: return "The public is watching how we treat the poorest. Focus your policies on the left side of the chart—every point gained there is worth two in the polls.";
+      case ElectionCycle.PersonalUtility: return "People are incredibly protective of their own finances right now. If a policy costs them anything, they will revolt.";
+      case ElectionCycle.SocietalUtility: return "The public wants a fairer country. If we only help the wealthy, they'll turn on us regardless of the growth numbers.";
       default: return "";
     }
   };

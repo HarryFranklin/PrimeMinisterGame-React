@@ -138,25 +138,25 @@ export default function ElectorateTab() {
   };
 
   const renderGuidedAnalysis = () => {
-    if (activeLens === 'approval_ls') return (
-      <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
-        <p className="text-sm">You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
-        <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
-          <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Analysis Notice</span>
-          <p className="text-sm text-zinc-700 italic">"Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?"</p>
+      if (activeLens === 'approval_ls') return (
+        <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+          <p className="text-sm">You are viewing <strong className="text-zinc-800">how people plan to vote, mapped against their happiness</strong>.</p>
+          <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
+            <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Analysis Notice</span>
+            <p className="text-sm text-zinc-700 italic">"Look at where the blue blocks are. Are your supporters the miserable citizens, the happy ones, or a mix of both?"</p>
+          </div>
         </div>
-      </div>
-    );
-    if (activeLens === 'impact_ls') return (
-      <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
-        <p className="text-sm">You are viewing the <strong className="text-zinc-800">Wellbeing Impact</strong>.</p>
-        <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
-          <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Mechanical Reality</span>
-          <p className="text-sm text-zinc-700 italic">"This reveals the mechanical truth of the policy. Some voters may be 'Angry' in other tabs, despite their wellbeing objectively 'Improving' here, due to fairness ideals."</p>
+      );
+      if (activeLens === 'impact_ls') return (
+        <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+          <p className="text-sm">You are viewing the <strong className="text-zinc-800">actual impact of your policy on people's lives</strong>, ignoring how they plan to vote.</p>
+          <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
+            <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Mechanical Reality</span>
+            <p className="text-sm text-zinc-700 italic">"This shows the hard truth. Some voters might be 'Angry' in the voting tab, even though this tab shows their lives are improving, because they think the policy is unfair."</p>
+          </div>
         </div>
-      </div>
-    );
-  };
+      );
+    };
 
   return (
     <div className="h-full flex flex-col gap-4 lg:gap-6 min-h-0 overflow-hidden">

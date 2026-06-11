@@ -97,16 +97,16 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
     }
 
     if (currentCycle === ElectionCycle.Benthamite) {
-      return `${intro}The societal average ${directionStr}. Look at the effect your policies had on the central mass of the electorate. We will break down exactly who won and lost in the next stages.`;
+      return `${intro}The national average ${directionStr}. Look at how your policies moved the bulk of the population. We will break down exactly who won and lost next.`;
     }
     if (currentCycle === ElectionCycle.Rawlsian) {
-      return `${intro}The societal floor ${directionStr}. Look at the far left of the distribution to see how your policies impacted our most vulnerable citizens.`;
+      return `${intro}The quality of life for our poorest citizens ${directionStr}. Look at the far left of the chart to see if you successfully protected the vulnerable.`;
     }
     if (currentCycle === ElectionCycle.PersonalUtility) {
-      return `${intro}Under a Personal Utility lens, the average evaluation ${directionStr}. The raw distribution above doesn't show the whole picture, as citizens are now fiercely guarding their own wealth.`;
+      return `${intro}Under a lens of pure self-interest, voter satisfaction ${directionStr}. The raw happiness chart above doesn't show the whole picture, as citizens are now fiercely guarding their own pockets.`;
     }
     if (currentCycle === ElectionCycle.SocietalUtility) {
-      return `${intro}Accounting for empathy and fairness, the societal evaluation ${directionStr}. Look at how the shape of the distribution affected their overall sense of justice.`;
+      return `${intro}Accounting for the public's demand for fairness, your approval ${directionStr}. Look at how the gap between rich and poor affected their sense of justice.`;
     }
     return "";
   };
@@ -186,7 +186,7 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
         <h1 className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${showSuccess ? 'text-emerald-700' : showFailure ? 'text-rose-700' : 'text-zinc-800'}`}>
           {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes...'}
         </h1>
-        <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">{showSuccess ? 'The public endorses your mandate' : showFailure ? 'You failed to deliver the mandate' : 'Awaiting final tally'}</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">{showSuccess ? `The public feels we didn't do enough to address their concerns.` : 'Awaiting final tally'}</p>
         <div className="flex flex-col items-center justify-center gap-1">
           <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">Final Approval</span>
           <span className={`text-8xl font-black tabular-nums transition-colors duration-300 ${showSuccess ? 'text-emerald-600' : showFailure ? 'text-rose-600' : 'text-zinc-800'}`}>{displayScore.toFixed(1)}%</span>
@@ -226,8 +226,8 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
-      <DPMMessage title="The Human Element">
-        The mathematics hide the human cost. We have selected three citizens to review their personal trajectories under your term.
+      <DPMMessage title="Voter Sentiment">
+        We've tracked how your policies impacted individual voters. Here is what three typical citizens are saying about your term.
       </DPMMessage>
       
       <div className="flex flex-col gap-3">
@@ -235,7 +235,7 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
           <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center">
             <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm"><span className="text-lg">{vp.emoji}</span></div>
             <div className="flex-1">
-              <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.name} <span className="text-zinc-400 font-normal ml-2 text-xs">Trajectory: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
+              <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.name} <span className="text-zinc-400 font-normal ml-2 text-xs">Change in Happiness: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
               <p className="text-sm text-zinc-600 italic">"{vp.text}"</p>
             </div>
           </div>
@@ -309,10 +309,10 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
 
   const getDpmMessage = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "You successfully increased average Life Satisfaction, but our new data science indicates that relying solely on averages can be dangerous. Click to calculate the averages for these two theoretical societies.";
-      case ElectionCycle.Rawlsian: return "You successfully protected the most vulnerable. However, objective metrics are flawed. Click on these two citizens to reveal their subjective 'Personal Utility' scores.";
-      case ElectionCycle.PersonalUtility: return "Personal Utility models citizens making choices based purely on their own outcomes. Click on the citizen below to reveal how their perspective shifts when accounting for broader societal fairness.";
-      case ElectionCycle.SocietalUtility: return "You have tested both utility frameworks. Let's compare how the society you just built is evaluated under each philosophy.";
+      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let’s look at two different ways a society can have the same average.";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture. Click on these citizens to see how they feel their lives have actually changed.";
+      case ElectionCycle.PersonalUtility: return "Our voters are behaving selfishly. They ignore the big picture to protect their own wallets. Click below to see what happens when we try to shift their focus toward fairness.";
+      case ElectionCycle.SocietalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
     }
   };
