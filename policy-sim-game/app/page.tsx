@@ -167,8 +167,8 @@ export default function Home() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                // THE FIX: Delay the grey background fading out by 0.8s so the modal has time to slide away!
+                exit={{ opacity: 0, transition: { duration: 0.5, delay: 0.8 } }}
                 className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-4"
               >
                 <AnimatePresence mode="wait">
@@ -178,9 +178,10 @@ export default function Home() {
                     <motion.div
                       key="welcome"
                       initial={{ x: -1000, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: 1000, opacity: 0 }}
-                      transition={{ type: "tween", ease: "easeInOut", duration: 0.8, delay: 1.2 }}
+                      // Entry has the 1.2s delay
+                      animate={{ x: 0, opacity: 1, transition: { type: "tween", ease: "easeInOut", duration: 0.8, delay: 1.2 } }}
+                      // Exit has NO delay, it leaves instantly when clicked
+                      exit={{ x: 1000, opacity: 0, transition: { type: "tween", ease: "easeInOut", duration: 0.8 } }}
                     >
                       <WelcomeModal onAcknowledge={() => setHasSeenWelcome(true)} />
                     </motion.div>
@@ -191,9 +192,10 @@ export default function Home() {
                     <motion.div
                       key="briefing"
                       initial={{ x: -1000, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: 1000, opacity: 0 }}
-                      transition={{ type: "tween", ease: "easeInOut", duration: 0.8, delay: 0.8 }}
+                      // Entry has the 0.8s delay between modals
+                      animate={{ x: 0, opacity: 1, transition: { type: "tween", ease: "easeInOut", duration: 0.8, delay: 0.8 } }}
+                      // Exit has NO delay, it leaves instantly when clicked
+                      exit={{ x: 1000, opacity: 0, transition: { type: "tween", ease: "easeInOut", duration: 0.8 } }}
                     >
                       <BriefingModal 
                         currentCycle={game.currentCycle} 

@@ -119,13 +119,13 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Turn 1 (Baseline)</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Start</h3>
           <div className="h-[200px]">
             <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={initialMarkers} />
           </div>
         </div>
         <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Turn 5 (Election)</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">End</h3>
           <div className="h-[200px]">
             <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={finalMarkers} />
           </div>
@@ -437,10 +437,6 @@ export default function ElectionModal({
   if (!won && cycleAttempts < 3) canProceed = false;
   const totalPages = canProceed ? 4 : 3;
 
-  useEffect(() => {
-    setPageReady(false);
-  }, [page]);
-
   const getModalTitle = () => {
     if (page === 0) return "Term Summary";
     if (page === 1) return "Election Verdict";
@@ -462,12 +458,17 @@ export default function ElectionModal({
 
       <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0 h-12">
         {page > 0 ? (
-          <button onClick={() => setPage(p => p - 1)} className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors">&larr; Back</button>
+          <button 
+            onClick={() => { setPageReady(false); setPage(p => p - 1); }} 
+            className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors"
+          >
+            &larr; Back
+          </button>
         ) : <div />}
 
         {page < totalPages - 1 ? (
           <button 
-            onClick={() => setPage(p => p + 1)} 
+            onClick={() => { setPageReady(false); setPage(p => p + 1); }} 
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
@@ -476,7 +477,6 @@ export default function ElectionModal({
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
             {!canProceed ? (
-              // Explicitly state what failing means so the loop feels intentional
               <button onClick={onReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md">Mandate Failed - Restart Term</button>
             ) : (
               <>
