@@ -138,27 +138,25 @@ export default function ElectorateTab() {
   };
 
   const renderGuidedAnalysis = () => {
-      if (activeLens === 'approval_ls') return (
-        <div className="space-y-4">
-          <p>You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
-          <InlineDPMMessage 
-            persistenceId={`cycle_${currentCycle}_electorate_approval`}
-            title="Analysis Notice"
-            message="Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?"
-          />
+    if (activeLens === 'approval_ls') return (
+      <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+        <p className="text-sm">You are viewing <strong className="text-zinc-800">Voting Intentions mapped against Life Satisfaction</strong>.</p>
+        <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
+          <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Analysis Notice</span>
+          <p className="text-sm text-zinc-700 italic">"Look at where the blue blocks are concentrated. Is your support coming from the most miserable citizens, the most satisfied, or a mix of both?"</p>
         </div>
-      );
-      if (activeLens === 'impact_ls') return (
-        <div className="space-y-4">
-          <p>You are viewing the <strong className="text-zinc-800">Objective Wellbeing Impact</strong>, stripping away voting intentions.</p>
-          <InlineDPMMessage 
-            persistenceId={`cycle_${currentCycle}_electorate_impact`}
-            title="Mechanical Reality"
-            message="This reveals the mechanical truth of the policy. Some voters may be 'Angry' in other tabs, despite their wellbeing objectively 'Improving' here, due to fairness ideals."
-          />
+      </div>
+    );
+    if (activeLens === 'impact_ls') return (
+      <div className="space-y-3 bg-zinc-50 border border-zinc-200 p-4 rounded-xl">
+        <p className="text-sm">You are viewing the <strong className="text-zinc-800">Wellbeing Impact</strong>.</p>
+        <div className="bg-white p-3 rounded-lg border border-zinc-100 shadow-sm">
+          <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-1">Mechanical Reality</span>
+          <p className="text-sm text-zinc-700 italic">"This reveals the mechanical truth of the policy. Some voters may be 'Angry' in other tabs, despite their wellbeing objectively 'Improving' here, due to fairness ideals."</p>
         </div>
-      );
-    };
+      </div>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col gap-4 lg:gap-6 min-h-0 overflow-hidden">

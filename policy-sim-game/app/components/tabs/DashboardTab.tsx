@@ -217,6 +217,7 @@ export default function DashboardTab() {
             isParliamentDissolved={isParliamentDissolved}
             selectedPolicy={selectedPolicy}
             cycleMAO={cycleMAO}
+            currentMetricScore={turnMetricScore} // NEW: Pass the score down
           />
 
           <div 

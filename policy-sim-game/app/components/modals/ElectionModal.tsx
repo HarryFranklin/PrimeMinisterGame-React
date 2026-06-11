@@ -4,7 +4,7 @@ import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
-import { ModalContent, ModalHeader, DPMMessage, InlineDPMMessage } from './SharedModalComponents';
+import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -40,23 +40,15 @@ const Confetti = () => {
 // --- Extracted Components ---
 
 const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax, setPageReady }: any) => {
-  const [step, setStep] = useState(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rule = FRAMEWORK_RULES[currentCycle as ElectionCycle];
   
   const initialHist = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
   const finalHist = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
 
+  // Page is ready immediately, no artificial delays.
   useEffect(() => {
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-  }, []);
-
-  // Now, only the final analysis message auto-sequences AFTER you click the button
-  useEffect(() => {
-    if (step === 2) {
-      timeoutRef.current = setTimeout(() => setStep(3), 1000); 
-    }
-  }, [step]);
+    setPageReady(true);
+  }, [setPageReady]);
 
   const getMetric = React.useCallback((pop: any[]) => {
     if (currentCycle === ElectionCycle.Benthamite) return pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length;
@@ -76,9 +68,9 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
   const showMarkers = currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian;
   const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : "Floor";
   
-  // Markers are strictly locked behind Step 2
-  const initialMarkers = step >= 2 && showMarkers ? [{ value: startMetric, label: `Start ${markerLabel}`, color: "#000000", dashed: true }] : [];
-  const finalMarkers = step >= 2 && showMarkers ? [{ value: endMetric, label: `End ${markerLabel}`, color: rule.graphColor, dashed: false }] : [];
+  // Show markers instantly
+  const initialMarkers = showMarkers ? [{ value: startMetric, label: `Start ${markerLabel}`, color: "#a1a1aa", dashed: true }] : [];
+  const finalMarkers = showMarkers ? [{ value: endMetric, label: `End ${markerLabel}`, color: rule.graphColor, dashed: false }] : [];
 
   const getAnalysisMessage = () => {
     const s = startMetric.toFixed(2);
@@ -119,65 +111,26 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
     return "";
   };
 
-  const getButtonLabel = () => {
-    if (currentCycle === ElectionCycle.Benthamite) return "Reveal Averages";
-    if (currentCycle === ElectionCycle.Rawlsian) return "Reveal Societal Floor";
-    if (currentCycle === ElectionCycle.PersonalUtility) return "Analyse Subjective Utility";
-    if (currentCycle === ElectionCycle.SocietalUtility) return "Analyse Societal Evaluation";
-    return "Reveal Data";
-  };
-
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
-      <InlineDPMMessage 
-        persistenceId={`election_macro_${currentCycle}`}
-        title="Term Summary"
-        message="Review the macro shifts in our society between the start of our term and today. Notice how the distribution has changed."
-        onComplete={() => { if (step === 0) setStep(1); }}
-      />
+      <DPMMessage title="Term Summary">
+        {getAnalysisMessage()}
+      </DPMMessage>
       
-      {step >= 1 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Turn 1 (Baseline)</h3>
-              <div className="h-[200px]">
-                <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={initialMarkers} />
-              </div>
-            </div>
-            <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Turn 5 (Election)</h3>
-              <div className="h-[200px]">
-                <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={finalMarkers} />
-              </div>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Turn 1 (Baseline)</h3>
+          <div className="h-[200px]">
+            <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={initialMarkers} />
           </div>
-
-          {/* The Interactive Reveal Button */}
-          {step === 1 && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center mt-2 mb-2">
-              <button 
-                onClick={() => setStep(2)}
-                className="px-8 py-3.5 bg-zinc-900 text-white text-sm font-bold uppercase tracking-widest rounded-xl hover:bg-black transition-all shadow-md group flex items-center gap-2 cursor-pointer"
-              >
-                <span className="text-lg opacity-80 group-hover:opacity-100 transition-opacity">📊</span>
-                {getButtonLabel()}
-              </button>
-            </motion.div>
-          )}
-        </motion.div>
-      )}
-
-      {step >= 3 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <InlineDPMMessage 
-            persistenceId={`election_macro_analysis_${currentCycle}`}
-            title="Metric Analysis"
-            message={getAnalysisMessage()}
-            onComplete={() => setPageReady(true)}
-          />
-        </motion.div>
-      )}
+        </div>
+        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Turn 5 (Election)</h3>
+          <div className="h-[200px]">
+            <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={finalMarkers} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -245,12 +198,9 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
 };
 
 const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageReady }: any) => {
-  const [contentReady, setContentReady] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-  }, []);
+    setPageReady(true);
+  }, [setPageReady]);
 
   const getVoxPopContent = (diff: number) => {
     if (diff <= -0.5) return { emoji: '🤬', text: `Since the government took office, my situation has severely worsened. The policies completely ignored me.` };
@@ -276,34 +226,26 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
-      <InlineDPMMessage 
-        persistenceId={`election_micro_${currentCycle}`}
-        title="The Human Element"
-        message="The mathematics hide the human cost. We have selected three citizens to review their personal trajectories under your term."
-        onComplete={() => {
-          setContentReady(true);
-          timeoutRef.current = setTimeout(() => setPageReady(true), 3000); 
-        }}
-      />
-      {contentReady && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3">
-          {voxPops.map((vp, idx) => (
-            <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center">
-              <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm"><span className="text-lg">{vp.emoji}</span></div>
-              <div className="flex-1">
-                <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.name} <span className="text-zinc-400 font-normal ml-2 text-xs">Trajectory: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
-                <p className="text-sm text-zinc-600 italic">"{vp.text}"</p>
-              </div>
+      <DPMMessage title="The Human Element">
+        The mathematics hide the human cost. We have selected three citizens to review their personal trajectories under your term.
+      </DPMMessage>
+      
+      <div className="flex flex-col gap-3">
+        {voxPops.map((vp, idx) => (
+          <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center">
+            <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm"><span className="text-lg">{vp.emoji}</span></div>
+            <div className="flex-1">
+              <h4 className="font-bold text-zinc-800 text-sm mb-1">{vp.name} <span className="text-zinc-400 font-normal ml-2 text-xs">Trajectory: {vp.diff > 0 ? '+' : ''}{vp.diff.toFixed(2)}</span></h4>
+              <p className="text-sm text-zinc-600 italic">"{vp.text}"</p>
             </div>
-          ))}
-        </motion.div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
 
 const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
-  const [contentReady, setContentReady] = useState(false);
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
@@ -311,8 +253,6 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
 
   useEffect(() => {
-    if (!contentReady) return;
-    
     let isReady = false;
     if (currentCycle === ElectionCycle.Benthamite) {
       isReady = revealedBenthamA && revealedBenthamB;
@@ -327,7 +267,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
     if (isReady) {
       setPageReady(true);
     }
-  }, [contentReady, revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, currentCycle, setPageReady]);
+  }, [revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, currentCycle, setPageReady]);
 
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: 100 }), []);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: 50, 10: 50 }), []);
@@ -379,111 +319,102 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
-      <InlineDPMMessage 
-        persistenceId={`election_debrief_${currentCycle}`}
-        title="Academic Debrief"
-        message={getDpmMessage()}
-        onComplete={() => {
-          setContentReady(true);
-        }}
-      />
+      <DPMMessage title="Academic Debrief">
+        {getDpmMessage()}
+      </DPMMessage>
       
-      {contentReady && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          {currentCycle === ElectionCycle.Benthamite && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-                <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
-                {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
-                {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
-              </div>
-              <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-                <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
-                {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
-                {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
-              </div>
-              {revealedBenthamA && revealedBenthamB && (
-                <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
-                  "Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality. For Term 2, we will focus on raising the societal floor."
-                </DPMMessage>
-              )}
-            </div>
+      {currentCycle === ElectionCycle.Benthamite && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
+            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
+            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
+            {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+          </div>
+          <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
+            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
+            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
+            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
+            {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+          </div>
+          {revealedBenthamA && revealedBenthamB && (
+            <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
+              "Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality. For Term 2, we will focus on raising the societal floor."
+            </DPMMessage>
           )}
+        </div>
+      )}
 
-          {currentCycle === ElectionCycle.Rawlsian && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {contrastingCitizens.map((citizen, idx) => {
-                const utility = WelfareMetrics.getUtilityForPerson(citizen.currentLS, citizen.personalUtilities);
-                const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
-                const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
-                return (
-                  <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[140px] flex-1 ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(citizen.id)}</p>
-                    <div className="mb-1"><span className="text-xs text-zinc-400">Objective Life Satisfaction: </span><strong className="text-xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)}</strong></div>
-                    <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-                      <div className="w-full h-px bg-zinc-200 my-2" />
-                      <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Utility</span>
-                      <strong className="text-2xl text-pink-600">{utility.toFixed(2)}</strong>
-                    </div>
-                    {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Click to Reveal</span></div>}
-                  </div>
-                );
-              })}
-              {revealedCitizen1 && revealedCitizen2 && (
-                <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
-                  "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Personal Utility."
-                </DPMMessage>
-              )}
-            </div>
-          )}
-
-          {currentCycle === ElectionCycle.PersonalUtility && empathyCitizen && (
-            <div className="flex flex-col gap-3">
-              <div onClick={() => setRevealedEmpathy(true)} className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(empathyCitizen.id)}</p>
-                <div className="grid grid-cols-2 gap-4 mb-2">
-                  <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
-                  <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Personal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong></div>
-                </div>
-                <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
+      {currentCycle === ElectionCycle.Rawlsian && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {contrastingCitizens.map((citizen, idx) => {
+            const utility = WelfareMetrics.getUtilityForPerson(citizen.currentLS, citizen.personalUtilities);
+            const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
+            const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
+            return (
+              <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[140px] flex-1 ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}>
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(citizen.id)}</p>
+                <div className="mb-1"><span className="text-xs text-zinc-400">Objective Life Satisfaction: </span><strong className="text-xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)}</strong></div>
+                <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
-                  <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
-                  <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
-                  <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
+                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Utility</span>
+                  <strong className="text-2xl text-pink-600">{utility.toFixed(2)}</strong>
                 </div>
-                {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span></div>}
+                {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Click to Reveal</span></div>}
               </div>
-              {revealedEmpathy && (
-                <DPMMessage title="Moving to Empathy" className="border-emerald-200 bg-emerald-50/30 animate-in fade-in slide-in-from-bottom-4">
-                  "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes impossible due to loss aversion. For your final term, we will incorporate Societal Utility into their voting logic."
-                </DPMMessage>
-              )}
-            </div>
+            );
+          })}
+          {revealedCitizen1 && revealedCitizen2 && (
+            <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
+              "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Personal Utility."
+            </DPMMessage>
           )}
+        </div>
+      )}
 
-          {currentCycle === ElectionCycle.SocietalUtility && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4 flex flex-col">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Term 3: Personal Utility</h3>
-                <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong></div>
-                <div className="flex-1 text-xs text-zinc-600 space-y-2">
-                  <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
-                  <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
-                </div>
-              </div>
-              <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 flex flex-col">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Term 4: Societal Utility</h3>
-                <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong></div>
-                <div className="flex-1 text-xs text-emerald-800/80 space-y-2">
-                  <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
-                  <p><strong>The Challenge:</strong> While empathy allows the floor to rise, consensus remains difficult because citizens hold fundamentally conflicting definitions of "fairness".</p>
-                </div>
-              </div>
+      {currentCycle === ElectionCycle.PersonalUtility && empathyCitizen && (
+        <div className="flex flex-col gap-3">
+          <div onClick={() => setRevealedEmpathy(true)} className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(empathyCitizen.id)}</p>
+            <div className="grid grid-cols-2 gap-4 mb-2">
+              <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
+              <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Personal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong></div>
             </div>
+            <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
+              <div className="w-full h-px bg-zinc-200 my-2" />
+              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
+              <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
+              <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
+            </div>
+            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span></div>}
+          </div>
+          {revealedEmpathy && (
+            <DPMMessage title="Moving to Empathy" className="border-emerald-200 bg-emerald-50/30 animate-in fade-in slide-in-from-bottom-4">
+              "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes impossible due to loss aversion. For your final term, we will incorporate Societal Utility into their voting logic."
+            </DPMMessage>
           )}
-        </motion.div>
+        </div>
+      )}
+
+      {currentCycle === ElectionCycle.SocietalUtility && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4 flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Term 3: Personal Utility</h3>
+            <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong></div>
+            <div className="flex-1 text-xs text-zinc-600 space-y-2">
+              <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
+              <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+            </div>
+          </div>
+          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Term 4: Societal Utility</h3>
+            <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong></div>
+            <div className="flex-1 text-xs text-emerald-800/80 space-y-2">
+              <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
+              <p><strong>The Challenge:</strong> While empathy allows the floor to rise, consensus remains difficult because citizens hold fundamentally conflicting definitions of "fairness".</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -545,7 +476,8 @@ export default function ElectionModal({
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
             {!canProceed ? (
-              <button onClick={onReset} className="px-6 py-2.5 bg-zinc-900 text-white rounded-lg text-sm font-bold hover:bg-black shadow-md">Try Again</button>
+              // Explicitly state what failing means so the loop feels intentional
+              <button onClick={onReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md">Mandate Failed - Restart Term</button>
             ) : (
               <>
                 <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors">Restart Cycle</button>
@@ -566,7 +498,7 @@ export default function ElectionModal({
                     disabled={!pageReady}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
                   >
-                    Finish Simulation
+                    Finish Game
                   </button>
                 )}
               </>
