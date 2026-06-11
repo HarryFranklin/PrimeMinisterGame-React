@@ -47,7 +47,11 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
 
   // Page is ready immediately, no artificial delays.
   useEffect(() => {
-    setPageReady(true);
+    // 2.5 second delay before the continue button unlocks
+    const timer = setTimeout(() => {
+      setPageReady(true);
+    }, 2500);
+    return () => clearTimeout(timer); // Cleanup timer if component unmounts
   }, [setPageReady]);
 
   const getMetric = React.useCallback((pop: any[]) => {
@@ -179,14 +183,21 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
   const showFailure = isDone && !won;
 
   return (
-    <div className="flex flex-col items-center justify-center py-6 w-full relative animate-in zoom-in duration-500">
+    <div className="flex flex-col items-center justify-center py-6 mt-8 w-full relative animate-in zoom-in duration-500">
       {showSuccess && <Confetti />}
-      {showSuccess && <div className="absolute -top-4 bg-emerald-500 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg animate-bounce z-10">Majority Secured</div>}
-      <div className={`p-10 w-full max-w-lg text-center rounded-3xl border-4 transition-all duration-700 transform ${showSuccess ? 'bg-emerald-50 border-emerald-200 scale-105 shadow-xl' : showFailure ? 'bg-rose-50 border-rose-200 scale-100 shadow-md' : 'bg-zinc-50 border-zinc-200 scale-100'}`}>
+      
+      {showSuccess && <div className="absolute -top-5 bg-emerald-500 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg animate-bounce z-10">Majority Secured</div>}
+      
+      <div className={`p-10 w-full max-w-lg min-h-[320px] flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 transform ${showSuccess ? 'bg-emerald-50 border-emerald-200 scale-105 shadow-xl' : showFailure ? 'bg-rose-50 border-rose-200 scale-100 shadow-md' : 'bg-zinc-50 border-zinc-200 scale-100'}`}>
+        
         <h1 className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${showSuccess ? 'text-emerald-700' : showFailure ? 'text-rose-700' : 'text-zinc-800'}`}>
           {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes...'}
         </h1>
-        <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">{showSuccess ? `The public feels we didn't do enough to address their concerns.` : 'Awaiting final tally'}</p>
+        
+        <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">
+          {showSuccess ? "The public has backed our vision for the country." : showFailure ? "The public feels we didn't do enough to address their concerns." : "Awaiting final tally"}
+        </p>
+        
         <div className="flex flex-col items-center justify-center gap-1">
           <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">Final Approval</span>
           <span className={`text-8xl font-black tabular-nums transition-colors duration-300 ${showSuccess ? 'text-emerald-600' : showFailure ? 'text-rose-600' : 'text-zinc-800'}`}>{displayScore.toFixed(1)}%</span>
@@ -218,9 +229,9 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
     if (!b) b = bOptions.sort((x: any, y: any) => Math.abs(x.lsDiff) - Math.abs(y.lsDiff))[0];
 
     return [
-      { id: a.id, name: getFakeName(a.id), diff: a.lsDiff, ...getVoxPopContent(a.lsDiff) },
-      { id: b.id, name: getFakeName(b.id), diff: b.lsDiff, ...getVoxPopContent(b.lsDiff) },
-      { id: c.id, name: getFakeName(c.id), diff: c.lsDiff, ...getVoxPopContent(c.lsDiff) }
+      { id: a.id, name: getFakeName(0), diff: a.lsDiff, ...getVoxPopContent(a.lsDiff) },
+      { id: b.id, name: getFakeName(1), diff: b.lsDiff, ...getVoxPopContent(b.lsDiff) },
+      { id: c.id, name: getFakeName(2), diff: c.lsDiff, ...getVoxPopContent(c.lsDiff) }
     ];
   }, [finalPopulation, initialPopulation]);
 
@@ -309,7 +320,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
 
   const getDpmMessage = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let’s look at two different ways a society can have the same average.";
+      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let’s look at an example of how two societies can have the same average happiness.";
       case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture. Click on these citizens to see how they feel their lives have actually changed.";
       case ElectionCycle.PersonalUtility: return "Our voters are behaving selfishly. They ignore the big picture to protect their own wallets. Click below to see what happens when we try to shift their focus toward fairness.";
       case ElectionCycle.SocietalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
@@ -446,15 +457,15 @@ export default function ElectionModal({
   };
 
   return (
-    <ModalContent maxWidth="max-w-4xl">
-      <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
-      
-      <motion.div layout className="flex-1">
-        {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
-        {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
-        {page === 2 && <PageMicro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
-        {page === 3 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
-      </motion.div>
+      <ModalContent maxWidth="max-w-4xl">
+        <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
+        
+        <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">
+          {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
+          {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
+          {page === 2 && <PageMicro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
+          {page === 3 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
+        </motion.div>
 
       <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0 h-12">
         {page > 0 ? (
