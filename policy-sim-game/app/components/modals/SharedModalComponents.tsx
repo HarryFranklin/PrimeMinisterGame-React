@@ -19,10 +19,26 @@ export const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-export const ModalContent = ({ children, maxWidth = "max-w-4xl" }: { children: React.ReactNode, maxWidth?: string }) => (
-  <motion.div 
-    layout
-    className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} flex flex-col border-x border-zinc-200 border-t-[6px] border-t-pink-600 border-b-[6px] border-b-zinc-900 animate-in zoom-in duration-300 max-h-[95vh]`}
+
+export const ModalContent = ({
+  children,
+  maxWidth = "max-w-4xl"
+}: {
+  children: React.ReactNode;
+  maxWidth?: string;
+}) => (
+  <motion.div
+    className={`
+      bg-white rounded-2xl shadow-2xl
+      w-[min(92vw,34rem)]
+      ${maxWidth}
+      flex flex-col
+      border-x border-zinc-200
+      border-t-[6px] border-t-pink-600
+      border-b-[6px] border-b-zinc-900
+      animate-in zoom-in duration-300
+      max-h-[95vh]
+    `}
   >
     <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
       {children}
@@ -30,9 +46,10 @@ export const ModalContent = ({ children, maxWidth = "max-w-4xl" }: { children: R
   </motion.div>
 );
 
+
 export const ModalHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
-  <div className="text-center max-w-2xl mx-auto">
-    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-1">{title}</h2>
+  <div className="text-center mb-5 max-w-2xl mx-auto">
+    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-1.5">{title}</h2>
     {subtitle && <p className="text-xs font-bold text-pink-600 uppercase tracking-widest">{subtitle}</p>}
   </div>
 );
@@ -88,37 +105,47 @@ export const InteractiveDPMEmail = ({
 
   const handleAcknowledge = () => {
     if (!buttonUnlocked) return;
-    
     setButtonUnlocked(false); 
     onAcknowledge();
   };
 
   return (
-    <motion.div layout className="w-full relative flex flex-col">
-      <AnimatePresence mode="popLayout" initial={false}>
+    // THE HAMMER: style={{ width: '100%' }} forces Framer Motion to respect the full width
+    <motion.div layout className="w-full flex flex-col shrink-0" style={{ width: '100%' }}>
+      <AnimatePresence mode="wait" initial={false}>
         {!isOpen ? (
           <motion.button 
-            key="envelope" layout
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.4 }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setIsOpen(true)}
-            className="w-full p-6 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between shadow-sm group hover:border-pink-300 transition-colors cursor-pointer"
+            key="closed-envelope"
+            layout
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setIsOpen(true)} 
+            className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between shadow-sm group hover:bg-zinc-100 transition-colors cursor-pointer text-left"
+            style={{ width: '100%' }} // Applied here as well
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-zinc-200 shadow-sm group-hover:border-pink-300 transition-colors">
-                <span className="text-2xl">📁</span>
+              <div className="w-12 h-12 bg-white rounded-full border border-zinc-200 shadow-sm flex items-center justify-center shrink-0">
+                <span className="text-xl">📁</span>
               </div>
-              <div className="text-left">
-                <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 block mb-0.5">Secure Message</span>
-                <span className="font-bold text-zinc-800">Open Briefing from Deputy Prime Minister</span>
+              <div>
+                <p className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-0.5">Secure Message</p>
+                <p className="text-lg font-bold text-zinc-900 group-hover:text-black transition-colors">Open Briefing</p>
               </div>
             </div>
-            <span className="text-zinc-400 group-hover:text-pink-500 transition-colors">→</span>
+            <span className="text-zinc-400 group-hover:translate-x-1 transition-transform">→</span>
           </motion.button>
         ) : (
           <motion.div 
-            key="message" layout
-            initial={{ opacity: 0, filter: "blur(4px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} exit={{ opacity: 0, filter: "blur(4px)" }} transition={{ duration: 0.4 }}
+            key="open-message" 
+            layout
+            initial={{ opacity: 0, filter: "blur(4px)", y: 10 }} 
+            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }} 
+            exit={{ opacity: 0, filter: "blur(4px)", y: 10 }} 
+            transition={{ duration: 0.4 }}
             className="flex flex-col gap-6 w-full"
+            style={{ width: '100%' }} // Applied here as well
           >
             <DPMMessage title={title}>
               <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if(isTyping) skip(); }}>

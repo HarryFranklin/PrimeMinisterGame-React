@@ -170,7 +170,7 @@ export default function DashboardTab() {
                       <span className="text-zinc-400 text-lg">📝</span>
                     </div>
                     <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Awaiting Policy</h4>
-                    <p className="text-xs text-zinc-500 font-medium">
+                    <p className="text-sm text-zinc-500 font-medium">
                       Select a policy from the Legislative Agenda to forecast its impact.
                     </p>
                   </div>
@@ -253,7 +253,7 @@ export default function DashboardTab() {
             <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
               {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
             </h3>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-500 mt-1">
               {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
             </p>
           </div>
