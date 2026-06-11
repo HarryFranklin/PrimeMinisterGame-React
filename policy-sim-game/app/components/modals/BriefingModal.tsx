@@ -22,6 +22,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
       case ElectionCycle.Rawlsian:
         return "Following your re-election, a severe global economic shock has wiped out our previous gains. The national baseline has reset, and we are back to square one.";
       case ElectionCycle.PersonalUtility:
+        return "A devastating cost-of-living crisis has levelled the playing field once again. The electorate is anxious and hyper-focused on their own survival.";
       case ElectionCycle.SocietalUtility:
         return "Another term, another crisis. Global supply chain collapses have reset the economy. The public is demanding not just recovery, but a fundamentally fairer society.";
       default:
@@ -34,8 +35,6 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     msg += `PHILOSOPHY: ${rule.frameworkTitle}\n\n`;
     msg += `THE SITUATION:\n${getDiegeticContext()}\n\n`;
     msg += `YOUR GOAL:\n${rule.briefingText}\n\n`;
-    
-
     msg += `KEY OBJECTIVE:\n`;
 
     if (currentCycle === ElectionCycle.Benthamite) {
