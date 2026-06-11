@@ -21,7 +21,7 @@ export const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
 
 export const ModalContent = ({ children, maxWidth = "max-w-4xl" }: { children: React.ReactNode, maxWidth?: string }) => (
   <motion.div 
-    layout // Added layout to smoothly expand rather than being 'huge and empty'
+    layout
     className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} flex flex-col border-x border-zinc-200 border-t-[6px] border-t-pink-600 border-b-[6px] border-b-zinc-900 animate-in zoom-in duration-300 max-h-[95vh]`}
   >
     <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
@@ -31,9 +31,9 @@ export const ModalContent = ({ children, maxWidth = "max-w-4xl" }: { children: R
 );
 
 export const ModalHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
-  <div className="text-center max-w-3xl mx-auto shrink-0 mb-2">
-    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 mb-2 leading-tight break-words">{title}</h2>
-    {subtitle && <p className="text-sm font-bold uppercase tracking-widest text-zinc-500">{subtitle}</p>}
+  <div className="text-center max-w-2xl mx-auto">
+    <h2 className="text-2xl font-bold text-zinc-900 tracking-tight mb-1">{title}</h2>
+    {subtitle && <p className="text-xs font-bold text-pink-600 uppercase tracking-widest">{subtitle}</p>}
   </div>
 );
 
@@ -87,10 +87,10 @@ export const InteractiveDPMEmail = ({
   }, [isComplete, delayAfterComplete]);
 
   const handleAcknowledge = () => {
-    setIsOpen(false);
-    setTimeout(() => {
-      onAcknowledge();
-    }, 500); 
+    if (!buttonUnlocked) return;
+    
+    setButtonUnlocked(false); 
+    onAcknowledge();
   };
 
   return (
@@ -139,7 +139,7 @@ export const InteractiveDPMEmail = ({
               onClick={handleAcknowledge}
               disabled={!buttonUnlocked}
               className={`w-full py-4 text-sm font-bold uppercase tracking-widest rounded-xl transition-all shadow-md shrink-0 duration-500 ${
-                buttonUnlocked ? 'bg-zinc-900 text-white hover:bg-black translate-y-0 opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed translate-y-2 opacity-50'
+                buttonUnlocked ? 'bg-zinc-900 text-white hover:bg-black translate-y-0 opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed translate-y-2 opacity-50 pointer-events-none'
               }`}
             >
               {buttonText}

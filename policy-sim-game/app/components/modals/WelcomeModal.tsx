@@ -10,7 +10,7 @@ export default function WelcomeModal({ onAcknowledge }: WelcomeModalProps) {
 
   return (
     <ModalContent maxWidth="max-w-xl">
-      <ModalHeader title="Welcome Prime Minister" subtitle="Initialisation" />
+      <ModalHeader title="Welcome Prime Minister" subtitle="Introduction" />
       
       <div className="p-6 md:p-8 flex flex-col gap-6 bg-zinc-50/50 rounded-xl mt-4">
         <InteractiveDPMEmail 

@@ -104,7 +104,7 @@ export default function DashboardTab() {
               onClick={() => setActiveTab('graphs')} 
               className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
             >
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
                 <path d="M7 17l9.2-9.2M17 17V7H7"/>
               </svg>
@@ -143,7 +143,7 @@ export default function DashboardTab() {
               onClick={() => setActiveTab('electorate')} 
               className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
             >
-              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
                 {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
@@ -217,7 +217,7 @@ export default function DashboardTab() {
             isParliamentDissolved={isParliamentDissolved}
             selectedPolicy={selectedPolicy}
             cycleMAO={cycleMAO}
-            currentMetricScore={turnMetricScore} // NEW: Pass the score down
+            currentMetricScore={turnMetricScore}
           />
 
           <div 
@@ -229,7 +229,7 @@ export default function DashboardTab() {
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
             
-            {/* HIDE APPROVAL RATING WHEN DISSOLVED TO BUILD TENSION */}
+            {/* HIDE APPROVAL RATING */}
             {isParliamentDissolved ? (
               <p className="text-3xl lg:text-4xl font-black tracking-widest text-zinc-500 mt-2">
                 UNCLEAR
@@ -250,7 +250,7 @@ export default function DashboardTab() {
         {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (4 Cols) */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
+            <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
               {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
             </h3>
             <p className="text-xs text-zinc-500 mt-1">
@@ -289,12 +289,12 @@ export default function DashboardTab() {
               <div className="flex flex-col gap-2.5">
                 {enactedLegislation.map((leg, index) => (
                   <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200 shadow-sm">
-                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-sm font-black shrink-0 mt-0.5">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-900 text-sm mb-0.5">{leg.enactedPolicyName}</p>
-                      <p className="text-xs text-zinc-600 leading-snug line-clamp-2">{leg.description}</p>
+                      <p className="font-bold text-zinc-900 text mb-0.5">{leg.enactedPolicyName}</p>
+                      <p className="text-sm text-zinc-600 leading-snug line-clamp-2">{leg.description}</p>
                     </div>
                   </div>
                 ))}

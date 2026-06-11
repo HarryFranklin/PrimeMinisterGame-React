@@ -22,7 +22,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#ec4899",
     winThresholdScalar: 0.855,
-    briefingText: "Your directive is to increase the total amount of happiness in the country. You must enact policies that raise the national average, even if it leaves a minority of people behind.",
+    briefingText: "Your goal is to increase the total amount of happiness in the country. You must enact policies that raise the national average, even if it leaves a minority of people behind.",
   },
   [ElectionCycle.Rawlsian]: {
     frameworkTitle: "Rawlsian Framework",
@@ -33,7 +33,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#3b82f6",
     winThresholdScalar: 0.83,
-    briefingText: "Your directive is to protect the most vulnerable people in society. You must enact policies that improve the lives of the absolute worst-off, even if it brings down the national average.",
+    briefingText: "Your goal is to protect the most vulnerable people in society. You must enact policies that improve the lives of the absolute worst-off, even if it brings down the national average.",
   },
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",

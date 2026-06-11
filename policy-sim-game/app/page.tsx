@@ -86,6 +86,12 @@ export default function Home() {
 
   const game = useGameEngine(handleTabChange);
 
+  const modalTransition = { 
+    type: "tween", 
+    ease: "easeInOut", 
+    duration: 0.8
+  };
+
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
       
@@ -155,52 +161,86 @@ export default function Home() {
             </AnimatePresence>
           </main>
 
-          {/* Modals */}
-          <AnimatePresence>
+          {/* Main Modal Sequence Container */}
+          <AnimatePresence mode="wait">
             {(!hasSeenWelcome || !game.isAgendaUnlocked || game.showElection || game.showFinalDebrief) && (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.6 }}
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-4"
               >
                 <AnimatePresence mode="wait">
-                  {!hasSeenWelcome && (
-                    <WelcomeModal key="welcome" onAcknowledge={() => setHasSeenWelcome(true)} />
-                  )}
-
-                  {hasSeenWelcome && !game.isAgendaUnlocked && (
-                    <BriefingModal 
+                  
+                  {/* 1. Welcome Screen */}
+                  {!hasSeenWelcome ? (
+                    <motion.div
+                      key="welcome"
+                      initial={{ x: -1000, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: 1000, opacity: 0 }}
+                      transition={{ type: "tween", ease: "easeInOut", duration: 0.8, delay: 1.2 }}
+                    >
+                      <WelcomeModal onAcknowledge={() => setHasSeenWelcome(true)} />
+                    </motion.div>
+                  ) 
+                  
+                  /* 2. Briefing Screen */
+                  : !game.isAgendaUnlocked ? (
+                    <motion.div
                       key="briefing"
-                      currentCycle={game.currentCycle} 
-                      onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
-                    />
-                  )}
+                      initial={{ x: -1000, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: 1000, opacity: 0 }}
+                      transition={{ type: "tween", ease: "easeInOut", duration: 0.8, delay: 0.8 }}
+                    >
+                      <BriefingModal 
+                        currentCycle={game.currentCycle} 
+                        onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
+                      />
+                    </motion.div>
+                  ) 
 
-                  {game.showElection && (
-                    <ElectionModal
+                  /* 3. Election Modal */
+                  : game.showElection ? (
+                    <motion.div
                       key="election"
-                      currentMetricScore={game.turnMetricScore}
-                      currentCycle={game.currentCycle}
-                      approvalRating={game.turnApprovalRating}
-                      cycleAttempts={game.cycleAttempts}
-                      initialPopulation={game.initialPopulation}
-                      finalPopulation={game.population}
-                      yAxisMax={game.yAxisMax}
-                      onNextCycle={game.handleProceedFromNarrative}
-                      onReset={game.handleResetCycle}
-                      onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
-                    />
-                  )}
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <ElectionModal
+                        currentMetricScore={game.turnMetricScore}
+                        currentCycle={game.currentCycle}
+                        approvalRating={game.turnApprovalRating}
+                        cycleAttempts={game.cycleAttempts}
+                        initialPopulation={game.initialPopulation}
+                        finalPopulation={game.population}
+                        yAxisMax={game.yAxisMax}
+                        onNextCycle={game.handleProceedFromNarrative}
+                        onReset={game.handleResetCycle}
+                        onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
+                      />
+                    </motion.div>
+                  ) 
 
-                  {game.showFinalDebrief && (
-                    <FinalDebriefModal
+                  /* 4. Final Debrief */
+                  : (
+                    <motion.div
                       key="debrief"
-                      baselinePopulation={game.baselinePopulation}
-                      finalPopulation={game.population}
-                      yAxisMax={game.yAxisMax}
-                    />
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <FinalDebriefModal
+                        baselinePopulation={game.baselinePopulation}
+                        finalPopulation={game.population}
+                        yAxisMax={game.yAxisMax}
+                      />
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </motion.div>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ElectionCycle } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { ModalContent, ModalHeader, InteractiveDPMEmail } from './SharedModalComponents';
@@ -12,7 +11,6 @@ interface BriefingModalProps {
 export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingModalProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
 
-  // The narrative injection to explain the board resets!
   const getDiegeticContext = () => {
     switch(currentCycle) {
       case ElectionCycle.Benthamite: return "Welcome to Number 10, Prime Minister. The country is looking to you for leadership.";
@@ -27,13 +25,13 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     let msg = `PRIME MINISTER'S MANDATE: TERM ${currentCycle + 1}\n\n`;
     msg += `PHILOSOPHY: ${rule.frameworkTitle}\n\n`;
     msg += `THE SITUATION:\n${getDiegeticContext()}\n\n`;
-    msg += `YOUR DIRECTIVE:\n${rule.briefingText}\n\n`;
-    msg += `THE METRIC:\nCitizens will evaluate your success based on ${rule.targetMetricName}. `;
+    msg += `YOUR GOAL:\n${rule.briefingText}\n\n`;
     
-    if (currentCycle === ElectionCycle.Benthamite) msg += `You must raise the overall average.`;
-    if (currentCycle === ElectionCycle.Rawlsian) msg += `You prioritise society's most vulnerable.`;
-    if (currentCycle === ElectionCycle.PersonalUtility) msg += `Citizens will strictly guard their own utility against loss.`;
-    if (currentCycle === ElectionCycle.SocietalUtility) msg += `Citizens will evaluate outcomes based on empathy and fairness.`;
+    msg += `KEY OBJECTIVE:\n`;
+    if (currentCycle === ElectionCycle.Benthamite) msg += `Raise the overall national average happiness.`;
+    if (currentCycle === ElectionCycle.Rawlsian) msg += `Prioritise the country's most vulnerable citizens.`;
+    if (currentCycle === ElectionCycle.PersonalUtility) msg += `Maps voter self-interest and avoid policies that cause loss.`;
+    if (currentCycle === ElectionCycle.SocietalUtility) msg += `Balance individual outcomes with the public demand for fairness.`;
     
     return msg;
   };
@@ -42,11 +40,10 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     <ModalContent maxWidth="max-w-xl">
       <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
       
-      <p className="text-zinc-600 text-sm mb-2 text-center">
+      <p className="text-zinc-600 text-sm mb-4 text-center">
         The Civil Service has prepared your mandate for the upcoming term.
       </p>
 
-      {/* Kept the typewriter here as it makes sense for a dramatic term intro */}
       <InteractiveDPMEmail 
         title="Official Mandate" 
         message={getBriefingMessage()} 
