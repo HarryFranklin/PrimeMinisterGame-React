@@ -268,11 +268,11 @@ export default function DashboardTab() {
                     key={policy.id}
                     disabled={!isAgendaUnlocked || isEnacting}
                     onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                    className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden ${
+                    className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${
                       isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                     } ${
                       isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
-                    } ${isEnacting && 'opacity-50 cursor-not-allowed'}`}
+                    } ${isEnacting && 'opacity-50'}`}
                   >
                     {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
                     <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
