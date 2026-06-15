@@ -39,7 +39,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     msg += `DIRECTIVE:\n`;
 
     if (currentCycle === ElectionCycle.Benthamite) {
-      msg += `Raise the overall national average happiness.`;
+      msg += `Raise the overall National Average Happiness.`;
     }
     if (currentCycle === ElectionCycle.Rawlsian) {
       msg += `Prioritise the country's most vulnerable citizens.`;

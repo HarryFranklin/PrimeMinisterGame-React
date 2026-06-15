@@ -45,97 +45,83 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
   const initialHist = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
   const finalHist = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
 
-  // Page is ready immediately, no artificial delays.
+  const safeYAxisMax = useMemo(() => {
+    const maxInitial = Math.max(...initialHist.map((d: any) => d.count), 0);
+    const maxFinal = Math.max(...finalHist.map((d: any) => d.count), 0);
+    const trueMax = Math.max(maxInitial, maxFinal, yAxisMax);
+    return Math.ceil(trueMax / 10) * 10;
+  }, [initialHist, finalHist, yAxisMax]);
+
+  // FIXED: Calculating the metrics inline based on the active cycle
+  const startMetric = useMemo(() => {
+    if (!initialPopulation || initialPopulation.length === 0) return 0;
+    if (currentCycle === ElectionCycle.Benthamite) return initialPopulation.reduce((s: number, p: any) => s + p.currentLS, 0) / initialPopulation.length;
+    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...initialPopulation.map((p: any) => p.currentLS));
+    if (currentCycle === ElectionCycle.PersonalUtility) return initialPopulation.reduce((s: number, p: any) => s + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / initialPopulation.length;
+    
+    const allLS = initialPopulation.map((p: any) => p.currentLS);
+    return initialPopulation.reduce((s: number, p: any) => s + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / initialPopulation.length;
+  }, [initialPopulation, currentCycle]);
+
+  const endMetric = useMemo(() => {
+    if (!finalPopulation || finalPopulation.length === 0) return 0;
+    if (currentCycle === ElectionCycle.Benthamite) return finalPopulation.reduce((s: number, p: any) => s + p.currentLS, 0) / finalPopulation.length;
+    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...finalPopulation.map((p: any) => p.currentLS));
+    if (currentCycle === ElectionCycle.PersonalUtility) return finalPopulation.reduce((s: number, p: any) => s + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / finalPopulation.length;
+    
+    const allLS = finalPopulation.map((p: any) => p.currentLS);
+    return finalPopulation.reduce((s: number, p: any) => s + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / finalPopulation.length;
+  }, [finalPopulation, currentCycle]);
+
   useEffect(() => {
-    // 2.5 second delay before the continue button unlocks
     const timer = setTimeout(() => {
       setPageReady(true);
     }, 2500);
-    return () => clearTimeout(timer); // Cleanup timer if component unmounts
+    return () => clearTimeout(timer);
   }, [setPageReady]);
 
-  const getMetric = React.useCallback((pop: any[]) => {
-    if (currentCycle === ElectionCycle.Benthamite) return pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length;
-    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...pop.map(r => r.currentLS));
-    if (currentCycle === ElectionCycle.PersonalUtility) return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
-    if (currentCycle === ElectionCycle.SocietalUtility) {
-      const allLS = pop.map(p => p.currentLS);
-      return pop.reduce((sum, p) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / pop.length;
-    }
-    return 0;
-  }, [currentCycle]);
-
-  const startMetric = useMemo(() => getMetric(initialPopulation), [getMetric, initialPopulation]);
-  const endMetric = useMemo(() => getMetric(finalPopulation), [getMetric, finalPopulation]);
-  const improved = endMetric >= startMetric;
-
-  const showMarkers = true;
-  
-  // Dynamically assign the correct label based on your new metric names
+  const showMarkers = true; 
   const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : 
                       currentCycle === ElectionCycle.Rawlsian ? "Baseline" : 
                       currentCycle === ElectionCycle.PersonalUtility ? "Satisfaction" : 
                       "Fairness";
   
-  const initialMarkers = showMarkers ? [{ value: startMetric, label: `Start ${markerLabel}`, color: "#a1a1aa", dashed: true }] : [];
-  const finalMarkers = showMarkers ? [{ value: endMetric, label: `End ${markerLabel}`, color: rule.graphColor, dashed: false }] : [];
+  const initialMarkers = showMarkers ? [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: "#a1a1aa", dashed: true }] : [];
+  const finalMarkers = showMarkers ? [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }] : [];
 
   const getAnalysisMessage = () => {
-    const s = startMetric.toFixed(2);
-    const e = endMetric.toFixed(2);
+    const diff = endMetric - startMetric;
+    const direction = diff >= 0 ? "increased" : "decreased";
     
-    let directionStr = "";
-    let intro = "";
-
-    if (Math.abs(endMetric - startMetric) < 0.01) {
-      directionStr = `remained stable at ${s}`;
-      intro = "A stagnant term.\n\n";
-    } else if (improved) {
-      directionStr = `increased from ${s} to ${e}`;
-      intro = currentCycle === ElectionCycle.Benthamite ? "Excellent work!\n\n" :
-              currentCycle === ElectionCycle.Rawlsian ? "Well done!\n\n" :
-              currentCycle === ElectionCycle.PersonalUtility ? "A successful navigation of voter self-interest.\n\n" :
-              "An impressive balancing act.\n\n";
-    } else {
-      directionStr = `decreased from ${s} to ${e}`;
-      intro = currentCycle === ElectionCycle.Benthamite ? "Unfortunately,\n\n" :
-              currentCycle === ElectionCycle.Rawlsian ? "A difficult outcome.\n\n" :
-              currentCycle === ElectionCycle.PersonalUtility ? "A challenging term.\n\n" :
-              "A disappointing evaluation.\n\n";
-    }
-
     if (currentCycle === ElectionCycle.Benthamite) {
-      return `${intro}The national average ${directionStr}. Look at how your policies moved the bulk of the population. We will break down exactly who won and lost next.`;
+      return `The National Average Happiness has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}. This represents a net ${diff >= 0 ? 'gain' : 'loss'} of ${Math.abs(diff).toFixed(2)} points.`;
+    } else if (currentCycle === ElectionCycle.Rawlsian) {
+      return `The baseline standard of living for the poorest citizens has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}.`;
+    } else if (currentCycle === ElectionCycle.PersonalUtility) {
+      return `Average Voter Satisfaction has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)} based on personal financial impacts.`;
+    } else {
+      return `The National Fairness Index has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}, reflecting shifting views on equality.`;
     }
-    if (currentCycle === ElectionCycle.Rawlsian) {
-      return `${intro}The quality of life for our poorest citizens ${directionStr}. Look at the far left of the chart to see if you successfully protected the vulnerable.`;
-    }
-    if (currentCycle === ElectionCycle.PersonalUtility) {
-      return `${intro}Under a lens of pure self-interest, voter satisfaction ${directionStr}. The raw happiness chart above doesn't show the whole picture, as citizens are now fiercely guarding their own pockets.`;
-    }
-    if (currentCycle === ElectionCycle.SocietalUtility) {
-      return `${intro}Accounting for the public's demand for fairness, your approval ${directionStr}. Look at how the gap between rich and poor affected their sense of justice.`;
-    }
-    return "";
   };
 
+
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in">
+    <div className="flex flex-col gap-4 animate-in fade-in w-full">
       <DPMMessage title="Term Summary">
         {getAnalysisMessage()}
       </DPMMessage>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Start</h3>
-          <div className="h-[200px]">
-            <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={initialMarkers} />
+          <div className="h-[240px] md:h-[260px] w-full">
+            <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={safeYAxisMax} faceCols={4} markers={initialMarkers} />
           </div>
         </div>
-        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4">
+        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">End</h3>
-          <div className="h-[200px]">
-            <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={yAxisMax} faceCols={2} markers={finalMarkers} />
+          <div className="h-[240px] md:h-[260px] w-full">
+            <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={safeYAxisMax} faceCols={4} markers={finalMarkers} />
           </div>
         </div>
       </div>
@@ -332,6 +318,8 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
     }
   };
 
+  
+
   return (
     <div className="flex flex-col gap-4 animate-in fade-in">
       <DPMMessage title="Academic Debrief">
@@ -460,8 +448,16 @@ export default function ElectionModal({
     return "Election Sequence";
   };
 
+  const getModalWidth = () => {
+    if (page === 0) return "max-w-6xl w-[95vw] lg:w-[70vw]"; // Term Summary
+    if (page === 1) return "max-w-4xl";                      // Verdict
+    if (page === 2) return "max-w-5xl";                      // Electorate Feedback
+    if (page === 3) return "max-w-6xl w-[95vw] lg:w-[70vw]"; // Final Debrief
+    return "max-w-4xl";
+  };
+
   return (
-      <ModalContent maxWidth="max-w-4xl">
+      <ModalContent maxWidth={getModalWidth()}>
         <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
         
         <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">

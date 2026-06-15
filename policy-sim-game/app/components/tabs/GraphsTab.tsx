@@ -15,30 +15,15 @@ export default function GraphsTab() {
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
-  const currentMarkers: ChartMarker[] = [];
-  const projectedMarkers: ChartMarker[] = [];
-
-  if (currentCycle === ElectionCycle.Benthamite) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Happiness", color: "#3f3f46", dashed: false, hideLabelText: true });
-    currentMarkers.push({ value: targetScore, label: "Target Happiness", color: rule.graphColor, dashed: true, hideLabelText: true });
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Happiness", color: "#3f3f46", dashed: false, hideLabelText: true });
-    projectedMarkers.push({ value: targetScore, label: "Target Happiness", color: rule.graphColor, dashed: true, hideLabelText: true });
-  } else if (currentCycle === ElectionCycle.Rawlsian) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Baseline", color: "#3f3f46", dashed: false, hideLabelText: true });
-    currentMarkers.push({ value: targetScore, label: "Target Baseline", color: rule.graphColor, dashed: true, hideLabelText: true });
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Baseline", color: "#3f3f46", dashed: false, hideLabelText: true });
-    projectedMarkers.push({ value: targetScore, label: "Target Baseline", color: rule.graphColor, dashed: true, hideLabelText: true });
-  } else if (currentCycle === ElectionCycle.PersonalUtility) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Satisfaction", color: "#3f3f46", dashed: false, hideLabelText: true });
-    currentMarkers.push({ value: targetScore, label: "Target Satisfaction", color: rule.graphColor, dashed: true, hideLabelText: true });
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Satisfaction", color: "#3f3f46", dashed: false, hideLabelText: true });
-    projectedMarkers.push({ value: targetScore, label: "Target Satisfaction", color: rule.graphColor, dashed: true, hideLabelText: true });
-  } else if (currentCycle === ElectionCycle.SocietalUtility) {
-    currentMarkers.push({ value: turnMetricScore, label: "Current Fairness", color: "#3f3f46", dashed: false, hideLabelText: true });
-    currentMarkers.push({ value: targetScore, label: "Target Fairness", color: rule.graphColor, dashed: true, hideLabelText: true });
-    projectedMarkers.push({ value: currentMetricScore, label: "Projected Fairness", color: "#3f3f46", dashed: false, hideLabelText: true });
-    projectedMarkers.push({ value: targetScore, label: "Target Fairness", color: rule.graphColor, dashed: true, hideLabelText: true });
-  }
+  const currentMarkers: ChartMarker[] = [
+    { value: turnMetricScore, label: `Current: ${turnMetricScore.toFixed(2)}`, color: "#3f3f46", dashed: false },
+    { value: targetScore, label: `Target: ${targetScore.toFixed(2)}`, color: rule.graphColor, dashed: true }
+  ];
+  
+  const projectedMarkers: ChartMarker[] = [
+    { value: currentMetricScore, label: `Projected: ${currentMetricScore.toFixed(2)}`, color: "#3f3f46", dashed: false },
+    { value: targetScore, label: `Target: ${targetScore.toFixed(2)}`, color: rule.graphColor, dashed: true }
+  ];
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-300 min-h-0">

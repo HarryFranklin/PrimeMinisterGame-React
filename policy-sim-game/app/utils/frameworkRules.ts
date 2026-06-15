@@ -38,6 +38,18 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     winThresholdScalar: 0.83,
     briefingText: "Your goal is to protect the most vulnerable people in society. You must enact policies that improve the lives of the absolute worst-off, even if it brings down the national average.",
   },
+  [ElectionCycle.PersonalUtility]: {
+    frameworkTitle: "Personal Utility Framework",
+    graphTitle: "Personal Utility Distribution",
+    targetMetricName: "National Average Satisfaction", // Average of personal self-interest
+    targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing, heavily penalizing personal financial loss.",
+    targetDirection: 'maximize',
+    plotType: '1D',
+    yAxisType: AxisVariable.PersonalUtility,
+    graphColor: "#8b5cf6",
+    winThresholdScalar: 0.98,
+    briefingText: "Voters have become deeply selfish. They will protect their own wellbeing. You must navigate their self-interest and avoid policies that make the middle class feel like they are losing out.",
+  },
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",
     graphTitle: "Societal Utility Distribution",
@@ -50,16 +62,5 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     winThresholdScalar: 0.97,
     briefingText: "The public is angry about wellbeing inequality. You must balance economic progress with the electorate's demand for fairness. A society with high National Average Happiness that is highly unequal society will lead to you being voted out.",
   },
-  [ElectionCycle.PersonalUtility]: {
-    frameworkTitle: "Personal Utility Framework",
-    graphTitle: "Personal Utility Distribution",
-    targetMetricName: "National Average Satisfaction", // Average of personal self-interest
-    targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing, heavily penalizing personal financial loss.",
-    targetDirection: 'maximize',
-    plotType: '1D',
-    yAxisType: AxisVariable.PersonalUtility,
-    graphColor: "#8b5cf6",
-    winThresholdScalar: 0.98,
-    briefingText: "Voters have become deeply selfish. They will protect their own wellbeing. You must navigate their self-interest and avoid policies that make the middle class feel like they are losing out.",
-  }
+  
 };
