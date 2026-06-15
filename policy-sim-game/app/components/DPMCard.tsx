@@ -38,25 +38,16 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     );
   }
 
-const getFocus = () => {
-    switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "Raise the national average happiness as high as possible.";
-      case ElectionCycle.Rawlsian: return "Improve the lives of the most miserable and vulnerable citizens.";
-      case ElectionCycle.PersonalUtility: return "Pass policies that benefit the largest number of selfish voters.";
-      case ElectionCycle.SocietalUtility: return "Keep the country wealthy, but ensure the wealth is shared fairly.";
-      default: return "Awaiting instructions.";
-    }
-  };
-
 const getAdvisory = () => {
     if (selectedPolicy) return "Review the likely impact on the Electorate Analysis tab before enacting this policy.";
+    
     switch (currentCycle) {
       case ElectionCycle.Benthamite: 
-        return "We need to boost the national average. Prioritise policies that deliver widespread benefits to the majority.";
+        return "We need to boost the national average. Prioritise policies that deliver widespread gains, as total numbers are all that matter right now.";
       case ElectionCycle.Rawlsian: 
-        return "The public is watching how we treat the most vulnerable. Focus on delivering for those who are less well-off.";
+        return "The public is watching how we treat the most vulnerable. Focus your political capital entirely on raising the baseline for those worst-off.";
       case ElectionCycle.PersonalUtility: 
-        return "Voters are incredibly protective of their own finances right now. If a policy costs them anything personally, they will be unhappy..";
+        return "Voters are fiercely protective of their own finances. If a policy costs them anything personally, they will vote against us.";
       case ElectionCycle.SocietalUtility: 
         return "The public demands a fairer country. If we only enrich the wealthy while leaving others behind, they will turn on us regardless of economic growth.";
       default: 
@@ -89,8 +80,13 @@ const getAdvisory = () => {
         </div>
         
         <div className="bg-zinc-50 border border-zinc-200 p-5 rounded-xl shadow-sm">
-          <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-2">Strategic Focus: {rule.targetMetricName}</span>
-          <span className="text-base font-medium text-zinc-800 leading-relaxed block mb-4">{getFocus()}</span>
+          <div className="mb-4">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-1">Strategic Focus</span>
+            <span className="text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              {rule.targetMetricDescription}
+            </p>
+          </div>
           
           <div className="border-t border-zinc-200 pt-4 mt-2">
             <span className="text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-2">Advisory Note</span>

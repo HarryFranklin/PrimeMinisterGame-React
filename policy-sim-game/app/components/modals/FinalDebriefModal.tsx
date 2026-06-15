@@ -76,23 +76,16 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
         </div>
       </div>
 
-      <div className="shrink-0 flex flex-col">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
-          <div className="border-b border-zinc-200 pb-1">
-            <h3 className="text-lg font-black text-zinc-800 tracking-tight">Act A: Aggregations</h3>
-          </div>
-          <div className="border-b border-zinc-200 pb-1 hidden lg:block">
-            <h3 className="text-lg font-black text-zinc-800 tracking-tight">Act B: Utility</h3>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
-            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-1">1. Benthamite</h4>
+            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">1. Benthamite</h4>
+            <span className="text-[10px] font-bold text-pink-600 block mb-2">National Average Happiness</span>
             <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Maximising the total average efficiently increases overall societal wellbeing, but it does not account for how that wellbeing is distributed.</p>
           </div>
+          
           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
-            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-1">2. Rawlsian</h4>
+            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">2. Rawlsian</h4>
+            <span className="text-[10px] font-bold text-blue-500 block mb-2">Minimum Wellbeing Baseline</span>
             <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Prioritises the worst-off to create a minimum standard of living, but highlights the variance between objective metrics and subjective experience.</p>
           </div>
 
@@ -101,18 +94,17 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
           </div>
 
           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
-            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-1">3. Personal Utility</h4>
-            <p className="text-xs text-zinc-600 flex-1 leading-relaxed">
-              Focuses on individual rational choice. Due to loss aversion, citizens often vote to protect their current status, making redistribution difficult.
-            </p>
+            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">3. Personal Utility</h4>
+            <span className="text-[10px] font-bold text-purple-500 block mb-2">National Average Satisfaction</span>
+            <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Focuses on individual rational choice. Due to loss aversion, citizens often vote to protect their current status, making redistribution difficult.</p>
           </div>
           
           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
-            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800 mb-1">4. Societal Utility</h4>
+            <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">4. Societal Utility</h4>
+            <span className="text-[10px] font-bold text-emerald-600 block mb-2">National Fairness Index</span>
             <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Incorporates empathy and fairness ideals. However, differing definitions of 'fairness' mean consensus rarely results in perfect equality.</p>
           </div>
         </div>
-      </div>
 
       {/* System Sign-off */}
       <div className="p-4 bg-zinc-900 rounded-xl text-center text-white relative overflow-hidden shadow-xl shrink-0 mt-2">

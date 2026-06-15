@@ -6,7 +6,7 @@ interface WelcomeModalProps {
 }
 
 export default function WelcomeModal({ onAcknowledge }: WelcomeModalProps) {
-  const welcomeText = "Prime Minister, congratulations on your election. The country is looking to you for leadership.\n\nThe public mandate is evolving; as societal priorities shift, so too must the metrics by which you are judged. Should you secure a mandate this term, be advised that the criteria for success will evolve in the future, demanding a more nuanced approach to governance.\n\nYour first agenda awaits.";
+  const welcomeText = "Prime Minister, congratulations on your election. The country is looking to you for leadership.\n\nThe public mandate is evolving; as societal priorities shift, so does on what metrics you are judged. Should you secure a mandate this term, be advised that the criteria for success will evolve in the future, demanding a more nuanced approach to governance.\n\nYour first agenda awaits.";
 
   return (
     <ModalContent maxWidth="max-w-xl">

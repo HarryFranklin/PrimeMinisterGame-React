@@ -32,23 +32,21 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
 
   const getBriefingMessage = () => {
     let msg = `PRIME MINISTER'S MANDATE: TERM ${currentCycle + 1}\n\n`;
-    msg += `PHILOSOPHY: ${rule.frameworkTitle}\n\n`;
+    msg += `PHILOSOPHY: ${rule.frameworkTitle}\n`;
+    msg += `KEY METRIC: ${rule.targetMetricName}\n\n`;
     msg += `THE SITUATION:\n${getDiegeticContext()}\n\n`;
     msg += `YOUR GOAL:\n${rule.briefingText}\n\n`;
-    msg += `KEY OBJECTIVE:\n`;
+    msg += `DIRECTIVE:\n`;
 
     if (currentCycle === ElectionCycle.Benthamite) {
       msg += `Raise the overall national average happiness.`;
     }
-
     if (currentCycle === ElectionCycle.Rawlsian) {
       msg += `Prioritise the country's most vulnerable citizens.`;
     }
-
     if (currentCycle === ElectionCycle.PersonalUtility) {
-      msg += `Map voter self-interest and avoid policies that cause loss.`;
+      msg += `Map voter self-interest and avoid policies that cause personal loss.`;
     }
-
     if (currentCycle === ElectionCycle.SocietalUtility) {
       msg += `Balance individual outcomes with the public demand for fairness.`;
     }

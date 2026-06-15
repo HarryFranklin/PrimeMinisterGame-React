@@ -51,14 +51,21 @@ export default function DashboardTab() {
   }, [approvalRating]);
 
   const activeMarkers: ChartMarker[] = [];
-  if (currentCycle === ElectionCycle.Benthamite) {
-    activeMarkers.push({ value: turnMetricScore, label: "Current Average", color: "#3f3f46", dashed: false, hideLabelText: true });
-    activeMarkers.push({ value: targetScore, label: "Target Average", color: rule.graphColor, dashed: true, hideLabelText: true });
+  
+if (currentCycle === ElectionCycle.Benthamite) {
+    activeMarkers.push({ value: turnMetricScore, label: "Current Happiness", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Happiness", color: rule.graphColor, dashed: true, hideLabelText: true });
   } else if (currentCycle === ElectionCycle.Rawlsian) {
-    activeMarkers.push({ value: turnMetricScore, label: "Current Floor", color: "#3f3f46", dashed: false, hideLabelText: true });
-    activeMarkers.push({ value: targetScore, label: "Target Floor", color: rule.graphColor, dashed: true, hideLabelText: true });
+    activeMarkers.push({ value: turnMetricScore, label: "Current Baseline", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Baseline", color: rule.graphColor, dashed: true, hideLabelText: true });
+  } else if (currentCycle === ElectionCycle.PersonalUtility) {
+    activeMarkers.push({ value: turnMetricScore, label: "Current Satisfaction", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Satisfaction", color: rule.graphColor, dashed: true, hideLabelText: true });
+  } else if (currentCycle === ElectionCycle.SocietalUtility) {
+    activeMarkers.push({ value: turnMetricScore, label: "Current Fairness", color: "#3f3f46", dashed: false, hideLabelText: true });
+    activeMarkers.push({ value: targetScore, label: "Target Fairness", color: rule.graphColor, dashed: true, hideLabelText: true });
   }
-
+  
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
       const name = i.toString();

@@ -69,10 +69,14 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
   const endMetric = useMemo(() => getMetric(finalPopulation), [getMetric, finalPopulation]);
   const improved = endMetric >= startMetric;
 
-  const showMarkers = currentCycle === ElectionCycle.Benthamite || currentCycle === ElectionCycle.Rawlsian;
-  const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : "Floor";
+  const showMarkers = true;
   
-  // Show markers instantly
+  // Dynamically assign the correct label based on your new metric names
+  const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : 
+                      currentCycle === ElectionCycle.Rawlsian ? "Baseline" : 
+                      currentCycle === ElectionCycle.PersonalUtility ? "Satisfaction" : 
+                      "Fairness";
+  
   const initialMarkers = showMarkers ? [{ value: startMetric, label: `Start ${markerLabel}`, color: "#a1a1aa", dashed: true }] : [];
   const finalMarkers = showMarkers ? [{ value: endMetric, label: `End ${markerLabel}`, color: rule.graphColor, dashed: false }] : [];
 

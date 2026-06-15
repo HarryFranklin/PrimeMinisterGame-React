@@ -105,7 +105,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 
                 {revealedBenthamA && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
-                    <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span>
+                    <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average Happiness</span>
                     <strong className="text-5xl font-black text-pink-700">5.0</strong>
                   </div>
                 )}
@@ -128,7 +128,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 
                 {revealedBenthamB && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
-                    <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span>
+                    <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average Happiness</span>
                     <strong className="text-5xl font-black text-pink-700">5.0</strong>
                   </div>
                 )}
@@ -295,7 +295,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Cycle 3: Personal Utility</h3>
                 <div className="text-center mb-3">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Population Score</span>
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">National Average Satisfaction</span>
                   <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
                 </div>
                 <div className="flex-1 text-xs text-zinc-600 space-y-2">
@@ -307,7 +307,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Cycle 4: Societal Utility</h3>
                 <div className="text-center mb-3">
-                  <span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">Average Population Score</span>
+                  <span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">National Fairness Index</span>
                   <strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
                 </div>
                 <div className="flex-1 text-xs text-emerald-800/80 space-y-2">
