@@ -1,3 +1,9 @@
+/**
+ * Page 4 of the election sequence.
+ * Shows 3 vox-pop citizens with inline policy name highlights.
+ * Hovering a policy name highlights it in the right-hand legislation panel.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { ElectionCycle, Respondent } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
@@ -183,12 +189,18 @@ export default function StageElectorateFeedback({
   onReady,
 }: StageElectorateFeedbackProps) {
   const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
     onReady();
+    // Delay the appearance of the sidebar so it fades in after the left panel anchors
+    const timer = setTimeout(() => {
+      setShowSidebar(true);
+    }, 400); 
+    return () => clearTimeout(timer);
   }, [onReady]);
 
-  // Pick 3 representative citizens: most-declined, most-neutral, most-improved
+  // Pick 3 representative citizens
   const voxPops = useMemo(() => {
     const enriched = finalPopulation.map((p, i) => {
       const baseline = baselinePopulation.find(b => b.id === p.id) ?? initialPopulation[i];
@@ -212,7 +224,6 @@ export default function StageElectorateFeedback({
     return [worst, mid, best];
   }, [finalPopulation, initialPopulation, baselinePopulation]);
 
-  // Derive sentiments
   const voterData = useMemo(
     () =>
       voxPops.map(vp => ({
@@ -222,7 +233,6 @@ export default function StageElectorateFeedback({
     [voxPops, currentCycle]
   );
 
-  // Collect ONLY the policies that are actually rendered in the current quote
   const referencedPolicyIds = useMemo(() => {
     const ids = new Set<string>();
     voterData.forEach(({ sentiment }) => {
@@ -241,7 +251,7 @@ export default function StageElectorateFeedback({
   return (
     <div className="flex gap-6 w-full animate-in fade-in h-full">
       {/* Left: voter cards */}
-      <div className="flex-1 flex flex-col gap-4 min-w-0">
+      <div className="flex-1 flex flex-col gap-4 min-w-[500px]">
         <DPMMessage title="Voter Sentiment">
           We've tracked how your policies impacted individual voters. Hover over policy names to review the enacted
           legislation.
@@ -261,7 +271,6 @@ export default function StageElectorateFeedback({
                 <div className="flex items-center justify-between mb-2 w-full">
                   <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
                   
-                  {/* Dynamic LS Badge colors restored */}
                   <div className={`flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-md border shadow-sm shrink-0 ${
                     vp.lsDiff > 0.05 ? 'border-emerald-200' : vp.lsDiff < -0.05 ? 'border-rose-200' : 'border-zinc-200'
                   }`}>
@@ -286,36 +295,43 @@ export default function StageElectorateFeedback({
         </div>
       </div>
 
-      {/* Right: legislation panel - widened to 360px with larger text */}
-      <div className="w-[360px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
-        <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Referenced Legislation</h4>
-        <div className="flex flex-col gap-4 overflow-y-auto pr-1">
-          {referencedPolicyIds.length === 0 ? (
-            <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
-              <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
-            </div>
-          ) : (
-            referencedPolicyIds.map(id => {
-              const policy = availablePolicies.find(p => p.id === id);
-              if (!policy) return null;
-              const isHovered = hoveredPolicyId === id;
+      {/* Right: legislation panel */}
+      <div 
+        className={`w-[360px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col transition-opacity duration-700 ease-out ${
+          showSidebar ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div className="flex flex-col h-full w-full">
+          <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Referenced Legislation</h4>
+          
+          <div className="flex flex-col gap-4 overflow-y-auto px-3 pb-4 -mx-3">
+            {referencedPolicyIds.length === 0 ? (
+              <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
+                <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
+              </div>
+            ) : (
+              referencedPolicyIds.map(id => {
+                const policy = availablePolicies.find(p => p.id === id);
+                if (!policy) return null;
+                const isHovered = hoveredPolicyId === id;
 
-              return (
-                <div
-                  key={id}
-                  className={`p-4 rounded-xl border transition-all duration-300 ${
-                    isHovered
-                      ? 'bg-pink-50 border-pink-400 shadow-md scale-[1.02]'
-                      : 'bg-white border-zinc-200 shadow-sm opacity-80'
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
-                  <p className="font-bold text-base text-zinc-900 mb-1.5">{policy.policyName}</p>
-                  <p className="text-sm text-zinc-700 leading-relaxed line-clamp-3">{policy.description}</p>
-                </div>
-              );
-            })
-          )}
+                return (
+                  <div
+                    key={id}
+                    className={`p-4 rounded-xl border transition-all duration-300 ${
+                      isHovered
+                        ? 'bg-pink-50 border-pink-400 shadow-md scale-[1.02]'
+                        : 'bg-white border-zinc-200 shadow-sm opacity-80'
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
+                    <p className="font-bold text-base text-zinc-900 mb-1.5">{policy.policyName}</p>
+                    <p className="text-sm text-zinc-700 leading-relaxed">{policy.description}</p>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>
