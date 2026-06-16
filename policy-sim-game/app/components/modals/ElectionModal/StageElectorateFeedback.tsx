@@ -1,14 +1,7 @@
-/**
- * Page 4 of the election sequence.
- * Shows 3 vox-pop citizens with inline policy name highlights.
- * Hovering a policy name highlights it in the right-hand legislation panel.
- *
- */
-
 import React, { useEffect, useMemo, useState } from 'react';
-import { ElectionCycle, Respondent } from '../../utils/types';
-import { availablePolicies } from '../../data/policies';
-import { DPMMessage } from './SharedModalComponents';
+import { ElectionCycle, Respondent } from '../../../utils/types';
+import { availablePolicies } from '../../../data/policies';
+import { DPMMessage } from '../SharedModalComponents';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,7 +14,6 @@ interface PolicyRef {
 
 interface VoterSentiment {
   emoji: string;
-  /** Sentiment key — rendered into a sentence by VoterQuote */
   kind: 'very_negative' | 'negative' | 'neutral_mixed' | 'neutral' | 'positive' | 'very_positive';
   bestPolicy: PolicyRef | null;
   worstPolicy: PolicyRef | null;
@@ -212,7 +204,6 @@ export default function StageElectorateFeedback({
     const worst = sorted[0];
     const best = sorted[sorted.length - 1];
 
-    // Most-neutral: smallest absolute diff that isn't worst/best
     const mid =
       sorted
         .filter(s => s.id !== worst.id && s.id !== best.id)
@@ -221,7 +212,7 @@ export default function StageElectorateFeedback({
     return [worst, mid, best];
   }, [finalPopulation, initialPopulation, baselinePopulation]);
 
-  // Derive sentiments (pure data — no JSX)
+  // Derive sentiments
   const voterData = useMemo(
     () =>
       voxPops.map(vp => ({
@@ -231,13 +222,18 @@ export default function StageElectorateFeedback({
     [voxPops, currentCycle]
   );
 
-  // Collect all referenced policy IDs across all three citizens
-  // This is derived from DATA (the sentiment objects) not from JSX rendering
+  // Collect ONLY the policies that are actually rendered in the current quote
   const referencedPolicyIds = useMemo(() => {
     const ids = new Set<string>();
     voterData.forEach(({ sentiment }) => {
-      if (sentiment.bestPolicy?.id) ids.add(sentiment.bestPolicy.id);
-      if (sentiment.worstPolicy?.id) ids.add(sentiment.worstPolicy.id);
+      const { kind, bestPolicy, worstPolicy } = sentiment;
+      
+      if (['very_negative', 'negative', 'neutral_mixed'].includes(kind) && worstPolicy?.id) {
+        ids.add(worstPolicy.id);
+      }
+      if (['positive', 'very_positive', 'neutral_mixed'].includes(kind) && bestPolicy?.id) {
+        ids.add(bestPolicy.id);
+      }
     });
     return Array.from(ids);
   }, [voterData]);
@@ -264,11 +260,20 @@ export default function StageElectorateFeedback({
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-2 w-full">
                   <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
-                  <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
-                    <span className="text-xs font-bold text-zinc-500">
-                      LS: {vp.baselineLS.toFixed(1)} <span className="text-zinc-300">→</span> {vp.finalLS.toFixed(1)}
+                  
+                  {/* Dynamic LS Badge colors restored */}
+                  <div className={`flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-md border shadow-sm shrink-0 ${
+                    vp.lsDiff > 0.05 ? 'border-emerald-200' : vp.lsDiff < -0.05 ? 'border-rose-200' : 'border-zinc-200'
+                  }`}>
+                    <span className="text-xs font-bold text-zinc-500">LS: {vp.baselineLS.toFixed(1)}</span>
+                    <span className="text-xs text-zinc-300 font-black">→</span>
+                    <span className={`text-xs font-black ${
+                      vp.lsDiff > 0.05 ? 'text-emerald-600' : vp.lsDiff < -0.05 ? 'text-rose-600' : 'text-zinc-600'
+                    }`}>
+                      {vp.finalLS.toFixed(1)}
                     </span>
                   </div>
+
                 </div>
                 <p className="text-sm text-zinc-600 italic leading-snug">
                   "
@@ -281,10 +286,10 @@ export default function StageElectorateFeedback({
         </div>
       </div>
 
-      {/* Right: legislation panel */}
-      <div className="w-[300px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
-        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3">Referenced Legislation</h4>
-        <div className="flex flex-col gap-3 overflow-y-auto pr-1">
+      {/* Right: legislation panel - widened to 360px with larger text */}
+      <div className="w-[360px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
+        <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Referenced Legislation</h4>
+        <div className="flex flex-col gap-4 overflow-y-auto pr-1">
           {referencedPolicyIds.length === 0 ? (
             <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
               <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
@@ -304,9 +309,9 @@ export default function StageElectorateFeedback({
                       : 'bg-white border-zinc-200 shadow-sm opacity-80'
                   }`}
                 >
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
-                  <p className="font-bold text-sm text-zinc-900 mb-1.5">{policy.policyName}</p>
-                  <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{policy.description}</p>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
+                  <p className="font-bold text-base text-zinc-900 mb-1.5">{policy.policyName}</p>
+                  <p className="text-sm text-zinc-700 leading-relaxed line-clamp-3">{policy.description}</p>
                 </div>
               );
             })

@@ -91,10 +91,10 @@ export const ModalHeader = ({ title, subtitle }: { title: string, subtitle?: str
 export const DPMMessage = ({ title, children, className = "" }: { title: string, children: React.ReactNode, className?: string }) => (
   <div className={`p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-left shrink-0 ${className}`}>
     <div className="flex items-center gap-3 mb-3 border-b border-zinc-200/60 pb-3">
-      <span className="text-2xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">👱‍♂️</span>
+      <span className="text-2xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
       <div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-pink-600 leading-tight block mb-0.5">Deputy Prime Minister</span>
-        <span className="font-bold text-zinc-800 text-sm">{title}</span>
+        <span className="text-sm font-black uppercase tracking-widest text-pink-600 leading-tight block mb-0.5">Deputy Prime Minister</span>
+        <span className="font-bold text-zinc-800 text-base">{title}</span>
       </div>
     </div>
     <div className="italic text-zinc-700 text-sm leading-relaxed">{children}</div>

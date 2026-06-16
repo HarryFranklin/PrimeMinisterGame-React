@@ -4,8 +4,8 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { ElectionCycle, Respondent } from '../../utils/types';
-import { DPMMessage } from './SharedModalComponents';
+import { ElectionCycle, Respondent } from '../../../utils/types';
+import { DPMMessage } from '../SharedModalComponents';
 
 interface StagePopulationChangeProps {
   finalPopulation: Respondent[];

@@ -5,11 +5,11 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
-import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
-import { WelfareMetrics } from '../../utils/WelfareMetrics';
-import D3Chart from '../D3Chart';
-import { DPMMessage } from './SharedModalComponents';
+import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
+import { FRAMEWORK_RULES } from '../../../utils/frameworkRules';
+import { WelfareMetrics } from '../../../utils/WelfareMetrics';
+import D3Chart from '../../D3Chart';
+import { DPMMessage } from '../SharedModalComponents';
 
 interface StageTermSummaryProps {
   currentCycle: ElectionCycle;
