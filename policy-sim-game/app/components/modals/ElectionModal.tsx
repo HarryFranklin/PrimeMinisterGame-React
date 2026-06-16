@@ -224,7 +224,7 @@ const PageCohorts = ({ finalPopulation, currentCycle, setPageReady }: any) => {
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full">
-      <DPMMessage title="Wellbeing Mobility">
+      <DPMMessage title="How The Population Changed">
         "We've tracked the electorate based on how their overall life satisfaction shifted during your administration."
       </DPMMessage>
 
@@ -258,11 +258,22 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
     setPageReady(true);
   }, [setPageReady]);
 
-  const getVoterStory = (citizen: any, cycle: ElectionCycle, setHover: (id: string | null) => void) => {
+  interface InteractivePolicyProps {
+    id: string | null;
+    name: string;
+  }
+
+  interface VoterStory {
+    emoji: string;
+    text: React.ReactElement;
+    referencedPolicyIds: string[];
+  }
+
+  const getVoterStory = (citizen: any, cycle: ElectionCycle, setHover: (id: string | null) => void): VoterStory => {
     const cycleLedger = citizen.historicalLedger?.find((l: any) => l.cycle === cycle);
     
     if (!cycleLedger || cycleLedger.turns.length < 2) {
-      return { emoji: '😐', text: <>Honestly, my life hasn't changed much at all. The politicians' arguments haven't really affected my day-to-day.</>, referencedPolicyIds: [] };
+      return { emoji: '😐', text: <>Honestly, my life hasn't changed much at all.</>, referencedPolicyIds: [] };
     }
 
     let bestPolicy = { name: '', id: null as string | null, delta: -Infinity };
@@ -282,8 +293,8 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
     const totalDiff = citizen.lsDiff;
     const referencedPolicyIds: string[] = [];
 
-    const InteractivePolicy = ({ id, name }: { id: string | null, name: string }) => {
-      if (!id || !name) return null;
+    const InteractivePolicy = ({ id, name }: InteractivePolicyProps) => {
+      if (!id || !name) return <>{name}</>;
       if (!referencedPolicyIds.includes(id)) referencedPolicyIds.push(id);
       return (
         <span 
@@ -331,6 +342,7 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
         referencedPolicyIds 
       };
     }
+    
     return { 
       emoji: '😄', 
       text: <>I've seen a huge difference! {bestPolicy.delta > 0.05 && bestPolicy.name ? <>The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> really helped me out and turned things around.</> : "The agenda directly enhanced my quality of life."}</>, 
@@ -351,18 +363,22 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
     if (!b) b = bOptions.sort((x: any, y: any) => Math.abs(x.lsDiff) - Math.abs(y.lsDiff))[0];
 
     return [a, b, c];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finalPopulation, initialPopulation, baselinePopulation, currentCycle]);
+
+  const stories = useMemo(() => {
+    return voxPops.map(vp => ({
+      ...vp,
+      story: getVoterStory(vp, currentCycle, setHoveredPolicyId)
+    }));
+  }, [voxPops, currentCycle]); 
 
   const referencedPolicyIds = useMemo(() => {
     const ids = new Set<string>();
-    voxPops.forEach(vp => {
-      const story = getVoterStory(vp, currentCycle, () => {});
-      story.referencedPolicyIds.forEach(id => ids.add(id));
+    stories.forEach(vp => {
+      vp.story.referencedPolicyIds.forEach((id: string) => ids.add(id));
     });
     return Array.from(ids);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voxPops, currentCycle]);
+  }, [stories]);
 
   return (
     <div className="flex gap-6 w-full animate-in fade-in h-full">
@@ -372,36 +388,31 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
         </DPMMessage>
         
         <div className="flex flex-col gap-3 w-full">
-          {voxPops.map((vp, idx) => {
-            const story = getVoterStory(vp, currentCycle, setHoveredPolicyId);
-            return (
-              <div key={idx} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-4 items-center w-full shadow-sm">
-                <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-14 h-14 shrink-0 shadow-sm">
-                  <span className="text-2xl">{story.emoji}</span>
-                </div>
-                
-                <div className="flex-1 w-full min-w-0">
-                  <div className="flex items-center justify-between mb-2 w-full">
-                    <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
-                    
-                    <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
-                      <span className="text-xs font-bold text-zinc-500">{vp.baselineLS.toFixed(1)}</span>
-                      <span className="text-xs text-zinc-300 font-black">→</span>
-                      <span className={`text-xs font-black ${vp.lsDiff > 0 ? 'text-emerald-600' : vp.lsDiff < 0 ? 'text-rose-600' : 'text-zinc-600'}`}>
-                        {vp.finalLS.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-zinc-600 italic leading-snug">"{story.text}"</p>
-                </div>
+          {stories.map((vp, idx) => (
+            <div key={idx} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-4 items-center w-full shadow-sm">
+              <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-14 h-14 shrink-0 shadow-sm">
+                <span className="text-2xl">{vp.story.emoji}</span>
               </div>
-            );
-          })}
+              
+              <div className="flex-1 w-full min-w-0">
+                <div className="flex items-center justify-between mb-2 w-full">
+                  <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
+                  
+                  <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
+                    <span className="text-xs font-bold text-zinc-500">
+                       LS: {vp.baselineLS.toFixed(1)} <span className="text-zinc-300">→</span> {vp.finalLS.toFixed(1)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-600 italic leading-snug">"{vp.story.text}"</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Referenced Legislation</h4>
+        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3">Referenced Legislation</h4>
         <div className="flex flex-col gap-3 overflow-y-auto pr-2">
           {referencedPolicyIds.map(id => {
             const policy = availablePolicies.find(p => p.id === id);
@@ -610,8 +621,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
   );
 }
 
-// --- Main Modal Component ---
-
+// Main Modal Component
 export default function ElectionModal({ 
   currentMetricScore, currentCycle, approvalRating, cycleAttempts, 
   initialPopulation, baselinePopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
@@ -631,7 +641,7 @@ export default function ElectionModal({
   const getModalTitle = () => {
     if (page === 0) return "Term Summary";
     if (page === 1) return "Election Verdict";
-    if (page === 2) return "Demographic Shifts";
+    if (page === 2) return "Wellbeing Mobility";
     if (page === 3) return "Electorate Feedback";
     if (page === 4) return "Academic Debrief";
     return "Election Sequence";
@@ -641,7 +651,7 @@ export default function ElectionModal({
     if (page === 0) return "max-w-3xl"; 
     if (page === 1) return "max-w-xl";  
     if (page === 2) return "max-w-3xl"; 
-    if (page === 3) return "max-w-5xl"; // Dynamically expands to fit the right-hand policy sidebar
+    if (page === 3) return "max-w-5xl";
     if (page === 4) return "max-w-3xl"; 
     return "max-w-3xl";
   };
@@ -674,7 +684,7 @@ export default function ElectionModal({
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Demographic Shifts \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
+            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Changes \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
