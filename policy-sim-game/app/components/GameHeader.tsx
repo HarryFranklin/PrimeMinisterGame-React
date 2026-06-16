@@ -12,6 +12,8 @@ interface GameHeaderProps {
 export default function GameHeader({
   currentCycle, currentTurn, turnsPerCycle, isParliamentDissolved
 }: GameHeaderProps) {
+  const turnsRemaining = Math.max(0, turnsPerCycle - currentTurn + 1);
+
   return (
     <header className="bg-white border-b border-zinc-200 px-8 py-5 flex justify-between items-center shrink-0 shadow-sm relative z-10">
       
@@ -34,7 +36,10 @@ export default function GameHeader({
           {isParliamentDissolved ? "Status:" : "Election in:"}
         </p>
         <p className={`text-lg font-mono font-black ${isParliamentDissolved ? 'text-rose-600' : 'text-zinc-900'}`}>
-          {isParliamentDissolved ? "POLLS OPEN" : `${Math.max(0, turnsPerCycle - currentTurn + 1)}`}
+          {isParliamentDissolved 
+            ? "POLLS OPEN" 
+            : `${turnsRemaining} ${turnsRemaining === 1 ? 'turn' : 'turns'}`
+          }
         </p>
       </div>
       
