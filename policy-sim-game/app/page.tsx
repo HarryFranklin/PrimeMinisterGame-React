@@ -1,22 +1,27 @@
 "use client";
+
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
+
 // Modals
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import WelcomeModal from "./components/modals/WelcomeModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
+
 import GameHeader from "./components/GameHeader";
 import DashboardTab from "./components/tabs/DashboardTab";
+
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
 
 export default function Home() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
+
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
 
   useEffect(() => {
@@ -25,6 +30,7 @@ export default function Home() {
       const isLowResolution = window.innerWidth < 1024;
       setIsUnsupportedScreen(isMobileDevice || isLowResolution);
     };
+
     evaluateViewport();
     window.addEventListener('resize', evaluateViewport);
     return () => window.removeEventListener('resize', evaluateViewport);
@@ -94,6 +100,7 @@ export default function Home() {
                       approvalRating={game.turnApprovalRating}
                       cycleAttempts={game.cycleAttempts}
                       initialPopulation={game.initialPopulation}
+                      baselinePopulation={game.baselinePopulation}
                       finalPopulation={game.population}
                       yAxisMax={game.yAxisMax}
                       onNextCycle={game.handleProceedFromNarrative}

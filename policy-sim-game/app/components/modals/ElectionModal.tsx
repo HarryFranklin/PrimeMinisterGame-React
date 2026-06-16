@@ -12,6 +12,7 @@ interface ElectionModalProps {
   approvalRating: number;
   cycleAttempts: number;
   initialPopulation: Respondent[];
+  baselinePopulation: Respondent[];
   finalPopulation: Respondent[];
   yAxisMax: number;
   onNextCycle: () => void;
@@ -195,7 +196,7 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
   );
 }
 
-const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageReady }: any) => {
+const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, currentCycle, setPageReady }: any) => {
   useEffect(() => {
     setPageReady(true);
   }, [setPageReady]);
@@ -209,43 +210,58 @@ const PageMicro = ({ initialPopulation, finalPopulation, currentCycle, setPageRe
   };
 
   const voxPops = useMemo(() => {
-    const sorted = finalPopulation.map((p: any, i: number) => ({ 
-      id: p.id, 
-      initialLS: initialPopulation[i].currentLS,
-      finalLS: p.currentLS,
-      lsDiff: p.currentLS - initialPopulation[i].currentLS 
-    })).sort((a: any,b: any) => a.lsDiff - b.lsDiff);
+    const sorted = finalPopulation.map((p: any, i: number) => {
+      const baseline = baselinePopulation.find((b: any) => b.id === p.id) || initialPopulation[i];
+      const lsDiff = p.currentLS - baseline.currentLS;
+      
+      return { 
+        id: p.id, 
+        baselineLS: baseline.currentLS,
+        finalLS: p.currentLS,
+        lsDiff: lsDiff 
+      };
+    }).sort((a: any, b: any) => a.lsDiff - b.lsDiff);
     
-    const a = sorted[0]; const c = sorted[sorted.length - 1]; 
+    const a = sorted[0]; 
+    const c = sorted[sorted.length - 1]; 
     let bOptions = sorted.filter((s: any) => s.id !== a.id && s.id !== c.id);
     let b = bOptions.find((s: any) => Math.abs(s.lsDiff - a.lsDiff) > 0.02 && Math.abs(s.lsDiff - c.lsDiff) > 0.02 && Math.abs(s.lsDiff) < 0.2);
     if (!b) b = bOptions.sort((x: any, y: any) => Math.abs(x.lsDiff) - Math.abs(y.lsDiff))[0];
 
     return [
-      { id: a.id, name: getFakeName(0), initialLS: a.initialLS, finalLS: a.finalLS, diff: a.lsDiff, ...getVoxPopContent(a.lsDiff) },
-      { id: b.id, name: getFakeName(1), initialLS: b.initialLS, finalLS: b.finalLS, diff: b.lsDiff, ...getVoxPopContent(b.lsDiff) },
-      { id: c.id, name: getFakeName(2), initialLS: c.initialLS, finalLS: c.finalLS, diff: c.lsDiff, ...getVoxPopContent(c.lsDiff) }
+      { id: a.id, name: getFakeName(0), baselineLS: a.baselineLS, finalLS: a.finalLS, diff: a.lsDiff, ...getVoxPopContent(a.lsDiff) },
+      { id: b.id, name: getFakeName(1), baselineLS: b.baselineLS, finalLS: b.finalLS, diff: b.lsDiff, ...getVoxPopContent(b.lsDiff) },
+      { id: c.id, name: getFakeName(2), baselineLS: c.baselineLS, finalLS: c.finalLS, diff: c.lsDiff, ...getVoxPopContent(c.lsDiff) }
     ];
-  }, [finalPopulation, initialPopulation]);
+  }, [finalPopulation, initialPopulation, baselinePopulation]);
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in">
+    <div className="flex flex-col gap-4 animate-in fade-in w-full">
       <DPMMessage title="Voter Sentiment">
         We've tracked how your policies impacted individual voters. Here is what three typical citizens are saying about your term.
       </DPMMessage>
       
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 w-full">
         {voxPops.map((vp, idx) => (
-          <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center">
-            <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm"><span className="text-lg">{vp.emoji}</span></div>
-            <div className="flex-1">
-              <h4 className="font-bold text-zinc-800 text-sm mb-1">
-                {vp.name} 
-                <span className="text-zinc-500 font-normal ml-2 text-[11px]">
-                  Previous Happiness: {vp.initialLS.toFixed(1)}/10, Current Happiness: {vp.finalLS.toFixed(1)}/10
-                </span>
-              </h4>
-              <p className="text-sm text-zinc-600 italic">"{vp.text}"</p>
+          <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full">
+            <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
+              <span className="text-lg">{vp.emoji}</span>
+            </div>
+            
+            <div className="flex-1 w-full min-w-0">
+              <div className="flex items-center justify-between mb-1.5 w-full">
+                <h4 className="font-bold text-zinc-800 text-sm truncate pr-2">{vp.name}</h4>
+                
+                <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
+                  <span className="text-xs font-bold text-zinc-500">Life Satisfaction: {vp.baselineLS.toFixed(1)}</span>
+                  <span className="text-xs text-zinc-300 font-black">→</span>
+                  <span className={`text-xs font-black ${vp.diff > 0 ? 'text-emerald-600' : vp.diff < 0 ? 'text-rose-600' : 'text-zinc-600'}`}>
+                    {vp.finalLS.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+              
+              <p className="text-sm text-zinc-600 italic leading-snug">"{vp.text}"</p>
             </div>
           </div>
         ))}
@@ -438,7 +454,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
 
 export default function ElectionModal({ 
   currentMetricScore, currentCycle, approvalRating, cycleAttempts, 
-  initialPopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
+  initialPopulation, baselinePopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
 }: ElectionModalProps) {
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
@@ -475,7 +491,7 @@ export default function ElectionModal({
         <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">
           {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
           {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
-          {page === 2 && <PageMicro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
+          {page === 2 && <PageMicro initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
           {page === 3 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
         </motion.div>
 
