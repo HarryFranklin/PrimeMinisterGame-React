@@ -1,11 +1,65 @@
 import { useMemo, useState, useEffect } from "react";
 import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
-import { AxisVariable, ElectionCycle } from "../../utils/types";
+import { AxisVariable, Respondent } from "../../utils/types";
 import { IMPACT_COLORS } from "../../utils/uiHelpers";
 import { availablePolicies } from "../../data/policies";
-import D3Chart, { ChartMarker } from "../D3Chart";
+import D3Chart from "../D3Chart";
 import DPMCard from "../DPMCard";
+
+// Component for the animated historical pop-up
+const HistoricalImpactPopup = ({ turn, population, currentCycle, policyName, rule, yAxisMax }: any) => {
+  const [showAfter, setShowAfter] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowAfter(prev => !prev);
+    }, 1500); // Toggles between before/after every 1.5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const histBefore = useMemo(() => {
+    const popBefore = population.map((r: Respondent) => {
+      const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
+      const tData = ledger?.turns.find((t: any) => t.turn === turn - 1);
+      return { currentLS: tData ? tData.ls : r.currentLS };
+    });
+    return Array.from({ length: 11 }, (_, i) => ({
+      name: i, count: popBefore.filter((r: { currentLS: number }) => Math.round(r.currentLS) === i).length
+    }));
+  }, [population, currentCycle, turn]);
+
+  const histAfter = useMemo(() => {
+    const popAfter = population.map((r: Respondent) => {
+      const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
+      const tData = ledger?.turns.find((t: any) => t.turn === turn);
+      return { currentLS: tData ? tData.ls : r.currentLS };
+    });
+    return Array.from({ length: 11 }, (_, i) => ({
+      name: i, count: popAfter.filter((r: { currentLS: number }) => Math.round(r.currentLS) === i).length
+    }));
+  }, [population, currentCycle, turn]);
+
+  return (
+    <div className="absolute right-full mr-4 top-0 w-[360px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-200 p-5 z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden pointer-events-none">
+      <div className="flex justify-between items-center mb-3">
+         <h4 className="font-bold text-zinc-900 text-sm truncate pr-4">{policyName}</h4>
+         <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors shrink-0 ${showAfter ? 'bg-pink-100 text-pink-700' : 'bg-zinc-200 text-zinc-600'}`}>
+            {showAfter ? 'After' : 'Before'}
+         </span>
+      </div>
+      <div className="h-[220px]">
+         <D3Chart
+           plotType="1D" chartData={[]}
+           histogramData={showAfter ? histAfter : histBefore}
+           xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType}
+           color={showAfter ? rule.graphColor : "#d4d4d8"}
+           visualStyle="faces" yAxisMax={yAxisMax} faceCols={2}
+         />
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardTab() {
   const { pulsePolicy } = useUI();
@@ -13,13 +67,14 @@ export default function DashboardTab() {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
-    population, previewPopulation, isParliamentDissolved, handleFaceElectorate, history
+    population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
   const [displayApproval, setDisplayApproval] = useState(approvalRating);
+  const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -61,30 +116,68 @@ export default function DashboardTab() {
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
       const name = i.toString();
-      const residentsInBin = population.filter(r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
+      let binCount = 0;
       const segments: any[] = [];
 
-      if (selectedPolicy) {
-        const improveCount = residentsInBin.filter(r => {
-          const idx = population.indexOf(r);
-          return previewPopulation[idx].currentLS - r.currentLS > 0.05;
+      // MODE A: Historical Hover Mode
+      if (isParliamentDissolved && hoveredHistoryTurn !== null) {
+        const residentsInBinBefore = population.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
+          if (!ledger) return false;
+          const turnData = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1);
+          return turnData && Math.min(10, Math.max(0, Math.round(turnData.ls))) === i;
+        });
+
+        binCount = residentsInBinBefore.length;
+
+        const improveCount = residentsInBinBefore.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
+          const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
+          const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
+          return after - before > 0.05;
         }).length;
         
-        const worsenCount = residentsInBin.filter(r => {
-          const idx = population.indexOf(r);
-          return previewPopulation[idx].currentLS - r.currentLS < -0.05;
+        const worsenCount = residentsInBinBefore.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
+          const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
+          const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
+          return after - before < -0.05;
         }).length;
+
+        const stableCount = binCount - improveCount - worsenCount;
         
-        const stableCount = residentsInBin.length - improveCount - worsenCount;
-        
-        if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
-        if (stableCount > 0) segments.push({ label: 'Will be stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
-        if (worsenCount > 0) segments.push({ label: 'Will be worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
+        if (improveCount > 0) segments.push({ label: 'Improved', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
+        if (stableCount > 0) segments.push({ label: 'Stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
+        if (worsenCount > 0) segments.push({ label: 'Worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
+
+      } 
+      // MODE B: Standard Future Preview Mode
+      else {
+        const residentsInBin = population.filter((r: Respondent) => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
+        binCount = residentsInBin.length;
+
+        if (selectedPolicy) {
+          const improveCount = residentsInBin.filter((r: Respondent) => {
+            const idx = population.indexOf(r);
+            return previewPopulation[idx].currentLS - r.currentLS > 0.05;
+          }).length;
+          
+          const worsenCount = residentsInBin.filter((r: Respondent) => {
+            const idx = population.indexOf(r);
+            return previewPopulation[idx].currentLS - r.currentLS < -0.05;
+          }).length;
+          
+          const stableCount = binCount - improveCount - worsenCount;
+          
+          if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
+          if (stableCount > 0) segments.push({ label: 'Will be stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
+          if (worsenCount > 0) segments.push({ label: 'Will be worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
+        }
       }
       
-      return { name, count: residentsInBin.length, segments };
+      return { name, count: binCount, segments };
     });
-  }, [population, previewPopulation, selectedPolicy]);
+  }, [population, previewPopulation, selectedPolicy, hoveredHistoryTurn, isParliamentDissolved, currentCycle]);
 
   const enactedLegislation = useMemo(() => {
     return history.filter(h => h.turn > 1).map(h => {
@@ -92,6 +185,11 @@ export default function DashboardTab() {
       return { ...h, description: pDetails?.description };
     });
   }, [history]);
+
+  const hoveredPolicyName = useMemo(() => {
+    if (hoveredHistoryTurn === null) return null;
+    return history.find(h => h.turn === hoveredHistoryTurn)?.enactedPolicyName;
+  }, [hoveredHistoryTurn, history]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
@@ -136,8 +234,8 @@ export default function DashboardTab() {
           {/* BOTTOM: Wellbeing Impact Forecast */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
             <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
-                {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 truncate pr-2">
+                {hoveredPolicyName ? `Historical Impact: ${hoveredPolicyName}` : selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
             </div>
             
@@ -167,25 +265,25 @@ export default function DashboardTab() {
                 </div>
               )}
 
-              {isParliamentDissolved && (
+              {isParliamentDissolved && hoveredHistoryTurn === null && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">🗳️</span>
+                      <span className="text-zinc-400 text-lg">📊</span>
                     </div>
-                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Forecast Unavailable</h4>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Interactive History</h4>
                     <p className="text-xs text-zinc-500 font-medium">
-                      No forecast available due to the impending election.
+                      Hover over enacted legislation in the right panel to view its historical impact on the population.
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${selectedPolicy ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${(selectedPolicy || hoveredHistoryTurn !== null) ? 'opacity-100' : 'opacity-40 grayscale'}`}>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Improve</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{hoveredHistoryTurn ? 'Improved' : 'Will Improve'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be stable'] }} />
@@ -193,7 +291,7 @@ export default function DashboardTab() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be worsened'] }} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Worsen</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{hoveredHistoryTurn ? 'Worsened' : 'Will Worsen'}</span>
               </div>
             </div>
           </div>
@@ -232,14 +330,29 @@ export default function DashboardTab() {
         </div>
 
         {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
-        <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
-          <div className="p-4 border-b border-zinc-200 bg-zinc-100 shrink-0">
-            <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
-              {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
-            </h3>
-            <p className="text-sm text-zinc-600 mt-1">
-              {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
-            </p>
+        <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 relative">
+          
+          {/* Animated Historical Popup Rendered Here */}
+          {hoveredHistoryTurn && isParliamentDissolved && (
+            <HistoricalImpactPopup 
+              turn={hoveredHistoryTurn} 
+              population={population} 
+              currentCycle={currentCycle} 
+              policyName={hoveredPolicyName} 
+              rule={rule} 
+              yAxisMax={yAxisMax} 
+            />
+          )}
+
+          <div className="p-4 border-b border-zinc-200 bg-zinc-100 shrink-0 flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
+                {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
+              </h3>
+              <p className="text-sm text-zinc-600 mt-1">
+                {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
+              </p>
+            </div>
           </div>
           
           <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
@@ -248,7 +361,6 @@ export default function DashboardTab() {
               // Standard Agenda View
               currentDeck.slice(0, 4).map((policy) => {
                 const isSelected = selectedPolicy?.id === policy.id;
-
                 return (
                   <button
                     key={policy.id}
@@ -274,12 +386,17 @@ export default function DashboardTab() {
               // History View (When Parliament Dissolved)
               <div className="flex flex-col gap-2.5">
                 {enactedLegislation.map((leg, index) => (
-                  <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200 shadow-sm">
-                    <div className="w-6 h-6 rounded-full bg-zinc-200 text-zinc-700 flex items-center justify-center text-sm font-black shrink-0 mt-0.5">
+                  <div 
+                    key={index} 
+                    onMouseEnter={() => setHoveredHistoryTurn(leg.turn)}
+                    onMouseLeave={() => setHoveredHistoryTurn(null)}
+                    className="flex gap-3 items-start bg-white p-3 rounded-lg border border-zinc-200 shadow-sm cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-500 group-hover:bg-pink-200 group-hover:text-pink-700 transition-colors flex items-center justify-center text-sm font-black shrink-0 mt-0.5">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-bold text-zinc-900 text mb-0.5">{leg.enactedPolicyName}</p>
+                      <p className="font-bold text-zinc-900 group-hover:text-pink-900 transition-colors mb-0.5">{leg.enactedPolicyName}</p>
                       <p className="text-sm text-zinc-600 leading-snug line-clamp-2">{leg.description}</p>
                     </div>
                   </div>
@@ -292,7 +409,7 @@ export default function DashboardTab() {
             {isParliamentDissolved ? (
               <button 
                 onClick={handleFaceElectorate}
-                className="w-full py-4 bg-rose-600 text-white text-base font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 transition-all shadow-lg animate-pulse"
+                className="w-full py-4 bg-rose-600 text-white text-base font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 transition-all shadow-lg animate-pulse cursor-pointer"
               >
                 Face the Electorate
               </button>
@@ -301,7 +418,7 @@ export default function DashboardTab() {
                 onClick={handleApplyPolicy}
                 disabled={!selectedPolicy || !isAgendaUnlocked || isEnacting}
                 className={`w-full py-3 text-white text-sm font-bold rounded-xl transition-all shadow-md ${
-                  isEnacting ? 'bg-pink-600 animate-pulse' : 'bg-zinc-900 hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed'
+                  isEnacting ? 'bg-pink-600 animate-pulse' : 'bg-zinc-900 hover:bg-black disabled:bg-zinc-300 disabled:cursor-not-allowed cursor-pointer'
                 }`}
               >
                 {isEnacting ? 'Enacting Legislation...' : 'Enact Policy'}

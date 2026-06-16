@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Respondent, ElectionCycle, Policy, TurnHistory, GamePhase } from '../utils/types';
-import { loadPopulation } from '../utils/dataLoader';
+import { Respondent, ElectionCycle, Policy, TurnHistory, GamePhase, TurnLedger } from '../utils/types';
+import { loadPopulation, getONSBaselineLS } from '../utils/dataLoader';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { PolicyEngine } from '../utils/PolicyEngine';
 import { MAOEngine } from '../utils/MAOEngine';
@@ -15,6 +15,34 @@ const calculateAverage = (pop: Respondent[]): number => {
   return pop.length > 0 ? pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length : 0;
 };
 
+// Helper function to append the current metrics of all citizens into their longitudinal ledgers
+const recordTurnState = (pop: Respondent[], cycle: ElectionCycle, turn: number, policyId: string | null, policyName: string | null): Respondent[] => {
+  const allLS = pop.map(p => p.currentLS);
+  const multipliers = WelfareMetrics.getPopulationCurveMultipliers(allLS);
+
+  return pop.map(p => {
+    const pu = WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities);
+    let su = 0;
+    for (let i = 0; i < 6; i++) {
+      su += multipliers[i] * p.societalUtilities[i];
+    }
+    su = su / pop.length;
+
+    const record: TurnLedger = { turn, policyId, policyName, ls: p.currentLS, personalUtility: pu, societalUtility: su };
+    
+    const newLedger = [...p.historicalLedger];
+    const cycleIndex = newLedger.findIndex(l => l.cycle === cycle);
+    
+    if (cycleIndex >= 0) {
+      newLedger[cycleIndex] = { ...newLedger[cycleIndex], turns: [...newLedger[cycleIndex].turns, record] };
+    } else {
+      newLedger.push({ cycle, turns: [record] });
+    }
+
+    return { ...p, historicalLedger: newLedger };
+  });
+};
+
 export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [population, setPopulation] = useState<Respondent[]>([]);
   const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]);
@@ -23,9 +51,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
 
-  // Centralised Game Phase State
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Welcome);
-  
   const isAgendaUnlocked = gamePhase === GamePhase.Playing;
 
   const [currentTurn, setCurrentTurn] = useState(1);
@@ -50,11 +76,19 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setDpmConsultedState({});
   }, []);
 
-  const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
+  const startCycle = useCallback((cycle: ElectionCycle, basePop: Respondent[]) => {
+    // Clear out any existing ledger data for this specific cycle if restarting, then log Turn 1
+    let popToRecord = basePop.map(p => {
+      const cleanLedger = (p.historicalLedger || []).filter(l => l.cycle !== cycle);
+      return { ...p, historicalLedger: cleanLedger };
+    });
+    
+    popToRecord = recordTurnState(popToRecord, cycle, 1, null, 'Took Office');
+
     const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, TURNS_PER_CYCLE);
     setCycleSchedule(schedule);
 
-    const maoResult = MAOEngine.calculateMAO(pop, schedule, cycle, MetricsEngine.getMetricScore);
+    const maoResult = MAOEngine.calculateMAO(popToRecord, schedule, cycle, MetricsEngine.getMetricScore);
     setCycleMAO(maoResult.maxScore);
     setOptimalPath(maoResult.optimalPath);
 
@@ -62,12 +96,13 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCurrentTurn(1);
     setCurrentCycle(cycle);
     setIsParliamentDissolved(false);
-    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(pop) }]);
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(popToRecord) }]);
     setSelectedPolicy(null);
     setYAxisMax(100);
     resetDpmConsulted();
     
-    // Automatically move to briefing when a new cycle starts
+    setPopulation(popToRecord);
+    setInitialPopulation(popToRecord);
     setGamePhase(GamePhase.Briefing); 
   }, [resetDpmConsulted]);
 
@@ -95,7 +130,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     startCycle(ElectionCycle.Benthamite, data);
     setCycleAttempts(1);
     
-    // Explicitly override the Briefing state set by startCycle on a fresh load
     setGamePhase(GamePhase.Welcome); 
   }, [startCycle]);
 
@@ -153,7 +187,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setIsEnacting(true);
 
     setTimeout(() => {
-      setPopulation(previewPopulation);
+      // Record the new population state into the longitudinal ledgers
+      const nextPop = recordTurnState(previewPopulation, currentCycle, currentTurn + 1, selectedPolicy.id, selectedPolicy.policyName);
+      setPopulation(nextPop);
+      
       setHistory(prev => [...prev, {
         turn: currentTurn + 1,
         enactedPolicyId: selectedPolicy.id,
@@ -184,13 +221,15 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const handleResetCycle = useCallback(() => {
     wipeSave();
-    const data = loadPopulation();
-    setPopulation(data);
-    setInitialPopulation(data);
-    startCycle(currentCycle, data);
+    // Revert LS to ONS Baseline, but preserve the ledger for previous cycles
+    const nextPop = population.map(p => ({
+      ...p,
+      currentLS: getONSBaselineLS(p.id)
+    }));
+    startCycle(currentCycle, nextPop);
     setCycleAttempts(prev => prev + 1);
     resetDpmConsulted();
-  }, [currentCycle, resetDpmConsulted, wipeSave, startCycle]);
+  }, [population, currentCycle, resetDpmConsulted, wipeSave, startCycle]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
     wipeSave();
@@ -207,16 +246,18 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       return;
     }
 
-    const data = loadPopulation();
-    setPopulation(data);
-    setInitialPopulation(data);
-
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
     else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
 
-    startCycle(nextCycle, data);
+    // Revert LS to ONS Baseline, but preserve the ledger from the completed cycle
+    const nextPop = population.map(p => ({
+      ...p,
+      currentLS: getONSBaselineLS(p.id)
+    }));
+
+    startCycle(nextCycle, nextPop);
     setCycleAttempts(1);
   };
 

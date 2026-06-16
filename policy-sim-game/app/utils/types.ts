@@ -6,11 +6,27 @@ export enum AxisVariable {
   DeltaSocietalFairness
 }
 
+export interface TurnLedger {
+  turn: number;
+  policyId: string | null;
+  policyName: string | null;
+  ls: number;
+  personalUtility: number;
+  societalUtility: number;
+}
+
+export interface CycleLedger {
+  cycle: ElectionCycle;
+  turns: TurnLedger[];
+}
+
 export interface Respondent {
   id: number;
+  name: string;
   personalUtilities: number[];
   societalUtilities: number[];
   currentLS: number;
+  historicalLedger: CycleLedger[];
 }
 
 export interface PolicyRule {

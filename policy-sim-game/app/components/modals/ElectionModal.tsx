@@ -4,6 +4,7 @@ import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
+import { availablePolicies } from '../../data/policies';
 import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 
 interface ElectionModalProps {
@@ -22,10 +23,6 @@ interface ElectionModalProps {
 
 const generateHistogramData = (pop: Respondent[]) => Array.from({ length: 11 }, (_, i) => ({ name: i, count: pop.filter(r => Math.round(r.currentLS) === i).length }));
 const getDummyHistogram = (distribution: Record<number, number>) => Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
-const getFakeName = (id: number) => {
-  const names = ["Arthur Pendelton", "Sarah Jenkins", "Marcus Thorne", "Fiona Gallagher", "David Chowdhury", "Chloe Davies", "James O'Connor", "Eleanor Hughes", "Liam Patel", "Grace Smith", "Thomas Wright", "Olivia Newton", "Jack Evans", "Archibald Taylor", "John Sebastian", "Michelle White", "Aaron Neville"];
-  return names[id % names.length];
-}
 
 const Confetti = () => {
   const colors = ['#ec4899', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
@@ -79,14 +76,13 @@ const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax,
     return () => clearTimeout(timer);
   }, [setPageReady]);
 
-  const showMarkers = true; 
   const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : 
                       currentCycle === ElectionCycle.Rawlsian ? "Baseline" : 
                       currentCycle === ElectionCycle.PersonalUtility ? "Satisfaction" : 
                       "Fairness";
 
-  const initialMarkers = showMarkers ? [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: "#a1a1aa", dashed: true }] : [];
-  const finalMarkers = showMarkers ? [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }] : [];
+  const initialMarkers = [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: "#a1a1aa", dashed: true }];
+  const finalMarkers = [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }];
 
   const getAnalysisMessage = () => {
     const diff = endMetric - startMetric;
@@ -196,30 +192,156 @@ const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
   );
 }
 
-const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, currentCycle, setPageReady }: any) => {
+const PageCohorts = ({ finalPopulation, currentCycle, setPageReady }: any) => {
   useEffect(() => {
     setPageReady(true);
   }, [setPageReady]);
 
-  const getVoxPopContent = (diff: number) => {
-    if (diff <= -1.5) return { emoji: '😡', text: `Since the government took office, my situation has severely worsened. The policies completely ignored me.` };
-    if (diff < -0.1) return { emoji: '😟', text: `My quality of life has slipped. The recent policies haven't worked in my favour.` };
-    if (diff < 0.1) return { emoji: '😐', text: `My own circumstances have remained fairly stable, but looking at the overall distribution of wealth, I have strong opinions on fairness.` };
-    if (diff < 1.5) return { emoji: '🙂', text: `I've noticed a slight improvement. The agenda seems to be heading in the right direction.` };
-    return { emoji: '😄', text: `I have seen massive improvements! The agenda has directly enhanced my quality of life.` };
+  const cohorts = useMemo(() => {
+    let improvedCount = 0;
+    let stableCount = 0;
+    let declinedCount = 0;
+
+    finalPopulation.forEach((p: any) => {
+      const ledger = p.historicalLedger?.find((l: any) => l.cycle === currentCycle);
+      if (!ledger || ledger.turns.length === 0) return;
+      
+      const startLS = ledger.turns[0].ls;
+      const endLS = ledger.turns[ledger.turns.length - 1].ls;
+      const diff = endLS - startLS;
+
+      if (diff > 0.5) improvedCount++;
+      else if (diff < -0.5) declinedCount++;
+      else stableCount++;
+    });
+
+    return {
+      improved: finalPopulation.length ? Math.round((improvedCount / finalPopulation.length) * 100) : 0,
+      stable: finalPopulation.length ? Math.round((stableCount / finalPopulation.length) * 100) : 0,
+      declined: finalPopulation.length ? Math.round((declinedCount / finalPopulation.length) * 100) : 0
+    };
+  }, [finalPopulation, currentCycle]);
+
+  return (
+    <div className="flex flex-col gap-4 animate-in fade-in w-full">
+      <DPMMessage title="Wellbeing Mobility">
+        "We've tracked the electorate based on how their overall life satisfaction shifted during your administration."
+      </DPMMessage>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mt-2">
+        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 flex flex-col items-center text-center shadow-sm">
+          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">📈</div>
+          <h4 className="font-black text-emerald-900 uppercase tracking-widest text-xs mb-1">Improved</h4>
+          <p className="text-4xl font-black text-emerald-600">{cohorts.improved}%</p>
+        </div>
+
+        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col items-center text-center shadow-sm">
+          <div className="w-12 h-12 bg-zinc-200 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">➖</div>
+          <h4 className="font-black text-zinc-700 uppercase tracking-widest text-xs mb-1">Unchanged</h4>
+          <p className="text-4xl font-black text-zinc-600">{cohorts.stable}%</p>
+        </div>
+
+        <div className="bg-rose-50 rounded-xl border border-rose-200 p-6 flex flex-col items-center text-center shadow-sm">
+          <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">📉</div>
+          <h4 className="font-black text-rose-900 uppercase tracking-widest text-xs mb-1">Declined</h4>
+          <p className="text-4xl font-black text-rose-600">{cohorts.declined}%</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, currentCycle, setPageReady }: any) => {
+  const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageReady(true);
+  }, [setPageReady]);
+
+  const getVoterStory = (citizen: any, cycle: ElectionCycle, setHover: (id: string | null) => void) => {
+    const cycleLedger = citizen.historicalLedger?.find((l: any) => l.cycle === cycle);
+    
+    if (!cycleLedger || cycleLedger.turns.length < 2) {
+      return { emoji: '😐', text: <>Honestly, my life hasn't changed much at all. The politicians' arguments haven't really affected my day-to-day.</>, referencedPolicyIds: [] };
+    }
+
+    let bestPolicy = { name: '', id: null as string | null, delta: -Infinity };
+    let worstPolicy = { name: '', id: null as string | null, delta: Infinity };
+
+    for (let i = 1; i < cycleLedger.turns.length; i++) {
+      const prev = cycleLedger.turns[i-1].ls;
+      const curr = cycleLedger.turns[i].ls;
+      const delta = curr - prev;
+      const policyName = cycleLedger.turns[i].policyName || '';
+      const policyId = cycleLedger.turns[i].policyId;
+
+      if (delta > bestPolicy.delta) bestPolicy = { name: policyName, id: policyId, delta };
+      if (delta < worstPolicy.delta) worstPolicy = { name: policyName, id: policyId, delta };
+    }
+
+    const totalDiff = citizen.lsDiff;
+    const referencedPolicyIds: string[] = [];
+
+    const InteractivePolicy = ({ id, name }: { id: string | null, name: string }) => {
+      if (!id || !name) return null;
+      if (!referencedPolicyIds.includes(id)) referencedPolicyIds.push(id);
+      return (
+        <span 
+          className="font-bold underline decoration-pink-300 decoration-2 underline-offset-2 text-pink-700 hover:text-pink-900 transition-colors cursor-pointer"
+          onMouseEnter={() => setHover(id)}
+          onMouseLeave={() => setHover(null)}
+        >
+          {name}
+        </span>
+      );
+    };
+
+    if (totalDiff <= -1.5) {
+      return { 
+        emoji: '😡', 
+        text: <>Since this government took office, things have gotten really tough. {worstPolicy.delta < -0.05 && worstPolicy.name ? <>Having the <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> pass made it so much harder to get by.</> : "The policies completely ignored my needs."}</>, 
+        referencedPolicyIds 
+      };
+    }
+    if (totalDiff < -0.1) {
+      return { 
+        emoji: '😟', 
+        text: <>I'm definitely worse off than I was. {worstPolicy.delta < -0.05 && worstPolicy.name ? <>The <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> really didn't help matters.</> : "The agenda just didn't work for me."}</>, 
+        referencedPolicyIds 
+      };
+    }
+    if (totalDiff < 0.1) {
+      if (bestPolicy.delta > 0.1 && worstPolicy.delta < -0.1 && bestPolicy.name && worstPolicy.name) {
+          return { 
+            emoji: '😐', 
+            text: <>Honestly, I haven't noticed much difference overall. The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> helped a bit, but the <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> set me back just as much.</>, 
+            referencedPolicyIds 
+          };
+      }
+      return { 
+        emoji: '😐', 
+        text: <>Honestly, my life hasn't changed much at all. The politicians' arguments haven't really affected my day-to-day.</>, 
+        referencedPolicyIds 
+      };
+    }
+    if (totalDiff < 1.5) {
+      return { 
+        emoji: '🙂', 
+        text: <>Things are looking up a bit. {bestPolicy.delta > 0.05 && bestPolicy.name ? <>The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> actually made things easier for me.</> : "The agenda seems to be heading in a good direction."}</>, 
+        referencedPolicyIds 
+      };
+    }
+    return { 
+      emoji: '😄', 
+      text: <>I've seen a huge difference! {bestPolicy.delta > 0.05 && bestPolicy.name ? <>The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> really helped me out and turned things around.</> : "The agenda directly enhanced my quality of life."}</>, 
+      referencedPolicyIds 
+    };
   };
 
   const voxPops = useMemo(() => {
     const sorted = finalPopulation.map((p: any, i: number) => {
       const baseline = baselinePopulation.find((b: any) => b.id === p.id) || initialPopulation[i];
-      const lsDiff = p.currentLS - baseline.currentLS;
-      
-      return { 
-        id: p.id, 
-        baselineLS: baseline.currentLS,
-        finalLS: p.currentLS,
-        lsDiff: lsDiff 
-      };
+      return { ...p, baselineLS: baseline.currentLS, finalLS: p.currentLS, lsDiff: p.currentLS - baseline.currentLS };
     }).sort((a: any, b: any) => a.lsDiff - b.lsDiff);
     
     const a = sorted[0]; 
@@ -228,43 +350,81 @@ const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, cur
     let b = bOptions.find((s: any) => Math.abs(s.lsDiff - a.lsDiff) > 0.02 && Math.abs(s.lsDiff - c.lsDiff) > 0.02 && Math.abs(s.lsDiff) < 0.2);
     if (!b) b = bOptions.sort((x: any, y: any) => Math.abs(x.lsDiff) - Math.abs(y.lsDiff))[0];
 
-    return [
-      { id: a.id, name: getFakeName(0), baselineLS: a.baselineLS, finalLS: a.finalLS, diff: a.lsDiff, ...getVoxPopContent(a.lsDiff) },
-      { id: b.id, name: getFakeName(1), baselineLS: b.baselineLS, finalLS: b.finalLS, diff: b.lsDiff, ...getVoxPopContent(b.lsDiff) },
-      { id: c.id, name: getFakeName(2), baselineLS: c.baselineLS, finalLS: c.finalLS, diff: c.lsDiff, ...getVoxPopContent(c.lsDiff) }
-    ];
-  }, [finalPopulation, initialPopulation, baselinePopulation]);
+    return [a, b, c];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalPopulation, initialPopulation, baselinePopulation, currentCycle]);
+
+  const referencedPolicyIds = useMemo(() => {
+    const ids = new Set<string>();
+    voxPops.forEach(vp => {
+      const story = getVoterStory(vp, currentCycle, () => {});
+      story.referencedPolicyIds.forEach(id => ids.add(id));
+    });
+    return Array.from(ids);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voxPops, currentCycle]);
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in w-full">
-      <DPMMessage title="Voter Sentiment">
-        We've tracked how your policies impacted individual voters. Here is what three typical citizens are saying about your term.
-      </DPMMessage>
-      
-      <div className="flex flex-col gap-3 w-full">
-        {voxPops.map((vp, idx) => (
-          <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full">
-            <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
-              <span className="text-lg">{vp.emoji}</span>
-            </div>
-            
-            <div className="flex-1 w-full min-w-0">
-              <div className="flex items-center justify-between mb-1.5 w-full">
-                <h4 className="font-bold text-zinc-800 text-sm truncate pr-2">{vp.name}</h4>
+    <div className="flex gap-6 w-full animate-in fade-in h-full">
+      <div className="flex-1 flex flex-col gap-4 min-w-[500px]">
+        <DPMMessage title="Voter Sentiment">
+          We've tracked how your policies impacted individual voters. Hover over the policy names below to review the enacted legislation.
+        </DPMMessage>
+        
+        <div className="flex flex-col gap-3 w-full">
+          {voxPops.map((vp, idx) => {
+            const story = getVoterStory(vp, currentCycle, setHoveredPolicyId);
+            return (
+              <div key={idx} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-4 items-center w-full shadow-sm">
+                <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-14 h-14 shrink-0 shadow-sm">
+                  <span className="text-2xl">{story.emoji}</span>
+                </div>
                 
-                <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
-                  <span className="text-xs font-bold text-zinc-500">Life Satisfaction: {vp.baselineLS.toFixed(1)}</span>
-                  <span className="text-xs text-zinc-300 font-black">→</span>
-                  <span className={`text-xs font-black ${vp.diff > 0 ? 'text-emerald-600' : vp.diff < 0 ? 'text-rose-600' : 'text-zinc-600'}`}>
-                    {vp.finalLS.toFixed(1)}
-                  </span>
+                <div className="flex-1 w-full min-w-0">
+                  <div className="flex items-center justify-between mb-2 w-full">
+                    <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
+                    
+                    <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
+                      <span className="text-xs font-bold text-zinc-500">{vp.baselineLS.toFixed(1)}</span>
+                      <span className="text-xs text-zinc-300 font-black">→</span>
+                      <span className={`text-xs font-black ${vp.lsDiff > 0 ? 'text-emerald-600' : vp.lsDiff < 0 ? 'text-rose-600' : 'text-zinc-600'}`}>
+                        {vp.finalLS.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-zinc-600 italic leading-snug">"{story.text}"</p>
                 </div>
               </div>
-              
-              <p className="text-sm text-zinc-600 italic leading-snug">"{vp.text}"</p>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Referenced Legislation</h4>
+        <div className="flex flex-col gap-3 overflow-y-auto pr-2">
+          {referencedPolicyIds.map(id => {
+            const policy = availablePolicies.find(p => p.id === id);
+            if (!policy) return null;
+            const isHovered = hoveredPolicyId === id;
+            
+            return (
+              <div 
+                key={id} 
+                className={`p-4 rounded-xl border transition-all duration-300 ${isHovered ? 'bg-pink-50 border-pink-400 shadow-md scale-[1.02]' : 'bg-white border-zinc-200 shadow-sm opacity-80'}`}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
+                <p className="font-bold text-sm text-zinc-900 mb-1.5">{policy.policyName}</p>
+                <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{policy.description}</p>
+              </div>
+            );
+          })}
+          {referencedPolicyIds.length === 0 && (
+            <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
+              <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
             </div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -334,7 +494,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
 
   const getDpmMessage = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let s look at an example of how two societies can have the same average happiness.";
+      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let's look at an example of how two societies can have the same average happiness.";
       case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture. Click on these citizens to see how they feel their lives have actually changed.";
       case ElectionCycle.PersonalUtility: return "Our voters are behaving selfishly. They ignore the big picture to protect their own wallets. Click below to see what happens when we try to shift their focus toward fairness.";
       case ElectionCycle.SocietalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
@@ -380,7 +540,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
             const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
             return (
               <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[140px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(citizen.id)}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen.name}</p>
                 <div className="mb-1"><span className="text-xs text-zinc-400">Objective Life Satisfaction: </span><strong className="text-xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)}</strong></div>
                 
                 <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
@@ -404,7 +564,7 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
       {currentCycle === ElectionCycle.PersonalUtility && empathyCitizen && (
         <div className="flex flex-col gap-3">
           <div onClick={() => setRevealedEmpathy(true)} className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{getFakeName(empathyCitizen.id)}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{empathyCitizen.name}</p>
             <div className="grid grid-cols-2 gap-4 mb-2">
               <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
               <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Personal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong></div>
@@ -466,21 +626,23 @@ export default function ElectionModal({
   let canProceed = true;
   if (!won && cycleAttempts < 3) canProceed = false;
 
-  const totalPages = canProceed ? 4 : 3;
+  const totalPages = canProceed ? 5 : 4;
 
   const getModalTitle = () => {
     if (page === 0) return "Term Summary";
     if (page === 1) return "Election Verdict";
-    if (page === 2) return "Electorate Feedback";
-    if (page === 3) return "Academic Debrief";
+    if (page === 2) return "Demographic Shifts";
+    if (page === 3) return "Electorate Feedback";
+    if (page === 4) return "Academic Debrief";
     return "Election Sequence";
   };
 
   const getModalWidth = () => {
     if (page === 0) return "max-w-3xl"; 
     if (page === 1) return "max-w-xl";  
-    if (page === 2) return "max-w-2xl"; 
-    if (page === 3) return "max-w-3xl"; 
+    if (page === 2) return "max-w-3xl"; 
+    if (page === 3) return "max-w-5xl"; // Dynamically expands to fit the right-hand policy sidebar
+    if (page === 4) return "max-w-3xl"; 
     return "max-w-3xl";
   };
 
@@ -491,8 +653,9 @@ export default function ElectionModal({
         <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">
           {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
           {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
-          {page === 2 && <PageMicro initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
-          {page === 3 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
+          {page === 2 && <PageCohorts finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
+          {page === 3 && <PageMicro initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
+          {page === 4 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
         </motion.div>
 
       <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0 h-12">
@@ -511,7 +674,7 @@ export default function ElectionModal({
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
+            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Demographic Shifts \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">

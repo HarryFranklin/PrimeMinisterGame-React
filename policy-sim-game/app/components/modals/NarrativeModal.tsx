@@ -22,9 +22,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
-  
   const [rawlsExplanation, setRawlsExplanation] = useState(false);
-  
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
   const [personalExplanation, setPersonalExplanation] = useState(false);
 
@@ -49,7 +47,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
   const empathyCitizen = useMemo(() => {
     if (population.length === 0) return null;
     const allLS = population.map(p => p.currentLS);
-    
+          
     let bestCitizen = population[0];
     let maxDiff = -1;
     for (const r of population) {
@@ -96,13 +94,11 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 <div className={`h-[180px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
                   <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={3}/>
                 </div>
-                
                 {!revealedBenthamA && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span>
                   </div>
                 )}
-                
                 {revealedBenthamA && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
                     <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average Happiness</span>
@@ -124,7 +120,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                     <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span>
                   </div>
                 )}
-                
                 {revealedBenthamB && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300">
                     <span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average Happiness</span>
@@ -133,7 +128,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 )}
               </div>
             </div>
-
             {bothBenthamRevealed && (
               <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
                 <DPMMessage title="Mathematically Identical Outcomes" className="border-pink-200 bg-pink-50/30 mb-4">
@@ -166,19 +160,16 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                       isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'
                     }`}
                   >
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Citizen #{String(citizen.id).substring(0,4)}</p>
-                    
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen.name}</p>
                     <div className="mb-2">
                       <span className="text-xs text-zinc-400">Life Satisfaction: </span>
                       <strong className="text-2xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)}</strong>
                     </div>
-                    
                     <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                       <div className="w-full h-px bg-zinc-200 my-3" />
                       <span className="text-xs text-pink-500 font-bold uppercase tracking-widest block mb-1">Personal Utility</span>
                       <strong className="text-3xl text-pink-600">{utility.toFixed(2)}</strong>
                     </div>
-                    
                     {!isRevealed && (
                       <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Click to Reveal</span>
@@ -188,7 +179,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 );
               })}
             </div>
-
             {bothRawlsRevealed && !rawlsExplanation && (
               <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
                 <DPMMessage title="Observation" className="mb-4">
@@ -197,7 +187,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 <ModalActionBtn onClick={() => setRawlsExplanation(true)}>Review Findings</ModalActionBtn>
               </div>
             )}
-
             {rawlsExplanation && (
               <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
                 <DPMMessage title="The Flaw in Objective Metrics" className="mb-4 border-pink-200 bg-pink-50/30">
@@ -214,7 +203,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
         const allLS = population.map(p => p.currentLS);
         const pu = WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities);
         const su = WelfareMetrics.evaluateDistribution(allLS, empathyCitizen.societalUtilities);
-
         return (
           <>
             <ModalHeader title="The Individual vs The Collective" />
@@ -228,8 +216,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                   revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'
                 }`}
               >
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Citizen #{String(empathyCitizen.id).substring(0,4)}</p>
-                
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">{empathyCitizen.name}</p>
                 <div className="grid grid-cols-2 gap-4 mb-2">
                   <div>
                     <span className="text-xs text-zinc-400 block mb-1">Life Satisfaction</span>
@@ -240,7 +227,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                     <strong className="text-2xl text-zinc-800">{pu.toFixed(2)}</strong>
                   </div>
                 </div>
-                
                 <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-3" />
                   <span className="text-xs text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
@@ -249,7 +235,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                     "While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
                   </p>
                 </div>
-
                 {!revealedEmpathy && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span>
@@ -257,7 +242,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 )}
               </div>
             </div>
-
             {revealedEmpathy && !personalExplanation && (
               <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
                 <DPMMessage title="Observation" className="mb-4">
@@ -266,7 +250,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 <ModalActionBtn onClick={() => setPersonalExplanation(true)}>Review Findings</ModalActionBtn>
               </div>
             )}
-
             {personalExplanation && (
               <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
                 <DPMMessage title="The Status Quo Trap" className="mb-4 border-emerald-200 bg-emerald-50/30">
@@ -278,7 +261,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
           </>
         );
       }
-
       case ElectionCycle.SocietalUtility:
         return (
           <>
@@ -290,7 +272,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Cycle 3: Personal Utility</h3>
                 <div className="text-center mb-3">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">National Average Satisfaction</span>
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span>
                   <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
                 </div>
                 <div className="flex-1 text-xs text-zinc-600 space-y-2">
@@ -299,7 +281,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 </div>
               </div>
               <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5 flex flex-col">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Cycle 4: Societal Utility</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Term 4: Societal Utility</h3>
                 <div className="text-center mb-3">
                   <span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">National Fairness Index</span>
                   <strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
