@@ -52,6 +52,11 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   const [isDone, setIsDone] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
 
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
   useEffect(() => {
     let start = 0;
     const DURATION = 4000;
@@ -76,7 +81,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
         rafId = requestAnimationFrame(animate);
       } else {
         setIsDone(true);
-        timeoutId = setTimeout(() => onReady(), 2000);
+        timeoutId = setTimeout(() => onReadyRef.current(), 2000);
       }
     };
 
@@ -86,8 +91,10 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
       clearTimeout(timeoutId);
     };
 
-    return () => cleanupRef.current?.();
-  }, [approvalRating, onReady]);
+    return () => {
+      if (cleanupRef.current) cleanupRef.current();
+    };
+  }, [approvalRating]);
 
   const showSuccess = isDone && won;
   const showFailure = isDone && !won;
