@@ -1,11 +1,8 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants, Easing } from 'framer-motion';
 import { useTypewriter } from '../../hooks/useTypewriter';
-import { useGame } from "../../context/GameStateContext";
-import { Variants, Easing } from 'framer-motion';
 
-// Define the easing constant explicitly to satisfy TypeScript
 const easeOut: Easing = [0.22, 1, 0.36, 1];
 const easeIn: Easing = [0.47, 0, 0.74, 0.58];
 
@@ -18,18 +15,18 @@ interface InteractiveDPMEmailProps {
   buttonText?: string;
 }
 
-export const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
-  <motion.div 
+export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.ReactNode; exitDelay?: number }) => (
+  <motion.div
+    key="overlay"
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
+    exit={{ opacity: 0, transition: { duration: 0.5, delay: exitDelay } }}
     className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
   >
     {children}
   </motion.div>
 );
 
-// Define variants outside the component so they are stable
 const modalVariants: Variants = {
   hidden: (isSliding: boolean) => ({
     opacity: 0,
@@ -62,7 +59,6 @@ export const ModalContent = ({
     <motion.div
       layout
       variants={modalVariants}
-      // Pass the state that determines if it should slide
       custom={slideEntry || slideExit}
       initial="hidden"
       animate="visible"
@@ -119,17 +115,16 @@ export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onC
   );
 };
 
-export const InteractiveDPMEmail = ({ 
-  title, 
-  message, 
-  typeSpeed = 70, 
-  delayAfterComplete = 2000, 
+export const InteractiveDPMEmail = ({
+  title,
+  message,
+  typeSpeed = 70,
+  delayAfterComplete = 2000,
   onAcknowledge,
   buttonText = "Begin Term"
 }: InteractiveDPMEmailProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [buttonUnlocked, setButtonUnlocked] = useState(false);
-  
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(message, typeSpeed, isOpen);
 
   useEffect(() => {
@@ -143,7 +138,7 @@ export const InteractiveDPMEmail = ({
 
   const handleAcknowledge = () => {
     if (!buttonUnlocked) return;
-    setButtonUnlocked(false); 
+    setButtonUnlocked(false);
     onAcknowledge();
   };
 
@@ -151,14 +146,14 @@ export const InteractiveDPMEmail = ({
     <motion.div layout className="w-full flex flex-col shrink-0" style={{ width: '100%' }}>
       <AnimatePresence mode="wait" initial={false}>
         {!isOpen ? (
-          <motion.button 
+          <motion.button
             key="closed-envelope"
             layout
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3 }}
-            onClick={() => setIsOpen(true)} 
+            onClick={() => setIsOpen(true)}
             className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between shadow-sm group hover:bg-zinc-100 transition-colors cursor-pointer text-left"
             style={{ width: '100%' }}
           >
@@ -174,18 +169,18 @@ export const InteractiveDPMEmail = ({
             <span className="text-zinc-400 group-hover:translate-x-1 transition-transform">→</span>
           </motion.button>
         ) : (
-          <motion.div 
-            key="open-message" 
+          <motion.div
+            key="open-message"
             layout
-            initial={{ opacity: 0, filter: "blur(4px)", y: 10 }} 
-            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }} 
-            exit={{ opacity: 0, filter: "blur(4px)", y: 10 }} 
+            initial={{ opacity: 0, filter: "blur(4px)", y: 10 }}
+            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+            exit={{ opacity: 0, filter: "blur(4px)", y: 10 }}
             transition={{ duration: 0.4 }}
             className="flex flex-col gap-6 w-full"
             style={{ width: '100%' }}
           >
             <DPMMessage title={title}>
-              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if(isTyping) skip(); }}>
+              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
                 <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{message}</span>
                 <span className="whitespace-pre-wrap absolute top-0 left-0 w-full h-full">
                   {displayedText}
@@ -198,8 +193,7 @@ export const InteractiveDPMEmail = ({
                 )}
               </div>
             </DPMMessage>
-
-            <button 
+            <button
               onClick={handleAcknowledge}
               disabled={!buttonUnlocked}
               className={`w-full py-4 text-sm font-bold uppercase tracking-widest rounded-xl transition-all shadow-md shrink-0 duration-500 ${
@@ -215,15 +209,12 @@ export const InteractiveDPMEmail = ({
   );
 };
 
-export const InlineDPMMessage = ({ 
-  title, message, typeSpeed = 40, onComplete, persistenceId 
-}: { 
-  title: string; message: string; typeSpeed?: number; onComplete?: () => void; persistenceId: string; 
+export const InlineDPMMessage = ({
+  title, message, typeSpeed = 40, onComplete, isUnlocked, onUnlock
+}: {
+  title: string; message: string; typeSpeed?: number; onComplete?: () => void; isUnlocked: boolean; onUnlock: () => void;
 }) => {
-  const { dpmConsulted, setDpmConsulted } = useGame();
   const [isOpen, setIsOpen] = useState(false);
-
-  const isUnlocked = persistenceId ? !!dpmConsulted[persistenceId] : false;
   const isInstant = isUnlocked;
 
   useEffect(() => {
@@ -236,11 +227,11 @@ export const InlineDPMMessage = ({
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(message, typeSpeed, isOpen && !isUnlocked);
 
   useEffect(() => {
-    if (isComplete && !isUnlocked && persistenceId) {
-      setDpmConsulted(persistenceId, true);
+    if (isComplete && !isUnlocked) {
+      onUnlock();
       if (onComplete) onComplete();
     }
-  }, [isComplete, isUnlocked, persistenceId, setDpmConsulted, onComplete]);
+  }, [isComplete, isUnlocked, onUnlock, onComplete]);
 
   const textToShow = isInstant ? message : displayedText;
 
@@ -248,7 +239,7 @@ export const InlineDPMMessage = ({
     <motion.div layout className="w-full relative flex flex-col shrink-0">
       <AnimatePresence mode="popLayout" initial={false}>
         {!isOpen ? (
-          <motion.button 
+          <motion.button
             key="button" layout
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
             whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={() => setIsOpen(true)}
@@ -263,13 +254,13 @@ export const InlineDPMMessage = ({
             <span className="text-zinc-400 group-hover:text-white transition-colors">→</span>
           </motion.button>
         ) : (
-          <motion.div 
+          <motion.div
             key="message" layout
             initial={isInstant ? false : { opacity: 0, filter: "blur(4px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: 0.4 }}
             className="w-full"
           >
             <DPMMessage title={title}>
-              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if(isTyping) skip(); }}>
+              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
                 <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{message}</span>
                 <span className="whitespace-pre-wrap absolute top-0 left-0 w-full h-full">
                   {textToShow}

@@ -1,62 +1,18 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Respondent, ElectionCycle, Policy, TurnHistory } from '../utils/types';
+import { Respondent, ElectionCycle, Policy, TurnHistory, GamePhase } from '../utils/types';
 import { loadPopulation } from '../utils/dataLoader';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { PolicyEngine } from '../utils/PolicyEngine';
 import { MAOEngine } from '../utils/MAOEngine';
 import { availablePolicies } from '../data/policies';
 import { FRAMEWORK_RULES } from "../utils/frameworkRules";
+import { MetricsEngine } from '../utils/MetricsEngine';
+import { useSaveGame } from './useSaveGame';
 
 const TURNS_PER_CYCLE = 5;
-const SAVE_KEY = 'policy-sim-save-v1';
 
 const calculateAverage = (pop: Respondent[]): number => {
   return pop.length > 0 ? pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length : 0;
-};
-
-const generateCycleSchedule = (cycle: ElectionCycle, available: Policy[]): Policy[][] => {
-  const schedule: Policy[][] = [];
-  let seed = cycle * 12345 + 1;
-  const pseudoRandom = () => {
-    const x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
-  };
-  let pool = [...available];
-  for (let t = 0; t < TURNS_PER_CYCLE; t++) {
-    const turnPolicies: Policy[] = [];
-    for (let p = 0; p < 8; p++) {
-      if (pool.length === 0) pool = [...available];
-      const index = Math.floor(pseudoRandom() * pool.length);
-      turnPolicies.push(pool[index]);
-      pool.splice(index, 1);
-    }
-    schedule.push(turnPolicies);
-  }
-  return schedule;
-};
-
-const getMetricScore = (pop: Respondent[], cycle: ElectionCycle) => {
-  if (pop.length === 0) return 0;
-  if (cycle === ElectionCycle.Benthamite) return pop.reduce((s, r) => s + r.currentLS, 0) / pop.length;
-  if (cycle === ElectionCycle.Rawlsian) return WelfareMetrics.calculateSocietalFloor(pop);
-  
-  if (cycle === ElectionCycle.SocietalUtility) {
-    const allLS = pop.map(p => p.currentLS);
-    const multipliers = WelfareMetrics.getPopulationCurveMultipliers(allLS);
-    let totalPopUtility = 0;
-    
-    for (let i = 0; i < pop.length; i++) {
-      const r = pop[i];
-      let personSocietalUtility = 0;
-      for (let j = 0; j < 6; j++) {
-        personSocietalUtility += multipliers[j] * r.societalUtilities[j];
-      }
-      totalPopUtility += (personSocietalUtility / pop.length);
-    }
-    return totalPopUtility / pop.length;
-  }
-  
-  return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
 };
 
 export function useGameEngine(setActiveTab?: (tab: any) => void) {
@@ -65,15 +21,19 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [pulsePolicy, setPulsePolicy] = useState(false);
-  const [isAgendaUnlocked, setIsAgendaUnlocked] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
+
+  // Centralised Game Phase State
+  const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Welcome);
+  
+  const isAgendaUnlocked = gamePhase === GamePhase.Playing;
+
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
   const [isEnacting, setIsEnacting] = useState(false);
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
-  const [showElection, setShowElection] = useState(false);
-  const [showFinalDebrief, setShowFinalDebrief] = useState(false);
+
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
   const [cycleMAO, setCycleMAO] = useState<number>(0);
@@ -91,71 +51,62 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, []);
 
   const startCycle = useCallback((cycle: ElectionCycle, pop: Respondent[]) => {
-    const schedule = generateCycleSchedule(cycle, availablePolicies);
+    const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, TURNS_PER_CYCLE);
     setCycleSchedule(schedule);
-         
-    const maoResult = MAOEngine.calculateMAO(pop, schedule, cycle, getMetricScore);
+
+    const maoResult = MAOEngine.calculateMAO(pop, schedule, cycle, MetricsEngine.getMetricScore);
     setCycleMAO(maoResult.maxScore);
     setOptimalPath(maoResult.optimalPath);
-         
+
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
     setCurrentCycle(cycle);
-    setIsAgendaUnlocked(false);
     setIsParliamentDissolved(false);
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(pop) }]);
-    setShowElection(false);
     setSelectedPolicy(null);
     setYAxisMax(100);
-
     resetDpmConsulted();
+    
+    // Automatically move to briefing when a new cycle starts
+    setGamePhase(GamePhase.Briefing); 
   }, [resetDpmConsulted]);
 
-  useEffect(() => {
-    const savedGame = localStorage.getItem(SAVE_KEY);
-         
-    if (savedGame) {
-      try {
-        const parsed = JSON.parse(savedGame);
-        setPopulation(parsed.population);
-        setInitialPopulation(parsed.initialPopulation);
-        setBaselinePopulation(parsed.baselinePopulation || parsed.initialPopulation);
-        setCurrentTurn(parsed.currentTurn);
-        setCurrentCycle(parsed.currentCycle);
-        setCycleAttempts(parsed.cycleAttempts);
-        setHistory(parsed.history);
-        setCycleSchedule(parsed.cycleSchedule);
-        setCycleMAO(parsed.cycleMAO);
-        setCurrentDeck(parsed.currentDeck);
-        setOptimalPath(parsed.optimalPath);
-        setIsParliamentDissolved(parsed.isParliamentDissolved || false);
-        return;
-      } catch (e) {
-        console.error("Failed to load save file, starting fresh.", e);
-        localStorage.removeItem(SAVE_KEY);
-      }
-    }
-         
+  const handleSaveLoad = useCallback((parsed: any) => {
+    setPopulation(parsed.population);
+    setInitialPopulation(parsed.initialPopulation);
+    setBaselinePopulation(parsed.baselinePopulation || parsed.initialPopulation);
+    setCurrentTurn(parsed.currentTurn);
+    setCurrentCycle(parsed.currentCycle);
+    setCycleAttempts(parsed.cycleAttempts);
+    setHistory(parsed.history);
+    setCycleSchedule(parsed.cycleSchedule);
+    setCycleMAO(parsed.cycleMAO);
+    setCurrentDeck(parsed.currentDeck);
+    setOptimalPath(parsed.optimalPath);
+    setIsParliamentDissolved(parsed.isParliamentDissolved || false);
+    setGamePhase(parsed.gamePhase || GamePhase.Playing);
+  }, []);
+
+  const handleSaveError = useCallback(() => {
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
     setBaselinePopulation(data);
     startCycle(ElectionCycle.Benthamite, data);
     setCycleAttempts(1);
+    
+    // Explicitly override the Briefing state set by startCycle on a fresh load
+    setGamePhase(GamePhase.Welcome); 
   }, [startCycle]);
 
-  useEffect(() => {
-    if (population.length === 0 || cycleSchedule.length === 0) return;
-         
-    const saveData = {
+  const gameStateSnapshot = useMemo(() => ({
       population, initialPopulation, baselinePopulation,
       currentTurn, currentCycle, cycleAttempts, history,
       cycleSchedule, cycleMAO, currentDeck, optimalPath,
-      isParliamentDissolved
-    };
-         
-    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-  }, [population, currentTurn, currentCycle, isParliamentDissolved]);
+      isParliamentDissolved, gamePhase
+  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase]);
+
+  const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
   const previewPopulation = useMemo(() => {
     if (!selectedPolicy) return population;
@@ -174,7 +125,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   useEffect(() => {
     const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
-         
+
     setYAxisMax(prev => {
       const targetMax = Math.max(100, Math.ceil(maxCurrent / 20) * 20);
       if (targetMax > prev) {
@@ -184,22 +135,23 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
   }, [currentHistogramData]);
 
-  const initialMetricScore = useMemo(() => getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
-  const turnMetricScore = useMemo(() => getMetricScore(population, currentCycle), [population, currentCycle]);
-  const currentMetricScore = useMemo(() => getMetricScore(previewPopulation, currentCycle), [previewPopulation, currentCycle]);
+  const initialMetricScore = useMemo(() => MetricsEngine.getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
+  const turnMetricScore = useMemo(() => MetricsEngine.getMetricScore(population, currentCycle), [population, currentCycle]);
+  const currentMetricScore = useMemo(() => MetricsEngine.getMetricScore(previewPopulation, currentCycle), [previewPopulation, currentCycle]);
+
   const turnApprovalRating = useMemo(() => WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar), [turnMetricScore, cycleMAO, currentCycle]);
 
   const handleNavigateToPolicy = useCallback(() => {
-    setActiveTab;
+    if (setActiveTab) setActiveTab('legislative');
     setPulsePolicy(true);
     setTimeout(() => setPulsePolicy(false), 1500);
   }, [setActiveTab]);
 
   const handleApplyPolicy = () => {
     if (!selectedPolicy || isEnacting) return;
-         
+
     setIsEnacting(true);
-         
+
     setTimeout(() => {
       setPopulation(previewPopulation);
       setHistory(prev => [...prev, {
@@ -208,41 +160,40 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         enactedPolicyName: selectedPolicy.policyName,
         lsAverage: calculateAverage(previewPopulation)
       }]);
-             
+
       const updatedSchedule = cycleSchedule.map((deck, idx) =>
         idx >= currentTurn ? deck.filter(p => p.id !== selectedPolicy.id) : deck
       );
       setCycleSchedule(updatedSchedule);
-             
+
       if (currentTurn < TURNS_PER_CYCLE) {
         setCurrentDeck(updatedSchedule[currentTurn]);
         setCurrentTurn(prev => prev + 1);
       } else {
         setIsParliamentDissolved(true);
       }
-             
+
       setSelectedPolicy(null);
       setIsEnacting(false);
     }, 800);
   };
 
   const handleFaceElectorate = useCallback(() => {
-    setShowElection(true);
+    setGamePhase(GamePhase.Election);
   }, []);
 
   const handleResetCycle = useCallback(() => {
-    localStorage.removeItem(SAVE_KEY);
+    wipeSave();
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
     startCycle(currentCycle, data);
     setCycleAttempts(prev => prev + 1);
-
     resetDpmConsulted();
-  }, [resetDpmConsulted]);
+  }, [currentCycle, resetDpmConsulted, wipeSave, startCycle]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
-    localStorage.removeItem(SAVE_KEY);
+    wipeSave();
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
@@ -252,19 +203,19 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const handleProceedFromNarrative = () => {
     if (currentCycle === ElectionCycle.SocietalUtility) {
-      setShowElection(false);
-      setShowFinalDebrief(true);
+      setGamePhase(GamePhase.Debrief);
       return;
     }
+
     const data = loadPopulation();
     setPopulation(data);
     setInitialPopulation(data);
-         
+
     let nextCycle = ElectionCycle.Rawlsian;
     if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
     else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
     else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
-         
+
     startCycle(nextCycle, data);
     setCycleAttempts(1);
   };
@@ -273,7 +224,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     if (population.length === 0) return [];
     const allLS = population.map(p => p.currentLS);
     const multipliers = currentCycle === ElectionCycle.SocietalUtility ? WelfareMetrics.getPopulationCurveMultipliers(allLS) : null;
-    
+
     return population.map(r => {
       let yVal = r.currentLS;
       if (currentCycle === ElectionCycle.SocietalUtility && multipliers) {
@@ -292,7 +243,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     if (previewPopulation.length === 0) return [];
     const allLS = previewPopulation.map(p => p.currentLS);
     const multipliers = currentCycle === ElectionCycle.SocietalUtility ? WelfareMetrics.getPopulationCurveMultipliers(allLS) : null;
-    
+
     return previewPopulation.map(r => {
       let yVal = r.currentLS;
       if (currentCycle === ElectionCycle.SocietalUtility && multipliers) {
@@ -312,13 +263,13 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     currentTurn, currentCycle, cycleAttempts,
     selectedPolicy, setSelectedPolicy, pulsePolicy, isEnacting,
     isParliamentDissolved, handleFaceElectorate,
-    showElection, setShowElection, showFinalDebrief, setShowFinalDebrief,
     history, currentDeck, cycleMAO, optimalPath,
     turnMetricScore, initialMetricScore, currentMetricScore, turnApprovalRating,
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleProceedFromNarrative, setCurrentTurn, handleNavigateToPolicy,
-    isAgendaUnlocked, setIsAgendaUnlocked, yAxisMax,
+    gamePhase, setGamePhase, isAgendaUnlocked, yAxisMax,
     TURNS_PER_CYCLE,
-    dpmConsulted, setDpmConsulted, resetDpmConsulted
+    dpmConsulted, setDpmConsulted, resetDpmConsulted,
+    wipeSave
   };
 }

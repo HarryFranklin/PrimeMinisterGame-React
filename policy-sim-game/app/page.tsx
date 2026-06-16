@@ -1,30 +1,24 @@
 "use client";
 import { UIProvider, GameProvider } from "./context/GameStateContext";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
-
 // Modals
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import WelcomeModal from "./components/modals/WelcomeModal";
-
+import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import GameHeader from "./components/GameHeader";
 import DashboardTab from "./components/tabs/DashboardTab";
-
-// Custom Hooks
 import { useGameEngine } from "./hooks/useGameEngine";
+import { GamePhase } from "./utils/types";
 
 export default function Home() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
-  
-  // State for mobile/low-resolution check
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
 
-  // Responsive device and low-resolution detection hook
   useEffect(() => {
     const evaluateViewport = () => {
       const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -40,11 +34,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      
-      {/* TOP LEVEL SCREEN GUARD OVERLAY */}
       <AnimatePresence>
         {isUnsupportedScreen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -52,7 +44,7 @@ export default function Home() {
           >
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md shadow-2xl flex flex-col items-center gap-4">
               <h2 className="text-xl font-black tracking-tight text-white uppercase tracking-wider">Desktop Display Required</h2>
-              <p className="text-zinc-400 text-sm leading-relaxed font-medium">This academic policy simulation requires a larger screen.</p>
+              <p className="text-zinc-400 text-sm leading-relaxed font-medium">This game requires a larger screen.</p>
             </div>
           </motion.div>
         )}
@@ -66,7 +58,7 @@ export default function Home() {
       />
 
       <UIProvider value={{
-        setActiveTab: () => {}, // No-op as tabs are removed
+        setActiveTab: () => {}, 
         pulsePolicy: game.pulsePolicy, 
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
@@ -75,28 +67,26 @@ export default function Home() {
             <DashboardTab />
           </main>
 
-          {/* Main Modal Sequence Container */}
           <AnimatePresence mode="wait">
-            {(!hasSeenWelcome || !game.isAgendaUnlocked || game.showElection || game.showFinalDebrief) && (
-              <motion.div
-                key="overlay"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { duration: 0.5, delay: 0.6 } }}
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-4"
-              >
+            {game.gamePhase !== GamePhase.Playing && (
+              <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
-                  {!hasSeenWelcome ? (
-                    <WelcomeModal key="welcome" onAcknowledge={() => setHasSeenWelcome(true)} />
-                  ) 
-                  : !game.isAgendaUnlocked ? (
+                  {game.gamePhase === GamePhase.Welcome && (
+                    <WelcomeModal 
+                      key="welcome" 
+                      onAcknowledge={() => game.setGamePhase(GamePhase.Briefing)} 
+                    />
+                  )}
+                  
+                  {game.gamePhase === GamePhase.Briefing && (
                     <BriefingModal 
                       key="briefing" 
                       currentCycle={game.currentCycle} 
-                      onAcknowledge={() => game.setIsAgendaUnlocked(true)} 
+                      onAcknowledge={() => game.setGamePhase(GamePhase.Playing)} 
                     />
-                  ) 
-                  : game.showElection ? (
+                  )}
+
+                  {game.gamePhase === GamePhase.Election && (
                     <ElectionModal
                       key="election"
                       currentMetricScore={game.turnMetricScore}
@@ -108,19 +98,20 @@ export default function Home() {
                       yAxisMax={game.yAxisMax}
                       onNextCycle={game.handleProceedFromNarrative}
                       onReset={game.handleResetCycle}
-                      onFinish={() => { game.setShowElection(false); game.setShowFinalDebrief(true); }}
+                      onFinish={() => game.setGamePhase(GamePhase.Debrief)}
                     />
-                  ) 
-                  : game.showFinalDebrief ? (
+                  )}
+
+                  {game.gamePhase === GamePhase.Debrief && (
                     <FinalDebriefModal
                       key="debrief"
                       baselinePopulation={game.baselinePopulation}
                       finalPopulation={game.population}
                       yAxisMax={game.yAxisMax}
                     />
-                  ) : null}
+                  )}
                 </AnimatePresence>
-              </motion.div>
+              </ModalOverlay>
             )}
           </AnimatePresence>
         </GameProvider>

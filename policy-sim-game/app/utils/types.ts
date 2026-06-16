@@ -32,13 +32,21 @@ export interface Policy {
 export enum ElectionCycle {
   Benthamite,
   Rawlsian,
-  SocietalUtility,
-  PersonalUtility
+  PersonalUtility,
+  SocietalUtility
 }
 
 export interface TurnHistory {
   turn: number;
   enactedPolicyId: string | null;
   enactedPolicyName: string | null;
-  lsAverage: number; 
+  lsAverage: number;
+}
+
+export enum GamePhase {
+  Welcome = 'welcome',
+  Briefing = 'briefing',
+  Playing = 'playing',
+  Election = 'election',
+  Debrief = 'debrief'
 }
