@@ -92,7 +92,6 @@ export default function StageTermSummary({
   const initialMarkers = [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: '#a1a1aa', dashed: true }];
   const finalMarkers = [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }];
 
-  // Charts need ~2.5 s to settle before we let the player proceed
   useEffect(() => {
     const timer = setTimeout(() => onReady(), 2500);
     return () => clearTimeout(timer);
@@ -115,9 +114,9 @@ export default function StageTermSummary({
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType}
               color="#d4d4d8"
-              visualStyle="faces"
+              visualStyle="faces" 
+              faceCols={1}
               yAxisMax={safeYAxisMax}
-              faceCols={4}
               markers={initialMarkers}
             />
           </div>
@@ -134,8 +133,8 @@ export default function StageTermSummary({
               yAxisType={rule.yAxisType}
               color={rule.graphColor}
               visualStyle="faces"
+              faceCols={1}
               yAxisMax={safeYAxisMax}
-              faceCols={4}
               markers={finalMarkers}
             />
           </div>

@@ -65,7 +65,7 @@ export default function ElectionModal({
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
         {page === 2 && <StagePopulationChange finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
         {page === 3 && <StageElectorateFeedback initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
-        {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} onReady={() => setPageReady(true)} />}
+        {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
       <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0 h-12">

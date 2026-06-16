@@ -193,7 +193,6 @@ export default function StageElectorateFeedback({
 
   useEffect(() => {
     onReady();
-    // Delay the appearance of the sidebar so it fades in after the left panel anchors
     const timer = setTimeout(() => {
       setShowSidebar(true);
     }, 400); 
@@ -212,16 +211,33 @@ export default function StageElectorateFeedback({
       };
     });
 
-    const sorted = [...enriched].sort((a, b) => a.lsDiff - b.lsDiff);
+    // Filter to ensure we don't pick citizens with identical trajectories
+    const uniquePool: typeof enriched = [];
+    const seen = new Set<string>();
+    for (const p of enriched) {
+      const key = `${p.baselineLS.toFixed(1)}_${p.finalLS.toFixed(1)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniquePool.push(p);
+      }
+    }
+
+    const poolToUse = uniquePool.length >= 3 ? uniquePool : enriched;
+    const sorted = [...poolToUse].sort((a, b) => a.lsDiff - b.lsDiff);
+    
     const worst = sorted[0];
     const best = sorted[sorted.length - 1];
 
-    const mid =
+    let mid =
       sorted
         .filter(s => s.id !== worst.id && s.id !== best.id)
-        .sort((a, b) => Math.abs(a.lsDiff) - Math.abs(b.lsDiff))[0] ?? sorted[Math.floor(sorted.length / 2)];
+        .sort((a, b) => Math.abs(a.lsDiff) - Math.abs(b.lsDiff))[0];
 
-    return [worst, mid, best];
+    // Fallbacks just in case the population is extremely small
+    if (!mid && sorted.length > 2) mid = sorted[1];
+    if (!mid) mid = worst; 
+
+    return Array.from(new Set([worst, mid, best]));
   }, [finalPopulation, initialPopulation, baselinePopulation]);
 
   const voterData = useMemo(
@@ -304,7 +320,8 @@ export default function StageElectorateFeedback({
         <div className="flex flex-col h-full w-full">
           <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Referenced Legislation</h4>
           
-          <div className="flex flex-col gap-4 overflow-y-auto px-3 pb-4 -mx-3">
+          {/* Invisible padding extended vertically (-my-2 / py-2) to prevent top clipping */}
+          <div className="flex flex-col gap-4 overflow-y-auto px-3 py-2 -mx-3 -my-2 pb-4">
             {referencedPolicyIds.length === 0 ? (
               <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
                 <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>

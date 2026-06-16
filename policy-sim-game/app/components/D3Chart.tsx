@@ -19,10 +19,10 @@ interface HistogramEntry {
 interface D3ChartProps {
   plotType: '1D' | '2D';
   chartData: any[];
-  histogramData?: HistogramEntry[]; 
+  histogramData?: HistogramEntry[];
   xAxisType: AxisVariable;
   yAxisType: AxisVariable;
-  color?: string; 
+  color?: string;
   markers?: ChartMarker[];
   visualStyle?: 'solid' | 'faces';
   yAxisMax?: number;
@@ -77,7 +77,6 @@ export default function D3Chart({
   const prevPlotType = useRef<string | null>(null);
   const prevXAxis = useRef<AxisVariable | null>(null);
   const prevYAxis = useRef<AxisVariable | null>(null);
-  
   const chartId = useId().replace(/:/g, '');
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -138,21 +137,20 @@ export default function D3Chart({
     };
 
     if (plotType === '1D' && histogramData) {
-      // True linear scale starting exactly at 0, spanning 11 bins (0 through 10)
       const xScale = d3.scaleLinear().domain([0, 11]).range([0, width]);
-      
-      // Calculate bin width and the offset to centre items inside their bin
       const bw = (width / 11) * 0.9;
       const getXPos = (name: string | number) => xScale(Number(name)) + (width / 11) * 0.05;
-
       const yDomainMax = yAxisMax;               
+
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
       
       const defs = svg.selectAll("defs").data([0]).join("defs");
       
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
-            
+        const actualRectWidth = faceCols * faceSize;
+        const xOffset = (bw - actualRectWidth) / 2; // Centers the pattern perfectly within the bin
+        
         defs.selectAll("*").remove(); 
         const patterns = defs.selectAll("pattern.face-pattern")
           .data(histogramData, (d: any) => d.name)
@@ -160,20 +158,19 @@ export default function D3Chart({
           .attr("class", "face-pattern")
           .attr("id", d => `face-${d.name}-${chartId}`)
           .attr("patternUnits", "userSpaceOnUse")
-          .attr("width", faceSize)       
-          .attr("height", faceSize)      
-          .attr("x", d => getXPos(d.name))
+          .attr("width", faceSize)          
+          .attr("height", faceSize)         
+          .attr("x", d => getXPos(d.name) + xOffset)
           .attr("y", height)
           .attr("viewBox", "0 0 100 100")
           .attr("preserveAspectRatio", "xMidYMid meet");
 
         const faceGroup = patterns.append("g");
 
-        // Face Background
         faceGroup.append("circle")
           .attr("cx", 50)
           .attr("cy", 50)
-          .attr("r", 48) 
+          .attr("r", 48)
           .attr("fill", d => d3.interpolateRdYlGn(Number(d.name) / 10))
           .attr("stroke", d => {
               const colorObj = d3.color(d3.interpolateRdYlGn(Number(d.name) / 10));
@@ -181,11 +178,9 @@ export default function D3Chart({
           })
           .attr("stroke-width", 4);
 
-        // Eyes
         faceGroup.append("circle").attr("cx", 34).attr("cy", 40).attr("r", 8).attr("fill", "#1f2937");
         faceGroup.append("circle").attr("cx", 66).attr("cy", 40).attr("r", 8).attr("fill", "#1f2937");
         
-        // Mouth
         faceGroup.append("path")
           .attr("d", d => {
             const score = Number(d.name); 
@@ -193,12 +188,11 @@ export default function D3Chart({
             return `M 28 65 Q 50 ${controlY} 72 65`;
           })
           .attr("stroke", "#1f2937")
-          .attr("stroke-width", 6) 
+          .attr("stroke-width", 6)
           .attr("fill", "none")
           .attr("stroke-linecap", "round");
       }
 
-      // Hardcode the ticks to 0 through 10
       chart.select(".axis-x")
         .transition().duration(dimensions.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) as any)
@@ -211,21 +205,24 @@ export default function D3Chart({
       
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
-      dataLayer.selectAll("rect.bar").remove(); 
+      dataLayer.selectAll("rect.bar").remove();
+
       const cols = dataLayer.selectAll("g.col").data(histogramData, (d: any) => d.name)
         .join("g")
         .attr("class", "col");
 
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
+        const actualRectWidth = faceCols * faceSize;
+        const xOffset = (bw - actualRectWidth) / 2;
 
         cols.selectAll("rect.segment").remove();
         cols.selectAll("rect.face-bar").data(d => [d])
           .join(
             enter => enter.append("rect")
               .attr("class", "face-bar")
-              .attr("x", d => getXPos(d.name))
-              .attr("width", bw)
+              .attr("x", d => getXPos(d.name) + xOffset)
+              .attr("width", Math.max(0, actualRectWidth - 0.5)) // Sub-pixel trim physically prevents infinite tiling loops
               .attr("fill", d => `url(#face-${d.name}-${chartId})`)
               .attr("y", height)
               .attr("height", 0),
@@ -233,7 +230,8 @@ export default function D3Chart({
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
           .transition().duration(1000).ease(d3.easeCubicOut)
-          .attr("x", d => getXPos(d.name))
+          .attr("x", d => getXPos(d.name) + xOffset)
+          .attr("width", Math.max(0, actualRectWidth - 0.5))
           .attr("y", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
@@ -246,7 +244,6 @@ export default function D3Chart({
             if (d.count > 0 && faceCount === 0) faceCount = 1;
             return faceCount * faceSize;
           });
-
       } else {
         cols.selectAll("rect.face-bar").remove();
         cols.selectAll("rect.segment")
@@ -281,10 +278,8 @@ export default function D3Chart({
       }
 
       annotationLayer.selectAll("*").remove();
-
       if (markers && markers.length > 0) {
         markers.forEach((marker, index) => {
-          // xScale handles the exact positioning inherently now
           const markerX = xScale(Math.max(0, Math.min(10.9, marker.value)));
           const markerColor = marker.color || "#3f3f46";
           const yPos = 12 + (index * 16);
@@ -301,7 +296,7 @@ export default function D3Chart({
 
           annotationLayer.append("text")
           .attr("y", yPos)
-          .attr("x", markerX - 8) 
+          .attr("x", markerX - 8)
           .attr("fill", markerColor)
           .attr("font-size", "12px")
           .attr("font-weight", "900")
@@ -315,6 +310,7 @@ export default function D3Chart({
           .style("opacity", 1);
         });
       }
+
     } else if (plotType === '2D') {
       annotationLayer.selectAll("*").remove();
       
@@ -326,7 +322,6 @@ export default function D3Chart({
 
       dataLayer.selectAll("circle.dot").data(chartData, (d: any) => d.id).join("circle").attr("class", "dot").transition().duration(500).attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-
   }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, visualStyle, dimensions, faceCols]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;

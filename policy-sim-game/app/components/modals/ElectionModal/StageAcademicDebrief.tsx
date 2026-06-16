@@ -1,6 +1,6 @@
 /**
  * Page 5 of the election sequence.
- * Provides the comparative analysis under different frameworks.
+ * Provides the theoretical and comparative analysis under different welfare frameworks.
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -12,6 +12,7 @@ import { DPMMessage } from '../SharedModalComponents';
 interface StageAcademicDebriefProps {
   currentCycle: ElectionCycle;
   finalPopulation: Respondent[];
+  yAxisMax: number;
   onReady: () => void;
 }
 
@@ -21,6 +22,7 @@ const getDummyHistogram = (distribution: Record<number, number>) =>
 export default function StageAcademicDebrief({ 
   currentCycle, 
   finalPopulation, 
+  yAxisMax,
   onReady 
 }: StageAcademicDebriefProps) {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
@@ -46,8 +48,10 @@ export default function StageAcademicDebrief({
     }
   }, [revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, currentCycle, onReady]);
 
-  const benthamGraphA = useMemo(() => getDummyHistogram({ 5: 100 }), []);
-  const benthamGraphB = useMemo(() => getDummyHistogram({ 0: 50, 10: 50 }), []);
+  const dummyPeak = useMemo(() => Math.max(20, Math.floor((yAxisMax || 100) * 0.75)), [yAxisMax]);
+  
+  const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
+  const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
   const contrastingCitizens = useMemo(() => {
     for (let i = 0; i < finalPopulation.length; i++) {
@@ -104,14 +108,18 @@ export default function StageAcademicDebrief({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
+            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
+              <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+            </div>
             {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
             {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
           
           <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}><D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={1}/></div>
+            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
+              <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+            </div>
             {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
             {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
