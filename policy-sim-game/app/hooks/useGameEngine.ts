@@ -59,7 +59,7 @@ const getMetricScore = (pop: Respondent[], cycle: ElectionCycle) => {
   return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
 };
 
-export function useGameEngine(setActiveTab: (tab: any) => void) {
+export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [population, setPopulation] = useState<Respondent[]>([]);
   const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]);
   const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
@@ -182,7 +182,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
       }
       return prev;
     });
-  }, [currentHistogramData]); // Fixed: target only active changes to block graph jumping during previews
+  }, [currentHistogramData]);
 
   const initialMetricScore = useMemo(() => getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const turnMetricScore = useMemo(() => getMetricScore(population, currentCycle), [population, currentCycle]);
@@ -190,7 +190,7 @@ export function useGameEngine(setActiveTab: (tab: any) => void) {
   const turnApprovalRating = useMemo(() => WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar), [turnMetricScore, cycleMAO, currentCycle]);
 
   const handleNavigateToPolicy = useCallback(() => {
-    setActiveTab('dashboard');
+    setActiveTab;
     setPulsePolicy(true);
     setTimeout(() => setPulsePolicy(false), 1500);
   }, [setActiveTab]);

@@ -69,20 +69,8 @@ const MIN_FACE_PX = 10;
 const MAX_FACE_PX = 22;
 
 function calcFaceSize(bandwidth: number, requestedCols: number): number {
-  const idealSize = bandwidth / requestedCols;
-  // Too small: reduce columns so each face is bigger
-  // Too large: add columns so each face shrinks
-  // On the boundary: use exactly as requested
-  let optimalCols: number;
-  if (idealSize < MIN_FACE_PX) {
-    optimalCols = Math.max(1, Math.floor(bandwidth / MIN_FACE_PX));
-  } else if (idealSize > MAX_FACE_PX) {
-    optimalCols = Math.max(1, Math.round(bandwidth / MAX_FACE_PX));
-  } else {
-    optimalCols = requestedCols;
-  }
-  // Divide bandwidth evenly among chosen columns — no partial face at the edge
-  return bandwidth / Math.max(1, optimalCols);
+  // Directly respect the requested columns to prevent pattern clipping and offset issues
+  return bandwidth / Math.max(1, requestedCols);
 }
 
 export default function D3Chart({ 
@@ -298,23 +286,23 @@ export default function D3Chart({
             .attr("stroke-width", 2)
             .attr("stroke-dasharray", marker.dashed ? "6,4" : "none")
             .style("opacity", 0)
-            .transition().duration(1000).ease(d3.easeCubicOut)
+            .transition().duration(300).ease(d3.easeCubicOut)
             .style("opacity", 1);
 
           annotationLayer.append("text")
-            .attr("y", yPos)
-            .attr("x", markerX - 8) 
-            .attr("fill", markerColor)
-            .attr("font-size", "12px")
-            .attr("font-weight", "900")
-            .attr("stroke", "white")
-            .attr("stroke-width", 4)
-            .style("paint-order", "stroke")
-            .attr("text-anchor", "end") 
-            .text(marker.hideLabelText ? marker.value.toFixed(2) : marker.label)
-            .style("opacity", 0)
-            .transition().duration(1000).delay(200).ease(d3.easeCubicOut)
-            .style("opacity", 1);
+          .attr("y", yPos)
+          .attr("x", markerX - 8) 
+          .attr("fill", markerColor)
+          .attr("font-size", "12px")
+          .attr("font-weight", "900")
+          .attr("stroke", "white")
+          .attr("stroke-width", 4)
+          .style("paint-order", "stroke")
+          .attr("text-anchor", "end") 
+          .text(marker.label) 
+          .style("opacity", 0)
+          .transition().duration(300).delay(0).ease(d3.easeCubicOut)
+          .style("opacity", 1);
         });
       }
 

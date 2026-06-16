@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTypewriter } from '../../hooks/useTypewriter';
 import { useGame } from "../../context/GameStateContext";
+import { Variants, Easing } from 'framer-motion';
+
+// Define the easing constant explicitly to satisfy TypeScript
+const easeOut: Easing = [0.22, 1, 0.36, 1];
+const easeIn: Easing = [0.47, 0, 0.74, 0.58];
 
 interface InteractiveDPMEmailProps {
   title: string;
@@ -14,37 +19,71 @@ interface InteractiveDPMEmailProps {
 }
 
 export const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md transition-all animate-in fade-in p-2 md:p-4">
-    {children}
-  </div>
-);
-
-
-export const ModalContent = ({
-  children,
-  maxWidth = "max-w-xl"
-}: {
-  children: React.ReactNode;
-  maxWidth?: string;
-}) => (
-  <motion.div
-    layout
-    className={`
-      bg-white rounded-2xl shadow-2xl
-      w-full ${maxWidth}
-      flex flex-col
-      border-x border-zinc-200
-      border-t-[6px] border-t-pink-600
-      border-b-[6px] border-b-zinc-900
-      max-h-[95vh]
-    `}
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
   >
-    <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
-      {children}
-    </div>
+    {children}
   </motion.div>
 );
 
+// Define variants outside the component so they are stable
+const modalVariants: Variants = {
+  hidden: (isSliding: boolean) => ({
+    opacity: 0,
+    x: isSliding ? -800 : 0,
+    scale: isSliding ? 1 : 0.95
+  }),
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { duration: 0.6, ease: easeOut }
+  },
+  exit: (isSliding: boolean) => (isSliding
+    ? { x: 800, opacity: 0, transition: { duration: 0.6, ease: easeIn } }
+    : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } })
+};
+
+export const ModalContent = ({
+  children,
+  maxWidth = "max-w-xl",
+  slideEntry = false,
+  slideExit = false
+}: {
+  children: React.ReactNode;
+  maxWidth?: string;
+  slideEntry?: boolean;
+  slideExit?: boolean;
+}) => {
+  return (
+    <motion.div
+      layout
+      variants={modalVariants}
+      // Pass the state that determines if it should slide
+      custom={slideEntry || slideExit}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className={`
+        bg-white rounded-2xl shadow-2xl
+        w-full ${maxWidth}
+        flex flex-col
+        border-x border-zinc-200
+        border-t-[6px] border-t-pink-600
+        border-b-[6px] border-b-zinc-900
+        max-h-[95vh]
+        transition-[max-width] duration-500 ease-in-out
+      `}
+    >
+      <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
+        {children}
+      </div>
+    </motion.div>
+  );
+};
 
 export const ModalHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
   <div className="text-center mb-5 max-w-2xl mx-auto">
@@ -67,7 +106,7 @@ export const DPMMessage = ({ title, children, className = "" }: { title: string,
 );
 
 export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onClick: () => void, children: React.ReactNode, variant?: "primary" | "secondary" | "accent" }) => {
-  const baseClass = "w-full py-3 md:py-3.5 text-sm md:text-base font-bold rounded-xl transition-all shadow-md shrink-0 flex-1";
+  const baseClass = "w-full py-3 md:py-3.5 text-sm md:text-base font-bold rounded-xl transition-all shadow-md shrink-0 flex-1 cursor-pointer";
   const variants = {
     primary: "bg-zinc-900 text-white hover:bg-black",
     secondary: "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 shadow-none border border-zinc-300",
@@ -121,7 +160,7 @@ export const InteractiveDPMEmail = ({
             transition={{ duration: 0.3 }}
             onClick={() => setIsOpen(true)} 
             className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between shadow-sm group hover:bg-zinc-100 transition-colors cursor-pointer text-left"
-            style={{ width: '100%' }} // Applied here as well
+            style={{ width: '100%' }}
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white rounded-full border border-zinc-200 shadow-sm flex items-center justify-center shrink-0">
@@ -143,7 +182,7 @@ export const InteractiveDPMEmail = ({
             exit={{ opacity: 0, filter: "blur(4px)", y: 10 }} 
             transition={{ duration: 0.4 }}
             className="flex flex-col gap-6 w-full"
-            style={{ width: '100%' }} // Applied here as well
+            style={{ width: '100%' }}
           >
             <DPMMessage title={title}>
               <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if(isTyping) skip(); }}>

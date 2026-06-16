@@ -8,7 +8,7 @@ import D3Chart, { ChartMarker } from "../D3Chart";
 import DPMCard from "../DPMCard";
 
 export default function DashboardTab() {
-  const { setActiveTab, pulsePolicy } = useUI();
+  const { pulsePolicy } = useUI();
   const {
     currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
@@ -50,10 +50,12 @@ export default function DashboardTab() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [approvalRating]);
 
-  const activeMarkers: ChartMarker[] = [
-    { value: turnMetricScore, label: `Current: ${turnMetricScore.toFixed(2)}`, color: "#3f3f46", dashed: false },
-    { value: targetScore, label: `Target: ${targetScore.toFixed(2)}`, color: rule.graphColor, dashed: true }
-  ];
+  const activeMarkers = isParliamentDissolved 
+    ? [] 
+    : [
+        { value: turnMetricScore, label: "CURRENT", color: "#3f3f46", dashed: false },
+        { value: targetScore, label: "TARGET", color: rule.graphColor, dashed: true }
+      ];
   
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
@@ -91,19 +93,13 @@ export default function DashboardTab() {
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
-        {/* LEFT COLUMN: Stacked Graphs (4 Cols wide) */}
+        {/* LEFT COLUMN: Stacked Graphs */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
-            
+          
           {/* TOP: Current Distribution */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-            <div 
-              onClick={() => setActiveTab('graphs')} 
-              className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
-            >
+            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
-                <path d="M7 17l9.2-9.2M17 17V7H7"/>
-              </svg>
             </div>
             
             <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
@@ -135,16 +131,10 @@ export default function DashboardTab() {
 
           {/* BOTTOM: Wellbeing Impact Forecast */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-            <div 
-              onClick={() => setActiveTab('electorate')} 
-              className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-zinc-100 transition-colors"
-            >
+            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
                 {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 group-hover:text-zinc-800 transition-colors">
-                <path d="M7 17l9.2-9.2M17 17V7H7"/>
-              </svg>
             </div>
             
             <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
@@ -205,23 +195,18 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: DPM & Approval (4 Cols) */}
+        {/* MIDDLE COLUMN: DPM & Approval */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           <DPMCard 
-            currentCycle={currentCycle} 
+            currentCycle={currentCycle}
             currentTurn={currentTurn}
             isParliamentDissolved={isParliamentDissolved}
             selectedPolicy={selectedPolicy}
             cycleMAO={cycleMAO}
             currentMetricScore={turnMetricScore}
           />
-
-          <div 
-            onClick={() => !isParliamentDissolved && setActiveTab('electorate')} 
-            className={`bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all group ${
-              isParliamentDissolved ? 'bg-zinc-800 border border-zinc-700' : 'cursor-pointer hover:bg-black'
-            }`}
-          >
+          {/* Approval box made non-clickable */}
+          <div className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all">
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
             
@@ -243,7 +228,7 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (4 Cols) */}
+        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
           <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
             <h3 className="text-xl font-bold text-zinc-900 tracking-tight">

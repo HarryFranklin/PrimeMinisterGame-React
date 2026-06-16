@@ -55,7 +55,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
   };
 
   return (
-    <ModalContent maxWidth="max-w-xl">
+    <ModalContent maxWidth="max-w-xl" slideEntry slideExit>
       <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
 
       <p className="text-zinc-600 text-sm mb-4 text-center">

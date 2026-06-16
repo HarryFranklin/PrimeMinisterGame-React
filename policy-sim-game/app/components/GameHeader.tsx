@@ -1,67 +1,43 @@
-// components/GameHeader.tsx
 import React from 'react';
 import { ElectionCycle } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 
 interface GameHeaderProps {
   currentCycle: ElectionCycle;
-  activeTab: string;
-  setActiveTab: (tab: any) => void;
   currentTurn: number;
   turnsPerCycle: number;
-  tabs: readonly string[];
   isParliamentDissolved: boolean;
 }
 
 export default function GameHeader({
-  currentCycle, activeTab, setActiveTab, currentTurn, turnsPerCycle, tabs, isParliamentDissolved
+  currentCycle, currentTurn, turnsPerCycle, isParliamentDissolved
 }: GameHeaderProps) {
-  const activeTabIndex = tabs.indexOf(activeTab);
-
   return (
-    <header className="bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm relative z-10">
-      <div>
-        <h1 className="text-xl font-bold">Policy Simulator</h1>
-        <p className="text-xs font-bold text-pink-600 uppercase">
+    <header className="bg-white border-b border-zinc-200 px-8 py-5 flex justify-between items-center shrink-0 shadow-sm relative z-10">
+      
+      {/* Prime Minister Game & Framework */}
+      <div className="flex items-baseline gap-4 z-20">
+        <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Prime Minister Game</h1>
+        <p className="text-base font-bold text-pink-600 uppercase tracking-widest">
           {FRAMEWORK_RULES[currentCycle]?.frameworkTitle || "Loading..."}
         </p>
       </div>
-      
-      {/* TAB BAR */}
-      <nav className="p-1 rounded-lg w-full max-w-3xl pointer-events-auto bg-zinc-100 transition-all duration-500">
-        <div className="relative grid grid-cols-3 gap-1">
-          <div 
-            className="absolute top-0 bottom-0 left-0 bg-white rounded-md shadow-sm transition-all duration-300 ease-out"
-            style={{
-              width: `calc((100% - 8px) / 3)`, 
-              transform: `translateX(calc(${activeTabIndex * 100}% + ${activeTabIndex * 4}px))`
-            }}
-          />
-          {tabs.map((t) => (
-            <button 
-              key={t} 
-              onClick={() => setActiveTab(t as any)} 
-              className={`relative z-10 w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold uppercase rounded-md transition-all duration-300 ${
-                activeTab === t 
-                  ? 'text-pink-600' 
-                  : 'text-zinc-500 hover:text-zinc-700'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </nav>
-      
+
+      {/* Centered Dashboard Label */}
+      <span className="absolute left-1/2 -translate-x-1/2 text-sm font-bold text-zinc-400 uppercase tracking-[0.25em] z-10">
+        Dashboard
+      </span>
+
       {/* Turn Counter */}
-      <div className="text-right">
-        <p className="text-xs font-bold text-zinc-400 uppercase">
-          {isParliamentDissolved ? "Status" : "Election In"}
+      <div className="flex items-center gap-4 z-20">
+        <p className="text-lg font-bold text-zinc-500 uppercase tracking-widest">
+          {isParliamentDissolved ? "Status:" : "Election in:"}
         </p>
-        <p className={`text-lg font-mono font-bold ${isParliamentDissolved ? 'text-rose-600 animate-pulse' : ''}`}>
-          {isParliamentDissolved ? "POLLS OPEN" : `${Math.max(0, turnsPerCycle - currentTurn + 1)} Turns`}
+        <p className={`text-lg font-mono font-black ${isParliamentDissolved ? 'text-rose-600' : 'text-zinc-900'}`}>
+          {isParliamentDissolved ? "POLLS OPEN" : `${Math.max(0, turnsPerCycle - currentTurn + 1)}`}
         </p>
       </div>
+      
     </header>
   );
 }
