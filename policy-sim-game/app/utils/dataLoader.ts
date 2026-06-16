@@ -11,10 +11,13 @@ function getONSBaselineLS(id: number): number {
   const bucketSeed = seededRandom(id);
   const placementSeed = seededRandom(id + 1);
 
+  // Distribute baseline LS with a realistic spread, capping the maximum 
+  // generated start state to prevent UI rounding anomalies at 10.0
   if (bucketSeed < 0.05) return 2 + (placementSeed * 2);
   if (bucketSeed < 0.15) return 4 + (placementSeed * 2);
   if (bucketSeed < 0.70) return 6 + (placementSeed * 2);
-  return 8 + (placementSeed * 2);
+  
+  return 8 + (placementSeed * 1.8); 
 }
 
 export function loadPopulation(): Respondent[] {
@@ -33,5 +36,6 @@ export function loadPopulation(): Respondent[] {
       });
     }
   }
+
   return population;
 }
