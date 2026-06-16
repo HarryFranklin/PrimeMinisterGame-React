@@ -22,7 +22,9 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
+  
   const [rawlsExplanation, setRawlsExplanation] = useState(false);
+  
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
   const [personalExplanation, setPersonalExplanation] = useState(false);
 
@@ -85,14 +87,12 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             <DPMMessage title="Theoretical Comparison">
               "Prime Minister, before examining the society you built, consider this comparison. Click to calculate the Benthamite average for these two theoretical societies."
             </DPMMessage>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
                 onClick={() => setRevealedBenthamA(true)} 
-                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
+                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-                {/* Standardised Height */}
                 <div className={`h-[180px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
                   <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={3}/>
                 </div>
@@ -113,13 +113,12 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               
               <div 
                 onClick={() => setRevealedBenthamB(true)} 
-                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'}`}
+                className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
               >
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
                 <div className={`h-[180px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
                   <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={120} faceCols={3}/>
                 </div>
-
                 {!revealedBenthamB && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span>
@@ -154,19 +153,17 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             <DPMMessage title="Subjective Experience">
               "Prime Minister, you successfully raised the floor. But the data presents a new variable. Click on these two citizens to reveal their Personal Utility scores."
             </DPMMessage>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {contrastingCitizens.map((citizen, idx) => {
                 const utility = WelfareMetrics.getUtilityForPerson(citizen.currentLS, citizen.personalUtilities);
                 const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
                 const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
-
                 return (
                   <div 
                     key={idx} 
                     onClick={() => setReveal(true)}
-                    className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center h-full min-h-[160px] ${
-                      isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-pink-300 hover:bg-pink-50/50'
+                    className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center h-full min-h-[160px] cursor-pointer ${
+                      isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'
                     }`}
                   >
                     <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Citizen #{String(citizen.id).substring(0,4)}</p>
@@ -181,7 +178,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                       <span className="text-xs text-pink-500 font-bold uppercase tracking-widest block mb-1">Personal Utility</span>
                       <strong className="text-3xl text-pink-600">{utility.toFixed(2)}</strong>
                     </div>
-
+                    
                     {!isRevealed && (
                       <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Click to Reveal</span>
@@ -224,12 +221,11 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             <DPMMessage title="Societal Evaluation">
               "Personal Utility models citizens making choices based purely on their own outcomes. Click on the citizen below to reveal how their perspective shifts when accounting for the broader society."
             </DPMMessage>
-
             <div className="w-full">
               <div 
                 onClick={() => setRevealedEmpathy(true)}
-                className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] ${
-                  revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50'
+                className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${
+                  revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'
                 }`}
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Citizen #{String(empathyCitizen.id).substring(0,4)}</p>
@@ -290,7 +286,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             <DPMMessage title="Final Comparison">
               "Prime Minister, you have now tested both utility frameworks. Let's directly compare how the society you just built is evaluated under each philosophy."
             </DPMMessage>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Cycle 3: Personal Utility</h3>
@@ -303,7 +298,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                   <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
                 </div>
               </div>
-
               <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5 flex flex-col">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Cycle 4: Societal Utility</h3>
                 <div className="text-center mb-3">
@@ -316,7 +310,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                 </div>
               </div>
             </div>
-
+            
             <div className="mt-2 text-center">
               <DPMMessage title="Next Steps" className="mb-4">
                 "As you proceed to the final debrief, consider which of these four frameworks provides the most effective and ethical blueprint for real-world governance."
@@ -325,7 +319,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             </div>
           </>
         );
-
       default:
         return null;
     }

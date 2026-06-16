@@ -19,7 +19,6 @@ export default function DashboardTab() {
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
-  // Custom hook logic directly injected to animate the Approval Rating
   const [displayApproval, setDisplayApproval] = useState(approvalRating);
 
   useEffect(() => {
@@ -33,19 +32,21 @@ export default function DashboardTab() {
       return;
     }
 
-    const duration = 1200; // 1.2 second ticking animation
+    const duration = 1200; 
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const easeProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+      const easeProgress = 1 - Math.pow(1 - progress, 3); 
       setDisplayApproval(startValue + change * easeProgress);
+
       if (progress < 1) {
         animationFrameId = requestAnimationFrame(animate);
       } else {
         setDisplayApproval(approvalRating);
       }
     };
+    
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
   }, [approvalRating]);
@@ -56,21 +57,24 @@ export default function DashboardTab() {
         { value: turnMetricScore, label: "CURRENT", color: "#3f3f46", dashed: false },
         { value: targetScore, label: "TARGET", color: rule.graphColor, dashed: true }
       ];
-  
+
   const stackedData = useMemo(() => {
     return Array.from({ length: 11 }, (_, i) => {
       const name = i.toString();
       const residentsInBin = population.filter(r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
       const segments: any[] = [];
+
       if (selectedPolicy) {
         const improveCount = residentsInBin.filter(r => {
           const idx = population.indexOf(r);
           return previewPopulation[idx].currentLS - r.currentLS > 0.05;
         }).length;
+        
         const worsenCount = residentsInBin.filter(r => {
           const idx = population.indexOf(r);
           return previewPopulation[idx].currentLS - r.currentLS < -0.05;
         }).length;
+        
         const stableCount = residentsInBin.length - improveCount - worsenCount;
         
         if (improveCount > 0) segments.push({ label: 'Will improve', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
@@ -98,8 +102,8 @@ export default function DashboardTab() {
           
           {/* TOP: Current Distribution */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">Current Distribution</h3>
+            <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">Current Distribution</h3>
             </div>
             
             <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
@@ -131,8 +135,8 @@ export default function DashboardTab() {
 
           {/* BOTTOM: Wellbeing Impact Forecast */}
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-            <div className="px-4 py-3 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl flex justify-between items-center shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-800">
+            <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
                 {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
             </div>
@@ -153,7 +157,7 @@ export default function DashboardTab() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">📝</span>
+                      <span className="text-zinc-400 text-lg">💡</span>
                     </div>
                     <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Awaiting Policy</h4>
                     <p className="text-sm text-zinc-500 font-medium">
@@ -205,12 +209,11 @@ export default function DashboardTab() {
             cycleMAO={cycleMAO}
             currentMetricScore={turnMetricScore}
           />
-          {/* Approval box made non-clickable */}
+
           <div className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all">
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
             
-            {/* HIDE APPROVAL RATING */}
             {isParliamentDissolved ? (
               <p className="text-3xl lg:text-4xl font-black tracking-widest text-zinc-500 mt-2">
                 UNCLEAR
@@ -230,20 +233,22 @@ export default function DashboardTab() {
 
         {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0">
-          <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
+          <div className="p-4 border-b border-zinc-200 bg-zinc-100 shrink-0">
             <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
               {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
             </h3>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-600 mt-1">
               {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
             </p>
           </div>
           
-          <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>             
+          <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
+            
             {!isParliamentDissolved ? (
               // Standard Agenda View
               currentDeck.slice(0, 4).map((policy) => {
                 const isSelected = selectedPolicy?.id === policy.id;
+
                 return (
                   <button
                     key={policy.id}
@@ -266,7 +271,7 @@ export default function DashboardTab() {
                 );
               })
             ) : (
-              // History View (When Parliament Dissolved - Compacted to fit)
+              // History View (When Parliament Dissolved)
               <div className="flex flex-col gap-2.5">
                 {enactedLegislation.map((leg, index) => (
                   <div key={index} className="flex gap-3 items-start bg-zinc-50 p-3 rounded-lg border border-zinc-200 shadow-sm">
@@ -283,7 +288,7 @@ export default function DashboardTab() {
             )}
           </div>
           
-          <div className="p-4 border-t border-zinc-100 bg-zinc-50 shrink-0">
+          <div className="p-4 border-t border-zinc-100 bg-zinc-100 shrink-0">
             {isParliamentDissolved ? (
               <button 
                 onClick={handleFaceElectorate}

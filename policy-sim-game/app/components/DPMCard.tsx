@@ -38,7 +38,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     );
   }
 
-const getAdvisory = () => {
+  const getAdvisory = () => {
     if (selectedPolicy) return "Review the likely impact on the Electorate Analysis tab before enacting this policy.";
     
     switch (currentCycle) {
@@ -57,10 +57,10 @@ const getAdvisory = () => {
 
   return (
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
-      <div className="p-5 border-b border-zinc-100 bg-zinc-50/80 flex items-center gap-4 shrink-0 relative z-10">
-        <span className="text-4xl bg-white border border-zinc-200 w-14 h-14 flex items-center justify-center rounded-full shadow-sm shrink-0">👱‍♂️</span>
+      <div className="p-5 border-b border-zinc-200 bg-zinc-100 flex items-center gap-4 shrink-0 relative z-10">
+        <span className="text-4xl bg-white border border-zinc-200 w-14 h-14 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-zinc-400 leading-tight">
+          <p className="text-xs font-black uppercase tracking-widest text-zinc-500 leading-tight">
             Deputy Prime Minister
           </p>
           <h3 className="text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
@@ -79,11 +79,11 @@ const getAdvisory = () => {
           </div>
         </div>
         
-        <div className="bg-zinc-50 border border-zinc-200 p-5 rounded-xl shadow-sm">
+        <div className="bg-zinc-100 border border-zinc-200 p-5 rounded-xl shadow-sm">
           <div className="mb-4">
             <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-1">Strategic Focus</span>
             <span className="text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
-            <p className="text-sm text-zinc-500 leading-relaxed">
+            <p className="text-sm text-zinc-600 leading-relaxed">
               {rule.targetMetricDescription}
             </p>
           </div>
