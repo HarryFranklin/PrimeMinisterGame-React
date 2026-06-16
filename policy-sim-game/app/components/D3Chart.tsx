@@ -62,6 +62,29 @@ const getAxisLabel = (axisType: AxisVariable): string => {
   }
 }
 
+// Face sizing constraints. Below MIN faces are unrecognisable blobs;
+// above MAX they look comically oversized. The algorithm uses these to
+// calculate the best number of columns that keeps individual faces in range.
+const MIN_FACE_PX = 10;
+const MAX_FACE_PX = 22;
+
+function calcFaceSize(bandwidth: number, requestedCols: number): number {
+  const idealSize = bandwidth / requestedCols;
+  // Too small: reduce columns so each face is bigger
+  // Too large: add columns so each face shrinks
+  // On the boundary: use exactly as requested
+  let optimalCols: number;
+  if (idealSize < MIN_FACE_PX) {
+    optimalCols = Math.max(1, Math.floor(bandwidth / MIN_FACE_PX));
+  } else if (idealSize > MAX_FACE_PX) {
+    optimalCols = Math.max(1, Math.round(bandwidth / MAX_FACE_PX));
+  } else {
+    optimalCols = requestedCols;
+  }
+  // Divide bandwidth evenly among chosen columns — no partial face at the edge
+  return bandwidth / Math.max(1, optimalCols);
+}
+
 export default function D3Chart({ 
   plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2 
 }: D3ChartProps) {
@@ -140,7 +163,7 @@ export default function D3Chart({
       
       if (visualStyle === 'faces') {
         const bw = xScale.bandwidth();
-        const faceSize = bw / faceCols;
+        const faceSize = calcFaceSize(bw, faceCols);
            
         defs.selectAll("*").remove(); 
         const patterns = defs.selectAll("pattern.face-pattern")
@@ -192,20 +215,19 @@ export default function D3Chart({
       const bw = xScale.bandwidth();
       dataLayer.selectAll("rect.bar").remove(); 
 
-      // FIX 3: Removed the 'transform' wrapper to prevent browser offset bugs
       const cols = dataLayer.selectAll("g.col").data(histogramData, (d: any) => d.name)
         .join("g")
         .attr("class", "col");
 
       if (visualStyle === 'faces') {
-        const faceSize = bw / faceCols;
+        const faceSize = calcFaceSize(bw, faceCols);
         cols.selectAll("rect.segment").remove();
 
         cols.selectAll("rect.face-bar").data(d => [d])
           .join(
             enter => enter.append("rect")
               .attr("class", "face-bar")
-              .attr("x", d => xScale(d.name.toString()) || 0) // Explicit X positioning
+              .attr("x", d => xScale(d.name.toString()) || 0)
               .attr("width", bw)
               .attr("fill", d => `url(#face-${d.name}-${chartId})`)
               .attr("y", height)
@@ -214,7 +236,7 @@ export default function D3Chart({
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
           .transition().duration(1000).ease(d3.easeCubicOut)
-          .attr("x", d => xScale(d.name.toString()) || 0) // Explicit X positioning
+          .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("y", d => {
             const rawHeight = height - yScale(d.count);
             let faceCount = Math.floor(rawHeight / faceSize);
@@ -244,7 +266,7 @@ export default function D3Chart({
           .join(
             enter => enter.append("rect")
               .attr("class", "segment")
-              .attr("x", d => xScale(d.name.toString()) || 0) // Explicit X positioning
+              .attr("x", d => xScale(d.name.toString()) || 0)
               .attr("width", bw)
               .attr("y", height)
               .attr("height", 0)
@@ -253,7 +275,7 @@ export default function D3Chart({
             exit => exit.transition().duration(400).attr("y", height).attr("height", 0).remove()
           )
           .transition().duration(1200).ease(d3.easeCubicOut)
-          .attr("x", d => xScale(d.name.toString()) || 0) // Explicit X positioning
+          .attr("x", d => xScale(d.name.toString()) || 0)
           .attr("width", bw)
           .attr("y", d => d.yPos)
           .attr("height", d => d.h)
@@ -289,7 +311,6 @@ export default function D3Chart({
             .attr("stroke-width", 4)
             .style("paint-order", "stroke")
             .attr("text-anchor", "end") 
-            // FIX 4: Just prints the label exactly as you passed it, without duplicating the number!
             .text(marker.hideLabelText ? marker.value.toFixed(2) : marker.label)
             .style("opacity", 0)
             .transition().duration(1000).delay(200).ease(d3.easeCubicOut)

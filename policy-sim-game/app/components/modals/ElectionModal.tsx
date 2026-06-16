@@ -449,11 +449,11 @@ export default function ElectionModal({
   };
 
   const getModalWidth = () => {
-    if (page === 0) return "max-w-6xl w-[95vw] lg:w-[70vw]"; // Term Summary
-    if (page === 1) return "max-w-4xl";                      // Verdict
-    if (page === 2) return "max-w-5xl";                      // Electorate Feedback
-    if (page === 3) return "max-w-6xl w-[95vw] lg:w-[70vw]"; // Final Debrief
-    return "max-w-4xl";
+    if (page === 0) return "max-w-3xl"; // Term Summary: two charts side by side
+    if (page === 1) return "max-w-xl";  // Verdict: centred score, no need for width
+    if (page === 2) return "max-w-2xl"; // Electorate Feedback: three vox pop cards
+    if (page === 3) return "max-w-3xl"; // Academic Debrief: two cards or two charts
+    return "max-w-3xl";
   };
 
   return (

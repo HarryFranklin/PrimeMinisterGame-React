@@ -22,21 +22,20 @@ export const ModalOverlay = ({ children }: { children: React.ReactNode }) => (
 
 export const ModalContent = ({
   children,
-  maxWidth = "max-w-4xl"
+  maxWidth = "max-w-xl"
 }: {
   children: React.ReactNode;
   maxWidth?: string;
 }) => (
   <motion.div
+    layout
     className={`
       bg-white rounded-2xl shadow-2xl
-      w-[min(92vw,34rem)]
-      ${maxWidth}
+      w-full ${maxWidth}
       flex flex-col
       border-x border-zinc-200
       border-t-[6px] border-t-pink-600
       border-b-[6px] border-b-zinc-900
-      animate-in zoom-in duration-300
       max-h-[95vh]
     `}
   >
@@ -110,7 +109,6 @@ export const InteractiveDPMEmail = ({
   };
 
   return (
-    // THE HAMMER: style={{ width: '100%' }} forces Framer Motion to respect the full width
     <motion.div layout className="w-full flex flex-col shrink-0" style={{ width: '100%' }}>
       <AnimatePresence mode="wait" initial={false}>
         {!isOpen ? (
