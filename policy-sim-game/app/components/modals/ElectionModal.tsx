@@ -1,11 +1,16 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, AxisVariable } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
-import { availablePolicies } from '../../data/policies';
 import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
+
+// Stage components
+import StageTermSummary from './StageTermSummary';
+import StageVerdict from './StageVerdict';
+import StagePopulationChange from './StagePopulationChange';
+import StageElectorateFeedback from './StageElectorateFeedback';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -21,425 +26,10 @@ interface ElectionModalProps {
   onFinish?: () => void;
 }
 
-const generateHistogramData = (pop: Respondent[]) => Array.from({ length: 11 }, (_, i) => ({ name: i, count: pop.filter(r => Math.round(r.currentLS) === i).length }));
-const getDummyHistogram = (distribution: Record<number, number>) => Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
+const getDummyHistogram = (distribution: Record<number, number>) => 
+  Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
 
-const Confetti = () => {
-  const colors = ['#ec4899', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
-  return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-[9999] flex justify-center">
-      {Array.from({ length: 100 }).map((_, i) => (
-        <motion.div key={i} initial={{ y: -50, x: 0, opacity: 1, rotate: 0 }} animate={{ y: window.innerHeight + 50, x: (Math.random() - 0.5) * window.innerWidth * 0.8, opacity: [1, 1, 0], rotate: 360 + Math.random() * 720 }} transition={{ duration: 2.5 + Math.random() * 2, ease: "easeOut", delay: Math.random() * 0.4 }} className="absolute w-3 h-3" style={{ backgroundColor: colors[i % colors.length], borderRadius: i % 3 === 0 ? '50%' : '2px', top: '-20px' }} />
-      ))}
-    </div>
-  );
-}
-
-// --- Extracted Components ---
-
-const PageMacro = ({ initialPopulation, finalPopulation, currentCycle, yAxisMax, setPageReady }: any) => {
-  const rule = FRAMEWORK_RULES[currentCycle as ElectionCycle];
-  const initialHist = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
-  const finalHist = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
-  
-  const safeYAxisMax = useMemo(() => {
-    const maxInitial = Math.max(...initialHist.map((d: any) => d.count), 0);
-    const maxFinal = Math.max(...finalHist.map((d: any) => d.count), 0);
-    const trueMax = Math.max(maxInitial, maxFinal, yAxisMax);
-    return Math.ceil(trueMax / 10) * 10;
-  }, [initialHist, finalHist, yAxisMax]);
-
-  const startMetric = useMemo(() => {
-    if (!initialPopulation || initialPopulation.length === 0) return 0;
-    if (currentCycle === ElectionCycle.Benthamite) return initialPopulation.reduce((s: number, p: any) => s + p.currentLS, 0) / initialPopulation.length;
-    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...initialPopulation.map((p: any) => p.currentLS));
-    if (currentCycle === ElectionCycle.PersonalUtility) return initialPopulation.reduce((s: number, p: any) => s + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / initialPopulation.length;
-    
-    const allLS = initialPopulation.map((p: any) => p.currentLS);
-    return initialPopulation.reduce((s: number, p: any) => s + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / initialPopulation.length;
-  }, [initialPopulation, currentCycle]);
-
-  const endMetric = useMemo(() => {
-    if (!finalPopulation || finalPopulation.length === 0) return 0;
-    if (currentCycle === ElectionCycle.Benthamite) return finalPopulation.reduce((s: number, p: any) => s + p.currentLS, 0) / finalPopulation.length;
-    if (currentCycle === ElectionCycle.Rawlsian) return Math.min(...finalPopulation.map((p: any) => p.currentLS));
-    if (currentCycle === ElectionCycle.PersonalUtility) return finalPopulation.reduce((s: number, p: any) => s + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / finalPopulation.length;
-    
-    const allLS = finalPopulation.map((p: any) => p.currentLS);
-    return finalPopulation.reduce((s: number, p: any) => s + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / finalPopulation.length;
-  }, [finalPopulation, currentCycle]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageReady(true);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [setPageReady]);
-
-  const markerLabel = currentCycle === ElectionCycle.Benthamite ? "Average" : 
-                      currentCycle === ElectionCycle.Rawlsian ? "Baseline" : 
-                      currentCycle === ElectionCycle.PersonalUtility ? "Satisfaction" : 
-                      "Fairness";
-
-  const initialMarkers = [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: "#a1a1aa", dashed: true }];
-  const finalMarkers = [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }];
-
-  const getAnalysisMessage = () => {
-    const diff = endMetric - startMetric;
-    const direction = diff >= 0 ? "increased" : "decreased";
-    
-    if (currentCycle === ElectionCycle.Benthamite) {
-      return `The National Average Happiness has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}. This represents a net ${diff >= 0 ? 'gain' : 'loss'} of ${Math.abs(diff).toFixed(2)} points.`;
-    } else if (currentCycle === ElectionCycle.Rawlsian) {
-      return `The baseline standard of living for the poorest citizens has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}.`;
-    } else if (currentCycle === ElectionCycle.PersonalUtility) {
-      return `Average Voter Satisfaction has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)} based on personal financial impacts.`;
-    } else {
-      return `The National Fairness Index has ${direction} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}, reflecting shifting views on equality.`;
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-4 animate-in fade-in w-full">
-      <DPMMessage title="Term Summary">
-        {getAnalysisMessage()}
-      </DPMMessage>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Start</h3>
-          <div className="h-[240px] md:h-[260px] w-full">
-            <D3Chart plotType="1D" chartData={[]} histogramData={initialHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color="#d4d4d8" visualStyle='faces' yAxisMax={safeYAxisMax} faceCols={4} markers={initialMarkers} />
-          </div>
-        </div>
-        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">End</h3>
-          <div className="h-[240px] md:h-[260px] w-full">
-            <D3Chart plotType="1D" chartData={[]} histogramData={finalHist} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType} color={rule.graphColor} visualStyle='faces' yAxisMax={safeYAxisMax} faceCols={4} markers={finalMarkers} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const PageVerdict = ({ approvalRating, won, setPageReady }: any) => {
-  const [displayScore, setDisplayScore] = useState(0);
-  const [isDone, setIsDone] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    let start = 0;
-    const duration = 4000;
-    const delay = 1500;
-    let animationFrameId: number;
-
-    const animate = (currentTime: number) => {
-      if (!start) start = currentTime;
-      const elapsed = currentTime - start;
-
-      if (elapsed < delay) {
-        animationFrameId = requestAnimationFrame(animate);
-        return;
-      }
-
-      const progress = Math.min((elapsed - delay) / duration, 1);
-      const easeProgress = 1 - Math.pow(1 - progress, 3); 
-      setDisplayScore(easeProgress * approvalRating);
-
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(animate);
-      } else {
-        setIsDone(true);
-        timeoutRef.current = setTimeout(() => setPageReady(true), 2000); 
-      }
-    };
-    
-    animationFrameId = requestAnimationFrame(animate);
-    
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [approvalRating, setPageReady]);
-
-  const showSuccess = isDone && won;
-  const showFailure = isDone && !won;
-
-  return (
-    <div className="flex flex-col items-center justify-center py-6 mt-8 w-full relative animate-in zoom-in duration-500">
-      {showSuccess && <Confetti />}
-      
-      {showSuccess && <div className="absolute -top-5 bg-emerald-500 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg animate-bounce z-10">Majority Secured</div>}
-      
-      <div className={`p-10 w-full max-w-lg min-h-[320px] flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 transform ${showSuccess ? 'bg-emerald-50 border-emerald-200 scale-105 shadow-xl' : showFailure ? 'bg-rose-50 border-rose-200 scale-100 shadow-md' : 'bg-zinc-50 border-zinc-200 scale-100'}`}>
-        
-        <h1 className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${showSuccess ? 'text-emerald-700' : showFailure ? 'text-rose-700' : 'text-zinc-800'}`}>
-          {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes...'}
-        </h1>
-        
-        <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">
-          {showSuccess ? "The public has backed our vision for the country." : showFailure ? "The public feels we didn't do enough to address their concerns." : "Awaiting final tally"}
-        </p>
-        
-        <div className="flex flex-col items-center justify-center gap-1">
-          <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">Final Approval</span>
-          <span className={`text-8xl font-black tabular-nums transition-colors duration-300 ${showSuccess ? 'text-emerald-600' : showFailure ? 'text-rose-600' : 'text-zinc-800'}`}>{displayScore.toFixed(1)}%</span>
-          <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const PageCohorts = ({ finalPopulation, currentCycle, setPageReady }: any) => {
-  useEffect(() => {
-    setPageReady(true);
-  }, [setPageReady]);
-
-  const cohorts = useMemo(() => {
-    let improvedCount = 0;
-    let stableCount = 0;
-    let declinedCount = 0;
-
-    finalPopulation.forEach((p: any) => {
-      const ledger = p.historicalLedger?.find((l: any) => l.cycle === currentCycle);
-      if (!ledger || ledger.turns.length === 0) return;
-      
-      const startLS = ledger.turns[0].ls;
-      const endLS = ledger.turns[ledger.turns.length - 1].ls;
-      const diff = endLS - startLS;
-
-      if (diff > 0.5) improvedCount++;
-      else if (diff < -0.5) declinedCount++;
-      else stableCount++;
-    });
-
-    return {
-      improved: finalPopulation.length ? Math.round((improvedCount / finalPopulation.length) * 100) : 0,
-      stable: finalPopulation.length ? Math.round((stableCount / finalPopulation.length) * 100) : 0,
-      declined: finalPopulation.length ? Math.round((declinedCount / finalPopulation.length) * 100) : 0
-    };
-  }, [finalPopulation, currentCycle]);
-
-  return (
-    <div className="flex flex-col gap-4 animate-in fade-in w-full">
-      <DPMMessage title="How The Population Changed">
-        "We've tracked the electorate based on how their overall life satisfaction shifted during your administration."
-      </DPMMessage>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mt-2">
-        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 flex flex-col items-center text-center shadow-sm">
-          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">📈</div>
-          <h4 className="font-black text-emerald-900 uppercase tracking-widest text-xs mb-1">Improved</h4>
-          <p className="text-4xl font-black text-emerald-600">{cohorts.improved}%</p>
-        </div>
-
-        <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-6 flex flex-col items-center text-center shadow-sm">
-          <div className="w-12 h-12 bg-zinc-200 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">➖</div>
-          <h4 className="font-black text-zinc-700 uppercase tracking-widest text-xs mb-1">Unchanged</h4>
-          <p className="text-4xl font-black text-zinc-600">{cohorts.stable}%</p>
-        </div>
-
-        <div className="bg-rose-50 rounded-xl border border-rose-200 p-6 flex flex-col items-center text-center shadow-sm">
-          <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center text-xl mb-4 shadow-inner">📉</div>
-          <h4 className="font-black text-rose-900 uppercase tracking-widest text-xs mb-1">Declined</h4>
-          <p className="text-4xl font-black text-rose-600">{cohorts.declined}%</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const PageMicro = ({ initialPopulation, baselinePopulation, finalPopulation, currentCycle, setPageReady }: any) => {
-  const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPageReady(true);
-  }, [setPageReady]);
-
-  interface InteractivePolicyProps {
-    id: string | null;
-    name: string;
-  }
-
-  interface VoterStory {
-    emoji: string;
-    text: React.ReactElement;
-    referencedPolicyIds: string[];
-  }
-
-  const getVoterStory = (citizen: any, cycle: ElectionCycle, setHover: (id: string | null) => void): VoterStory => {
-    const cycleLedger = citizen.historicalLedger?.find((l: any) => l.cycle === cycle);
-    
-    if (!cycleLedger || cycleLedger.turns.length < 2) {
-      return { emoji: '😐', text: <>Honestly, my life hasn't changed much at all.</>, referencedPolicyIds: [] };
-    }
-
-    let bestPolicy = { name: '', id: null as string | null, delta: -Infinity };
-    let worstPolicy = { name: '', id: null as string | null, delta: Infinity };
-
-    for (let i = 1; i < cycleLedger.turns.length; i++) {
-      const prev = cycleLedger.turns[i-1].ls;
-      const curr = cycleLedger.turns[i].ls;
-      const delta = curr - prev;
-      const policyName = cycleLedger.turns[i].policyName || '';
-      const policyId = cycleLedger.turns[i].policyId;
-
-      if (delta > bestPolicy.delta) bestPolicy = { name: policyName, id: policyId, delta };
-      if (delta < worstPolicy.delta) worstPolicy = { name: policyName, id: policyId, delta };
-    }
-
-    const totalDiff = citizen.lsDiff;
-    const referencedPolicyIds: string[] = [];
-
-    const InteractivePolicy = ({ id, name }: InteractivePolicyProps) => {
-      if (!id || !name) return <>{name}</>;
-      if (!referencedPolicyIds.includes(id)) referencedPolicyIds.push(id);
-      return (
-        <span 
-          className="font-bold underline decoration-pink-300 decoration-2 underline-offset-2 text-pink-700 hover:text-pink-900 transition-colors cursor-pointer"
-          onMouseEnter={() => setHover(id)}
-          onMouseLeave={() => setHover(null)}
-        >
-          {name}
-        </span>
-      );
-    };
-
-    if (totalDiff <= -1.5) {
-      return { 
-        emoji: '😡', 
-        text: <>Since this government took office, things have gotten really tough. {worstPolicy.delta < -0.05 && worstPolicy.name ? <>Having the <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> pass made it so much harder to get by.</> : "The policies completely ignored my needs."}</>, 
-        referencedPolicyIds 
-      };
-    }
-    if (totalDiff < -0.1) {
-      return { 
-        emoji: '😟', 
-        text: <>I'm definitely worse off than I was. {worstPolicy.delta < -0.05 && worstPolicy.name ? <>The <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> really didn't help matters.</> : "The agenda just didn't work for me."}</>, 
-        referencedPolicyIds 
-      };
-    }
-    if (totalDiff < 0.1) {
-      if (bestPolicy.delta > 0.1 && worstPolicy.delta < -0.1 && bestPolicy.name && worstPolicy.name) {
-          return { 
-            emoji: '😐', 
-            text: <>Honestly, I haven't noticed much difference overall. The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> helped a bit, but the <InteractivePolicy id={worstPolicy.id} name={worstPolicy.name} /> set me back just as much.</>, 
-            referencedPolicyIds 
-          };
-      }
-      return { 
-        emoji: '😐', 
-        text: <>Honestly, my life hasn't changed much at all. The politicians' arguments haven't really affected my day-to-day.</>, 
-        referencedPolicyIds 
-      };
-    }
-    if (totalDiff < 1.5) {
-      return { 
-        emoji: '🙂', 
-        text: <>Things are looking up a bit. {bestPolicy.delta > 0.05 && bestPolicy.name ? <>The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> actually made things easier for me.</> : "The agenda seems to be heading in a good direction."}</>, 
-        referencedPolicyIds 
-      };
-    }
-    
-    return { 
-      emoji: '😄', 
-      text: <>I've seen a huge difference! {bestPolicy.delta > 0.05 && bestPolicy.name ? <>The <InteractivePolicy id={bestPolicy.id} name={bestPolicy.name} /> really helped me out and turned things around.</> : "The agenda directly enhanced my quality of life."}</>, 
-      referencedPolicyIds 
-    };
-  };
-
-  const voxPops = useMemo(() => {
-    const sorted = finalPopulation.map((p: any, i: number) => {
-      const baseline = baselinePopulation.find((b: any) => b.id === p.id) || initialPopulation[i];
-      return { ...p, baselineLS: baseline.currentLS, finalLS: p.currentLS, lsDiff: p.currentLS - baseline.currentLS };
-    }).sort((a: any, b: any) => a.lsDiff - b.lsDiff);
-    
-    const a = sorted[0]; 
-    const c = sorted[sorted.length - 1]; 
-    let bOptions = sorted.filter((s: any) => s.id !== a.id && s.id !== c.id);
-    let b = bOptions.find((s: any) => Math.abs(s.lsDiff - a.lsDiff) > 0.02 && Math.abs(s.lsDiff - c.lsDiff) > 0.02 && Math.abs(s.lsDiff) < 0.2);
-    if (!b) b = bOptions.sort((x: any, y: any) => Math.abs(x.lsDiff) - Math.abs(y.lsDiff))[0];
-
-    return [a, b, c];
-  }, [finalPopulation, initialPopulation, baselinePopulation, currentCycle]);
-
-  const stories = useMemo(() => {
-    return voxPops.map(vp => ({
-      ...vp,
-      story: getVoterStory(vp, currentCycle, setHoveredPolicyId)
-    }));
-  }, [voxPops, currentCycle]); 
-
-  const referencedPolicyIds = useMemo(() => {
-    const ids = new Set<string>();
-    stories.forEach(vp => {
-      vp.story.referencedPolicyIds.forEach((id: string) => ids.add(id));
-    });
-    return Array.from(ids);
-  }, [stories]);
-
-  return (
-    <div className="flex gap-6 w-full animate-in fade-in h-full">
-      <div className="flex-1 flex flex-col gap-4 min-w-[500px]">
-        <DPMMessage title="Voter Sentiment">
-          We've tracked how your policies impacted individual voters. Hover over the policy names below to review the enacted legislation.
-        </DPMMessage>
-        
-        <div className="flex flex-col gap-3 w-full">
-          {stories.map((vp, idx) => (
-            <div key={idx} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-4 items-center w-full shadow-sm">
-              <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-14 h-14 shrink-0 shadow-sm">
-                <span className="text-2xl">{vp.story.emoji}</span>
-              </div>
-              
-              <div className="flex-1 w-full min-w-0">
-                <div className="flex items-center justify-between mb-2 w-full">
-                  <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
-                  
-                  <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm shrink-0">
-                    <span className="text-xs font-bold text-zinc-500">
-                       LS: {vp.baselineLS.toFixed(1)} <span className="text-zinc-300">→</span> {vp.finalLS.toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm text-zinc-600 italic leading-snug">"{vp.story.text}"</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col">
-        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3">Referenced Legislation</h4>
-        <div className="flex flex-col gap-3 overflow-y-auto pr-2">
-          {referencedPolicyIds.map(id => {
-            const policy = availablePolicies.find(p => p.id === id);
-            if (!policy) return null;
-            const isHovered = hoveredPolicyId === id;
-            
-            return (
-              <div 
-                key={id} 
-                className={`p-4 rounded-xl border transition-all duration-300 ${isHovered ? 'bg-pink-50 border-pink-400 shadow-md scale-[1.02]' : 'bg-white border-zinc-200 shadow-sm opacity-80'}`}
-              >
-                <span className="text-[9px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
-                <p className="font-bold text-sm text-zinc-900 mb-1.5">{policy.policyName}</p>
-                <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{policy.description}</p>
-              </div>
-            );
-          })}
-          {referencedPolicyIds.length === 0 && (
-            <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
-              <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+// --- Page 5: Academic Debrief (Kept inline as it wasn't extracted) ---
 
 const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
@@ -621,7 +211,8 @@ const PageDebrief = ({ currentCycle, finalPopulation, setPageReady }: any) => {
   );
 }
 
-// Main Modal Component
+// --- Main Modal Component ---
+
 export default function ElectionModal({ 
   currentMetricScore, currentCycle, approvalRating, cycleAttempts, 
   initialPopulation, baselinePopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
@@ -641,7 +232,7 @@ export default function ElectionModal({
   const getModalTitle = () => {
     if (page === 0) return "Term Summary";
     if (page === 1) return "Election Verdict";
-    if (page === 2) return "Wellbeing Mobility";
+    if (page === 2) return "Demographic Shifts";
     if (page === 3) return "Electorate Feedback";
     if (page === 4) return "Academic Debrief";
     return "Election Sequence";
@@ -661,10 +252,10 @@ export default function ElectionModal({
         <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
         
         <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">
-          {page === 0 && <PageMacro initialPopulation={initialPopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} yAxisMax={yAxisMax} setPageReady={setPageReady} />}
-          {page === 1 && <PageVerdict approvalRating={approvalRating} won={won} setPageReady={setPageReady} />}
-          {page === 2 && <PageCohorts finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
-          {page === 3 && <PageMicro initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} setPageReady={setPageReady} />}
+          {page === 0 && <StageTermSummary currentCycle={currentCycle} initialPopulation={initialPopulation} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
+          {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
+          {page === 2 && <StagePopulationChange finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
+          {page === 3 && <StageElectorateFeedback initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
           {page === 4 && <PageDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} setPageReady={setPageReady} />}
         </motion.div>
 
@@ -684,7 +275,7 @@ export default function ElectionModal({
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Changes \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
+            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Demographic Shifts \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
