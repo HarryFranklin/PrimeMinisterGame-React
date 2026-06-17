@@ -15,19 +15,15 @@ const calculateAverage = (pop: Respondent[]): number => {
   return pop.length > 0 ? pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length : 0;
 };
 
-// Helper function to append the current metrics of all citizens into their longitudinal ledgers
+// Helper function to append the current metrics of all citizens into their ledgers
 const recordTurnState = (pop: Respondent[], cycle: ElectionCycle, turn: number, policyId: string | null, policyName: string | null): Respondent[] => {
   const allLS = pop.map(p => p.currentLS);
   const multipliers = WelfareMetrics.getPopulationCurveMultipliers(allLS);
 
   return pop.map(p => {
-    const pu = WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities);
-    let su = 0;
-    for (let i = 0; i < 6; i++) {
-      su += multipliers[i] * p.societalUtilities[i];
-    }
-    su = su / pop.length;
-
+    const pu = WelfareMetrics.getCycleUtility(p, ElectionCycle.PersonalUtility, pop.length, allLS, multipliers);
+    const su = WelfareMetrics.getCycleUtility(p, ElectionCycle.SocietalUtility, pop.length, allLS, multipliers);
+    
     const record: TurnLedger = { turn, policyId, policyName, ls: p.currentLS, personalUtility: pu, societalUtility: su };
     
     const newLedger = [...p.historicalLedger];
@@ -38,7 +34,7 @@ const recordTurnState = (pop: Respondent[], cycle: ElectionCycle, turn: number, 
     } else {
       newLedger.push({ cycle, turns: [record] });
     }
-
+    
     return { ...p, historicalLedger: newLedger };
   });
 };
@@ -47,6 +43,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [population, setPopulation] = useState<Respondent[]>([]);
   const [initialPopulation, setInitialPopulation] = useState<Respondent[]>([]);
   const [baselinePopulation, setBaselinePopulation] = useState<Respondent[]>([]);
+
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
@@ -57,9 +54,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [currentTurn, setCurrentTurn] = useState(1);
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
+  
   const [isEnacting, setIsEnacting] = useState(false);
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
-
+  
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
   const [cycleMAO, setCycleMAO] = useState<number>(0);
@@ -77,7 +75,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, []);
 
   const startCycle = useCallback((cycle: ElectionCycle, basePop: Respondent[]) => {
-    // Clear out any existing ledger data for this specific cycle if restarting, then log Turn 1
     let popToRecord = basePop.map(p => {
       const cleanLedger = (p.historicalLedger || []).filter(l => l.cycle !== cycle);
       return { ...p, historicalLedger: cleanLedger };
@@ -159,7 +156,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   useEffect(() => {
     const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
-
     setYAxisMax(prev => {
       const targetMax = Math.max(100, Math.ceil(maxCurrent / 20) * 20);
       if (targetMax > prev) {
@@ -183,11 +179,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const handleApplyPolicy = () => {
     if (!selectedPolicy || isEnacting) return;
-
     setIsEnacting(true);
 
     setTimeout(() => {
-      // Record the new population state into the longitudinal ledgers
       const nextPop = recordTurnState(previewPopulation, currentCycle, currentTurn + 1, selectedPolicy.id, selectedPolicy.policyName);
       setPopulation(nextPop);
       
@@ -221,7 +215,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const handleResetCycle = useCallback(() => {
     wipeSave();
-    // Revert LS to ONS Baseline, but preserve the ledger for previous cycles
     const nextPop = population.map(p => ({
       ...p,
       currentLS: getONSBaselineLS(p.id)
@@ -246,17 +239,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       return;
     }
 
-    let nextCycle = ElectionCycle.Rawlsian;
-    if (currentCycle === ElectionCycle.Benthamite) nextCycle = ElectionCycle.Rawlsian;
-    else if (currentCycle === ElectionCycle.Rawlsian) nextCycle = ElectionCycle.PersonalUtility;
-    else if (currentCycle === ElectionCycle.PersonalUtility) nextCycle = ElectionCycle.SocietalUtility;
+    const nextCycle = currentCycle + 1;
 
     // Revert LS to ONS Baseline, but preserve the ledger from the completed cycle
     const nextPop = population.map(p => ({
       ...p,
       currentLS: getONSBaselineLS(p.id)
     }));
-
+    
     startCycle(nextCycle, nextPop);
     setCycleAttempts(1);
   };
@@ -265,17 +255,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     if (population.length === 0) return [];
     const allLS = population.map(p => p.currentLS);
     const multipliers = currentCycle === ElectionCycle.SocietalUtility ? WelfareMetrics.getPopulationCurveMultipliers(allLS) : null;
-
+    
     return population.map(r => {
-      let yVal = r.currentLS;
-      if (currentCycle === ElectionCycle.SocietalUtility && multipliers) {
-        let personSocietalUtility = 0;
-        for (let i = 0; i < 6; i++) {
-          personSocietalUtility += multipliers[i] * r.societalUtilities[i];
-        }
-        yVal = personSocietalUtility / population.length;
-      }
-      else if (currentCycle === ElectionCycle.PersonalUtility) yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      const yVal = WelfareMetrics.getCycleUtility(r, currentCycle, population.length, allLS, multipliers);
       return { id: r.id, x: r.currentLS, y: yVal };
     });
   }, [population, currentCycle]);
@@ -284,17 +266,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     if (previewPopulation.length === 0) return [];
     const allLS = previewPopulation.map(p => p.currentLS);
     const multipliers = currentCycle === ElectionCycle.SocietalUtility ? WelfareMetrics.getPopulationCurveMultipliers(allLS) : null;
-
+    
     return previewPopulation.map(r => {
-      let yVal = r.currentLS;
-      if (currentCycle === ElectionCycle.SocietalUtility && multipliers) {
-        let personSocietalUtility = 0;
-        for (let i = 0; i < 6; i++) {
-          personSocietalUtility += multipliers[i] * r.societalUtilities[i];
-        }
-        yVal = personSocietalUtility / previewPopulation.length;
-      }
-      else if (currentCycle === ElectionCycle.PersonalUtility) yVal = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
+      const yVal = WelfareMetrics.getCycleUtility(r, currentCycle, previewPopulation.length, allLS, multipliers);
       return { id: r.id, x: r.currentLS, y: yVal };
     });
   }, [previewPopulation, currentCycle]);
