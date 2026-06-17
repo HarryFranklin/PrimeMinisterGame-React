@@ -1,7 +1,13 @@
 import { Respondent, Policy } from "./types";
 
+// Salting ensures that random people are hit per policy when it's a given % that are hit.
+// Rather than the same every time.
+
 export class PolicyEngine {
   static applyPolicy(population: Respondent[], policy: Policy): Respondent[] {
+    // Generate a simple numeric salt from the policy ID string
+    const policySalt = policy.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
     return population.map(r => {
       let newLS = r.currentLS;
 
@@ -10,10 +16,15 @@ export class PolicyEngine {
         if (rule.minLS !== undefined && r.currentLS < rule.minLS) continue;
         if (rule.maxLS !== undefined && r.currentLS > rule.maxLS) continue;
 
-        // 2. Probability targeting (for policies that only affect a percentage of the population)
+        // Warn in development if proportion is arbitrarily set on a universal rule
+        // if (process.env.NODE_ENV === 'development' && rule.affectEveryone && rule.proportion !== 1) {
+        //   console.warn(`PolicyRule for ${policy.id} specifies affectEveryone: true but has a proportion of ${rule.proportion}`);
+        // }
+
+        // 2. Probability targeting 
         if (!rule.affectEveryone) {
-          // Uses deterministic pseudo-randomness based on ID so the exact same people are consistently affected
-          const pseudoRandom = (Math.sin(r.id) + 1) / 2;
+          // Salting the pseudo-random generation guarantees different policies hit different demographics
+          const pseudoRandom = (Math.sin(r.id + policySalt) + 1) / 2;
           if (pseudoRandom > rule.proportion) continue;
         }
 
