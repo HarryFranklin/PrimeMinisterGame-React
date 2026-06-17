@@ -28,28 +28,16 @@ export class MAOEngine {
         .filter(opt => !currentPath.some(p => p.id === opt.id))
         .slice(0, 4);
 
-      // --- BEAM SEARCH OPTIMISATION ---
-      // Evaluate the immediate impact of all remaining valid options
-      const evaluatedOptions = options.map(opt => {
-        const nextPop = PolicyEngine.applyPolicy(currentPop, opt);
-        const score = metricFunction(nextPop, cycle);
-        return { opt, nextPop, score };
-      });
-
-      // Sort by best immediate score and slice the top 3.
-      // This trims the DFS tree from 32,768 paths back down to 243.
-      evaluatedOptions.sort((a, b) => b.score - a.score);
-      const bestOptions = evaluatedOptions.slice(0, 3);
-
-      // Recursive Case: Only test the 3 most viable paths
-      for (let i = 0; i < bestOptions.length; i++) {
-        currentPath.push(bestOptions[i].opt);
-        search(turnIndex + 1, bestOptions[i].nextPop, currentPath);
+      // Recursive Case: Full DFS evaluating all 1,024 valid paths
+      for (let i = 0; i < options.length; i++) {
+        currentPath.push(options[i]);
+        search(turnIndex + 1, PolicyEngine.applyPolicy(currentPop, options[i]), currentPath);
         currentPath.pop(); 
       }
     }
 
     search(0, initialPopulation, []);
+
     return { maxScore, optimalPath: bestPath };
   }
 }

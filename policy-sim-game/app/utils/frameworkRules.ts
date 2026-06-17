@@ -47,7 +47,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     graphColor: "#8b5cf6",
-    winThresholdScalar: 0.98,
+    winThresholdScalar: 0.95,
     briefingText: "Voters have become deeply selfish. They will protect their own wellbeing. You must navigate their self-interest and avoid policies that make the middle class feel like they are losing out.",
   },
   [ElectionCycle.SocietalUtility]: {
@@ -59,7 +59,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: "#10b981",
-    winThresholdScalar: 0.97,
+    winThresholdScalar: 0.9875,
     briefingText: "The public is angry about wellbeing inequality. You must balance economic progress with the electorate's demand for fairness. A society with high National Average Happiness that is highly unequal society will lead to you being voted out.",
   },
   
