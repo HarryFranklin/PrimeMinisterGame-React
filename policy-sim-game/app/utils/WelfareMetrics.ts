@@ -4,7 +4,6 @@ const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 export class WelfareMetrics {
   static getUtilityForPerson(lsScore: number, curve: number[]): number {
-    if (lsScore <= -0.9) return curve[0] * 10;
     const score = Math.max(lsScore, 2.0);
     const exactIndex = score / 2.0;
     
@@ -21,14 +20,12 @@ export class WelfareMetrics {
 
   static getPopulationCurveMultipliers(populationLS: number[]): number[] {
     const multipliers = [0, 0, 0, 0, 0, 0];
+
     for (let i = 0; i < populationLS.length; i++) {
       const lsScore = populationLS[i];
-      if (lsScore <= -0.9) {
-        multipliers[0] += 10;
-        continue;
-      }
       const score = Math.max(lsScore, 2.0);
       const exactIndex = score / 2.0;
+      
       let lowerIndex = Math.floor(exactIndex);
       let upperIndex = Math.ceil(exactIndex);
       
@@ -40,6 +37,7 @@ export class WelfareMetrics {
       multipliers[lowerIndex] += (1 - t) * 10;
       multipliers[upperIndex] += t * 10;
     }
+
     return multipliers;
   }
 
@@ -87,6 +85,7 @@ export class WelfareMetrics {
     if (cycleMAO <= 0) return 0;
     const threshold = cycleMAO * scalar;
     let approvalRating = 0;
+
     if (currentScore >= threshold) {
       const range = cycleMAO - threshold;
       const progress = range <= 0 ? 1 : (currentScore - threshold) / range;
@@ -95,6 +94,7 @@ export class WelfareMetrics {
       const progress = Math.max(0, currentScore) / threshold;
       approvalRating = progress * 51;
     }
+
     const finalRating = Math.max(0, Math.min(100, approvalRating));
     return Math.round(finalRating * 10) / 10;
   }
