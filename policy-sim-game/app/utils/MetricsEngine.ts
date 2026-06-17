@@ -13,36 +13,31 @@ export class MetricsEngine {
         return WelfareMetrics.calculateSocietalFloor(pop);
     }
     
-    if (cycle === ElectionCycle.SocietalUtility) {
+    const allLS = cycle === ElectionCycle.SocietalUtility ? pop.map(p => p.currentLS) : [];
+    const multipliers = cycle === ElectionCycle.SocietalUtility ? WelfareMetrics.getPopulationCurveMultipliers(allLS) : null;
 
-      const allLS = pop.map(p => p.currentLS);
-      const multipliers = WelfareMetrics.getPopulationCurveMultipliers(allLS);
-      let totalPopUtility = 0;
-      
-      for (let i = 0; i < pop.length; i++) {
-        const r = pop[i];
-        let personSocietalUtility = 0;
-        for (let j = 0; j < 6; j++) {
-          personSocietalUtility += multipliers[j] * r.societalUtilities[j];
-        }
-        totalPopUtility += (personSocietalUtility / pop.length);
-      }
-      return totalPopUtility / pop.length;
+    let totalUtility = 0;
+    for (let i = 0; i < pop.length; i++) {
+        totalUtility += WelfareMetrics.getCycleUtility(pop[i], cycle, pop.length, allLS, multipliers);
     }
 
-    return pop.reduce((s, r) => s + WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities), 0) / pop.length;
+    return totalUtility / pop.length;
   }
 
   static generateCycleSchedule(cycle: ElectionCycle, available: Policy[], turnsPerCycle: number): Policy[][] {
     const schedule: Policy[][] = [];
+    
+    // The pseudo-random seed is deliberately deterministic per cycle so that players 
+    // encountering failure will always face the exact same sequence of policies upon retrying.
+    // This allows them to systematically deduce and learn the optimal path.
     let seed = cycle * 12345 + 1;
-
     const pseudoRandom = () => {
       const x = Math.sin(seed++) * 10000;
       return x - Math.floor(x);
     };
 
     let pool = [...available];
+
     for (let t = 0; t < turnsPerCycle; t++) {
       const turnPolicies: Policy[] = [];
       for (let p = 0; p < 8; p++) {
