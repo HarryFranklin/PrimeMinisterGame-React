@@ -1,8 +1,5 @@
 import { Respondent, Policy } from "./types";
 
-// Salting ensures that random people are hit per policy when it's a given % that are hit.
-// Rather than the same every time.
-
 export class PolicyEngine {
   static applyPolicy(population: Respondent[], policy: Policy): Respondent[] {
     // Generate a simple numeric salt from the policy ID string
@@ -11,7 +8,9 @@ export class PolicyEngine {
     return population.map(r => {
       let newLS = r.currentLS;
 
-      for (const rule of policy.specificRules) {
+      for (let i = 0; i < policy.specificRules.length; i++) {
+        const rule = policy.specificRules[i];
+        
         // 1. Standard LS threshold targeting
         if (rule.minLS !== undefined && r.currentLS < rule.minLS) continue;
         if (rule.maxLS !== undefined && r.currentLS > rule.maxLS) continue;
@@ -28,10 +27,18 @@ export class PolicyEngine {
           if (pseudoRandom > rule.proportion) continue;
         }
 
-        newLS += rule.impact;
+        // 3. Deterministic Variance (Smoothing)
+        // Combine the citizen ID, policy salt, and rule index to create a distinct, repeatable seed
+        const noiseSeed = r.id + policySalt + (i * 137);
+        const pseudoRandomNoise = (Math.sin(noiseSeed) + 1) / 2; 
+        
+        // Creates a multiplier between 0.9 and 1.1 (±10%)
+        const varianceModifier = 1 + (pseudoRandomNoise - 0.5) * 0.2;
+        
+        newLS += (rule.impact * varianceModifier);
       }
 
-      // 3. Clamp Life Satisfaction strictly between the bounds of 0 and 10
+      // 4. Clamp Life Satisfaction strictly between the bounds of 0 and 10
       return { ...r, currentLS: Math.max(0, Math.min(10, newLS)) };
     });
   }
