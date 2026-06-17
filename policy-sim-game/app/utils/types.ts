@@ -33,7 +33,7 @@ export interface PolicyRule {
   note: string;
   minLS?: number;
   maxLS?: number;
-  affectEveryone?: boolean;
+  affectEveryone: boolean;
   proportion: number;
   impact: number;
 }
