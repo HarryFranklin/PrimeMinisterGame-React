@@ -14,21 +14,19 @@ import { ModalOverlay } from "./components/modals/SharedModalComponents";
 
 import GameHeader from "./components/GameHeader";
 import DashboardTab from "./components/tabs/DashboardTab";
-
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
 
 export default function Home() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
-
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
 
   useEffect(() => {
     const evaluateViewport = () => {
-      const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isLowResolution = window.innerWidth < 1024;
-      setIsUnsupportedScreen(isMobileDevice || isLowResolution);
+      // Rely strictly on viewport dimensions to avoid DevTools / User-Agent spoofing bugs
+      const isLowResolution = window.innerWidth < 1024 || window.innerHeight < 600;
+      setIsUnsupportedScreen(isLowResolution);
     };
 
     evaluateViewport();
