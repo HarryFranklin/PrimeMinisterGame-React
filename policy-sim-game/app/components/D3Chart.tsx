@@ -194,7 +194,7 @@ export default function D3Chart({
 
       chart.select(".axis-y")
         .transition().duration(dimensions.width ? 0 : 500)
-        .call(d3.axisLeft(yScale).ticks(5) as any)
+        .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => "") as any) 
         .call(styleAxis);
       
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
