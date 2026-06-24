@@ -61,7 +61,7 @@ export const availablePolicies: Policy[] = [
     policyName: "Corporate Deregulation",
     description: "Removes statutory compliance barriers to spur rapid growth. Heavily boosts the top end, mildly boosts the middle, but erodes protections for the lowest percentiles.",
     specificRules: [
-      { note: "Major boost to top", minLS: 8.0, affectEveryone: false, proportion: 0.85, impact: 1.5 },
+      { note: "Major boost to top", minLS: 8.0, maxLS: 9.5, affectEveryone: false, proportion: 0.85, impact: 1.5 },
       { note: "Minor boost to middle", minLS: 5.0, maxLS: 7.9, affectEveryone: false, proportion: 0.50, impact: 0.4 },
       { note: "Protection erosion penalty to bottom", maxLS: 4.5, affectEveryone: false, proportion: 0.90, impact: -0.6 }
     ]
@@ -78,11 +78,11 @@ export const availablePolicies: Policy[] = [
   {
     id: "universal-basic-income",
     policyName: "Universal Basic Income Pilot",
-    description: "A guaranteed baseline income for all citizens. Shifts the entire distribution upwards, funded by a flat penalty to the top tier.",
+    description: "A guaranteed monthly income for all. Shifts the entire distribution upwards, funded by a flat progressive tax hike on the top tier.",
     specificRules: [
       { note: "Boost to bottom half", maxLS: 5.5, affectEveryone: true, proportion: 1.0, impact: 1.4 },
-      { note: "Boost to middle", minLS: 5.6, maxLS: 7.5, affectEveryone: true, proportion: 1.0, impact: 0.5 },
-      { note: "Penalty to top tier", minLS: 8.5, affectEveryone: true, proportion: 1.0, impact: -1.2 }
+      { note: "Boost to middle-class", minLS: 5.6, maxLS: 7.5, affectEveryone: true, proportion: 1.0, impact: 0.5 },
+      { note: "Tax funding from top tier", minLS: 8.5, affectEveryone: true, proportion: 1.0, impact: -1.2 }
     ]
   },
 
@@ -112,7 +112,7 @@ export const availablePolicies: Policy[] = [
     policyName: "Elective Surgery Backlog Drive",
     description: "Surges regional hospital funding to eliminate waiting queues. Provides a massive quality of life increase to a small, randomly distributed segment.",
     specificRules: [
-      { note: "Health mobility restored", affectEveryone: false, proportion: 0.15, impact: 2.2 },
+      { note: "Health mobility restored", maxLS: 7.8, affectEveryone: false, proportion: 0.15, impact: 2.2 },
       { note: "General tax cost", affectEveryone: false, proportion: 0.95, impact: -0.2 }
     ]
   },
@@ -152,8 +152,9 @@ export const availablePolicies: Policy[] = [
     policyName: "Universal Prescription Fee Exemptions",
     description: "Bypasses all standard prescription fees across pharmacies in lower-income areas.",
     specificRules: [
-      { note: "Immediate budget relief for bottom", maxLS: 4.0, affectEveryone: true, proportion: 1.0, impact: 0.8 },
-      { note: "Regular medical budget ease for middle", minLS: 4.1, maxLS: 6.5, affectEveryone: true, proportion: 1.0, impact: 0.3 }
+      { note: "Immediate budget relief for lowest LS", maxLS: 4.0, affectEveryone: true, proportion: 1.0, impact: 0.8 },
+      { note: "Regular medical budget ease for middle", minLS: 4.1, maxLS: 6.5, affectEveryone: true, proportion: 1.0, impact: 0.3 },
+      { note: "Strain on specialist availability", minLS: 7.0, affectEveryone: true, proportion: 1.0, impact: -0.15 }
     ]
   }
 ];
