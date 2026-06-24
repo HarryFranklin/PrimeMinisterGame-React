@@ -2,8 +2,6 @@ export enum AxisVariable {
   LifeSatisfaction,
   PersonalUtility,
   SocietalFairness,
-  DeltaPersonalUtility,
-  DeltaSocietalFairness
 }
 
 export interface TurnLedger {
