@@ -15,11 +15,6 @@ export class PolicyEngine {
         if (rule.minLS !== undefined && r.currentLS < rule.minLS) continue;
         if (rule.maxLS !== undefined && r.currentLS > rule.maxLS) continue;
 
-        // Warn in development if proportion is arbitrarily set on a universal rule
-        // if (process.env.NODE_ENV === 'development' && rule.affectEveryone && rule.proportion !== 1) {
-        //   console.warn(`PolicyRule for ${policy.id} specifies affectEveryone: true but has a proportion of ${rule.proportion}`);
-        // }
-
         // 2. Probability targeting 
         if (!rule.affectEveryone) {
           // Salting the pseudo-random generation guarantees different policies hit different demographics
