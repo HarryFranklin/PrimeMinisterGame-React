@@ -81,7 +81,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         
         <div className="bg-zinc-100 border border-zinc-200 p-5 rounded-xl shadow-sm">
           <div className="mb-4">
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-1">Strategic Focus</span>
             <span className="text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
             <p className="text-sm text-zinc-600 leading-relaxed">
               {rule.targetMetricDescription}
