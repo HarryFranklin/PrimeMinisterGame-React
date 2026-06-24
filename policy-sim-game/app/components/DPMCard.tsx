@@ -39,7 +39,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
   }
 
   const getAdvisory = () => {
-    if (selectedPolicy) return "Review the likely impact on the Electorate Analysis tab before enacting this policy.";
+    if (selectedPolicy) return "If you have any Wellbeing Impact Forecasts remaining, review the policy's impact before enacting it.";
     
     switch (currentCycle) {
       case ElectionCycle.Benthamite: 
