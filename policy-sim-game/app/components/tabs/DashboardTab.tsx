@@ -76,6 +76,17 @@ export default function DashboardTab() {
   const [displayApproval, setDisplayApproval] = useState(approvalRating);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
 
+  // Track which policies have been forecasted this turn
+  const [forecastedPolicies, setForecastedPolicies] = useState<Set<string>>(new Set());
+
+  // Reset the forecasting budget whenever the turn rolls over
+  useEffect(() => {
+    setForecastedPolicies(new Set());
+  }, [currentTurn, currentCycle]);
+
+  const isForecasted = selectedPolicy ? forecastedPolicies.has(selectedPolicy.id) : false;
+  const forecastsRemaining = 2 - forecastedPolicies.size;
+
   useEffect(() => {
     let animationFrameId: number;
     let startTime: number;
@@ -88,11 +99,13 @@ export default function DashboardTab() {
     }
 
     const duration = 1200; 
+
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easeProgress = 1 - Math.pow(1 - progress, 3); 
+
       setDisplayApproval(startValue + change * easeProgress);
 
       if (progress < 1) {
@@ -119,8 +132,8 @@ export default function DashboardTab() {
       let binCount = 0;
       const segments: any[] = [];
 
-      // MODE A: Historical Hover Mode
       if (isParliamentDissolved && hoveredHistoryTurn !== null) {
+        // ... (Keep existing Historical Hover Mode logic exact same) ...
         const residentsInBinBefore = population.filter((r: Respondent) => {
           const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
           if (!ledger) return false;
@@ -150,9 +163,7 @@ export default function DashboardTab() {
         if (stableCount > 0) segments.push({ label: 'Stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
         if (worsenCount > 0) segments.push({ label: 'Worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
 
-      } 
-      // MODE B: Standard Future Preview Mode
-      else {
+      } else {
         const residentsInBin = population.filter((r: Respondent) => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
         binCount = residentsInBin.length;
 
@@ -179,6 +190,15 @@ export default function DashboardTab() {
     });
   }, [population, previewPopulation, selectedPolicy, hoveredHistoryTurn, isParliamentDissolved, currentCycle]);
 
+  // If a policy is selected but not forecasted, render the graph using current state in grey
+  const displayStackedData = (selectedPolicy && !isForecasted && !isParliamentDissolved)
+    ? currentHistogramData.map(d => ({ 
+        name: d.name, 
+        count: d.count, 
+        segments: [{ label: 'Will be stable', value: d.count, color: (IMPACT_COLORS as any)['Will be stable'] }] 
+      }))
+    : stackedData;
+
   const enactedLegislation = useMemo(() => {
     return history.filter(h => h.turn > 1).map(h => {
       const pDetails = availablePolicies.find(pol => pol.id === h.enactedPolicyId);
@@ -192,6 +212,7 @@ export default function DashboardTab() {
   }, [hoveredHistoryTurn, history]);
 
   return (
+    // ... Outer Wrappers remain exactly the same until the Forecast Card
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
@@ -239,20 +260,22 @@ export default function DashboardTab() {
               </h3>
             </div>
             
-            <div className="flex-1 p-3 pb-0 min-h-0 relative pointer-events-none">
-              <D3Chart 
-                plotType="1D" 
-                chartData={[]}
-                histogramData={stackedData} 
-                xAxisType={AxisVariable.LifeSatisfaction}
-                yAxisType={rule.yAxisType} 
-                color="#d4d4d8"
-                visualStyle={'solid'} 
-                yAxisMax={yAxisMax}
-              />
+            <div className="flex-1 p-3 pb-0 min-h-0 relative">
+              <div className="absolute inset-0 p-3 pb-0 pointer-events-none">
+                <D3Chart 
+                  plotType="1D" 
+                  chartData={[]}
+                  histogramData={displayStackedData} 
+                  xAxisType={AxisVariable.LifeSatisfaction}
+                  yAxisType={rule.yAxisType} 
+                  color="#d4d4d8"
+                  visualStyle={'solid'} 
+                  yAxisMax={yAxisMax}
+                />
+              </div>
               
               {!selectedPolicy && !isParliamentDissolved && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[250px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <span className="text-zinc-400 text-lg">💡</span>
@@ -265,11 +288,37 @@ export default function DashboardTab() {
                 </div>
               )}
 
+              {/* FORECAST BUDGET OVERLAY */}
+              {selectedPolicy && !isForecasted && !isParliamentDissolved && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
+                  <div className="bg-white px-5 py-4 rounded-xl shadow-xl border border-zinc-200 text-center max-w-[280px]">
+                    <div className="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-pink-100">
+                      <span className="text-pink-500 text-lg">📊</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Impact Unknown</h4>
+                    <p className="text-xs text-zinc-500 font-medium mb-4">
+                      You have <strong className="text-pink-600">{forecastsRemaining}</strong> forecast{forecastsRemaining !== 1 ? 's' : ''} remaining this turn.
+                    </p>
+                    <button 
+                      onClick={() => {
+                        if (forecastsRemaining > 0 && selectedPolicy) {
+                          setForecastedPolicies(prev => new Set(prev).add(selectedPolicy.id));
+                        }
+                      }}
+                      disabled={forecastsRemaining === 0}
+                      className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-md ${forecastsRemaining > 0 ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`}
+                    >
+                      {forecastsRemaining > 0 ? 'Run Data Forecast' : 'Out of Forecasts'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {isParliamentDissolved && hoveredHistoryTurn === null && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">📊</span>
+                      <span className="text-zinc-400 text-lg">⏳</span>
                     </div>
                     <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Interactive History</h4>
                     <p className="text-xs text-zinc-500 font-medium">
@@ -280,7 +329,8 @@ export default function DashboardTab() {
               )}
             </div>
 
-            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${(selectedPolicy || hoveredHistoryTurn !== null) ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+            {/* Fade out the legend if the policy isn't forecasted yet */}
+            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${((selectedPolicy && isForecasted) || hoveredHistoryTurn !== null) ? 'opacity-100' : 'opacity-30 grayscale'}`}>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
                 <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{hoveredHistoryTurn ? 'Improved' : 'Will Improve'}</span>
@@ -297,7 +347,7 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: DPM & Approval */}
+        {/* MIDDLE COLUMN: DPM & Approval (Remains Unchanged) */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           <DPMCard 
             currentCycle={currentCycle}
@@ -307,7 +357,6 @@ export default function DashboardTab() {
             cycleMAO={cycleMAO}
             currentMetricScore={turnMetricScore}
           />
-
           <div className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all">
             <div className="absolute top-0 left-0 w-full h-1.5" style={{backgroundColor: rule.graphColor}} />
             <p className="text-xs lg:text-sm font-bold uppercase tracking-widest text-zinc-400 mb-1">Public Approval</p>
@@ -329,10 +378,9 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
+        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (Remains Mostly Unchanged) */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 relative">
           
-          {/* Animated Historical Popup Rendered Here */}
           {hoveredHistoryTurn && isParliamentDissolved && (
             <HistoricalImpactPopup 
               turn={hoveredHistoryTurn} 
@@ -350,7 +398,7 @@ export default function DashboardTab() {
                 {isParliamentDissolved ? "Enacted Legislation" : "Legislative Agenda"}
               </h3>
               <p className="text-sm text-zinc-600 mt-1">
-                {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to forecast its impact."}
+                {isParliamentDissolved ? "The policies enacted during your term." : "Select a policy to review its details."}
               </p>
             </div>
           </div>
@@ -358,9 +406,11 @@ export default function DashboardTab() {
           <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
-              // Standard Agenda View
               currentDeck.slice(0, 4).map((policy) => {
                 const isSelected = selectedPolicy?.id === policy.id;
+                // Add a small indicator if the policy has been forecasted
+                const isPolForecasted = forecastedPolicies.has(policy.id);
+
                 return (
                   <button
                     key={policy.id}
@@ -373,9 +423,18 @@ export default function DashboardTab() {
                     } ${isEnacting && 'opacity-50'}`}
                   >
                     {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
-                    <p className={`font-bold text-base lg:text-lg leading-tight mb-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
-                      {policy.policyName}
-                    </p>
+                    
+                    <div className="flex justify-between items-start w-full mb-2">
+                      <p className={`font-bold text-base lg:text-lg leading-tight pr-4 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                        {policy.policyName}
+                      </p>
+                      {isPolForecasted && (
+                        <span className="shrink-0 bg-pink-100 text-pink-600 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
+                          Data Analysed
+                        </span>
+                      )}
+                    </div>
+
                     <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
                       {policy.description}
                     </p>
@@ -383,7 +442,6 @@ export default function DashboardTab() {
                 );
               })
             ) : (
-              // History View (When Parliament Dissolved)
               <div className="flex flex-col gap-2.5">
                 {enactedLegislation.map((leg, index) => (
                   <div 
@@ -425,6 +483,7 @@ export default function DashboardTab() {
               </button>
             )}
           </div>
+
         </div>
       </div>
     </div>
