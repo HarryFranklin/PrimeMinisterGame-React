@@ -71,11 +71,11 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white border-l-4 border-l-pink-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm">
             <span className="text-xs font-black uppercase tracking-widest text-pink-600 block mb-1">Current Score</span>
-            <span className="block text-3xl font-black text-zinc-900">{currentMetricScore.toFixed(2)}</span>
+            <span className="block text-2xl font-black text-zinc-900">{currentMetricScore.toFixed(2)}</span>
           </div>
           <div className="bg-white border-l-4 border-l-zinc-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm opacity-90">
             <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-1">Target Score</span>
-            <span className="block text-3xl font-black text-zinc-700">{targetScore}</span>
+            <span className="block text-2xl font-black text-zinc-700">{targetScore}</span>
           </div>
         </div>
         
