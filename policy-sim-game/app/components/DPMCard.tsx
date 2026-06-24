@@ -57,39 +57,39 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
 
   return (
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
-      <div className="p-5 border-b border-zinc-200 bg-zinc-100 flex items-center gap-4 shrink-0 relative z-10">
-        <span className="text-4xl bg-white border border-zinc-200 w-14 h-14 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
+      <div className="p-4 lg:p-5 border-b border-zinc-200 bg-zinc-100 flex items-center gap-4 shrink-0 relative z-10">
+        <span className="text-4xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-zinc-500 leading-tight">
             Deputy Prime Minister
           </p>
-          <h3 className="text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
+          <h3 className="text-lg lg:text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
         </div>
       </div>
       
-      <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white border-l-4 border-l-pink-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm">
+      <div className="p-4 lg:p-5 flex-1 flex flex-col gap-4 lg:gap-5 overflow-hidden">
+        <div className="grid grid-cols-2 gap-4 shrink-0">
+          <div className="bg-white border-l-4 border-l-pink-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm flex flex-col justify-center">
             <span className="text-xs font-black uppercase tracking-widest text-pink-600 block mb-1">Current Score</span>
-            <span className="block text-2xl font-black text-zinc-900">{currentMetricScore.toFixed(2)}</span>
+            <span className="block text-2xl lg:text-3xl font-black text-zinc-900">{currentMetricScore.toFixed(2)}</span>
           </div>
-          <div className="bg-white border-l-4 border-l-zinc-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm opacity-90">
+          <div className="bg-white border-l-4 border-l-zinc-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm opacity-90 flex flex-col justify-center">
             <span className="text-xs font-black uppercase tracking-widest text-zinc-500 block mb-1">Target Score</span>
-            <span className="block text-2xl font-black text-zinc-700">{targetScore}</span>
+            <span className="block text-2xl lg:text-3xl font-black text-zinc-700">{targetScore}</span>
           </div>
         </div>
         
-        <div className="bg-zinc-100 border border-zinc-200 p-5 rounded-xl shadow-sm">
-          <div className="mb-4">
-            <span className="text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
-            <p className="text-sm text-zinc-600 leading-relaxed">
+        <div className="bg-zinc-100 border border-zinc-200 p-4 lg:p-5 rounded-xl shadow-sm flex-1 flex flex-col min-h-0">
+          <div className="mb-3 shrink-0">
+            <span className="text-sm lg:text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
+            <p className="text-[13px] lg:text-sm text-zinc-600 leading-relaxed line-clamp-3 lg:line-clamp-none">
               {rule.targetMetricDescription}
             </p>
           </div>
           
-          <div className="border-t border-zinc-200 pt-4 mt-2">
-            <span className="text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-2">Advisory Note</span>
-            <p className="text-sm text-zinc-700 italic">"{getAdvisory()}"</p>
+          <div className="border-t border-zinc-200 pt-3 flex-1 flex flex-col min-h-0">
+            <span className="text-[11px] lg:text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-1.5 shrink-0">Advisory Note</span>
+            <p className="text-[13px] lg:text-sm text-zinc-700 italic overflow-hidden text-ellipsis leading-relaxed flex-1">"{getAdvisory()}"</p>
           </div>
         </div>
       </div>
