@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useGame, useUI } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { AxisVariable, Respondent } from "../../utils/types";
@@ -76,13 +76,42 @@ export default function DashboardTab() {
   const [displayApproval, setDisplayApproval] = useState(approvalRating);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
 
-  // Track which policies have been forecasted this turn
   const [forecastedPolicies, setForecastedPolicies] = useState<Set<string>>(new Set());
-  
-  // Track if the details pop-out is open for the selected policy
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // Reset the forecasting budget whenever the turn rolls over
+  // Dynamic Scaling State & Ref
+  const [scaleLevel, setScaleLevel] = useState(0);
+  const agendaListRef = useRef<HTMLDivElement>(null);
+
+  // Reset scale when policies change or window is resized
+  useEffect(() => {
+    const handleResize = () => setScaleLevel(0);
+    window.addEventListener('resize', handleResize);
+    setScaleLevel(0);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [currentDeck, isParliamentDissolved]);
+
+  // Synchronous loop before browser paint to check if items overflow
+  useLayoutEffect(() => {
+    const el = agendaListRef.current;
+    if (!el) return;
+
+    // A 2px buffer accounts for browser calculation rounding errors
+    if (el.scrollHeight > el.clientHeight + 2 && scaleLevel < 4) {
+      setScaleLevel(prev => prev + 1);
+    }
+  }, [scaleLevel, currentDeck, isParliamentDissolved]);
+
+  // Sizing tiers
+  const scaleConfigs = [
+    { title: 'text-base lg:text-lg', body: 'text-sm', pad: 'p-4', gap: 'mb-1' },     // Level 0 (Default)
+    { title: 'text-sm lg:text-base', body: 'text-xs', pad: 'p-3', gap: 'mb-0.5' },   // Level 1
+    { title: 'text-xs lg:text-sm', body: 'text-[11px]', pad: 'p-2.5', gap: 'mb-0.5' }, // Level 2
+    { title: 'text-[11px] lg:text-xs', body: 'text-[10px]', pad: 'p-2', gap: 'mb-0' },   // Level 3
+    { title: 'text-[10px] lg:text-[11px]', body: 'text-[9px]', pad: 'p-1.5', gap: 'mb-0' } // Level 4
+  ];
+  const textScale = scaleConfigs[Math.min(scaleLevel, 4)];
+
   useEffect(() => {
     setForecastedPolicies(new Set());
   }, [currentTurn, currentCycle]);
@@ -135,17 +164,17 @@ export default function DashboardTab() {
       let binCount = 0;
       const segments: any[] = [];
 
+      // MODE A: Historical Hover Mode Restored Entirely
       if (isParliamentDissolved && hoveredHistoryTurn !== null) {
-        // ... (Keep existing Historical Hover Mode logic exact same) ...
         const residentsInBinBefore = population.filter((r: Respondent) => {
           const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
           if (!ledger) return false;
           const turnData = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1);
           return turnData && Math.min(10, Math.max(0, Math.round(turnData.ls))) === i;
         });
-
+        
         binCount = residentsInBinBefore.length;
-
+        
         const improveCount = residentsInBinBefore.filter((r: Respondent) => {
           const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
           const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
@@ -159,14 +188,15 @@ export default function DashboardTab() {
           const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
           return after - before < -0.05;
         }).length;
-
+        
         const stableCount = binCount - improveCount - worsenCount;
         
         if (improveCount > 0) segments.push({ label: 'Improved', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
         if (stableCount > 0) segments.push({ label: 'Stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
         if (worsenCount > 0) segments.push({ label: 'Worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
-
-      } else {
+      } 
+      // MODE B: Standard Future Preview Mode
+      else {
         const residentsInBin = population.filter((r: Respondent) => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i);
         binCount = residentsInBin.length;
 
@@ -215,7 +245,6 @@ export default function DashboardTab() {
   }, [hoveredHistoryTurn, history]);
 
   return (
-    // ... Outer Wrappers remain exactly the same until the Forecast Card
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
       <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
         
@@ -381,7 +410,7 @@ export default function DashboardTab() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History (Remains Mostly Unchanged) */}
+        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 relative">
           
           {hoveredHistoryTurn && isParliamentDissolved && (
@@ -406,74 +435,90 @@ export default function DashboardTab() {
             </div>
           </div>
           
-          <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
+          <div ref={agendaListRef} className={`flex-1 flex flex-col gap-2 min-h-0 overflow-hidden relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
               currentDeck.slice(0, 4).map((policy, index) => {
                 const isSelected = selectedPolicy?.id === policy.id;
                 const isPolForecasted = forecastedPolicies.has(policy.id);
-                
-                // Determine if ANOTHER policy is selected and has its details open
                 const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
 
                 return (
-                  // z-50 ensures the selected policy's pop-out renders OVER the other policy cards
-                  <div key={policy.id} className={`relative w-full shrink-0 transition-all duration-500 ${isSelected ? 'z-50' : 'z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40 pointer-events-none' : ''}`}>
+                  <div key={policy.id} className={`relative flex flex-1 w-full min-h-0 transition-all duration-500 ${isSelected ? 'z-50' : 'z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40 pointer-events-none' : ''}`}>
                     
-                    <button
-                      disabled={!isAgendaUnlocked || isEnacting}
-                      onClick={() => {
-                        setSelectedPolicy(isSelected ? null : policy);
-                        setDetailsOpen(false); // Reset details when changing selection
-                      }}
-                      className={`w-full flex flex-col justify-start items-start text-left p-4 rounded-xl border transition-all duration-300 group cursor-pointer disabled:cursor-not-allowed ${
-                        isSelected ? 'border-pink-500 border-l-[6px] bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                    <div
+                      className={`w-full h-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
+                        isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
                       } ${
                         isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
                       } ${isEnacting && 'opacity-50'}`}
                     >
-                      <div className="flex justify-between items-start w-full mb-2">
-                        <p className={`font-bold text-base lg:text-lg leading-tight pr-4 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
-                          {policy.policyName}
-                        </p>
-                        {isPolForecasted && (
-                          <span className="shrink-0 bg-pink-100 text-pink-600 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
-                            Preview Available
-                          </span>
-                        )}
-                      </div>
+                      {/* Left pink bar overlay */}
+                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500" />}
 
-                      <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
-                        {policy.description}
-                      </p>
-
-                      {/* View Details Toggle Button */}
-                      {isSelected && (
-                        <div className="mt-3 flex justify-end w-full">
-                          <div 
-                            onClick={(e) => { 
-                              e.stopPropagation(); // Prevent the parent button from deselecting the policy
-                              setDetailsOpen(!detailsOpen); 
-                            }}
-                            className="text-[10px] font-bold text-pink-600 hover:text-pink-800 uppercase tracking-widest px-3 py-1.5 bg-pink-100 hover:bg-pink-200 rounded-md transition-colors shadow-sm"
-                          >
-                            {detailsOpen ? 'Close Details' : 'View Details'}
+                      {/* Main Clickable Area */}
+                      <button
+                        disabled={!isAgendaUnlocked || isEnacting}
+                        onClick={() => {
+                          setSelectedPolicy(isSelected ? null : policy);
+                          setDetailsOpen(false); 
+                        }}
+                        className={`flex-1 flex flex-col justify-between items-start text-left ${textScale.pad} h-full cursor-pointer disabled:cursor-not-allowed ${isSelected ? 'pl-4' : ''}`}
+                      >
+                        {/* Top Section: Title & Optional Preview Tag */}
+                        <div className={`w-full ${textScale.gap} ${isSelected ? 'pl-2' : ''} transition-all duration-300 shrink-0`}>
+                          <div className="flex justify-between items-start w-full">
+                            <p className={`font-bold ${textScale.title} leading-tight pr-4 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                              {policy.policyName}
+                            </p>
+                            {isPolForecasted && !isSelected && (
+                              <span className="shrink-0 bg-pink-100 text-pink-600 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
+                                Preview Available
+                              </span>
+                            )}
                           </div>
                         </div>
-                      )}
-                    </button>
 
-                    {/* Absolute Details Pop-out Overlay */}
+                        {/* Bottom Section: Description */}
+                        <p className={`w-full ${textScale.body} leading-relaxed mt-auto ${isSelected ? 'text-pink-700/80 pl-2 pb-2' : 'text-zinc-500 pb-1'} transition-all duration-300`}>
+                          {policy.description}
+                        </p>
+                      </button>
+
+                      {/* Right Action Side Panel (Exactly 15% width, visible only when selected) */}
+                      {isSelected && (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailsOpen(!detailsOpen);
+                          }}
+                          className={`w-[15%] min-w-[70px] border-l border-pink-200 flex flex-col justify-center items-center p-2 bg-pink-100/40 hover:bg-pink-100 cursor-pointer transition-colors text-center group/btn relative`}
+                        >
+                          {/* absolute badge placement if it was active */}
+                          {isPolForecasted && (
+                            <span className="absolute top-2 right-2 left-2 bg-pink-200 text-pink-700 text-[8px] uppercase tracking-wider font-black py-0.5 rounded text-center truncate">
+                              Previewed
+                            </span>
+                          )}
+                          
+                          <span className="text-[10px] font-black uppercase tracking-wider text-pink-600 group-hover/btn:text-pink-800 selection:bg-transparent select-none leading-tight">
+                            {detailsOpen ? 'Hide\nDetails' : 'View\nDetails'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Absolute Details Pop-out Layout */}
                     {isSelected && detailsOpen && (
                       <div 
-                        className={`absolute left-0 right-0 z-50 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 ${
+                        className={`absolute left-0 right-0 z-50 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 ${
                           index < 2 ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]'
                         }`}
                       >
-                        <span className="text-[12px] font-black uppercase tracking-widest text-pink-500 mb-1">Details</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-pink-500 mb-1">Details</span>
                         
                         {policy.specificRules.map((r, rIdx) => (
-                          <div key={rIdx} className="bg-white p-2.5 rounded-lg border border-pink-100 flex flex-col gap-1 shadow-sm">
+                          <div key={rIdx} className="bg-white p-3 rounded-lg border border-pink-100 flex flex-col gap-1.5 shadow-sm">
                             <div className="flex justify-between items-start gap-2">
                               <span className="font-bold text-sm text-zinc-800 leading-snug">{r.note}</span>
                               <span className={`font-black text-sm shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -481,7 +526,7 @@ export default function DashboardTab() {
                               </span>
                             </div>
                             
-                            <div className="text-[12px] text-zinc-600 flex flex-wrap gap-1 items-center mt-0.5">
+                            <div className="text-xs text-zinc-600 flex flex-wrap gap-1 items-center mt-0.5">
                               <span className="font-semibold text-zinc-700">Target Demographic:</span>
                               {r.affectEveryone ? (
                                 <span>Entire Population</span>
