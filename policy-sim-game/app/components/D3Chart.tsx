@@ -192,10 +192,29 @@ export default function D3Chart({
         .call(d3.axisBottom(xScale).tickValues([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) as any)
         .call(styleAxis);
 
+      // Clear out any previous custom labels inside the group first to prevent duplicates
+      chart.select(".axis-y").selectAll(".custom-y-label").remove();
+
       chart.select(".axis-y")
         .transition().duration(dimensions.width ? 0 : 500)
-        .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => "") as any) 
+        // Keep the absolute numbers hidden
+        .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => "") as any)
         .call(styleAxis);
+
+      // Append the label to the axis group immediately with matching styles to label-x
+      chart.select(".axis-y")
+        .append("text")
+        .attr("class", "custom-y-label")
+        .attr("text-anchor", "middle")
+        .attr("transform", "rotate(-90)")
+        // Position it cleanly to the left of the axis line
+        .attr("y", -15)
+        // Center it vertically along the exact midpoint height of the graph
+        .attr("x", -height / 2)
+        .attr("fill", "#3f3f46") // Matches label-x exactly
+        .style("font-weight", "bold") // Matches label-x exactly
+        .style("font-size", "14px") // Matches standard D3 label metrics
+        .text("Number of People");
       
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
