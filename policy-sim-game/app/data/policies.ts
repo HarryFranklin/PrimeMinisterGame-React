@@ -7,7 +7,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "universal-credit-uplift",
     policyName: "Universal Credit Uplift",
-    description: "A financial boost directly targeting the most deprived citizens. Funded by a slight baseline taxation increase on the upper half of the distribution.",
+    description: "A financial boost directly targeting the most deprived citizens. Funded by a slight baseline taxation increase on the upper half of the population.",
     specificRules: [
       // Models an 85% claim/take-up rate among eligible citizens
       { note: "High impact on bottom tail", maxLS: 4.0, affectEveryone: false, proportion: 0.85, impact: 1.5 },
@@ -50,7 +50,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "middle-income-tax-cut",
     policyName: "Broad Tax Cut",
-    description: "Reduces the basic tax rate for the majority of the distribution, boosting average aggregate scores at the expense of frozen social budgets.",
+    description: "Reduces the basic tax rate for the majority of the population, boosting average aggregate scores at the expense of frozen social budgets.",
     specificRules: [
       { note: "Boost to middle distribution", minLS: 4.5, maxLS: 8.0, affectEveryone: false, proportion: 0.95, impact: 0.8 },
       { note: "Welfare freeze penalty to bottom", maxLS: 3.5, affectEveryone: false, proportion: 0.85, impact: -0.5 }
@@ -132,7 +132,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "community-policing-surge",
     policyName: "Neighbourhood Policing Revival",
-    description: "Deploys foot-patrol officers to high-density areas. Alleviates vulnerability indexes significantly for those at the bottom of the distribution.",
+    description: "Deploys foot-patrol officers to high-density areas. Alleviates vulnerability indexes significantly for those at the bottom of the population.",
     specificRules: [
       { note: "High safety value to lowest LS", maxLS: 3.5, affectEveryone: false, proportion: 0.80, impact: 1.2 },
       { note: "Minor property protection clarity for middle", minLS: 4.0, maxLS: 6.5, affectEveryone: false, proportion: 0.50, impact: 0.4 }
