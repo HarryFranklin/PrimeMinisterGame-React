@@ -74,6 +74,21 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setDpmConsultedState({});
   }, []);
 
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     availablePolicies.forEach(policy => {
+  //       policy.specificRules.forEach(rule => {
+  //         if (!rule.affectEveryone && rule.impact >= 1.5 && rule.maxLS === undefined) {
+  //           console.warn(
+  //             `[Policy Design Risk] "${policy.policyName}" has a high impact (+${rule.impact}) ` +
+  //             `but no maxLS ceiling. High-satisfaction citizens may absorb and waste this impact.`
+  //           );
+  //         }
+  //       });
+  //     });
+  //   }
+  // }, []);
+
   const startCycle = useCallback((cycle: ElectionCycle, basePop: Respondent[]) => {
     let popToRecord = basePop.map(p => {
       const cleanLedger = (p.historicalLedger || []).filter(l => l.cycle !== cycle);
