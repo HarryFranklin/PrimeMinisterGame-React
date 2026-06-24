@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ElectionCycle } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { ModalContent, ModalHeader, InteractiveDPMEmail } from './SharedModalComponents';
@@ -12,7 +13,8 @@ interface BriefingModalProps {
 export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingModalProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
   const { cycleAttempts } = useGame();
-
+  const [showDefinition, setShowDefinition] = useState(false);
+  
   const isRetryingTerm = cycleAttempts > 1;
 
   const getDiegeticContext = () => {
@@ -55,31 +57,67 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
   };
 
   return (
-    <ModalContent maxWidth="max-w-xl" slideEntry slideExit>
-      <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
+    <ModalContent maxWidth={showDefinition ? "max-w-4xl" : "max-w-xl"} slideEntry slideExit>
+      <div className="flex gap-6 w-full transition-all duration-500">
+        
+        {/* Left Side: Main Briefing */}
+        <div className="flex-1 flex flex-col w-full min-w-[450px]">
+          <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
+          <p className="text-zinc-600 text-sm mb-4 text-center">
+            The Civil Service has prepared your mandate for the upcoming term.
+          </p>
+          
+          <InteractiveDPMEmail
+            title="Official Mandate"
+            message={getBriefingMessage()}
+            onAcknowledge={onAcknowledge}
+            buttonText="Accept Mandate & Begin Term"
+            typeSpeed={25}
+            highlights={[
+              { 
+                word: rule.targetMetricName, 
+                onClick: () => setShowDefinition(true) 
+              }
+            ]}
+          />
 
-      <p className="text-zinc-600 text-sm mb-4 text-center">
-        The Civil Service has prepared your mandate for the upcoming term.
-      </p>
-
-      <InteractiveDPMEmail
-        title="Official Mandate"
-        message={getBriefingMessage()}
-        onAcknowledge={onAcknowledge}
-        buttonText="Accept Mandate & Begin Term"
-        typeSpeed={25}
-      />
-
-      {isRetryingTerm && (
-        <div className="mt-5 text-center animate-in fade-in">
-          <button
-            onClick={onAcknowledge}
-            className="text-xs font-bold text-zinc-400 hover:text-zinc-600 uppercase tracking-widest transition-colors"
-          >
-            Skip Briefing →
-          </button>
+          {isRetryingTerm && (
+            <div className="mt-5 text-center animate-in fade-in">
+              <button
+                onClick={onAcknowledge}
+                className="text-xs font-bold text-zinc-400 hover:text-zinc-600 uppercase tracking-widest transition-colors cursor-pointer"
+              >
+                Skip Briefing
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right Side: Definition Panel */}
+        <AnimatePresence>
+          {showDefinition && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col justify-center"
+            >
+              <div className="bg-pink-50 border border-pink-200 rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-3 border-b border-pink-200/60 pb-3">
+                  <span className="text-xl">📖</span>
+                  <h4 className="text-sm font-black text-pink-900 uppercase tracking-widest leading-tight">
+                    {rule.targetMetricName}
+                  </h4>
+                </div>
+                <p className="text-sm text-pink-800 leading-relaxed font-medium">
+                  {rule.targetMetricDescription}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      </div>
     </ModalContent>
   );
 }

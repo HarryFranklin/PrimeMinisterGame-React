@@ -6,6 +6,38 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 const easeOut: Easing = [0.22, 1, 0.36, 1];
 const easeIn: Easing = [0.47, 0, 0.74, 0.58];
 
+const renderWithHighlights = (text: string, highlights?: HighlightConfig[]) => {
+  if (!highlights || highlights.length === 0) return text;
+  let result: (string | React.ReactNode)[] = [text];
+  
+  highlights.forEach((h, hIdx) => {
+    const nextResult: (string | React.ReactNode)[] = [];
+    result.forEach((item, i) => {
+      if (typeof item === 'string') {
+        const parts = item.split(h.word);
+        parts.forEach((part, j) => {
+          nextResult.push(part);
+          if (j < parts.length - 1) {
+            nextResult.push(
+              <span 
+                key={`${hIdx}-${i}-${j}`} 
+                onClick={(e) => { e.stopPropagation(); h.onClick?.(); }} 
+                className="font-bold underline decoration-pink-300 decoration-2 underline-offset-2 text-pink-700 hover:text-pink-900 transition-colors cursor-pointer relative group pointer-events-auto"
+              >
+                {h.word}
+              </span>
+            );
+          }
+        });
+      } else {
+        nextResult.push(item);
+      }
+    });
+    result = nextResult;
+  });
+  return result;
+};
+
 interface InteractiveDPMEmailProps {
   title: string;
   message: string;
@@ -13,6 +45,12 @@ interface InteractiveDPMEmailProps {
   delayAfterComplete?: number;
   onAcknowledge: () => void;
   buttonText?: string;
+  highlights?: HighlightConfig[];
+}
+
+export interface HighlightConfig {
+  word: string;
+  onClick?: () => void;
 }
 
 export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.ReactNode; exitDelay?: number }) => (
@@ -121,6 +159,7 @@ export const InteractiveDPMEmail = ({
   typeSpeed = 70,
   delayAfterComplete = 2000,
   onAcknowledge,
+  highlights,
   buttonText = "Begin Term"
 }: InteractiveDPMEmailProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -181,9 +220,9 @@ export const InteractiveDPMEmail = ({
           >
             <DPMMessage title={title}>
               <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
-                <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{message}</span>
+                <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{renderWithHighlights(message, highlights)}</span>
                 <span className="whitespace-pre-wrap absolute top-0 left-0 w-full h-full">
-                  {displayedText}
+                  {renderWithHighlights(displayedText, highlights)}
                   {isTyping && <span className="inline-block w-1.5 h-4 ml-1 bg-zinc-400 animate-pulse" />}
                 </span>
                 {isTyping && (
