@@ -150,7 +150,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "prescription-charge-exemption",
     policyName: "Universal Prescription Fee Exemptions",
-    description: "Bypasses all standard drug dispensing transaction charges across public pharmacies. Smooths out the lower half of the curve.",
+    description: "Bypasses all standard prescription fees across pharmacies in lower-income areas.",
     specificRules: [
       { note: "Immediate budget relief for bottom", maxLS: 4.0, affectEveryone: true, proportion: 1.0, impact: 0.8 },
       { note: "Regular medical budget ease for middle", minLS: 4.1, maxLS: 6.5, affectEveryone: true, proportion: 1.0, impact: 0.3 }
