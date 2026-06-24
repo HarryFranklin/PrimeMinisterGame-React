@@ -78,6 +78,9 @@ export default function DashboardTab() {
 
   // Track which policies have been forecasted this turn
   const [forecastedPolicies, setForecastedPolicies] = useState<Set<string>>(new Set());
+  
+  // Track if the details pop-out is open for the selected policy
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Reset the forecasting budget whenever the turn rolls over
   useEffect(() => {
@@ -406,39 +409,99 @@ export default function DashboardTab() {
           <div className={`flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
-              currentDeck.slice(0, 4).map((policy) => {
+              currentDeck.slice(0, 4).map((policy, index) => {
                 const isSelected = selectedPolicy?.id === policy.id;
-                // Add a small indicator if the policy has been forecasted
                 const isPolForecasted = forecastedPolicies.has(policy.id);
+                
+                // Determine if ANOTHER policy is selected and has its details open
+                const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
 
                 return (
-                  <button
-                    key={policy.id}
-                    disabled={!isAgendaUnlocked || isEnacting}
-                    onClick={() => setSelectedPolicy(selectedPolicy?.id === policy.id ? null : policy)}
-                    className={`relative shrink-0 flex-1 flex flex-col justify-start items-start w-full text-left p-4 rounded-xl border transition-all duration-300 group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${
-                      isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
-                    } ${
-                      isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
-                    } ${isEnacting && 'opacity-50'}`}
-                  >
-                    {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500 rounded-l-xl" />}
+                  // z-50 ensures the selected policy's pop-out renders OVER the other policy cards
+                  <div key={policy.id} className={`relative w-full shrink-0 transition-all duration-500 ${isSelected ? 'z-50' : 'z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40 pointer-events-none' : ''}`}>
                     
-                    <div className="flex justify-between items-start w-full mb-2">
-                      <p className={`font-bold text-base lg:text-lg leading-tight pr-4 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
-                        {policy.policyName}
-                      </p>
-                      {isPolForecasted && (
-                        <span className="shrink-0 bg-pink-100 text-pink-600 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
-                          Data Analysed
-                        </span>
-                      )}
-                    </div>
+                    <button
+                      disabled={!isAgendaUnlocked || isEnacting}
+                      onClick={() => {
+                        setSelectedPolicy(isSelected ? null : policy);
+                        setDetailsOpen(false); // Reset details when changing selection
+                      }}
+                      className={`w-full flex flex-col justify-start items-start text-left p-4 rounded-xl border transition-all duration-300 group cursor-pointer disabled:cursor-not-allowed ${
+                        isSelected ? 'border-pink-500 border-l-[6px] bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                      } ${
+                        isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
+                      } ${isEnacting && 'opacity-50'}`}
+                    >
+                      <div className="flex justify-between items-start w-full mb-2">
+                        <p className={`font-bold text-base lg:text-lg leading-tight pr-4 ${isSelected ? 'text-pink-900' : 'text-zinc-800'}`}>
+                          {policy.policyName}
+                        </p>
+                        {isPolForecasted && (
+                          <span className="shrink-0 bg-pink-100 text-pink-600 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
+                            Preview Available
+                          </span>
+                        )}
+                      </div>
 
-                    <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
-                      {policy.description}
-                    </p>
-                  </button>
+                      <p className={`text-sm leading-relaxed ${isSelected ? 'text-pink-700/80' : 'text-zinc-500'}`}>
+                        {policy.description}
+                      </p>
+
+                      {/* View Details Toggle Button */}
+                      {isSelected && (
+                        <div className="mt-3 flex justify-end w-full">
+                          <div 
+                            onClick={(e) => { 
+                              e.stopPropagation(); // Prevent the parent button from deselecting the policy
+                              setDetailsOpen(!detailsOpen); 
+                            }}
+                            className="text-[10px] font-bold text-pink-600 hover:text-pink-800 uppercase tracking-widest px-3 py-1.5 bg-pink-100 hover:bg-pink-200 rounded-md transition-colors shadow-sm"
+                          >
+                            {detailsOpen ? 'Close Details' : 'View Details'}
+                          </div>
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Absolute Details Pop-out Overlay */}
+                    {isSelected && detailsOpen && (
+                      <div 
+                        className={`absolute left-0 right-0 z-50 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 ${
+                          index < 2 ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]'
+                        }`}
+                      >
+                        <span className="text-[12px] font-black uppercase tracking-widest text-pink-500 mb-1">Details</span>
+                        
+                        {policy.specificRules.map((r, rIdx) => (
+                          <div key={rIdx} className="bg-white p-2.5 rounded-lg border border-pink-100 flex flex-col gap-1 shadow-sm">
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="font-bold text-sm text-zinc-800 leading-snug">{r.note}</span>
+                              <span className={`font-black text-sm shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {r.impact > 0 ? '+' : ''}{r.impact} LS
+                              </span>
+                            </div>
+                            
+                            <div className="text-[12px] text-zinc-600 flex flex-wrap gap-1 items-center mt-0.5">
+                              <span className="font-semibold text-zinc-700">Target Demographic:</span>
+                              {r.affectEveryone ? (
+                                <span>Entire Population</span>
+                              ) : (
+                                <>
+                                  <span className="bg-white border border-zinc-200 px-1.5 py-0.5 rounded font-medium text-zinc-700">
+                                    {r.minLS !== undefined && r.maxLS !== undefined ? `LS ${r.minLS} to ${r.maxLS}` : 
+                                     r.minLS !== undefined ? `LS ${r.minLS} and above` :
+                                     r.maxLS !== undefined ? `LS ${r.maxLS} and below` : 'All demographics'}
+                                  </span>
+                                  <span className="text-zinc-500">({Math.round(r.proportion * 100)}% coverage)</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  </div>
                 );
               })
             ) : (
