@@ -100,7 +100,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Since this government took office, things have gotten really tough.{' '}
           {worstPolicy ? (
             <>
-              Having the <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> pass made it so much harder to
+              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> pass made it so much harder to
               get by.
             </>
           ) : (
@@ -114,7 +114,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           I'm definitely worse off than I was.{' '}
           {worstPolicy ? (
             <>
-              The <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> really didn't help matters.
+              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> really didn't help matters.
             </>
           ) : (
             "The agenda just didn't work for me."
@@ -127,12 +127,12 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Honestly, I haven't noticed much difference overall.{' '}
           {bestPolicy && (
             <>
-              The <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> helped a bit,{' '}
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> helped a bit,{' '}
             </>
           )}
           {worstPolicy && (
             <>
-              but the <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> set me back just as much.
+              but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> set me back just as much.
             </>
           )}
         </>
@@ -145,7 +145,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Things are looking up a bit.{' '}
           {bestPolicy ? (
             <>
-              The <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> actually made things easier for me.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> actually made things easier for me.
             </>
           ) : (
             'The agenda seems to be heading in a good direction.'
@@ -158,7 +158,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           I've seen a huge difference!{' '}
           {bestPolicy ? (
             <>
-              The <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> really helped me out and turned things
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> really helped me out and turned things
               around.
             </>
           ) : (
@@ -265,85 +265,81 @@ export default function StageElectorateFeedback({
   }, [voterData]);
 
   return (
-    <div className="flex gap-6 w-full animate-in fade-in h-full">
+    <div className="flex gap-6 w-full animate-in fade-in h-full min-h-0 overflow-hidden">
       {/* Left: voter cards */}
-      <div className="flex-1 flex flex-col gap-4 min-w-[500px]">
+      <div className="flex-1 flex flex-col gap-3 min-w-[400px] h-full min-h-0 overflow-hidden">
         <DPMMessage title="Voter Sentiment">
-          We've tracked how your policies impacted individual voters. Hover over policy names to review the enacted
-          legislation.
+          We've tracked how your policies impacted individual voters. Hover over policy names to review the enacted legislation.
         </DPMMessage>
+        
+        <div className="flex flex-col gap-2 w-full flex-1 min-h-0 overflow-hidden">
+          {voterData.map((vp, idx) => {
+            const diffRounded = Math.round(vp.lsDiff * 10) / 10;
+            const borderColor = diffRounded > 0 ? 'border-emerald-200' : diffRounded < 0 ? 'border-rose-200' : 'border-zinc-200';
+            const textColor = diffRounded > 0 ? 'text-emerald-600' : diffRounded < 0 ? 'text-rose-600' : 'text-zinc-600';
 
-        <div className="flex flex-col gap-3 w-full">
-          {voterData.map((vp, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-4 items-center w-full shadow-sm"
-            >
-              <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-14 h-14 shrink-0 shadow-sm">
-                <span className="text-2xl">{vp.sentiment.emoji}</span>
-              </div>
-
-              <div className="flex-1 w-full min-w-0">
-                <div className="flex items-center justify-between mb-2 w-full">
-                  <h4 className="font-bold text-zinc-900 text-base truncate pr-2">{vp.name}</h4>
-                  
-                  <div className={`flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-md border shadow-sm shrink-0 ${
-                    vp.lsDiff > 0.05 ? 'border-emerald-200' : vp.lsDiff < -0.05 ? 'border-rose-200' : 'border-zinc-200'
-                  }`}>
-                    <span className="text-xs font-bold text-zinc-500">LS: {vp.baselineLS.toFixed(1)}</span>
-                    <span className="text-xs text-zinc-300 font-black">→</span>
-                    <span className={`text-xs font-black ${
-                      vp.lsDiff > 0.05 ? 'text-emerald-600' : vp.lsDiff < -0.05 ? 'text-rose-600' : 'text-zinc-600'
-                    }`}>
-                      {vp.finalLS.toFixed(1)}
-                    </span>
-                  </div>
-
+            return (
+              <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full shadow-sm flex-1 min-h-0">
+                <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
+                  <span className="text-xl">{vp.sentiment.emoji}</span>
                 </div>
-                <p className="text-sm text-zinc-600 italic leading-snug">
-                  "
-                  <VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} />
-                  "
-                </p>
+                <div className="flex-1 w-full min-w-0">
+                  <div className="flex items-center justify-between mb-1 w-full">
+                    <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
+                    <div className={`flex items-center gap-2 bg-white px-2 py-1 rounded-md border shadow-sm shrink-0 ${borderColor}`}>
+                      <span className="text-[12px] font-bold text-zinc-500">LS: {vp.baselineLS.toFixed(1)}</span>
+                      <span className="text-[12px] text-zinc-300 font-black">→</span>
+                      <span className={`text-[12px] font-black ${textColor}`}>{vp.finalLS.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2">
+                    "<VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} />"
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Right: legislation panel */}
-      <div 
-        className={`w-[360px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col transition-opacity duration-700 ease-out ${
-          showSidebar ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="flex flex-col h-full w-full">
-          <h4 className="text-sm font-black uppercase tracking-widest text-zinc-400 mb-4">Referenced Legislation</h4>
+      <div className={`w-[340px] lg:w-[380px] shrink-0 border-l border-zinc-200 pl-4 lg:pl-6 flex flex-col h-full min-h-0 overflow-visible transition-opacity duration-700 ease-out ${showSidebar ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="flex flex-col h-full w-full min-h-0 overflow-visible">
+          <h4 className="text-[11px] lg:text-xs font-black uppercase tracking-widest text-zinc-800 mb-2 lg:mb-3 shrink-0">Referenced Legislation</h4>
           
-          {/* Invisible padding extended vertically (-my-2 / py-2) to prevent top clipping */}
-          <div className="flex flex-col gap-4 overflow-y-auto px-3 py-2 -mx-3 -my-2 pb-4">
+          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 justify-center relative">
             {referencedPolicyIds.length === 0 ? (
-              <div className="p-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center">
-                <span className="text-xs font-bold text-zinc-400">No specific policies referenced by these citizens.</span>
+              <div className="p-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center shrink-0">
+                <span className="text-[10px] font-bold text-zinc-400">No specific policies referenced.</span>
               </div>
             ) : (
-              referencedPolicyIds.map(id => {
+              referencedPolicyIds.map((id, index) => {
                 const policy = availablePolicies.find(p => p.id === id);
                 if (!policy) return null;
                 const isHovered = hoveredPolicyId === id;
-
+                
                 return (
-                  <div
-                    key={id}
-                    className={`p-4 rounded-xl border transition-all duration-300 ${
-                      isHovered
-                        ? 'bg-pink-50 border-pink-400 shadow-md scale-[1.02]'
-                        : 'bg-white border-zinc-200 shadow-sm opacity-80'
+                  <div 
+                    key={id} 
+                    onMouseEnter={() => setHoveredPolicyId(id)}
+                    onMouseLeave={() => setHoveredPolicyId(null)}
+                    className={`p-3 lg:p-4 flex flex-col justify-center rounded-xl border transition-all duration-300 shrink-0 cursor-pointer relative ${
+                      isHovered ? 'bg-pink-50 border-pink-400 shadow-md ring-2 ring-pink-400/20 opacity-100 z-50' : 'bg-white border-zinc-200 shadow-sm opacity-100 z-10'
                     }`}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
-                    <p className="font-bold text-base text-zinc-900 mb-1.5">{policy.policyName}</p>
-                    <p className="text-sm text-zinc-700 leading-relaxed">{policy.description}</p>
+                    <span className="text-[9px] lg:text-[10px] font-bold uppercase tracking-widest text-pink-500 block mb-1">Enacted</span>
+                    <p className={`font-bold text-[15px] lg:text-base text-zinc-900 leading-tight`}>{policy.policyName}</p>
+                    
+                    {/* Hover Pop-up for the Description */}
+                    {isHovered && (
+                      <div className={`absolute right-[calc(100%+16px)] w-[280px] bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100] ${
+                        // Dynamically push up or down based on index to prevent screen clipping
+                        index > 1 ? 'bottom-0' : 'top-0'
+                      }`}>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Policy Details</span>
+                        <p className="text-xs text-zinc-700 leading-relaxed">{policy.description}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })

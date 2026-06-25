@@ -8,6 +8,7 @@ import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
 import { WelfareMetrics } from '../../../utils/WelfareMetrics';
 import D3Chart from '../../D3Chart';
 import { DPMMessage } from '../SharedModalComponents';
+import { motion } from 'framer-motion';
 
 interface StageAcademicDebriefProps {
   currentCycle: ElectionCycle;
@@ -30,6 +31,8 @@ export default function StageAcademicDebrief({
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
+  const [revealedPU, setRevealedPU] = useState(false);
+  const [revealedSU, setRevealedSU] = useState(false);
 
   useEffect(() => {
     let isReady = false;
@@ -40,13 +43,13 @@ export default function StageAcademicDebrief({
     } else if (currentCycle === ElectionCycle.PersonalUtility) {
       isReady = revealedEmpathy;
     } else if (currentCycle === ElectionCycle.SocietalUtility) {
-      isReady = true; 
+      isReady = revealedPU && revealedSU; 
     }
 
     if (isReady) {
       onReady();
     }
-  }, [revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, currentCycle, onReady]);
+  }, [revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, revealedPU, revealedSU, currentCycle, onReady]);
 
   const dummyPeak = useMemo(() => Math.max(20, Math.floor((yAxisMax || 100) * 0.75)), [yAxisMax]);
   
@@ -125,9 +128,11 @@ export default function StageAcademicDebrief({
           </div>
 
           {revealedBenthamA && revealedBenthamB && (
-            <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
-              "Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality. For Term 2, we will focus on raising the societal floor."
-            </DPMMessage>
+            <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden mt-1">
+              <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30">
+                "Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality. For Term 2, we will focus on raising the societal floor."
+              </DPMMessage>
+            </motion.div>
           )}
         </div>
       )}
@@ -154,9 +159,11 @@ export default function StageAcademicDebrief({
             );
           })}
           {revealedCitizen1 && revealedCitizen2 && (
-            <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30 animate-in fade-in slide-in-from-bottom-4 col-span-1 md:col-span-2">
-              "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Personal Utility."
-            </DPMMessage>
+            <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden mt-1">
+              <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30">
+                "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Personal Utility."
+              </DPMMessage>
+            </motion.div>
           )}
         </div>
       )}
@@ -179,31 +186,62 @@ export default function StageAcademicDebrief({
           </div>
 
           {revealedEmpathy && (
-            <DPMMessage title="Moving to Empathy" className="border-emerald-200 bg-emerald-50/30 animate-in fade-in slide-in-from-bottom-4">
-              "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes impossible due to loss aversion. For your final term, we will incorporate Societal Utility into their voting logic."
-            </DPMMessage>
+            <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden mt-1">
+              <DPMMessage title="Moving to Empathy" className="border-emerald-200 bg-emerald-50/30">
+                "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes impossible due to loss aversion. For your final term, we will incorporate Societal Utility into their voting logic."
+              </DPMMessage>
+            </motion.div>
           )}
         </div>
       )}
 
       {currentCycle === ElectionCycle.SocietalUtility && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-4 flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">Term 3: Personal Utility</h3>
-            <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong></div>
-            <div className="flex-1 text-xs text-zinc-600 space-y-2">
-              <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
-              <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-0">
+          
+          {/* Card 1: Personal Utility Reveal */}
+          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-1 text-center">Term 3: Personal Utility</h3>
+            
+            <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
+              <div className="text-center mb-3 mt-2">
+                <span className="text-[9px] uppercase font-bold text-zinc-400 block mb-0.5">Average Evaluation</span>
+                <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
+              </div>
+              <div className="flex-1 text-[10px] text-zinc-600 space-y-2 overflow-y-auto pr-1">
+                <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
+                <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+              </div>
             </div>
+            
+            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
           </div>
-          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-800 mb-2 text-center">Term 4: Societal Utility</h3>
-            <div className="text-center mb-3"><span className="text-[10px] uppercase font-bold text-emerald-600/70 block mb-1">Average Evaluation</span><strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong></div>
-            <div className="flex-1 text-xs text-emerald-800/80 space-y-2">
-              <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
-              <p><strong>The Challenge:</strong> While empathy allows the floor to rise, consensus remains difficult because citizens hold fundamentally conflicting definitions of "fairness".</p>
+          
+          {/* Card 2: Societal Utility Reveal */}
+          <div onClick={() => setRevealedSU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-emerald-600/70 mb-1 text-center">Term 4: Societal Utility</h3>
+            
+            <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
+              <div className="text-center mb-3 mt-2">
+                <span className="text-[9px] uppercase font-bold text-emerald-600/70 block mb-0.5">Average Evaluation</span>
+                <strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
+              </div>
+              <div className="flex-1 text-[10px] text-emerald-800/80 space-y-2 overflow-y-auto pr-1">
+                <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
+                <p><strong>The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
+              </div>
             </div>
+            
+            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-emerald-600">Click to Reveal</span></div>}
           </div>
+
+          {/* Smooth Expanding DPM Message */}
+          {revealedPU && revealedSU && (
+            <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden mt-1">
+              <DPMMessage title="The Final Mandate" className="border-emerald-200 bg-emerald-50/30">
+                "You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies. It is time for the final verdict."
+              </DPMMessage>
+            </motion.div>
+          )}
         </div>
       )}
     </div>

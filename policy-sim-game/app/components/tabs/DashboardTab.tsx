@@ -7,60 +7,6 @@ import { availablePolicies } from "../../data/policies";
 import D3Chart from "../D3Chart";
 import DPMCard from "../DPMCard";
 
-// Component for the animated historical pop-up
-const HistoricalImpactPopup = ({ turn, population, currentCycle, policyName, rule, yAxisMax }: any) => {
-  const [showAfter, setShowAfter] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowAfter(prev => !prev);
-    }, 1500); // Toggles between before/after every 1.5 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  const histBefore = useMemo(() => {
-    const popBefore = population.map((r: Respondent) => {
-      const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
-      const tData = ledger?.turns.find((t: any) => t.turn === turn - 1);
-      return { currentLS: tData ? tData.ls : r.currentLS };
-    });
-    return Array.from({ length: 11 }, (_, i) => ({
-      name: i, count: popBefore.filter((r: { currentLS: number }) => Math.round(r.currentLS) === i).length
-    }));
-  }, [population, currentCycle, turn]);
-
-  const histAfter = useMemo(() => {
-    const popAfter = population.map((r: Respondent) => {
-      const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
-      const tData = ledger?.turns.find((t: any) => t.turn === turn);
-      return { currentLS: tData ? tData.ls : r.currentLS };
-    });
-    return Array.from({ length: 11 }, (_, i) => ({
-      name: i, count: popAfter.filter((r: { currentLS: number }) => Math.round(r.currentLS) === i).length
-    }));
-  }, [population, currentCycle, turn]);
-
-  return (
-    <div className="absolute right-full mr-4 top-0 w-[360px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-200 p-5 z-[100] animate-in fade-in zoom-in-95 duration-200 overflow-hidden pointer-events-none">
-      <div className="flex justify-between items-center mb-3">
-         <h4 className="font-bold text-zinc-900 text-sm truncate pr-4">{policyName}</h4>
-         <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md transition-colors shrink-0 ${showAfter ? 'bg-pink-100 text-pink-700' : 'bg-zinc-200 text-zinc-600'}`}>
-            {showAfter ? 'After' : 'Before'}
-         </span>
-      </div>
-      <div className="h-[220px]">
-         <D3Chart
-           plotType="1D" chartData={[]}
-           histogramData={showAfter ? histAfter : histBefore}
-           xAxisType={AxisVariable.LifeSatisfaction} yAxisType={rule.yAxisType}
-           color={showAfter ? rule.graphColor : "#d4d4d8"}
-           visualStyle="faces" yAxisMax={yAxisMax} faceCols={2}
-         />
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardTab() {
   const { pulsePolicy } = useUI();
   const {
@@ -74,6 +20,7 @@ export default function DashboardTab() {
   const targetScore = cycleMAO * rule.winThresholdScalar;
 
   const [displayApproval, setDisplayApproval] = useState(approvalRating);
+  const [hoveredEnactedId, setHoveredEnactedId] = useState<string | null>(null);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
 
   const [forecastedPolicies, setForecastedPolicies] = useState<Set<string>>(new Set());
@@ -104,11 +51,11 @@ export default function DashboardTab() {
 
   // Sizing tiers
   const scaleConfigs = [
-    { title: 'text-base lg:text-lg', body: 'text-sm', pad: 'p-4', gap: 'mb-1' },     // Level 0 (Default)
-    { title: 'text-sm lg:text-base', body: 'text-xs', pad: 'p-3', gap: 'mb-0.5' },   // Level 1
-    { title: 'text-xs lg:text-sm', body: 'text-[11px]', pad: 'p-2.5', gap: 'mb-0.5' }, // Level 2
-    { title: 'text-[11px] lg:text-xs', body: 'text-[10px]', pad: 'p-2', gap: 'mb-0' },   // Level 3
-    { title: 'text-[10px] lg:text-[11px]', body: 'text-[9px]', pad: 'p-1.5', gap: 'mb-0' } // Level 4
+    { title: 'text-[15px] lg:text-base', body: 'text-[13px] lg:text-sm', pad: 'p-3.5', gap: 'mb-1' },
+    { title: 'text-sm lg:text-[15px]', body: 'text-xs', pad: 'p-3', gap: 'mb-0.5' },
+    { title: 'text-xs lg:text-sm', body: 'text-[11px]', pad: 'p-2.5', gap: 'mb-0.5' },
+    { title: 'text-[11px] lg:text-xs', body: 'text-[10px]', pad: 'p-2', gap: 'mb-0' },
+    { title: 'text-[10px] lg:text-[11px]', body: 'text-[9px]', pad: 'p-1.5', gap: 'mb-0' }
   ];
   const textScale = scaleConfigs[Math.min(scaleLevel, 4)];
 
@@ -288,7 +235,7 @@ export default function DashboardTab() {
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
             <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 truncate pr-2">
-                {hoveredPolicyName ? `Historical Impact: ${hoveredPolicyName}` : selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
+                {selectedPolicy ? "Wellbeing Impact Forecast" : "Wellbeing Forecast"}
               </h3>
             </div>
             
@@ -346,15 +293,15 @@ export default function DashboardTab() {
                 </div>
               )}
 
-              {isParliamentDissolved && hoveredHistoryTurn === null && (
+              {isParliamentDissolved && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
                   <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
                     <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">⏳</span>
+                      <span className="text-zinc-400 text-lg">🗳️</span>
                     </div>
-                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Interactive History</h4>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Term Concluded</h4>
                     <p className="text-xs text-zinc-500 font-medium">
-                      Hover over enacted legislation in the right panel to view its historical impact on the population.
+                      Review your enacted legislation and face the electorate.
                     </p>
                   </div>
                 </div>
@@ -362,10 +309,10 @@ export default function DashboardTab() {
             </div>
 
             {/* Fade out the legend if the policy isn't forecasted yet */}
-            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${((selectedPolicy && isForecasted) || hoveredHistoryTurn !== null) ? 'opacity-100' : 'opacity-30 grayscale'}`}>
+            <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${(selectedPolicy && isForecasted) ? 'opacity-100' : 'opacity-30 grayscale'}`}>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{hoveredHistoryTurn ? 'Improved' : 'Will Improve'}</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Improve</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be stable'] }} />
@@ -373,13 +320,13 @@ export default function DashboardTab() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be worsened'] }} />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">{hoveredHistoryTurn ? 'Worsened' : 'Will Worsen'}</span>
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Will Worsen</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: DPM & Approval (Remains Unchanged) */}
+        {/* MIDDLE COLUMN: DPM & Approval */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
           <DPMCard 
             currentCycle={currentCycle}
@@ -413,17 +360,6 @@ export default function DashboardTab() {
         {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
         <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 relative">
           
-          {hoveredHistoryTurn && isParliamentDissolved && (
-            <HistoricalImpactPopup 
-              turn={hoveredHistoryTurn} 
-              population={population} 
-              currentCycle={currentCycle} 
-              policyName={hoveredPolicyName} 
-              rule={rule} 
-              yAxisMax={yAxisMax} 
-            />
-          )}
-
           <div className="p-4 border-b border-zinc-200 bg-zinc-100 shrink-0 flex justify-between items-center">
             <div>
               <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
@@ -463,7 +399,7 @@ export default function DashboardTab() {
                           setSelectedPolicy(isSelected ? null : policy);
                           setDetailsOpen(false); 
                         }}
-                        className={`flex-1 flex flex-col justify-between items-start text-left ${textScale.pad} h-full cursor-pointer disabled:cursor-not-allowed ${isSelected ? 'pl-4' : ''}`}
+                        className={`flex-1 flex flex-col justify-center items-start text-left ${textScale.pad} h-full cursor-pointer disabled:cursor-not-allowed ${isSelected ? 'pl-4' : ''}`}
                       >
                         {/* Top Section: Title & Optional Preview Tag */}
                         <div className={`w-full ${textScale.gap} ${isSelected ? 'pl-2' : ''} transition-all duration-300 shrink-0`}>
@@ -479,8 +415,8 @@ export default function DashboardTab() {
                           </div>
                         </div>
 
-                        {/* Bottom Section: Description */}
-                        <p className={`w-full ${textScale.body} leading-relaxed mt-auto ${isSelected ? 'text-pink-700/80 pl-2 pb-2' : 'text-zinc-500 pb-1'} transition-all duration-300`}>
+                        {/* Bottom Section: Description */ }
+                        <p className={`w-full ${textScale.body} leading-relaxed ${isSelected ? 'text-pink-700/80 pl-2' : 'text-zinc-500'} transition-all duration-300`}>
                           {policy.description}
                         </p>
                       </button>
@@ -508,65 +444,61 @@ export default function DashboardTab() {
                       )}
                     </div>
 
-                    {/* Absolute Details Pop-out Layout */}
-                    {isSelected && detailsOpen && (
-                      <div 
-                        className={`absolute left-0 right-0 z-50 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-5 flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200 ${
-                          index < 2 ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]'
-                        }`}
-                      >
-                        <span className="text-xs font-black uppercase tracking-widest text-pink-500 mb-1">Details</span>
-                        
-                        {policy.specificRules.map((r, rIdx) => (
-                          <div key={rIdx} className="bg-white p-3 rounded-lg border border-pink-100 flex flex-col gap-1.5 shadow-sm">
-                            <div className="flex justify-between items-start gap-2">
-                              <span className="font-bold text-sm text-zinc-800 leading-snug">{r.note}</span>
-                              <span className={`font-black text-sm shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {r.impact > 0 ? '+' : ''}{r.impact} LS
-                              </span>
-                            </div>
-                            
-                            <div className="text-xs text-zinc-600 flex flex-wrap gap-1 items-center mt-0.5">
-                              <span className="font-semibold text-zinc-700">Target Demographic:</span>
-                              {r.affectEveryone ? (
-                                <span>Entire Population</span>
-                              ) : (
-                                <>
-                                  <span className="bg-white border border-zinc-200 px-1.5 py-0.5 rounded font-medium text-zinc-700">
-                                    {r.minLS !== undefined && r.maxLS !== undefined ? `LS ${r.minLS} to ${r.maxLS}` : 
-                                     r.minLS !== undefined ? `LS ${r.minLS} and above` :
-                                     r.maxLS !== undefined ? `LS ${r.maxLS} and below` : 'All demographics'}
-                                  </span>
-                                  <span className="text-zinc-500">({Math.round(r.proportion * 100)}% coverage)</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
                   </div>
                 );
               })
             ) : (
-              <div className="flex flex-col gap-2.5">
-                {enactedLegislation.map((leg, index) => (
-                  <div 
-                    key={index} 
-                    onMouseEnter={() => setHoveredHistoryTurn(leg.turn)}
-                    onMouseLeave={() => setHoveredHistoryTurn(null)}
-                    className="flex gap-3 items-start bg-white p-3 rounded-lg border border-zinc-200 shadow-sm cursor-pointer hover:border-pink-300 hover:bg-pink-50 transition-colors group"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-500 group-hover:bg-pink-200 group-hover:text-pink-700 transition-colors flex items-center justify-center text-sm font-black shrink-0 mt-0.5">
-                      {index + 1}
+              // History View (When Parliament Dissolved)
+              <div className="flex flex-col gap-1.5 h-full min-h-0 overflow-visible justify-between relative">
+                {enactedLegislation.map((leg, index) => {
+                  const isHovered = hoveredEnactedId !== null && hoveredEnactedId === leg.enactedPolicyId;
+                  const fullPolicy = availablePolicies.find(p => p.id === leg.enactedPolicyId);
+                  
+                  return (
+                    <div 
+                      key={index} 
+                      onMouseEnter={() => setHoveredEnactedId(leg.enactedPolicyId)}
+                      onMouseLeave={() => setHoveredEnactedId(null)}
+                      className={`relative flex flex-col justify-center bg-white ${textScale.pad} rounded-lg border border-zinc-200 shadow-sm cursor-pointer transition-colors shrink-0 ${isHovered ? 'z-50 ring-2 ring-pink-500/20' : 'z-10 hover:bg-zinc-50'}`}
+                    >
+                      <div className="flex gap-2 items-center min-w-0">
+                        <div className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                          {index + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-bold ${textScale.title} text-zinc-900 leading-tight mb-0.5`}>
+                            {leg.enactedPolicyName}
+                          </p>
+                          <p className={`${textScale.body} text-zinc-500 leading-tight`}>
+                            {leg.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Detail Pop-up */}
+                      {isHovered && fullPolicy && (
+                        <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100] ${
+                          index < 2 ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]'
+                        }`}>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Details</span>
+                          
+                          <div className="flex flex-col gap-1.5">
+                            {fullPolicy.specificRules.map((r: any, rIdx: number) => (
+                              <div key={rIdx} className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
+                                <div className="flex justify-between items-start gap-2">
+                                  <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
+                                  <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {r.impact > 0 ? '+' : ''}{r.impact} LS
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="font-bold text-zinc-900 group-hover:text-pink-900 transition-colors mb-0.5">{leg.enactedPolicyName}</p>
-                      <p className="text-sm text-zinc-600 leading-snug line-clamp-2">{leg.description}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -88,28 +88,27 @@ export default function StagePopulationChange({
     [finalPopulation, currentCycle]
   );
 
-  // No interaction required — enable immediately
   useEffect(() => {
     onReady();
   }, [onReady]);
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in w-full">
+    <div className="flex flex-col gap-3 animate-in fade-in w-full max-w-xl mx-auto pb-2">
       <DPMMessage title="How The Population Changed">
         "We've tracked the electorate based on how their overall life satisfaction shifted during your administration."
       </DPMMessage>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mt-2">
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full mt-1">
         {COHORT_CONFIGS.map(({ key, label, icon, bg, border, iconBg, textColor, labelColor }) => (
           <div
             key={key}
-            className={`${bg} rounded-xl border ${border} p-6 flex flex-col items-center text-center shadow-sm`}
+            className={`${bg} rounded-xl border ${border} p-4 flex flex-col items-center text-center shadow-sm`}
           >
-            <div className={`w-12 h-12 ${iconBg} rounded-full flex items-center justify-center text-xl mb-4 shadow-inner`}>
+            <div className={`w-10 h-10 ${iconBg} rounded-full flex items-center justify-center text-lg mb-2 shadow-inner`}>
               {icon}
             </div>
-            <h4 className={`font-black ${labelColor} uppercase tracking-widest text-xs mb-1`}>{label}</h4>
-            <p className={`text-4xl font-black ${textColor}`}>{cohorts[key]}%</p>
+            <h4 className={`font-black ${labelColor} uppercase tracking-widest text-[10px] mb-1`}>{label}</h4>
+            <p className={`text-3xl font-black ${textColor}`}>{cohorts[key]}%</p>
           </div>
         ))}
       </div>

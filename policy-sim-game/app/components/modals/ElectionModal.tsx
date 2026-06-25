@@ -52,6 +52,7 @@ export default function ElectionModal({
 
   const getModalWidth = () => {
     if (page === 1) return "max-w-xl";  
+    if (page === 2) return "max-w-2xl";
     if (page === 3) return "max-w-5xl";
     return "max-w-3xl";
   };
@@ -59,8 +60,8 @@ export default function ElectionModal({
   return (
     <ModalContent maxWidth={getModalWidth()}>
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
-      
-      <motion.div className="flex-1 min-h-[450px] flex flex-col justify-center">
+    
+      <motion.div className="flex-1 min-h-0 overflow-y-auto py-4 pr-1 w-full">
         {page === 0 && <StageTermSummary currentCycle={currentCycle} initialPopulation={initialPopulation} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
         {page === 2 && <StagePopulationChange finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
@@ -68,7 +69,8 @@ export default function ElectionModal({
         {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
-      <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-100 shrink-0 h-12">
+      {/* Footer pinned to bottom */}
+      <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
         {page > 0 ? (
           <button 
             onClick={() => { setPageReady(false); setPage(p => p - 1); }} 

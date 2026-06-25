@@ -183,7 +183,8 @@ export const InteractiveDPMEmail = ({
 
   return (
     <motion.div layout className="w-full flex flex-col shrink-0" style={{ width: '100%' }}>
-      <AnimatePresence mode="wait" initial={false}>
+      {/* Changing to popLayout prevents the jumpy wait transition */}
+      <AnimatePresence mode="popLayout" initial={false}>
         {!isOpen ? (
           <motion.button
             key="closed-envelope"
@@ -198,7 +199,7 @@ export const InteractiveDPMEmail = ({
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white rounded-full border border-zinc-200 shadow-sm flex items-center justify-center shrink-0">
-                <span className="text-xl">📁</span>
+                <span className="text-xl">📩</span>
               </div>
               <div>
                 <p className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-0.5">Secure Message</p>
@@ -211,11 +212,11 @@ export const InteractiveDPMEmail = ({
           <motion.div
             key="open-message"
             layout
-            initial={{ opacity: 0, filter: "blur(4px)", y: 10 }}
-            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-            exit={{ opacity: 0, filter: "blur(4px)", y: 10 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col gap-6 w-full"
+            initial={{ opacity: 0, height: 0, filter: "blur(4px)" }}
+            animate={{ opacity: 1, height: 'auto', filter: "blur(0px)" }}
+            exit={{ opacity: 0, height: 0, filter: "blur(4px)" }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex flex-col gap-6 w-full overflow-hidden"
             style={{ width: '100%' }}
           >
             <DPMMessage title={title}>
@@ -236,7 +237,7 @@ export const InteractiveDPMEmail = ({
               onClick={handleAcknowledge}
               disabled={!buttonUnlocked}
               className={`w-full py-4 text-sm font-bold uppercase tracking-widest rounded-xl transition-all shadow-md shrink-0 duration-500 ${
-                buttonUnlocked ? 'bg-zinc-900 text-white hover:bg-black translate-y-0 opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed translate-y-2 opacity-50 pointer-events-none'
+                buttonUnlocked ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50 pointer-events-none'
               }`}
             >
               {buttonText}
