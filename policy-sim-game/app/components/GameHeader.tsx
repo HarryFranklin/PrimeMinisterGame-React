@@ -21,7 +21,7 @@ export default function GameHeader({
       <div className="flex items-baseline gap-4 z-20">
         <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Prime Minister Game</h1>
         <p className="text-base font-bold text-pink-600 uppercase tracking-widest">
-          {FRAMEWORK_RULES[currentCycle]?.targetMetricName || "Loading..."}
+          {FRAMEWORK_RULES[currentCycle]?.frameworkTitle || "Loading..."}
         </p>
       </div>
 
