@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
-import { ModalContent, ModalHeader } from './SharedModalComponents';
+import { FloatingDefinitionPanel, ModalContent, ModalHeader } from './SharedModalComponents';
 
 // Stage components cleanly linked via relative routing
 import StageTermSummary from './ElectionModal//StageTermSummary';
@@ -32,6 +32,16 @@ export default function ElectionModal({
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
   
+  const [showDefinition, setShowDefinition] = useState(false);
+  const [defTitle, setDefTitle] = useState("");
+  const [defDesc, setDefDesc] = useState("");
+
+  const handleToggle = (title: string, desc: string) => {
+    setDefTitle(title);
+    setDefDesc(desc);
+    setShowDefinition(true);
+  };
+  
   const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0;
   const isFinalCycle = currentCycle === ElectionCycle.SocietalUtility;
@@ -58,11 +68,21 @@ export default function ElectionModal({
   };
 
   return (
-    <ModalContent maxWidth={getModalWidth()}>
+    <ModalContent 
+      maxWidth={getModalWidth()}
+      floatingPanel={
+          <FloatingDefinitionPanel
+            title={defTitle}
+            description={defDesc}
+            isVisible={showDefinition}
+          />
+      }
+    >
+
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
     
       <motion.div className="flex-1 min-h-0 overflow-y-auto py-4 pr-1 w-full">
-        {page === 0 && <StageTermSummary currentCycle={currentCycle} initialPopulation={initialPopulation} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
+        {page === 0 && <StageTermSummary currentCycle={currentCycle} initialPopulation={initialPopulation} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle}/>}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
         {page === 2 && <StagePopulationChange finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
         {page === 3 && <StageElectorateFeedback initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
