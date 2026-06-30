@@ -47,7 +47,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
   const empathyCitizen = useMemo(() => {
     if (population.length === 0) return null;
     const allLS = population.map(p => p.currentLS);
-          
+               
     let bestCitizen = population[0];
     let maxDiff = -1;
     for (const r of population) {
@@ -129,8 +129,8 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               </div>
             </div>
             {bothBenthamRevealed && (
-              <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
-                <DPMMessage title="Mathematically Identical Outcomes" className="border-pink-200 bg-pink-50/30 mb-4">
+              <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-4">
+                <DPMMessage title="Mathematically Identical Outcomes" className="border-pink-200 bg-pink-50/30">
                   "Under a strictly Benthamite framework, these societies are equally successful. Society A is perfectly equal, while Society B is entirely polarised. Maximising the average efficiently increases total wellbeing, but it completely ignores how that wellbeing is distributed."
                 </DPMMessage>
                 <ModalActionBtn onClick={onProceed}>Restart Simulation: Cycle 2 (Rawlsian)</ModalActionBtn>
@@ -138,7 +138,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             )}
           </>
         );
-
       case ElectionCycle.Rawlsian:
         const bothRawlsRevealed = revealedCitizen1 && revealedCitizen2;
         return (
@@ -180,16 +179,16 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               })}
             </div>
             {bothRawlsRevealed && !rawlsExplanation && (
-              <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
-                <DPMMessage title="Observation" className="mb-4">
+              <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-4">
+                <DPMMessage title="Observation">
                   "Notice the stark difference in their utility despite identical living standards. Are you ready to proceed?"
                 </DPMMessage>
                 <ModalActionBtn onClick={() => setRawlsExplanation(true)}>Review Findings</ModalActionBtn>
               </div>
             )}
             {rawlsExplanation && (
-              <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
-                <DPMMessage title="The Flaw in Objective Metrics" className="mb-4 border-pink-200 bg-pink-50/30">
+              <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-4">
+                <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30">
                   "Despite having identical objective Life Satisfaction scores, their true Personal Utility is markedly different. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience."
                 </DPMMessage>
                 <ModalActionBtn onClick={onProceed}>Restart Simulation: Cycle 3 (Personal Utility)</ModalActionBtn>
@@ -197,7 +196,6 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
             )}
           </>
         );
-
       case ElectionCycle.PersonalUtility: {
         if (!empathyCitizen) return null;
         const allLS = population.map(p => p.currentLS);
@@ -232,7 +230,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                   <span className="text-xs text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
                   <strong className="text-3xl text-emerald-600">{su.toFixed(2)}</strong>
                   <p className="text-[10px] text-zinc-500 mt-2 max-w-sm mx-auto italic">
-                    "While my personal circumstances are great, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
+                    "While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
                   </p>
                 </div>
                 {!revealedEmpathy && (
@@ -243,16 +241,16 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               </div>
             </div>
             {revealedEmpathy && !personalExplanation && (
-              <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
-                <DPMMessage title="Observation" className="mb-4">
+              <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-4">
+                <DPMMessage title="Observation">
                   "Notice the downward adjustment. Shall we review why this occurs?"
                 </DPMMessage>
                 <ModalActionBtn onClick={() => setPersonalExplanation(true)}>Review Findings</ModalActionBtn>
               </div>
             )}
             {personalExplanation && (
-              <div className="mt-2 animate-in fade-in slide-in-from-bottom-4">
-                <DPMMessage title="The Status Quo Trap" className="mb-4 border-emerald-200 bg-emerald-50/30">
+              <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-4">
+                <DPMMessage title="The Status Quo Trap" className="border-emerald-200 bg-emerald-50/30">
                   "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes difficult to enact due to loss aversion. For your final term, we will incorporate <strong>Societal Utility</strong> into their voting logic."
                 </DPMMessage>
                 <ModalActionBtn onClick={onProceed}>Restart Simulation: Final Cycle (Societal Utility)</ModalActionBtn>
@@ -293,8 +291,8 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
               </div>
             </div>
             
-            <div className="mt-2 text-center">
-              <DPMMessage title="Next Steps" className="mb-4">
+            <div className="text-center flex flex-col gap-4">
+              <DPMMessage title="Next Steps">
                 "As you proceed to the final debrief, consider which of these four frameworks provides the most effective and ethical blueprint for real-world governance."
               </DPMMessage>
               <ModalActionBtn onClick={onProceed} variant="accent">Proceed to Final Debrief</ModalActionBtn>

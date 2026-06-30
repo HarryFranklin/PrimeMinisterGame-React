@@ -1,9 +1,3 @@
-/**
- * Page 1 of the election sequence.
- * Shows a before/after D3 histogram comparison with the term's key metric.
- * Calls onReady() after a short delay to let the charts render.
- */
-
 import React, { useEffect, useMemo } from 'react';
 import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
 import { FRAMEWORK_RULES } from '../../../utils/frameworkRules';
@@ -91,16 +85,15 @@ export default function StageTermSummary({
   const markerLabel = MARKER_LABELS[currentCycle];
   const diff = endMetric - startMetric;
 
-  const rawMessage = ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, diff);
-
   const initialMarkers = [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: '#a1a1aa', dashed: true }];
   const finalMarkers = [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }];
-
 
   useEffect(() => {
     const timer = setTimeout(() => onReady(), 2500);
     return () => clearTimeout(timer);
   }, [onReady]);
+
+  const rawMessage = ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, diff);
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full">
@@ -116,7 +109,7 @@ export default function StageTermSummary({
         />
       </DPMMessage>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
         <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Start of Term</h3>
           <div className="h-[240px] md:h-[260px] w-full">
@@ -127,14 +120,13 @@ export default function StageTermSummary({
               xAxisType={AxisVariable.LifeSatisfaction}
               yAxisType={rule.yAxisType}
               color="#d4d4d8"
-              visualStyle="faces" 
+              visualStyle="faces"
               faceCols={1}
               yAxisMax={safeYAxisMax}
               markers={initialMarkers}
             />
           </div>
         </div>
-
         <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">End of Term</h3>
           <div className="h-[240px] md:h-[260px] w-full">

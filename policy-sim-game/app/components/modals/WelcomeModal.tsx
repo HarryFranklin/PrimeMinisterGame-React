@@ -11,15 +11,12 @@ export default function WelcomeModal({ onAcknowledge }: WelcomeModalProps) {
   return (
     <ModalContent maxWidth="max-w-[600px]" slideEntry slideExit>
       <ModalHeader title="Welcome Prime Minister" subtitle="Introduction" />
-  
-      <div className="w-full mt-4">
-        <InteractiveDPMEmail 
-          title="Orientation"
-          message={welcomeText}
-          onAcknowledge={onAcknowledge}
-          buttonText="Understood"
-        />
-      </div>
+      <InteractiveDPMEmail 
+        title="Orientation"
+        message={welcomeText}
+        onAcknowledge={onAcknowledge}
+        buttonText="Understood"
+      />
     </ModalContent>
   );
 }

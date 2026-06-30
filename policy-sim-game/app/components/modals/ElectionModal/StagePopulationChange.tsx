@@ -1,8 +1,3 @@
-/**
- * Page 3 of the election sequence.
- * Shows what percentage of the population improved, stayed stable, or declined.
- */
-
 import React, { useEffect, useMemo } from 'react';
 import { ElectionCycle, Respondent } from '../../../utils/types';
 import { DPMMessage } from '../SharedModalComponents';
@@ -93,12 +88,12 @@ export default function StagePopulationChange({
   }, [onReady]);
 
   return (
-    <div className="flex flex-col gap-3 animate-in fade-in w-full max-w-xl mx-auto pb-2">
+    <div className="flex flex-col gap-4 animate-in fade-in w-full max-w-xl mx-auto">
       <DPMMessage title="How The Population Changed">
         "We've tracked the electorate based on how their overall life satisfaction shifted during your administration."
       </DPMMessage>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full mt-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         {COHORT_CONFIGS.map(({ key, label, icon, bg, border, iconBg, textColor, labelColor }) => (
           <div
             key={key}

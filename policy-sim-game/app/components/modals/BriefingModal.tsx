@@ -66,9 +66,9 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         />
       }
     >
-      <div className="flex-1 flex flex-col w-full">
+      <div className="flex-1 flex flex-col w-full gap-4">
         <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
-        <p className="text-zinc-600 text-sm mb-4 text-center">
+        <p className="text-zinc-600 text-sm text-center">
           The Civil Service has prepared your mandate for the upcoming term.
         </p>
         
@@ -87,7 +87,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         />
 
         {isRetryingTerm && (
-          <div className="mt-5 text-center animate-in fade-in">
+          <div className="text-center animate-in fade-in">
             <button
               onClick={onAcknowledge}
               className="text-xs font-bold text-zinc-400 hover:text-zinc-600 uppercase tracking-widest transition-colors cursor-pointer"
