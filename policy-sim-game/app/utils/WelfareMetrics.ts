@@ -6,14 +6,14 @@ export class WelfareMetrics {
   static getUtilityForPerson(lsScore: number, curve: number[]): number {
     const score = Math.max(lsScore, 2.0);
     const exactIndex = score / 2.0;
-    
+
     let lowerIndex = Math.floor(exactIndex);
     let upperIndex = Math.ceil(exactIndex);
-    
+
     if (lowerIndex < 1) lowerIndex = 1;
     if (upperIndex > 5) upperIndex = 5;
     if (lowerIndex > 5) lowerIndex = 5;
-    
+
     const t = exactIndex - lowerIndex;
     return lerp(curve[lowerIndex], curve[upperIndex], t) * 10;
   }
@@ -25,14 +25,14 @@ export class WelfareMetrics {
       const lsScore = populationLS[i];
       const score = Math.max(lsScore, 2.0);
       const exactIndex = score / 2.0;
-      
+
       let lowerIndex = Math.floor(exactIndex);
       let upperIndex = Math.ceil(exactIndex);
-      
+
       if (lowerIndex < 1) lowerIndex = 1;
       if (upperIndex > 5) upperIndex = 5;
       if (lowerIndex > 5) lowerIndex = 5;
-      
+
       const t = exactIndex - lowerIndex;
       multipliers[lowerIndex] += (1 - t) * 10;
       multipliers[upperIndex] += t * 10;
@@ -66,6 +66,29 @@ export class WelfareMetrics {
       return WelfareMetrics.evaluateDistribution(allLS, respondent.societalUtilities);
     }
     return respondent.currentLS;
+  }
+
+  // Returns per-column stats for the utility table used in cycles 3 & 4.
+  // allLS and multipliers should be pre-computed once per population for efficiency
+  // (multipliers only matters/used for SocietalUtility; pass null otherwise).
+  static getColumnStats(
+    col: number,
+    population: Respondent[],
+    cycle: ElectionCycle,
+    allLS: number[],
+    multipliers: number[] | null
+  ): { count: number; avgUtility: number; totalYield: number } {
+    const citizens = population.filter(
+      r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === col
+    );
+    const count = citizens.length;
+    if (count === 0) return { count: 0, avgUtility: 0, totalYield: 0 };
+
+    const totalYield = citizens.reduce(
+      (sum, r) => sum + WelfareMetrics.getCycleUtility(r, cycle, population.length, allLS, multipliers),
+      0
+    );
+    return { count, avgUtility: totalYield / count, totalYield };
   }
 
   static calculateInequalityIndex(population: Respondent[]): number {
