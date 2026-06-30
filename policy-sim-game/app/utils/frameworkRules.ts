@@ -42,7 +42,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     frameworkTitle: "Personal Utility Framework",
     graphTitle: "Personal Utility Distribution",
     targetMetricName: "National Personal Satisfaction", // Average of personal self-interest
-    targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing, heavily penalizing personal financial loss.",
+    targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing according to their personal utility curve.", 
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
@@ -53,7 +53,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",
     graphTitle: "Societal Utility Distribution",
-    targetMetricName: "National Fairness Index", // Equity
+    targetMetricName: "National Fairness Index", 
     targetMetricDescription: "Calculated by averaging citizens' evaluation of society, balancing their own wellbeing against their desire for equality.",
     targetDirection: 'maximize',
     plotType: '1D',
@@ -62,5 +62,4 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     winThresholdScalar: 0.99,
     briefingText: "The public is angry about wellbeing inequality. You must balance economic progress with the electorate's demand for fairness. A society with high National Average Happiness that is highly unequal society will lead to you being voted out.",
   },
-  
 };

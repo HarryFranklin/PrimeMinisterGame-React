@@ -25,7 +25,7 @@ export default function UtilityTable({ population, previewPopulation, cycle }: U
   const currentCtx = useMemo(() => buildCycleContext(population, cycle), [population, cycle]);
 
   // Avg Utility is a property of the curve, not the live population, so it is
-  // always derived from the base (non-preview) population — this keeps the row
+  // always derived from the base (non-preview) population. This keeps the row
   // stable while # People shifts under a forecasted policy.
   const baseStats = useMemo(
     () => COLUMNS.map(col => WelfareMetrics.getColumnStats(col, population, cycle, currentCtx.allLS, currentCtx.multipliers)),
@@ -74,6 +74,7 @@ export default function UtilityTable({ population, previewPopulation, cycle }: U
               const before = baseStats[col].count;
               const after = displayedCounts[col];
               const delta = after - before;
+
               return (
                 <td key={col} className="bg-zinc-50 p-2 lg:p-2.5 font-bold text-zinc-900">
                   {after}
@@ -92,7 +93,8 @@ export default function UtilityTable({ population, previewPopulation, cycle }: U
             </td>
             {COLUMNS.map(col => (
               <td key={col} className="bg-white p-2 lg:p-2.5 text-zinc-600">
-                {baseStats[col].avgUtility.toFixed(2)}
+                {/* Implemented ternary check to render an em-dash for empty columns */}
+                {baseStats[col].count > 0 ? baseStats[col].avgUtility.toFixed(2) : '—'}
               </td>
             ))}
           </tr>
@@ -102,7 +104,8 @@ export default function UtilityTable({ population, previewPopulation, cycle }: U
             </td>
             {COLUMNS.map(col => (
               <td key={col} className="bg-zinc-50 p-2 lg:p-2.5 font-bold text-zinc-900">
-                {displayedYield[col].toFixed(1)}
+                {/* Implemented ternary check to render an em-dash for empty columns */}
+                {displayedYield[col] > 0 ? displayedYield[col].toFixed(1) : '—'}
               </td>
             ))}
           </tr>

@@ -11,7 +11,7 @@ import UtilityTable from "../UtilityTable";
 export default function DashboardTab() {
   const { pulsePolicy } = useUI();
   const {
-    currentCycle, currentTurn, currentChartData, previewChartData, currentHistogramData,
+    currentCycle, currentTurn, currentChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy, 
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate
@@ -189,11 +189,6 @@ export default function DashboardTab() {
       return { ...h, description: pDetails?.description };
     });
   }, [history]);
-
-  const hoveredPolicyName = useMemo(() => {
-    if (hoveredHistoryTurn === null) return null;
-    return history.find(h => h.turn === hoveredHistoryTurn)?.enactedPolicyName;
-  }, [hoveredHistoryTurn, history]);
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
@@ -570,8 +565,14 @@ export default function DashboardTab() {
                   return (
                     <div 
                       key={index} 
-                      onMouseEnter={() => setHoveredEnactedId(leg.enactedPolicyId)}
-                      onMouseLeave={() => setHoveredEnactedId(null)}
+                      onMouseEnter={() => {
+                        setHoveredEnactedId(leg.enactedPolicyId);
+                        setHoveredHistoryTurn(leg.turn);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredEnactedId(null);
+                        setHoveredHistoryTurn(null);
+                      }}
                       className={`relative flex flex-col justify-center bg-white ${textScale.pad} rounded-lg border border-zinc-200 shadow-sm cursor-pointer transition-colors shrink-0 ${isHovered ? 'z-50 ring-2 ring-pink-500/20' : 'z-10 hover:bg-zinc-50'}`}
                     >
                       <div className="flex gap-2 items-center min-w-0">
