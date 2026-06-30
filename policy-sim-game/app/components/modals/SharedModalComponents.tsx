@@ -6,10 +6,17 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 const easeOut: Easing = [0.22, 1, 0.36, 1];
 const easeIn: Easing = [0.47, 0, 0.74, 0.58];
 
-const renderWithHighlights = (text: string, highlights?: HighlightConfig[]) => {
-  if (!highlights || highlights.length === 0) return text;
+export interface HighlightConfig {
+  word: string;
+  onClick?: () => void;
+}
+
+// 1. REUSABLE HIGHLIGHT TEXT COMPONENT
+export const HighlightText = ({ text, highlights }: { text: string; highlights?: HighlightConfig[] }) => {
+  if (!highlights || highlights.length === 0) return <>{text}</>;
+
   let result: (string | React.ReactNode)[] = [text];
-  
+
   highlights.forEach((h, hIdx) => {
     const nextResult: (string | React.ReactNode)[] = [];
     result.forEach((item, i) => {
@@ -19,9 +26,9 @@ const renderWithHighlights = (text: string, highlights?: HighlightConfig[]) => {
           nextResult.push(part);
           if (j < parts.length - 1) {
             nextResult.push(
-              <span 
-                key={`${hIdx}-${i}-${j}`} 
-                onClick={(e) => { e.stopPropagation(); h.onClick?.(); }} 
+              <span
+                key={`${hIdx}-${i}-${j}`}
+                onClick={(e) => { e.stopPropagation(); h.onClick?.(); }}
                 className="font-bold underline decoration-pink-300 decoration-2 underline-offset-2 text-pink-700 hover:text-pink-900 transition-colors cursor-pointer relative group pointer-events-auto"
               >
                 {h.word}
@@ -35,8 +42,32 @@ const renderWithHighlights = (text: string, highlights?: HighlightConfig[]) => {
     });
     result = nextResult;
   });
-  return result;
+
+  return <>{result}</>;
 };
+
+// 2. REUSABLE DEFINITION SIDE PANEL
+export const DefinitionSidePanel = ({ title, description }: { title: string; description: string }) => (
+  <motion.div
+    initial={{ opacity: 0, x: 20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 20 }}
+    transition={{ duration: 0.4 }}
+    className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col justify-center"
+  >
+    <div className="bg-pink-50 border border-pink-200 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-3 mb-3 border-b border-pink-200/60 pb-3">
+        <span className="text-xl">💡</span>
+        <h4 className="text-sm font-black text-pink-900 uppercase tracking-widest leading-tight">
+          {title}
+        </h4>
+      </div>
+      <p className="text-sm text-pink-800 leading-relaxed font-medium">
+        {description}
+      </p>
+    </div>
+  </motion.div>
+);
 
 interface InteractiveDPMEmailProps {
   title: string;
@@ -46,11 +77,6 @@ interface InteractiveDPMEmailProps {
   onAcknowledge: () => void;
   buttonText?: string;
   highlights?: HighlightConfig[];
-}
-
-export interface HighlightConfig {
-  word: string;
-  onClick?: () => void;
 }
 
 export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.ReactNode; exitDelay?: number }) => (
@@ -146,6 +172,7 @@ export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onC
     secondary: "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 shadow-none border border-zinc-300",
     accent: "bg-pink-600 text-white hover:bg-pink-700"
   };
+
   return (
     <button onClick={onClick} className={`${baseClass} ${variants[variant]}`}>
       {children}
@@ -183,7 +210,6 @@ export const InteractiveDPMEmail = ({
 
   return (
     <motion.div layout className="w-full flex flex-col shrink-0" style={{ width: '100%' }}>
-      {/* Changing to popLayout prevents the jumpy wait transition */}
       <AnimatePresence mode="popLayout" initial={false}>
         {!isOpen ? (
           <motion.button
@@ -221,9 +247,11 @@ export const InteractiveDPMEmail = ({
           >
             <DPMMessage title={title}>
               <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
-                <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{renderWithHighlights(message, highlights)}</span>
+                <span className="whitespace-pre-wrap invisible block" aria-hidden="true">
+                  <HighlightText text={message} highlights={highlights} />
+                </span>
                 <span className="whitespace-pre-wrap absolute top-0 left-0 w-full h-full">
-                  {renderWithHighlights(displayedText, highlights)}
+                  <HighlightText text={displayedText} highlights={highlights} />
                   {isTyping && <span className="inline-block w-1.5 h-4 ml-1 bg-zinc-400 animate-pulse" />}
                 </span>
                 {isTyping && (

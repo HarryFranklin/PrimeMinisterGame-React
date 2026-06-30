@@ -9,7 +9,7 @@ import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
 import { FRAMEWORK_RULES } from '../../../utils/frameworkRules';
 import { WelfareMetrics } from '../../../utils/WelfareMetrics';
 import D3Chart from '../../D3Chart';
-import { DPMMessage } from '../SharedModalComponents';
+import { DPMMessage, HighlightText } from '../SharedModalComponents';
 
 interface StageTermSummaryProps {
   currentCycle: ElectionCycle;
@@ -17,6 +17,7 @@ interface StageTermSummaryProps {
   finalPopulation: Respondent[];
   yAxisMax: number;
   onReady: () => void;
+  onDefinitionToggle: (title: string, desc: string) => void;
 }
 
 const generateHistogramData = (pop: Respondent[]) =>
@@ -71,6 +72,7 @@ export default function StageTermSummary({
   finalPopulation,
   yAxisMax,
   onReady,
+  onDefinitionToggle
 }: StageTermSummaryProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
 
@@ -89,8 +91,11 @@ export default function StageTermSummary({
   const markerLabel = MARKER_LABELS[currentCycle];
   const diff = endMetric - startMetric;
 
+  const rawMessage = ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, diff);
+
   const initialMarkers = [{ value: startMetric, label: `${markerLabel}: ${startMetric.toFixed(2)}`, color: '#a1a1aa', dashed: true }];
   const finalMarkers = [{ value: endMetric, label: `${markerLabel}: ${endMetric.toFixed(2)}`, color: rule.graphColor, dashed: false }];
+
 
   useEffect(() => {
     const timer = setTimeout(() => onReady(), 2500);
@@ -100,7 +105,15 @@ export default function StageTermSummary({
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full">
       <DPMMessage title="Term Summary">
-        {ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, diff)}
+        <HighlightText 
+          text={rawMessage} 
+          highlights={[
+            { 
+              word: rule.targetMetricName, 
+              onClick: () => onDefinitionToggle(rule.targetMetricName, rule.targetMetricDescription) 
+            }
+          ]} 
+        />
       </DPMMessage>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
