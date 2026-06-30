@@ -232,7 +232,7 @@ export default function NarrativeModal({ completedCycle, population, onProceed, 
                   <span className="text-xs text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
                   <strong className="text-3xl text-emerald-600">{su.toFixed(2)}</strong>
                   <p className="text-[10px] text-zinc-500 mt-2 max-w-sm mx-auto italic">
-                    "While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
+                    "While my personal circumstances are great, my overall evaluation is adjusted downward due to the inequality present in the broader distribution."
                   </p>
                 </div>
                 {!revealedEmpathy && (

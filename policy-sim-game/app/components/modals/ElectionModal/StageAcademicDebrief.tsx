@@ -180,7 +180,7 @@ export default function StageAcademicDebrief({
               <div className="w-full h-px bg-zinc-200 my-2" />
               <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
               <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
-              <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
+              <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are great, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
             </div>
             {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span></div>}
           </div>
