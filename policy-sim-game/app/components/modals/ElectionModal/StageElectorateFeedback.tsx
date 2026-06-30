@@ -307,7 +307,7 @@ export default function StageElectorateFeedback({
         <div className="flex flex-col h-full w-full min-h-0 overflow-visible">
           <h4 className="text-[11px] lg:text-xs font-black uppercase tracking-widest text-zinc-800 mb-2 lg:mb-3 shrink-0">Referenced Legislation</h4>
           
-          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 justify-center relative">
+          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 justify-center relative [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {referencedPolicyIds.length === 0 ? (
               <div className="p-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 text-center shrink-0">
                 <span className="text-[10px] font-bold text-zinc-400">No specific policies referenced.</span>
