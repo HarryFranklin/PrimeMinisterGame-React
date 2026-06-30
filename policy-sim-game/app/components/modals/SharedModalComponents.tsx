@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants, Easing } from 'framer-motion';
 import { useTypewriter } from '../../hooks/useTypewriter';
 
@@ -11,7 +10,7 @@ export interface HighlightConfig {
   onClick?: () => void;
 }
 
-// 1. REUSABLE HIGHLIGHT TEXT COMPONENT
+// --- 1. REUSABLE HIGHLIGHT TEXT COMPONENT ---
 export const HighlightText = ({ text, highlights }: { text: string; highlights?: HighlightConfig[] }) => {
   if (!highlights || highlights.length === 0) return <>{text}</>;
 
@@ -46,27 +45,31 @@ export const HighlightText = ({ text, highlights }: { text: string; highlights?:
   return <>{result}</>;
 };
 
-// 2. REUSABLE DEFINITION SIDE PANEL
-export const DefinitionSidePanel = ({ title, description }: { title: string; description: string }) => (
-  <motion.div
-    initial={{ opacity: 0, x: 20 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: 20 }}
-    transition={{ duration: 0.4 }}
-    className="w-[320px] shrink-0 border-l border-zinc-200 pl-6 flex flex-col justify-center"
-  >
-    <div className="bg-pink-50 border border-pink-200 rounded-xl p-5 shadow-sm">
-      <div className="flex items-center gap-3 mb-3 border-b border-pink-200/60 pb-3">
-        <span className="text-xl">💡</span>
-        <h4 className="text-sm font-black text-pink-900 uppercase tracking-widest leading-tight">
-          {title}
-        </h4>
-      </div>
-      <p className="text-sm text-pink-800 leading-relaxed font-medium">
-        {description}
-      </p>
-    </div>
-  </motion.div>
+// --- 2. FLOATING DEFINITION PANEL (SLIDES FROM BEHIND) ---
+export const FloatingDefinitionPanel = ({ title, description, isVisible }: { title: string; description: string; isVisible: boolean }) => (
+  <AnimatePresence>
+    {isVisible && (
+      <motion.div
+        initial={{ opacity: 0, x: -40 }} // Starts hidden 40px behind the modal
+        animate={{ opacity: 1, x: 24 }}  // Slides out to 24px past the edge
+        exit={{ opacity: 0, x: -40 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute top-1/2 -translate-y-1/2 left-full w-[280px] md:w-[320px] pointer-events-auto"
+      >
+        <div className="bg-pink-50 border border-pink-200 rounded-xl p-5 shadow-xl">
+          <div className="flex items-center gap-3 mb-3 border-b border-pink-200/60 pb-3">
+            <span className="text-xl">📖</span>
+            <h4 className="text-sm font-black text-pink-900 uppercase tracking-widest leading-tight">
+              {title}
+            </h4>
+          </div>
+          <p className="text-sm text-pink-800 leading-relaxed font-medium">
+            {description}
+          </p>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
 );
 
 interface InteractiveDPMEmailProps {
@@ -108,13 +111,16 @@ const modalVariants: Variants = {
     : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } })
 };
 
+// --- 3. MODIFIED MODAL CONTENT ARCHITECTURE ---
 export const ModalContent = ({
   children,
+  floatingPanel,
   maxWidth = "max-w-xl",
   slideEntry = false,
   slideExit = false
 }: {
   children: React.ReactNode;
+  floatingPanel?: React.ReactNode;
   maxWidth?: string;
   slideEntry?: boolean;
   slideExit?: boolean;
@@ -127,19 +133,21 @@ export const ModalContent = ({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className={`
-        bg-white rounded-2xl shadow-2xl
-        w-full ${maxWidth}
-        flex flex-col
-        border-x border-zinc-200
-        border-t-[6px] border-t-pink-600
-        border-b-[6px] border-b-zinc-900
-        max-h-[95vh]
-        transition-[max-width] duration-500 ease-in-out
-      `}
+      className={`relative w-full ${maxWidth} transition-[max-width] duration-500 ease-in-out`}
     >
-      <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
-        {children}
+      {/* LAYER 1: Floating Panels Layer (Back) */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {floatingPanel}
+      </div>
+
+      {/* LAYER 2: Modal Background Layer (Middle) */}
+      <div className="absolute inset-0 bg-white rounded-2xl shadow-2xl border-x border-zinc-200 border-t-[6px] border-t-pink-600 border-b-[6px] border-b-zinc-900 z-10 pointer-events-none" />
+
+      {/* LAYER 3: Modal Content Layer (Front) */}
+      <div className="relative z-20 flex flex-col max-h-[95vh]">
+        <div className="flex-1 overflow-y-auto p-5 md:p-8 flex flex-col gap-4 md:gap-5">
+          {children}
+        </div>
       </div>
     </motion.div>
   );
@@ -270,77 +278,6 @@ export const InteractiveDPMEmail = ({
             >
               {buttonText}
             </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-};
-
-export const InlineDPMMessage = ({
-  title, message, typeSpeed = 40, onComplete, isUnlocked, onUnlock
-}: {
-  title: string; message: string; typeSpeed?: number; onComplete?: () => void; isUnlocked: boolean; onUnlock: () => void;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const isInstant = isUnlocked;
-
-  useEffect(() => {
-    if (isUnlocked) {
-      setIsOpen(true);
-      if (onComplete) onComplete();
-    }
-  }, [isUnlocked, onComplete]);
-
-  const { displayedText, isTyping, isComplete, skip } = useTypewriter(message, typeSpeed, isOpen && !isUnlocked);
-
-  useEffect(() => {
-    if (isComplete && !isUnlocked) {
-      onUnlock();
-      if (onComplete) onComplete();
-    }
-  }, [isComplete, isUnlocked, onUnlock, onComplete]);
-
-  const textToShow = isInstant ? message : displayedText;
-
-  return (
-    <motion.div layout className="w-full relative flex flex-col shrink-0">
-      <AnimatePresence mode="popLayout" initial={false}>
-        {!isOpen ? (
-          <motion.button
-            key="button" layout
-            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }}
-            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={() => setIsOpen(true)}
-            className="w-full p-4 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between shadow-md group hover:bg-black transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700 shadow-inner">
-                <span className="text-sm">👱‍♂️</span>
-              </div>
-              <span className="font-bold text-white text-sm">Consult Deputy Prime Minister</span>
-            </div>
-            <span className="text-zinc-400 group-hover:text-white transition-colors">→</span>
-          </motion.button>
-        ) : (
-          <motion.div
-            key="message" layout
-            initial={isInstant ? false : { opacity: 0, filter: "blur(4px)" }} animate={{ opacity: 1, filter: "blur(0px)" }} transition={{ duration: 0.4 }}
-            className="w-full"
-          >
-            <DPMMessage title={title}>
-              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
-                <span className="whitespace-pre-wrap invisible block" aria-hidden="true">{message}</span>
-                <span className="whitespace-pre-wrap absolute top-0 left-0 w-full h-full">
-                  {textToShow}
-                  {isTyping && <span className="inline-block w-1.5 h-4 ml-1 bg-zinc-400 animate-pulse" />}
-                </span>
-                {isTyping && (
-                  <span className="absolute bottom-0 right-0 text-[10px] font-bold text-pink-500 bg-pink-50/90 px-2 py-0.5 rounded-full border border-pink-100 hover:bg-pink-100 transition-colors pointer-events-none">
-                    Skip ⏭
-                  </span>
-                )}
-              </div>
-            </DPMMessage>
           </motion.div>
         )}
       </AnimatePresence>
