@@ -41,7 +41,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.PersonalUtility]: {
     frameworkTitle: "Personal Utility Framework",
     graphTitle: "Personal Utility Distribution",
-    targetMetricName: "National Average Satisfaction", // Average of personal self-interest
+    targetMetricName: "National Personal Satisfaction", // Average of personal self-interest
     targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing, heavily penalizing personal financial loss.",
     targetDirection: 'maximize',
     plotType: '1D',

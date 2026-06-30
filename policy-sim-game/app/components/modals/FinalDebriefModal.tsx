@@ -95,7 +95,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
 
           <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
             <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">3. Personal Utility</h4>
-            <span className="text-[10px] font-bold text-purple-500 block mb-2">National Average Satisfaction</span>
+            <span className="text-[10px] font-bold text-purple-500 block mb-2">National Self Satisfaction</span>
             <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Focuses on individual rational choice. Due to loss aversion, citizens often vote to protect their current status, making redistribution difficult.</p>
           </div>
           
