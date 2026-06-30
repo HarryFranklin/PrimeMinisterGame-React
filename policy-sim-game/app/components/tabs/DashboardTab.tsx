@@ -530,7 +530,7 @@ export default function DashboardTab() {
                         
                         {policy.specificRules.map((r, rIdx) => (
                           <div key={rIdx} className="bg-white p-3 rounded-lg border border-pink-100 flex flex-col gap-1.5 shadow-sm">
-                            <div className="flex justify-between items-start gap-2">
+                            <div className="flex justify-between items-center gap-2">
                               <span className="font-bold text-sm text-zinc-800 leading-snug">{r.note}</span>
                               <span className={`font-black text-sm shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                 {r.impact > 0 ? '+' : ''}{r.impact} LS
@@ -598,7 +598,7 @@ export default function DashboardTab() {
                           <div className="flex flex-col gap-1.5">
                             {fullPolicy.specificRules.map((r: any, rIdx: number) => (
                               <div key={rIdx} className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
-                                <div className="flex justify-between items-start gap-2">
+                                <div className="flex justify-between items-center gap-2">
                                   <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
                                   <span className={`font-black text-[13px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                     {r.impact > 0 ? '+' : ''}{r.impact} LS
