@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
@@ -25,31 +25,32 @@ interface ElectionModalProps {
   onFinish?: () => void;
 }
 
-export default function ElectionModal({ 
-  currentCycle, approvalRating, cycleAttempts, 
-  initialPopulation, baselinePopulation, finalPopulation, yAxisMax, onNextCycle, onReset, onFinish 
-}: ElectionModalProps) {
+export default function ElectionModal(props: ElectionModalProps) {
+  const { currentCycle, approvalRating, cycleAttempts, onNextCycle, onReset, onFinish } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
-  
   const [showDefinition, setShowDefinition] = useState(false);
   const [defTitle, setDefTitle] = useState("");
   const [defDesc, setDefDesc] = useState("");
+
+  const rule = FRAMEWORK_RULES[currentCycle];
+  const won = approvalRating >= 51.0;
+  const isFinalCycle = currentCycle === ElectionCycle.SocietalUtility;
+  
+  // Logic to determine if the player can proceed to next term
+  let canProceed = won || cycleAttempts >= 3;
+  // Restored to 5 total pages as per original design
+  const totalPages = canProceed ? 5 : 4;
+
+  useEffect(() => {
+    setShowDefinition(false);
+  }, [page]);
 
   const handleToggle = (title: string, desc: string) => {
     setDefTitle(title);
     setDefDesc(desc);
     setShowDefinition(true);
   };
-  
-  const rule = FRAMEWORK_RULES[currentCycle];
-  const won = approvalRating >= 51.0;
-  const isFinalCycle = currentCycle === ElectionCycle.SocietalUtility;
-  
-  let canProceed = true;
-  if (!won && cycleAttempts < 3) canProceed = false;
-
-  const totalPages = canProceed ? 5 : 4;
 
   const getModalTitle = () => {
     if (page === 0) return "Term Summary";
@@ -69,24 +70,20 @@ export default function ElectionModal({
 
   return (
     <ModalContent 
-      maxWidth={getModalWidth()}
+      maxWidth={page === 1 ? "max-w-xl" : page === 2 ? "max-w-2xl" : page === 3 ? "max-w-5xl" : "max-w-3xl"}
       floatingPanel={
-          <FloatingDefinitionPanel
-            title={defTitle}
-            description={defDesc}
-            isVisible={showDefinition}
-          />
+        <FloatingDefinitionPanel title={defTitle} description={defDesc} isVisible={showDefinition} />
       }
     >
 
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
     
       <motion.div className="flex-1 min-h-0 overflow-y-auto py-4 pr-1 w-full">
-        {page === 0 && <StageTermSummary currentCycle={currentCycle} initialPopulation={initialPopulation} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle}/>}
+        {page === 0 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
-        {page === 2 && <StagePopulationChange finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
-        {page === 3 && <StageElectorateFeedback initialPopulation={initialPopulation} baselinePopulation={baselinePopulation} finalPopulation={finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
-        {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={finalPopulation} yAxisMax={yAxisMax} onReady={() => setPageReady(true)} />}
+        {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
+        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} />}
+        {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
       {/* Footer pinned to bottom */}
