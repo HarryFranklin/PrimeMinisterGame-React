@@ -23,7 +23,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#ec4899",
-    winThresholdScalar: 0.89,
+    winThresholdScalar: 0.905,
     briefingText: "Your goal is to increase the total amount of happiness in the country. You must enact policies that raise the national average, even if it leaves a minority of people behind.",
   },
   [ElectionCycle.Rawlsian]: {
@@ -35,7 +35,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
     graphColor: "#3b82f6",
-    winThresholdScalar: 0.675,
+    winThresholdScalar: 0.625,
     briefingText: "Your goal is to protect the most vulnerable people in society. You must enact policies that improve the lives of the absolute worst-off, even if it brings down the national average.",
   },
   [ElectionCycle.PersonalUtility]: {
@@ -47,7 +47,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     graphColor: "#8b5cf6",
-    winThresholdScalar: 0.9575,
+    winThresholdScalar: 0.97,
     briefingText: "Voters have become deeply selfish. They will protect their own wellbeing. You must navigate their self-interest and avoid policies that make the middle class feel like they are losing out.",
   },
   [ElectionCycle.SocietalUtility]: {
@@ -59,7 +59,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: "#10b981",
-    winThresholdScalar: 0.99,
+    winThresholdScalar: 0.9675,
     briefingText: "The public is angry about wellbeing inequality. You must balance economic progress with the electorate's demand for fairness. A society with high National Average Happiness that is highly unequal society will lead to you being voted out.",
   },
 };

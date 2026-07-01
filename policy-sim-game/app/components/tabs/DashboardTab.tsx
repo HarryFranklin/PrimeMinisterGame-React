@@ -199,69 +199,48 @@ export default function DashboardTab() {
           
           {isUtilityCycle ? (
             // --- UTILITY CYCLE VIEW (Cycles 3 & 4) ---
+            // forecastState drives the equation block's locked/active appearance.
+            // The table itself is always fully visible — the equation section below
+            // it handles gating, mirroring how cycles 1-2 always show the distribution
+            // chart but gate the forecast chart behind a prompt.
             <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group relative">
               <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">Utility Analysis</h3>
               </div>
-              
-              <div className="flex-1 p-3 min-h-0 overflow-y-auto relative">
-                <UtilityTable 
+
+              <div className="flex-1 p-3 min-h-0 overflow-y-auto">
+                <UtilityTable
                   population={population}
-                  // Only pass previewPopulation if they've spent a forecast
-                  previewPopulation={(selectedPolicy && isForecasted && !isParliamentDissolved) ? previewPopulation : null}
+                  previewPopulation={isForecasted && !isParliamentDissolved ? previewPopulation : null}
                   cycle={currentCycle}
+                  metricName={rule.targetMetricName}
+                  forecastState={
+                    isParliamentDissolved ? 'idle'
+                    : !selectedPolicy     ? 'idle'
+                    : isForecasted        ? 'previewing'
+                    :                       'policy-selected'
+                  }
+                  forecastsRemaining={forecastsRemaining}
+                  onRunForecast={() => {
+                    if (forecastsRemaining > 0 && selectedPolicy) {
+                      setForecastedPolicies(prev => new Set(prev).add(selectedPolicy.id));
+                    }
+                  }}
                 />
-
-                {/* Overlays floated over the bottom of the table to not obscure the base data */}
-                {!selectedPolicy && !isParliamentDissolved && (
-                  <div className="absolute inset-x-4 bottom-4 flex flex-col items-center justify-center bg-white/95 backdrop-blur-[4px] rounded-xl shadow-lg border border-zinc-200 py-4 px-5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-auto">
-                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">💡</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Awaiting Policy</h4>
-                    <p className="text-sm text-zinc-500 font-medium text-center">
-                      Select a policy to forecast utility impacts.
-                    </p>
-                  </div>
-                )}
-
-                {selectedPolicy && !isForecasted && !isParliamentDissolved && (
-                  <div className="absolute inset-x-4 bottom-4 flex flex-col items-center justify-center bg-white/95 backdrop-blur-[4px] rounded-xl shadow-xl border border-pink-200 py-4 px-5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-auto">
-                    <div className="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-pink-100">
-                      <span className="text-pink-500 text-lg">📊</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Impact Unknown</h4>
-                    <p className="text-xs text-zinc-500 font-medium mb-4 text-center">
-                      You have <strong className="text-pink-600">{forecastsRemaining}</strong> forecast{forecastsRemaining !== 1 ? 's' : ''} remaining this turn.
-                    </p>
-                    <button 
-                      onClick={() => {
-                        if (forecastsRemaining > 0 && selectedPolicy) {
-                          setForecastedPolicies(prev => new Set(prev).add(selectedPolicy.id));
-                        }
-                      }}
-                      disabled={forecastsRemaining === 0}
-                      className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-md ${forecastsRemaining > 0 ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`}
-                    >
-                      {forecastsRemaining > 0 ? 'Run Data Forecast' : 'Out of Forecasts'}
-                    </button>
-                  </div>
-                )}
-                
-                {isParliamentDissolved && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
-                    <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
-                      <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-zinc-400 text-lg">🗳️</span>
-                      </div>
-                      <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Term Concluded</h4>
-                      <p className="text-xs text-zinc-500 font-medium">
-                        Review your enacted legislation and face the electorate.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* Panel-level overlay for dissolved parliament — same treatment as cycles 1-2 */}
+              {isParliamentDissolved && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-xl z-10 animate-in fade-in duration-300">
+                  <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
+                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-zinc-400 text-lg">🗳️</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Term Concluded</h4>
+                    <p className="text-xs text-zinc-500 font-medium">Review your enacted legislation and face the electorate.</p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             // --- STANDARD CYCLE VIEW (Cycles 1 & 2) ---
@@ -444,104 +423,102 @@ export default function DashboardTab() {
           <div ref={agendaListRef} className={`flex-1 flex flex-col gap-2 min-h-0 overflow-hidden relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
-            currentDeck.slice(0, 4).map((policy, index) => {
-              const isSelected = selectedPolicy?.id === policy.id;
-              const isPolForecasted = forecastedPolicies.has(policy.id);
-              const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
+              currentDeck.slice(0, 4).map((policy, index) => {
+                const isSelected = selectedPolicy?.id === policy.id;
+                const isPolForecasted = forecastedPolicies.has(policy.id);
+                const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
 
-              return (
-                <div key={policy.id} className={`relative flex flex-1 w-full min-h-0 transition-all duration-500 ${isSelected ? 'z-50' : 'z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40 pointer-events-none' : ''}`}>
-                  
-                  <div
-                    className={`w-full h-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
-                      isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
-                    } ${
-                      isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
-                    } ${isEnacting && 'opacity-50'}`}
-                  >
-                    {/* Left pink bar overlay */}
-                    {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500" />}
-
-                    {/* Main Clickable Area */}
-                    <button
-                      disabled={!isAgendaUnlocked || isEnacting}
-                      onClick={() => {
-                        setSelectedPolicy(isSelected ? null : policy);
-                        setDetailsOpen(false); 
-                      }}
-                      // Added overflow-hidden to the button itself
-                      className={`flex-1 flex flex-col justify-center items-start text-left ${textScale.pad} h-full cursor-pointer disabled:cursor-not-allowed ${isSelected ? 'pl-4' : ''} overflow-hidden w-full`}
+                return (
+                  <div key={policy.id} className={`relative flex w-full min-h-0 transition-all duration-500 ${isSelected ? 'flex-[1.4] z-50' : 'flex-1 z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40 pointer-events-none' : ''}`}>
+                    
+                    <div
+                      className={`w-full h-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
+                        isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
+                      } ${
+                        isSelected && pulsePolicy ? 'scale-[1.02] ring-4 ring-pink-500 animate-pulse' : isSelected ? 'ring-2 ring-pink-500/20' : ''
+                      } ${isEnacting && 'opacity-50'}`}
                     >
-                      {/* Top Section: Title & Optional Preview Tag */}
-                      <div className={`w-full ${textScale.gap} ${isSelected ? 'pl-2' : ''} transition-all duration-300 shrink-0`}>
-                        <div className="flex justify-between items-start w-full gap-2">
-                          <p className={`font-bold ${textScale.title} leading-tight pr-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'} line-clamp-2`}>
-                            {policy.policyName}
+                      {/* Left pink bar overlay */}
+                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-pink-500" />}
+
+                      {/* Main Clickable Area */}
+                      <button
+                        disabled={!isAgendaUnlocked || isEnacting}
+                        onClick={() => {
+                          setSelectedPolicy(isSelected ? null : policy);
+                          setDetailsOpen(false); 
+                        }}
+                        className={`flex-1 flex flex-col justify-center items-start text-left ${textScale.pad} h-full cursor-pointer disabled:cursor-not-allowed ${isSelected ? 'pl-4' : ''} overflow-hidden w-full`}
+                      >
+                        {/* Top Section: Title & Optional Preview Tag */}
+                        <div className={`w-full ${textScale.gap} ${isSelected ? 'pl-2' : ''} transition-all duration-300 shrink-0`}>
+                          <div className="flex justify-between items-start w-full gap-2">
+                            <p className={`font-bold ${textScale.title} leading-tight pr-2 ${isSelected ? 'text-pink-900' : 'text-zinc-800'} line-clamp-2`}>
+                              {policy.policyName}
+                            </p>
+                            {isPolForecasted && !isSelected && (
+                              <span className="shrink-0 bg-pink-100 text-pink-600 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
+                                Preview Available
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Section: Description */}
+                        <div className="flex-1 min-h-0 overflow-hidden w-full">
+                          <p className={`w-full ${textScale.body} leading-relaxed ${isSelected ? 'line-clamp-4 md:line-clamp-none text-pink-700/80 pl-2' : 'line-clamp-2 text-zinc-500'} transition-all duration-300`}>
+                            {policy.description}
                           </p>
-                          {isPolForecasted && !isSelected && (
-                            <span className="shrink-0 bg-pink-100 text-pink-600 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md border border-pink-200">
-                              Preview Available
+                        </div>
+                      </button>
+
+                      {/* Right Action Side Panel */}
+                      {isSelected && (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailsOpen(!detailsOpen);
+                          }}
+                          className={`w-[15%] min-w-[70px] border-l border-pink-200 flex flex-col justify-center items-center p-2 bg-pink-100/40 hover:bg-pink-100 cursor-pointer transition-colors text-center group/btn relative shrink-0`}
+                        >
+                          {isPolForecasted && (
+                            <span className="absolute top-2 right-2 left-2 bg-pink-200 text-pink-700 text-[8px] uppercase tracking-wider font-black py-0.5 rounded text-center truncate">
+                              Previewed
                             </span>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Bottom Section: Description */}
-                      {/* Added a min-h-0 wrapper to enforce flexbox clipping and line-clamp-2/3 to prevent spilling */}
-                      <div className="flex-1 min-h-0 overflow-hidden w-full">
-                        <p className={`w-full ${textScale.body} leading-relaxed line-clamp-2 md:line-clamp-3 ${isSelected ? 'text-pink-700/80 pl-2' : 'text-zinc-500'} transition-all duration-300`}>
-                          {policy.description}
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* Right Action Side Panel */}
-                    {isSelected && (
-                      <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDetailsOpen(!detailsOpen);
-                        }}
-                        className={`w-[15%] min-w-[70px] border-l border-pink-200 flex flex-col justify-center items-center p-2 bg-pink-100/40 hover:bg-pink-100 cursor-pointer transition-colors text-center group/btn relative shrink-0`}
-                      >
-                        {isPolForecasted && (
-                          <span className="absolute top-2 right-2 left-2 bg-pink-200 text-pink-700 text-[8px] uppercase tracking-wider font-black py-0.5 rounded text-center truncate">
-                            Previewed
+                          
+                          <span className="text-[10px] font-black uppercase tracking-wider text-pink-600 group-hover/btn:text-pink-800 selection:bg-transparent select-none leading-tight">
+                            {detailsOpen ? 'Hide\nDetails' : 'View\nDetails'}
                           </span>
-                        )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* DETAILS POP-UP */}
+                    {isSelected && detailsOpen && (
+                      <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 z-[100] ${
+                        index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
+                      }`}>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Policy Rules</span>
                         
-                        <span className="text-[10px] font-black uppercase tracking-wider text-pink-600 group-hover/btn:text-pink-800 selection:bg-transparent select-none leading-tight">
-                          {detailsOpen ? 'Hide\nDetails' : 'View\nDetails'}
-                        </span>
+                        <div className="flex flex-col gap-1.5">
+                          {policy.specificRules.map((r: any, rIdx: number) => (
+                            <div key={rIdx} className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
+                                <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {r.impact > 0 ? '+' : ''}{r.impact} LS
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {/* DETAILS POP-UP */}
-                  {isSelected && detailsOpen && (
-                    <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 z-[100] ${
-                      index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
-                    }`}>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Policy Rules</span>
-                      
-                      <div className="flex flex-col gap-1.5">
-                        {policy.specificRules.map((r: any, rIdx: number) => (
-                          <div key={rIdx} className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
-                            <div className="flex justify-between items-center gap-2">
-                              <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
-                              <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {r.impact > 0 ? '+' : ''}{r.impact} LS
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
+                );
+              })
+            ) : (
               // History View (When Parliament Dissolved)
               <div className="flex flex-col gap-1.5 h-full min-h-0 overflow-visible justify-between relative">
                 {enactedLegislation.map((leg, index) => {
