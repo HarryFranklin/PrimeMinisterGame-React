@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 import { ElectionCycle, Policy } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 
@@ -15,35 +14,6 @@ interface DPMCardProps {
 export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolved, selectedPolicy, cycleMAO, currentMetricScore }: DPMCardProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
   const targetScore = (cycleMAO * rule.winThresholdScalar).toFixed(2);
-  
-  const [isCompact, setIsCompact] = useState(false);
-  const [activeSlide, setActiveSlide] = useState<0 | 1>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Monitor available vertical height to toggle compact carousel mode
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        // If the container has less than 220px of height, switch to carousel
-        setIsCompact(entry.contentRect.height < 220);
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Handle the carousel timer
-  useEffect(() => {
-    if (!isCompact) return;
-    const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev === 0 ? 1 : 0));
-    }, 6000); // Rotates every 6 seconds
-    return () => clearInterval(timer);
-  }, [isCompact]);
 
   if (isParliamentDissolved) {
     return (
@@ -59,7 +29,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
             </p>
           </div>
         </div>
-        
         <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
           <p className="text-lg md:text-xl font-black text-rose-900 mb-2">Parliament is Dissolved.</p>
           <p className="text-sm text-rose-700 font-medium">The public are heading to the polls to deliver their verdict.</p>
@@ -68,18 +37,64 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     );
   }
 
-  const getAdvisory = () => {
-    if (selectedPolicy) return "If you have any Wellbeing Impact Forecasts remaining, review the policy's impact before enacting it.";
-    
+  const getAdvisory = (): string => {
+    const isUtilityCycle = currentCycle === ElectionCycle.PersonalUtility || currentCycle === ElectionCycle.SocietalUtility;
+    const target = cycleMAO * rule.winThresholdScalar;
+    // How far along toward the target they are: 0 = no progress, 1 = at target
+    const progressRatio = target > 0 ? Math.min(currentMetricScore / target, 1) : 0;
+    const isBehind = progressRatio < 0.7;
+    const isLate = currentTurn >= 4;
+
+    // When a policy is selected, cycles 3-4 direct the player to the utility
+    // table rather than giving the generic forecast reminder.
+    if (selectedPolicy) {
+      switch (currentCycle) {
+        case ElectionCycle.PersonalUtility:
+          return "You have two ways to read this. Open the details panel to see who this policy targets — that costs you nothing. Run a forecast to see how much your score will actually move — but you only get two per turn, so choose carefully.";
+        case ElectionCycle.SocietalUtility:
+          return "You have two ways to read this. The details panel tells you who this policy affects and whether it widens or narrows the gap — that is free. A forecast will show you the score impact — but you only get two this turn, so spend them on the policies you are genuinely unsure about.";
+        default:
+          return "If you have any Wellbeing Impact Forecasts remaining, review the policy's impact before enacting it.";
+      }
+    }
+
     switch (currentCycle) {
       case ElectionCycle.Benthamite:
         return "We need to boost the national average. Prioritise policies that deliver widespread gains, as total numbers are all that matter right now.";
+
       case ElectionCycle.Rawlsian:
         return "The public is watching how we treat the most vulnerable. Focus your political capital entirely on raising the baseline for those worst-off.";
-      case ElectionCycle.PersonalUtility:
-        return "Voters are fiercely protective of their own finances. If a policy costs them anything personally, they will vote against us.";
-      case ElectionCycle.SocietalUtility:
-        return "The public demands a fairer country. If we only enrich the wealthy while leaving others behind, they will turn on us regardless of economic growth.";
+
+      case ElectionCycle.PersonalUtility: {
+        // Early turns: explain the concept
+        if (currentTurn <= 2) {
+          return "Personal utility is not linear. A citizen already at LS 8 gains almost nothing from another point upward — their curve has flattened. The real score gains come from lifting those in the LS 3–6 range, where the curve is steepest. Look at the Avg Utility row.";
+        }
+        // Behind on score, mid-game
+        if (isBehind && !isLate) {
+          return "We are behind target. Focus on the columns with the highest Avg Utility in the table — those are the high-yield zones. Moving citizens into those columns is worth more than spreading gains evenly.";
+        }
+        // Late and behind
+        if (isBehind && isLate) {
+          return "Time is short and we are behind. Every remaining policy must target citizens in the steepest part of the utility curve. Gains at the top end are almost worthless — gains in the middle are not.";
+        }
+        // On track
+        return "We are on track. Stay disciplined — avoid policies that look good for LS averages but push people into flat parts of the utility curve. The table tells you what actually counts.";
+      }
+
+      case ElectionCycle.SocietalUtility: {
+        if (currentTurn <= 2) {
+          return "Citizens are not just evaluating their own score here — they are evaluating the shape of the entire distribution. A rising average that widens inequality will cost you votes. Compression matters as much as growth.";
+        }
+        if (isBehind && !isLate) {
+          return "We are behind. The score is dragged down when citizens observe a widening gap. Prioritise policies that either raise the floor or reduce the spread — even modest gains at the bottom count double here.";
+        }
+        if (isBehind && isLate) {
+          return "We are running out of time. Enact policies that visibly compress the distribution. Citizens with inequality-averse preferences — the majority — will not forgive a rising tide that lifts only some boats.";
+        }
+        return "We are on track. But beware of complacency — any policy that concentrates gains at the top can undo progress quickly. The societal score is sensitive to visible inequality.";
+      }
+
       default:
         return "";
     }
@@ -96,7 +111,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
           <h3 className="text-lg lg:text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
         </div>
       </div>
-      
+
       <div className="p-4 lg:p-5 flex-1 flex flex-col gap-4 lg:gap-5 overflow-hidden">
         <div className="grid grid-cols-2 gap-4 shrink-0">
           <div className="bg-white border-l-4 border-l-pink-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm flex flex-col justify-center">
@@ -108,68 +123,19 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
             <span className="block text-2xl lg:text-3xl font-black text-zinc-700">{targetScore}</span>
           </div>
         </div>
-        
-        <div 
-          ref={containerRef}
-          className="bg-zinc-100 border border-zinc-200 p-4 lg:p-5 rounded-xl shadow-sm flex-1 flex flex-col min-h-0 relative"
-        >
-          {!isCompact ? (
-            // Standard Layout (Sufficient Height)
-            <>
-              <div className="mb-3 shrink-0">
-                <span className="text-sm lg:text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
-                <p className="text-[13px] lg:text-sm text-zinc-600 leading-relaxed">
-                  {rule.targetMetricDescription}
-                </p>
-              </div>
-              
-              <div className="border-t border-zinc-200 pt-3 flex-1 flex flex-col min-h-0">
-                <span className="text-[11px] lg:text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-1.5 shrink-0">Advisory Note</span>
-                <p className="text-[13px] lg:text-sm text-zinc-700 italic overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden leading-relaxed flex-1">"{getAdvisory()}"</p>
-              </div>
-            </>
-          ) : (
-            // Compact Carousel Layout (Constrained Height)
-            <div className="flex-1 flex flex-col h-full relative overflow-hidden pb-4">
-              <AnimatePresence mode="wait">
-                {activeSlide === 0 ? (
-                  <motion.div 
-                    key="slide1" 
-                    initial={{ opacity: 0, y: 5 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: -5 }} 
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col h-full absolute inset-0"
-                  >
-                    <span className="text-sm font-bold text-zinc-900 block mb-1 truncate">{rule.targetMetricName}</span>
-                    <p className="text-[13px] text-zinc-600 leading-relaxed overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-                      {rule.targetMetricDescription}
-                    </p>
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="slide2" 
-                    initial={{ opacity: 0, y: 5 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: -5 }} 
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col h-full absolute inset-0"
-                  >
-                    <span className="text-[11px] font-black uppercase tracking-widest text-pink-600 block mb-1.5 shrink-0">Advisory Note</span>
-                    <p className="text-[13px] text-zinc-700 italic leading-relaxed overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-                      "{getAdvisory()}"
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* Carousel Indicators */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1.5 pt-2 bg-zinc-100 z-10">
-                <div className={`h-1.5 rounded-full transition-all duration-500 ${activeSlide === 0 ? 'w-4 bg-pink-500' : 'w-1.5 bg-zinc-300'}`} />
-                <div className={`h-1.5 rounded-full transition-all duration-500 ${activeSlide === 1 ? 'w-4 bg-pink-500' : 'w-1.5 bg-zinc-300'}`} />
-              </div>
-            </div>
-          )}
+
+        <div className="bg-zinc-100 border border-zinc-200 p-4 lg:p-5 rounded-xl shadow-sm flex-1 flex flex-col min-h-0">
+          <div className="mb-3 shrink-0">
+            <span className="text-sm lg:text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
+            <p className="text-[13px] lg:text-sm text-zinc-600 leading-relaxed line-clamp-3 lg:line-clamp-none">
+              {rule.targetMetricDescription}
+            </p>
+          </div>
+
+          <div className="border-t border-zinc-200 pt-3 flex-1 flex flex-col min-h-0">
+            <span className="text-[11px] lg:text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-1.5 shrink-0">Advisory Note</span>
+            <p className="text-[13px] lg:text-sm text-zinc-700 italic overflow-hidden text-ellipsis leading-relaxed flex-1">"{getAdvisory()}"</p>
+          </div>
         </div>
       </div>
     </div>

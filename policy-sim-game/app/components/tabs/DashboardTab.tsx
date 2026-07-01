@@ -199,16 +199,12 @@ export default function DashboardTab() {
           
           {isUtilityCycle ? (
             // --- UTILITY CYCLE VIEW (Cycles 3 & 4) ---
-            // forecastState drives the equation block's locked/active appearance.
-            // The table itself is always fully visible — the equation section below
-            // it handles gating, mirroring how cycles 1-2 always show the distribution
-            // chart but gate the forecast chart behind a prompt.
             <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group relative">
               <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">Utility Analysis</h3>
               </div>
-
-              <div className="flex-1 p-3 min-h-0 overflow-y-auto">
+              
+              <div className="flex-1 p-3 min-h-0 overflow-y-auto relative">
                 <UtilityTable
                   population={population}
                   previewPopulation={isForecasted && !isParliamentDissolved ? previewPopulation : null}
@@ -227,20 +223,44 @@ export default function DashboardTab() {
                     }
                   }}
                 />
-              </div>
 
-              {/* Panel-level overlay for dissolved parliament — same treatment as cycles 1-2 */}
-              {isParliamentDissolved && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-xl z-10 animate-in fade-in duration-300">
-                  <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
-                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-zinc-400 text-lg">🗳️</span>
-                    </div>
-                    <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Term Concluded</h4>
-                    <p className="text-xs text-zinc-500 font-medium">Review your enacted legislation and face the electorate.</p>
+                {selectedPolicy && !isForecasted && !isParliamentDissolved && (
+                <div className="absolute inset-x-4 bottom-4 flex flex-col items-center justify-center bg-white/95 backdrop-blur-[4px] rounded-xl shadow-xl border border-pink-200 py-4 px-5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-auto">
+                  <div className="w-10 h-10 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-2 border border-pink-100">
+                    <span className="text-pink-500 text-lg">📊</span>
                   </div>
+                  <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Impact Unknown</h4>
+                  <p className="text-xs text-zinc-500 font-medium mb-4 text-center">
+                    You have <strong className="text-pink-600">{forecastsRemaining}</strong> forecast{forecastsRemaining !== 1 ? 's' : ''} remaining this turn.
+                  </p>
+                  <button 
+                    onClick={() => {
+                      if (forecastsRemaining > 0 && selectedPolicy) {
+                        setForecastedPolicies(prev => new Set(prev).add(selectedPolicy.id));
+                      }
+                    }}
+                    disabled={forecastsRemaining === 0}
+                    className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-md ${forecastsRemaining > 0 ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'}`}
+                  >
+                    {forecastsRemaining > 0 ? 'Run Data Forecast' : 'Out of Forecasts'}
+                  </button>
                 </div>
               )}
+                
+                {isParliamentDissolved && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] rounded-b-xl z-10 animate-in fade-in duration-300 pointer-events-auto">
+                    <div className="bg-white px-5 py-4 rounded-xl shadow-lg border border-zinc-200 text-center max-w-[280px]">
+                      <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-zinc-400 text-lg">🗳️</span>
+                      </div>
+                      <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Term Concluded</h4>
+                      <p className="text-xs text-zinc-500 font-medium">
+                        Review your enacted legislation and face the electorate.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             // --- STANDARD CYCLE VIEW (Cycles 1 & 2) ---
@@ -500,18 +520,49 @@ export default function DashboardTab() {
                         index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                       }`}>
                         <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Policy Rules</span>
-                        
-                        <div className="flex flex-col gap-1.5">
-                          {policy.specificRules.map((r: any, rIdx: number) => (
-                            <div key={rIdx} className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
-                              <div className="flex justify-between items-center gap-2">
-                                <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
-                                <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {r.impact > 0 ? '+' : ''}{r.impact} LS
-                                </span>
+
+                        <div className="flex flex-col gap-2">
+                          {policy.specificRules.map((r: any, rIdx: number) => {
+                            // LS range label
+                            const lsRange = r.affectEveryone
+                              ? 'All citizens'
+                              : r.minLS !== undefined && r.maxLS !== undefined
+                                ? `LS ${r.minLS}–${r.maxLS}`
+                                : r.minLS !== undefined
+                                  ? `LS ≥ ${r.minLS}`
+                                  : r.maxLS !== undefined
+                                    ? `LS ≤ ${r.maxLS}`
+                                    : 'All citizens';
+
+                            // Coverage: citizens in the eligible LS band × proportion
+                            const eligible = population.filter((p: any) =>
+                              (r.affectEveryone) ||
+                              (
+                                (r.minLS === undefined || p.currentLS >= r.minLS) &&
+                                (r.maxLS === undefined || p.currentLS <= r.maxLS)
+                              )
+                            ).length;
+                            const coverage = Math.round(eligible * r.proportion);
+
+                            return (
+                              <div key={rIdx} className="bg-zinc-50 rounded-lg border border-zinc-100 overflow-hidden shadow-sm">
+                                {/* Rule name + impact */}
+                                <div className="flex justify-between items-center gap-2 px-2.5 pt-2.5 pb-1.5">
+                                  <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
+                                  <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {r.impact > 0 ? '+' : ''}{r.impact} LS
+                                  </span>
+                                </div>
+                                {/* LS range + coverage */}
+                                <div className="flex gap-2 px-2.5 pb-2 border-t border-zinc-100 pt-1.5">
+                                  <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Range</span>
+                                  <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
+                                  <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
+                                  <span className="text-[11px] font-bold text-zinc-600">~{coverage} people</span>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

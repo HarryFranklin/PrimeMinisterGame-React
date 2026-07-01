@@ -41,25 +41,26 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.PersonalUtility]: {
     frameworkTitle: "Personal Utility Framework",
     graphTitle: "Personal Utility Distribution",
-    targetMetricName: "National Personal Satisfaction", // Average of personal self-interest
-    targetMetricDescription: "Calculated by averaging how each citizen values their own wellbeing according to their personal utility curve.", 
+    targetMetricName: "National Personal Satisfaction",
+    targetMetricDescription: "The average of each citizen's personal utility at their current life satisfaction score. Utility is non-linear — gains at the top of the LS scale are worth far less than equivalent gains in the middle.",
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     graphColor: "#8b5cf6",
     winThresholdScalar: 0.97,
-    briefingText: "Voters have become deeply selfish. They will protect their own wellbeing. You must navigate their self-interest and avoid policies that make the middle class feel like they are losing out.",
+    briefingText: "Not every improvement counts the same. Helping someone who is already comfortable barely moves the needle — they are doing fine. But helping someone who is struggling makes a real difference to how they feel. Your job is to find those people and lift them, not to keep adding to the lives of those who need it least.",
   },
   [ElectionCycle.SocietalUtility]: {
     frameworkTitle: "Societal Utility Framework",
     graphTitle: "Societal Utility Distribution",
-    targetMetricName: "National Fairness Index", 
-    targetMetricDescription: "Calculated by averaging citizens' evaluation of society, balancing their own wellbeing against their desire for equality.",
+    targetMetricName: "National Fairness Index",
+    targetMetricDescription: "The average of how each citizen evaluates the entire LS distribution — not just their own score. Citizens who observe a highly unequal society report lower utility regardless of their personal situation.",
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: "#10b981",
     winThresholdScalar: 0.9675,
-    briefingText: "The public is angry about wellbeing inequality. You must balance economic progress with the electorate's demand for fairness. A society with high National Average Happiness that is highly unequal society will lead to you being voted out.",
+    briefingText: "Voters are not just tracking their own lives — they are watching everyone else's too. A rising national average that leaves the bottom behind will cost you votes from citizens who find inequality itself distressing, even if they are personally unaffected. Your task is to grow wellbeing in a way the whole country can see as fair. Visible gaps are politically fatal here.",
   },
+  
 };
