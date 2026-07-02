@@ -191,7 +191,7 @@ export default function DashboardTab() {
                     visualStyle={'faces'}
                     yAxisMax={yAxisMax}
                     faceCols={2}
-                    highlightBins={highlightedBins}
+                    activePolicyRules={detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null}
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function DashboardTab() {
                     visualStyle={isParliamentDissolved && hoveredHistoryTurn !== null ? 'solid' : 'faces'}
                     yAxisMax={yAxisMax}
                     faceCols={2}
-                    highlightBins={highlightedBins}
+                    activePolicyRules={detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null}
                   />
                 </div>
               </div>
@@ -477,10 +477,12 @@ export default function DashboardTab() {
                             return (
                               <React.Fragment key={rIdx}>
                                 {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full" />}
-                                <div className="bg-zinc-50 rounded-lg border border-zinc-100 overflow-hidden shadow-sm">
+                                {/* Left border colour matches band highlight & face segment colour */}
+                                <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4"
+                                     style={{ borderLeftColor: r.impact > 0 ? '#3b82f6' : '#f59e0b', backgroundColor: r.impact > 0 ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)' }}>
                                   <div className="flex justify-between items-center gap-2 px-2.5 pt-2.5 pb-1.5">
                                     <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
-                                    <span className={`font-black text-[11px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    <span className="font-black text-[11px] shrink-0" style={{ color: r.impact > 0 ? '#3b82f6' : '#f59e0b' }}>
                                       {r.impact > 0 ? '+' : ''}{r.impact} LS
                                     </span>
                                   </div>
@@ -488,7 +490,7 @@ export default function DashboardTab() {
                                     <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Range</span>
                                     <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
                                     <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
-                                    <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}% of the entire population</span>
+                                    <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}%</span>
                                   </div>
                                 </div>
                               </React.Fragment>

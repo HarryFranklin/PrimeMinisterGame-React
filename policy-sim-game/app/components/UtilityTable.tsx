@@ -94,7 +94,7 @@ export default function UtilityTable({
           {/* Row 1: % People */}
           <tr className="border-b border-zinc-200">
             <td className="bg-zinc-100 text-left px-2 py-1.5 font-bold text-zinc-600 text-[9px] uppercase tracking-wide">
-              People
+              People (%)
             </td>
             {COLUMNS.map(col => {
               const before = baseStats[col].count;
@@ -105,7 +105,7 @@ export default function UtilityTable({
 
               return (
                 <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none">
-                  {pctAfter}%
+                  {pctAfter}
                   {isPreviewing && pctDelta !== 0 && (
                     <span className={`block text-[8px] font-black mt-0.5 ${pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {pctDelta > 0 ? '+' : ''}{pctDelta}%
