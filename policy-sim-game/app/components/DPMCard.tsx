@@ -19,7 +19,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     return (
       <div className="flex-1 rounded-xl border-2 border-rose-400 bg-rose-50 flex flex-col shrink-0 min-h-0 overflow-hidden shadow-md">
         <div className="p-4 border-b border-rose-200/50 bg-white/50 flex items-center gap-3 shrink-0">
-          <span className="text-3xl bg-white border border-rose-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
+          <span className="text-3xl bg-white border border-rose-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">⚖️</span>
           <div>
             <p className="text-[11px] font-black uppercase tracking-widest text-rose-600 leading-tight">
               Deputy Prime Minister
@@ -38,50 +38,27 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
   }
 
   const getAdvisory = (): string => {
-    const isUtilityCycle = currentCycle === ElectionCycle.PersonalUtility || currentCycle === ElectionCycle.SocietalUtility;
     const target = cycleMAO * rule.winThresholdScalar;
-    // How far along toward the target they are: 0 = no progress, 1 = at target
     const progressRatio = target > 0 ? Math.min(currentMetricScore / target, 1) : 0;
     const isBehind = progressRatio < 0.7;
     const isLate = currentTurn >= 4;
 
-    // When a policy is selected, cycles 3-4 direct the player to the utility
-    // table rather than giving the generic forecast reminder.
     if (selectedPolicy) {
       switch (currentCycle) {
-        case ElectionCycle.PersonalUtility:
-          return "You have two ways to read this. Open the details panel to see who this policy targets — that costs you nothing. Run a forecast to see how much your score will actually move — but you only get two per turn, so choose carefully.";
         case ElectionCycle.SocietalUtility:
-          return "You have two ways to read this. The details panel tells you who this policy affects and whether it widens or narrows the gap — that is free. A forecast will show you the score impact — but you only get two this turn, so spend them on the policies you are genuinely unsure about.";
+          return "You have two ways to read this. The details panel tells you who this policy affects and whether it widens or narrows the gap. A forecast will show you the score impact — run a forecast if you are unsure.";
+        case ElectionCycle.PersonalUtility:
+          return "You have two ways to read this. Open the details panel to see who this policy targets. Run a forecast to see how much your score will actually move.";
         default:
-          return "If you have any Wellbeing Impact Forecasts remaining, review the policy's impact before enacting it.";
+          return "Review the policy's impact before enacting it.";
       }
     }
 
     switch (currentCycle) {
       case ElectionCycle.Benthamite:
         return "We need to boost the national average. Prioritise policies that deliver widespread gains, as total numbers are all that matter right now.";
-
       case ElectionCycle.Rawlsian:
         return "The public is watching how we treat the most vulnerable. Focus your political capital entirely on raising the baseline for those worst-off.";
-
-      case ElectionCycle.PersonalUtility: {
-        // Early turns: explain the concept
-        if (currentTurn <= 2) {
-          return "Personal utility is not linear. A citizen already at LS 8 gains almost nothing from another point upward — their curve has flattened. The real score gains come from lifting those in the LS 3–6 range, where the curve is steepest. Look at the Avg Utility row.";
-        }
-        // Behind on score, mid-game
-        if (isBehind && !isLate) {
-          return "We are behind target. Focus on the columns with the highest Avg Utility in the table — those are the high-yield zones. Moving citizens into those columns is worth more than spreading gains evenly.";
-        }
-        // Late and behind
-        if (isBehind && isLate) {
-          return "Time is short and we are behind. Every remaining policy must target citizens in the steepest part of the utility curve. Gains at the top end are almost worthless — gains in the middle are not.";
-        }
-        // On track
-        return "We are on track. Stay disciplined — avoid policies that look good for LS averages but push people into flat parts of the utility curve. The table tells you what actually counts.";
-      }
-
       case ElectionCycle.SocietalUtility: {
         if (currentTurn <= 2) {
           return "Citizens are not just evaluating their own score here — they are evaluating the shape of the entire distribution. A rising average that widens inequality will cost you votes. Compression matters as much as growth.";
@@ -94,7 +71,18 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         }
         return "We are on track. But beware of complacency — any policy that concentrates gains at the top can undo progress quickly. The societal score is sensitive to visible inequality.";
       }
-
+      case ElectionCycle.PersonalUtility: {
+        if (currentTurn <= 2) {
+          return "Personal utility is not linear. A citizen already at LS 8 gains almost nothing from another point upward — their curve has flattened. The real score gains come from lifting those in the LS 3-6 range, where the curve is steepest. Look at the Avg Utility row.";
+        }
+        if (isBehind && !isLate) {
+          return "We are behind target. Focus on the columns with the highest Avg Utility in the table — those are the high-yield zones. Moving citizens into those columns is worth more than spreading gains evenly.";
+        }
+        if (isBehind && isLate) {
+          return "Time is short and we are behind. Every remaining policy must target citizens in the steepest part of the utility curve. Gains at the top end are almost worthless — gains in the middle are not.";
+        }
+        return "We are on track. Stay disciplined — avoid policies that look good for LS averages but push people into flat parts of the utility curve. The table tells you what actually counts.";
+      }
       default:
         return "";
     }
@@ -103,7 +91,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
   return (
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
       <div className="p-4 lg:p-5 border-b border-zinc-200 bg-zinc-100 flex items-center gap-4 shrink-0 relative z-10">
-        <span className="text-4xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
+        <span className="text-4xl bg-white border border-zinc-200 w-12 h-12 flex items-center justify-center rounded-full shadow-sm shrink-0">🤝</span>
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-zinc-500 leading-tight">
             Deputy Prime Minister
@@ -111,7 +99,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
           <h3 className="text-lg lg:text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
         </div>
       </div>
-
       <div className="p-4 lg:p-5 flex-1 flex flex-col gap-4 lg:gap-5 overflow-hidden">
         <div className="grid grid-cols-2 gap-4 shrink-0">
           <div className="bg-white border-l-4 border-l-pink-500 border-y border-r border-zinc-200 p-4 rounded-r-xl shadow-sm flex flex-col justify-center">
@@ -123,15 +110,16 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
             <span className="block text-2xl lg:text-3xl font-black text-zinc-700">{targetScore}</span>
           </div>
         </div>
-
+        
         <div className="bg-zinc-100 border border-zinc-200 p-4 lg:p-5 rounded-xl shadow-sm flex-1 flex flex-col min-h-0">
           <div className="mb-3 shrink-0">
-            <span className="text-sm lg:text-base font-bold text-zinc-900 block mb-1">{rule.targetMetricName}</span>
+            <span className="text-sm lg:text-base font-bold text-zinc-900 block mb-1">
+              {rule.targetMetricName} <span className="text-zinc-500 font-black ml-1">({rule.targetMetricAbbreviation})</span>
+            </span>
             <p className="text-[13px] lg:text-sm text-zinc-600 leading-relaxed line-clamp-3 lg:line-clamp-none">
               {rule.targetMetricDescription}
             </p>
           </div>
-
           <div className="border-t border-zinc-200 pt-3 flex-1 flex flex-col min-h-0">
             <span className="text-[11px] lg:text-[12px] font-black uppercase tracking-widest text-pink-600 block mb-1.5 shrink-0">Advisory Note</span>
             <p className="text-[13px] lg:text-sm text-zinc-700 italic overflow-hidden text-ellipsis leading-relaxed flex-1">"{getAdvisory()}"</p>

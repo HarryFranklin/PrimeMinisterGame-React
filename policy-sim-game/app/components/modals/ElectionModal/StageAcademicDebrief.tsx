@@ -23,9 +23,12 @@ export default function StageAcademicDebrief({
 }: StageAcademicDebriefProps) {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
+  
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
+  
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
+
   const [revealedPU, setRevealedPU] = useState(false);
   const [revealedSU, setRevealedSU] = useState(false);
 
@@ -35,9 +38,9 @@ export default function StageAcademicDebrief({
       isReady = revealedBenthamA && revealedBenthamB;
     } else if (currentCycle === ElectionCycle.Rawlsian) {
       isReady = revealedCitizen1 && revealedCitizen2;
-    } else if (currentCycle === ElectionCycle.PersonalUtility) {
-      isReady = revealedEmpathy;
     } else if (currentCycle === ElectionCycle.SocietalUtility) {
+      isReady = revealedEmpathy;
+    } else if (currentCycle === ElectionCycle.PersonalUtility) {
       isReady = revealedPU && revealedSU; 
     }
     
@@ -69,6 +72,7 @@ export default function StageAcademicDebrief({
     
     let bestCitizen = finalPopulation[0];
     let maxDiff = -1;
+
     for (const r of finalPopulation) {
       if (r.currentLS >= 7) {
         const pu = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
@@ -81,6 +85,7 @@ export default function StageAcademicDebrief({
   }, [finalPopulation]);
 
   const avgPU = useMemo(() => finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / finalPopulation.length, [finalPopulation]);
+  
   const avgSU = useMemo(() => {
     const allLS = finalPopulation.map((p: any) => p.currentLS);
     return finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / finalPopulation.length;
@@ -90,8 +95,8 @@ export default function StageAcademicDebrief({
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let's look at an example of how two societies can have the same average happiness.";
       case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture. Click on these citizens to see how they feel their lives have actually changed.";
-      case ElectionCycle.PersonalUtility: return "Our voters are behaving selfishly. They ignore the big picture to protect their own wallets. Click below to see what happens when we try to shift their focus toward fairness.";
-      case ElectionCycle.SocietalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
+      case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard. Let's see what happens when we shift their focus to pure self-interest.";
+      case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
     }
   };
@@ -138,6 +143,7 @@ export default function StageAcademicDebrief({
             const utility = WelfareMetrics.getUtilityForPerson(citizen.currentLS, citizen.personalUtilities);
             const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
             const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
+            
             return (
               <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[140px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
                 <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen.name}</p>
@@ -153,61 +159,50 @@ export default function StageAcademicDebrief({
               </div>
             );
           })}
+
           {revealedCitizen1 && revealedCitizen2 && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30">
-                "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Personal Utility."
+                "Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness. Next term, citizens will vote using their unique Societal Utility."
               </DPMMessage>
             </motion.div>
           )}
         </div>
       )}
 
-      {currentCycle === ElectionCycle.PersonalUtility && empathyCitizen && (
+      {currentCycle === ElectionCycle.SocietalUtility && empathyCitizen && (
         <div className="flex flex-col gap-4">
           <div onClick={() => setRevealedEmpathy(true)} className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{empathyCitizen.name}</p>
             <div className="grid grid-cols-2 gap-4 mb-2">
               <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
-              <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Personal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong></div>
+              <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Societal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong></div>
             </div>
+            
             <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
               <div className="w-full h-px bg-zinc-200 my-2" />
-              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Societal Utility (Evaluation of distribution)</span>
-              <strong className="text-3xl text-emerald-600">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong>
-              <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my personal circumstances are optimal, my overall evaluation is adjusted downward due to the inequality present in the broader society."</p>
+              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Personal Utility (Self-Interest)</span>
+              <strong className="text-3xl text-emerald-600">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong>
+              <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
             </div>
-            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Societal Utility</span></div>}
+
+            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Personal Utility</span></div>}
           </div>
+
           {revealedEmpathy && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
-              <DPMMessage title="Moving to Empathy" className="border-emerald-200 bg-emerald-50/30">
-                "When citizens evaluate policy strictly to protect their personal utility, widespread redistribution becomes impossible due to loss aversion. For your final term, we will incorporate Societal Utility into their voting logic."
+              <DPMMessage title="Moving to Self-Interest" className="border-emerald-200 bg-emerald-50/30">
+                "When citizens evaluate policy strictly based on empathy, consensus is difficult because everyone has a different definition of fairness. For your final term, we will incorporate Personal Utility into their voting logic, modelling pure self-interest."
               </DPMMessage>
             </motion.div>
           )}
         </div>
       )}
 
-      {currentCycle === ElectionCycle.SocietalUtility && (
+      {currentCycle === ElectionCycle.PersonalUtility && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
-          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-1 text-center">Term 3: Personal Utility</h3>
-            <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-              <div className="text-center mb-3 mt-2">
-                <span className="text-[9px] uppercase font-bold text-zinc-400 block mb-0.5">Average Evaluation</span>
-                <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
-              </div>
-              <div className="flex-1 text-[10px] text-zinc-600 space-y-2 overflow-y-auto pr-1">
-                <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
-                <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
-              </div>
-            </div>
-            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
-          </div>
-          
           <div onClick={() => setRevealedSU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-emerald-600/70 mb-1 text-center">Term 4: Societal Utility</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-emerald-600/70 mb-1 text-center">Term 3: Societal Utility</h3>
             <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
               <div className="text-center mb-3 mt-2">
                 <span className="text-[9px] uppercase font-bold text-emerald-600/70 block mb-0.5">Average Evaluation</span>
@@ -221,9 +216,24 @@ export default function StageAcademicDebrief({
             {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-emerald-600">Click to Reveal</span></div>}
           </div>
 
+          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-1 text-center">Term 4: Personal Utility</h3>
+            <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
+              <div className="text-center mb-3 mt-2">
+                <span className="text-[9px] uppercase font-bold text-zinc-400 block mb-0.5">Average Evaluation</span>
+                <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
+              </div>
+              <div className="flex-1 text-[10px] text-zinc-600 space-y-2 overflow-y-auto pr-1">
+                <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
+                <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+              </div>
+            </div>
+            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
+          </div>
+
           {revealedPU && revealedSU && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-              <DPMMessage title="The Final Mandate" className="border-emerald-200 bg-emerald-50/30">
+              <DPMMessage title="The Final Mandate" className="border-zinc-200 bg-zinc-50/30">
                 "You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies. It is time for the final verdict."
               </DPMMessage>
             </motion.div>

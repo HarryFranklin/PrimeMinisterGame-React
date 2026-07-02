@@ -27,6 +27,7 @@ interface D3ChartProps {
   visualStyle?: 'solid' | 'faces';
   yAxisMax?: number;
   faceCols?: number;
+  highlightBins?: number[] | null;
 }
 
 const getAxisDomain = (axisType: AxisVariable): [number, number] => {
@@ -36,7 +37,7 @@ const getAxisDomain = (axisType: AxisVariable): [number, number] => {
     case AxisVariable.SocietalFairness: return [0, 10];
     default: return [0, 10];
   }
-};
+}
 
 const getTicks = (axisType: AxisVariable) => {
   switch (axisType) {
@@ -45,7 +46,7 @@ const getTicks = (axisType: AxisVariable) => {
     case AxisVariable.SocietalFairness: return [0, 2.5, 5, 7.5, 10];
     default: return [];
   }
-};
+}
 
 const getAxisLabel = (axisType: AxisVariable): string => {
   switch (axisType) {
@@ -54,7 +55,7 @@ const getAxisLabel = (axisType: AxisVariable): string => {
     case AxisVariable.SocietalFairness: return "Societal Fairness";
     default: return "Value";
   }
-};
+}
 
 const MIN_FACE_PX = 10;
 const MAX_FACE_PX = 22;
@@ -64,7 +65,7 @@ function calcFaceSize(bandwidth: number, requestedCols: number): number {
 }
 
 export default function D3Chart({ 
-  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2 
+  plotType, chartData, histogramData, xAxisType, yAxisType, color, markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2, highlightBins = null 
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -91,6 +92,7 @@ export default function D3Chart({
   }, []);
 
   const markersJson = JSON.stringify(markers); 
+  const highlightsJson = JSON.stringify(highlightBins);
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
@@ -98,15 +100,17 @@ export default function D3Chart({
     const margin = { top: 20, right: 20, bottom: 45, left: 50 };
     const width = Math.max(0, containerRef.current.clientWidth - margin.left - margin.right);
     const height = Math.max(0, containerRef.current.clientHeight - margin.top - margin.bottom);
-    const chartColor = color || "#ec4899"; 
+    const chartColor = color || "#ec4899";
 
     const svg = d3.select(svgRef.current);
     svg.attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom);
 
     if (prevPlotType.current !== plotType || prevXAxis.current !== xAxisType || prevYAxis.current !== yAxisType) {
       svg.selectAll("*").remove();
+
       const chart = svg.append("g").attr("class", "main-group").attr("transform", `translate(${margin.left},${margin.top})`);
       
+      chart.append("g").attr("class", "background-layer");
       chart.append("g").attr("class", "axis-x");
       chart.append("g").attr("class", "axis-y");
       chart.append("text").attr("class", "label-x");
@@ -132,18 +136,37 @@ export default function D3Chart({
 
     if (plotType === '1D' && histogramData) {
       const xScale = d3.scaleLinear().domain([0, 11]).range([0, width]);
-      const bw = (width / 11) * 0.9;
-      const getXPos = (name: string | number) => xScale(Number(name)) + (width / 11) * 0.05;
-      const yDomainMax = yAxisMax;               
+      
+      const rawBw = width / 11;
+      const bw = rawBw * 0.8;
+      const getXPos = (name: string | number) => xScale(Number(name)) + (rawBw * 0.1);
 
+      const yDomainMax = yAxisMax;                
       const yScale = d3.scaleLinear().domain([0, yDomainMax]).range([height, 0]);
+
+      // Subtle Background Banding with Highlight Logic
+      const bgLayer = chart.select(".background-layer");
+      const bands = bgLayer.selectAll("rect.band").data(d3.range(11));
+      bands.join("rect")
+           .attr("class", d => highlightBins && highlightBins.includes(d) ? "band animate-pulse" : "band")
+           .attr("x", d => xScale(d))
+           .attr("y", 0)
+           .attr("width", rawBw)
+           .attr("height", height)
+           .transition().duration(300)
+           .attr("fill", d => {
+             if (highlightBins) {
+               return highlightBins.includes(d) ? "rgba(236, 72, 153, 0.15)" : "transparent";
+             }
+             return d % 2 === 0 ? "#f4f4f5" : "transparent";
+           });
       
       const defs = svg.selectAll("defs").data([0]).join("defs");
       
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
         const actualRectWidth = faceCols * faceSize;
-        const xOffset = (bw - actualRectWidth) / 2; // Centers the pattern perfectly within the bin
+        const xOffset = (bw - actualRectWidth) / 2;
         
         defs.selectAll("*").remove(); 
         const patterns = defs.selectAll("pattern.face-pattern")
@@ -177,7 +200,7 @@ export default function D3Chart({
         
         faceGroup.append("path")
           .attr("d", d => {
-            const score = Number(d.name); 
+            const score = Number(d.name);
             const controlY = 45 + (score / 10) * 40; 
             return `M 28 65 Q 50 ${controlY} 72 65`;
           })
@@ -192,30 +215,27 @@ export default function D3Chart({
         .call(d3.axisBottom(xScale).tickValues([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) as any)
         .call(styleAxis);
 
-      // Clear out any previous custom labels inside the group first to prevent duplicates
-      chart.select(".axis-y").selectAll(".custom-y-label").remove();
+      chart.select(".axis-x").selectAll(".tick text")
+        .attr("transform", `translate(${rawBw / 2}, 0)`);
 
+      chart.select(".axis-y").selectAll(".custom-y-label").remove();
       chart.select(".axis-y")
         .transition().duration(dimensions.width ? 0 : 500)
-        // Keep the absolute numbers hidden
         .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => "") as any)
         .call(styleAxis);
 
-      // Append the label to the axis group immediately with matching styles to label-x
       chart.select(".axis-y")
         .append("text")
         .attr("class", "custom-y-label")
         .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        // Position it cleanly to the left of the axis line
         .attr("y", -15)
-        // Center it vertically along the exact midpoint height of the graph
         .attr("x", -height / 2)
-        .attr("fill", "#3f3f46") // Matches label-x exactly
-        .style("font-weight", "bold") // Matches label-x exactly
-        .style("font-size", "14px") // Matches standard D3 label metrics
+        .attr("fill", "#3f3f46")
+        .style("font-weight", "bold")
+        .style("font-size", "14px")
         .text("Number of People");
-      
+        
       chart.select(".label-x").attr("x", width / 2).attr("y", height + 38).attr("fill", "#3f3f46").style("text-anchor", "middle").style("font-weight", "bold").text(getAxisLabel(xAxisType));
 
       dataLayer.selectAll("rect.bar").remove();
@@ -235,7 +255,7 @@ export default function D3Chart({
             enter => enter.append("rect")
               .attr("class", "face-bar")
               .attr("x", d => getXPos(d.name) + xOffset)
-              .attr("width", Math.max(0, actualRectWidth - 0.5)) // Sub-pixel trim physically prevents infinite tiling loops
+              .attr("width", Math.max(0, actualRectWidth - 0.5)) 
               .attr("fill", d => `url(#face-${d.name}-${chartId})`)
               .attr("y", height)
               .attr("height", 0),
@@ -291,6 +311,7 @@ export default function D3Chart({
       }
 
       annotationLayer.selectAll("*").remove();
+
       if (markers && markers.length > 0) {
         markers.forEach((marker, index) => {
           const markerX = xScale(Math.max(0, Math.min(10.9, marker.value)));
@@ -335,7 +356,7 @@ export default function D3Chart({
 
       dataLayer.selectAll("circle.dot").data(chartData, (d: any) => d.id).join("circle").attr("class", "dot").transition().duration(500).attr("cx", d => xScale(d.x)).attr("cy", d => yScale(d.y)).attr("r", 5).style("fill", chartColor).style("opacity", 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, visualStyle, dimensions, faceCols]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, highlightsJson, visualStyle, dimensions, faceCols]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef}></svg></div>;
 }

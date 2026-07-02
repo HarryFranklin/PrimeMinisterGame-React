@@ -60,16 +60,16 @@ export default function DevPanel({
                 2. Rawlsian
               </button>
               <button
-                onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-              >
-                3. Personal
-              </button>
-              <button
                 onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)}
                 className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
               >
-                4. Societal
+                3. Societal
+              </button>
+              <button
+                onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)}
+                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+              >
+                4. Personal
               </button>
             </div>
           </div>

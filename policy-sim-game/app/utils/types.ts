@@ -46,8 +46,8 @@ export interface Policy {
 export enum ElectionCycle {
   Benthamite,
   Rawlsian,
-  PersonalUtility,
-  SocietalUtility
+  SocietalUtility,
+  PersonalUtility
 }
 
 export interface TurnHistory {

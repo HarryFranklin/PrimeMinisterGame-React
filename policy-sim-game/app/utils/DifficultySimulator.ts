@@ -10,14 +10,16 @@ export class DifficultySimulator {
   static runDeterministicSimulation(iterations: number = 10000) {
     console.log(`Running seed-accurate simulation (${iterations} random walks)...`);
     const population = loadPopulation();
+
     const cycles = [
       ElectionCycle.Benthamite, 
       ElectionCycle.Rawlsian, 
-      ElectionCycle.PersonalUtility, 
-      ElectionCycle.SocietalUtility
+      ElectionCycle.SocietalUtility, 
+      ElectionCycle.PersonalUtility
     ];
     
     const results: Record<string, any> = {};
+
     for (const cycle of cycles) {
       const staticSchedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, 5);
       const maoResult = MAOEngine.calculateMAO(population, staticSchedule, cycle, MetricsEngine.getMetricScore);
@@ -26,6 +28,7 @@ export class DifficultySimulator {
       const winThreshold = maoResult.maxScore * scalar;
       
       let winCount = 0;
+
       for (let i = 0; i < iterations; i++) {
         let currentPop = population;
         let currentPath: Policy[] = [];
@@ -38,16 +41,19 @@ export class DifficultySimulator {
           currentPath.push(randomPick);
           currentPop = PolicyEngine.applyPolicy(currentPop, randomPick);
         }
+
         const randomWalkScore = MetricsEngine.getMetricScore(currentPop, cycle);
         
         if (randomWalkScore >= winThreshold) {
           winCount++;
         }
       }
+
       results[ElectionCycle[cycle]] = {
         "Random Win Probability": ((winCount / iterations) * 100).toFixed(2) + "%"
       };
     }
+
     console.table(results);
     return results;
   }
