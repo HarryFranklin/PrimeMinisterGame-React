@@ -12,8 +12,3 @@ export const IMPACT_COLORS = {
   'Will be stable': '#d4d4d8',
   'Will be worsened': '#f59e0b'
 };
-
-export const STATUS_COLORS = {
-  intention: { 'Approves': '#3b82f6', 'Angry': '#f59e0b' },
-  trajectory: { 'Will improve': '#3b82f6', 'Will be worsened': '#f59e0b', 'Will be stable': '#d4d4d8' }
-};
