@@ -88,58 +88,74 @@ export default function DashboardTab() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [approvalRating]);
 
-  const activeMarkers = isParliamentDissolved 
+  const activeMarkers = isParliamentDissolved && hoveredHistoryTurn !== null
     ? [] 
     : [
         { value: turnMetricScore, label: `CURRENT ${rule.targetMetricAbbreviation}`, color: "#3f3f46", dashed: false },
         { value: targetScore, label: `TARGET ${rule.targetMetricAbbreviation}`, color: rule.graphColor, dashed: true }
       ];
 
-  const historicalData = useMemo(() => {
-    if (!isParliamentDissolved || hoveredHistoryTurn === null) return currentHistogramData;
-    return Array.from({ length: 11 }, (_, i) => {
-      const name = i.toString();
-      const residentsInBinBefore = population.filter((r: Respondent) => {
-        const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
-        if (!ledger) return false;
-        const turnData = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1);
-        return turnData && Math.min(10, Math.max(0, Math.round(turnData.ls))) === i;
+  const topHistogramData = useMemo(() => {
+    if (isParliamentDissolved && hoveredHistoryTurn !== null) {
+      return Array.from({ length: 11 }, (_, i) => {
+        const count = population.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
+          if (!ledger) return false;
+          const turnData = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1);
+          return turnData && Math.min(10, Math.max(0, Math.round(turnData.ls))) === i;
+        }).length;
+        return { name: i, count };
       });
-      
-      const binCount = residentsInBinBefore.length;
-      const segments: any[] = [];
-      
-      const improveCount = residentsInBinBefore.filter((r: Respondent) => {
-        const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
-        const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
-        const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
-        return after - before > 0.05;
-      }).length;
-      
-      const worsenCount = residentsInBinBefore.filter((r: Respondent) => {
-        const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
-        const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
-        const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
-        return after - before < -0.05;
-      }).length;
-      
-      const stableCount = binCount - improveCount - worsenCount;
-      
-      if (improveCount > 0) segments.push({ label: 'Improved', value: improveCount, color: (IMPACT_COLORS as any)['Will improve'] });
-      if (stableCount > 0) segments.push({ label: 'Stable', value: stableCount, color: (IMPACT_COLORS as any)['Will be stable'] });
-      if (worsenCount > 0) segments.push({ label: 'Worsened', value: worsenCount, color: (IMPACT_COLORS as any)['Will be worsened'] });
-
-      return { name, count: binCount, segments };
-    });
+    }
+    return currentHistogramData.map(d => ({ name: d.name, count: d.count }));
   }, [population, hoveredHistoryTurn, isParliamentDissolved, currentCycle, currentHistogramData]);
 
-  const forecastHistogramData = (selectedPolicy && !isParliamentDissolved)
-    ? previewPopulation.reduce((acc, r) => {
-        const bin = Math.min(10, Math.max(0, Math.round(r.currentLS)));
-        acc[bin].count++;
-        return acc;
-      }, Array.from({ length: 11 }, (_, i) => ({ name: i, count: 0 })))
-    : currentHistogramData.map(d => ({ name: d.name, count: d.count }));
+  const bottomHistogramData = useMemo(() => {
+    if (isParliamentDissolved) {
+      if (hoveredHistoryTurn === null) return []; 
+      
+      return Array.from({ length: 11 }, (_, i) => {
+        const residentsInBinBefore = population.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle);
+          if (!ledger) return false;
+          const turnData = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1);
+          return turnData && Math.min(10, Math.max(0, Math.round(turnData.ls))) === i;
+        });
+        
+        const binCount = residentsInBinBefore.length;
+        const segments: any[] = [];
+        
+        const improveCount = residentsInBinBefore.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
+          const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
+          const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
+          return after - before > 0.05;
+        }).length;
+        
+        const worsenCount = residentsInBinBefore.filter((r: Respondent) => {
+          const ledger = r.historicalLedger.find((l: any) => l.cycle === currentCycle)!;
+          const before = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn - 1)!.ls;
+          const after = ledger.turns.find((t: any) => t.turn === hoveredHistoryTurn)!.ls;
+          return after - before < -0.05;
+        }).length;
+        
+        const stableCount = binCount - improveCount - worsenCount;
+        
+        // Colors mapped to match D3Chart configurations
+        if (improveCount > 0) segments.push({ label: 'Improved', value: improveCount, color: '#10b981' });
+        if (stableCount > 0) segments.push({ label: 'Stable', value: stableCount, color: '#d4d4d8' });
+        if (worsenCount > 0) segments.push({ label: 'Worsened', value: worsenCount, color: '#e11d48' });
+
+        return { name: i, count: binCount, segments };
+      });
+    } else {
+      if (!selectedPolicy) return [];
+      return Array.from({ length: 11 }, (_, i) => {
+        const count = previewPopulation.filter(r => Math.min(10, Math.max(0, Math.round(r.currentLS))) === i).length;
+        return { name: i, count };
+      });
+    }
+  }, [population, hoveredHistoryTurn, isParliamentDissolved, currentCycle, selectedPolicy, previewPopulation]);
 
   const enactedLegislation = useMemo(() => {
     return history.filter(h => h.turn > 1).map(h => {
@@ -148,7 +164,6 @@ export default function DashboardTab() {
     });
   }, [history]);
 
-  // Determine highlighted bins for the Top graph
   const highlightedBins = useMemo(() => {
     if (!selectedPolicy || !detailsOpen || isParliamentDissolved) return null;
     const bins = new Set<number>();
@@ -161,6 +176,11 @@ export default function DashboardTab() {
     });
     return Array.from(bins);
   }, [selectedPolicy, detailsOpen, isParliamentDissolved]);
+
+  const hoveredPolicyDetails = hoveredEnactedId ? availablePolicies.find(p => p.id === hoveredEnactedId) : null;
+  const bottomChartTitle = isParliamentDissolved 
+    ? (hoveredPolicyDetails ? `Historical Policy Impact (${hoveredPolicyDetails.policyName})` : "Historical Policy Impact")
+    : "Projected Population";
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
@@ -175,7 +195,9 @@ export default function DashboardTab() {
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
                 <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
-                    {isParliamentDissolved ? "Pre-Election Distribution" : "Current Distribution"}
+                    {isParliamentDissolved 
+                      ? (hoveredHistoryTurn !== null ? `Population at Turn ${hoveredHistoryTurn - 1}` : "Final Population") 
+                      : "Current Population"}
                   </h3>
                 </div>
                 
@@ -183,7 +205,7 @@ export default function DashboardTab() {
                   <D3Chart 
                     plotType="1D" 
                     chartData={currentChartData}
-                    histogramData={currentHistogramData.map(d => ({ name: d.name, count: d.count }))} 
+                    histogramData={topHistogramData} 
                     xAxisType={AxisVariable.LifeSatisfaction}
                     yAxisType={rule.yAxisType} 
                     color="#d4d4d8"
@@ -224,7 +246,7 @@ export default function DashboardTab() {
                         </div>
                         <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Select Legislation</h4>
                         <p className="text-sm text-zinc-500 font-medium">
-                          Hover over a policy in your Enacted Legislation to review its historical impact on the distribution.
+                          Hover over a policy in your Enacted Legislation to review its historical impact on the population.
                         </p>
                       </div>
                     </div>
@@ -239,7 +261,9 @@ export default function DashboardTab() {
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
                 <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
-                    {isParliamentDissolved ? "Pre-Election Distribution" : "Current Distribution"}
+                    {isParliamentDissolved 
+                      ? (hoveredHistoryTurn !== null ? `Population at Turn ${hoveredHistoryTurn - 1}` : "Final Population") 
+                      : "Current Population"}
                   </h3>
                 </div>
                 
@@ -247,12 +271,12 @@ export default function DashboardTab() {
                   <D3Chart 
                     plotType="1D" 
                     chartData={currentChartData}
-                    histogramData={isParliamentDissolved && hoveredHistoryTurn !== null ? historicalData : currentHistogramData.map(d => ({ name: d.name, count: d.count }))} 
+                    histogramData={topHistogramData} 
                     xAxisType={AxisVariable.LifeSatisfaction}
                     yAxisType={rule.yAxisType} 
                     color="#d4d4d8"
                     markers={activeMarkers} 
-                    visualStyle={isParliamentDissolved && hoveredHistoryTurn !== null ? 'solid' : 'faces'}
+                    visualStyle={'faces'}
                     yAxisMax={yAxisMax}
                     faceCols={2}
                     activePolicyRules={detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null}
@@ -264,7 +288,7 @@ export default function DashboardTab() {
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
                 <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 truncate pr-2">
-                    {isParliamentDissolved ? "Historical Policy Impact" : "Projected Distribution"}
+                    {bottomChartTitle}
                   </h3>
                 </div>
                 
@@ -273,11 +297,11 @@ export default function DashboardTab() {
                     <D3Chart 
                       plotType="1D" 
                       chartData={[]}
-                      histogramData={isParliamentDissolved && hoveredHistoryTurn !== null ? historicalData : forecastHistogramData} 
+                      histogramData={bottomHistogramData} 
                       xAxisType={AxisVariable.LifeSatisfaction}
                       yAxisType={rule.yAxisType} 
                       color="#ec4899"
-                      visualStyle={isParliamentDissolved && hoveredHistoryTurn !== null ? 'solid' : 'faces'} 
+                      visualStyle={isParliamentDissolved && hoveredHistoryTurn !== null ? 'faces-segmented' : 'faces'} 
                       yAxisMax={yAxisMax}
                     />
                   </div>
@@ -304,7 +328,7 @@ export default function DashboardTab() {
                         </div>
                         <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-1">Select Legislation</h4>
                         <p className="text-sm text-zinc-500 font-medium">
-                          Hover over a policy in your Enacted Legislation to review its historical impact on the distribution.
+                          Hover over a policy in your Enacted Legislation to review its historical impact on the population.
                         </p>
                       </div>
                     </div>
@@ -314,15 +338,15 @@ export default function DashboardTab() {
                 {isParliamentDissolved && (
                   <div className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${(hoveredHistoryTurn !== null) ? 'opacity-100' : 'opacity-0 grayscale pointer-events-none hidden'}`}>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will improve'] }} />
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#10b981' }} />
                       <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Improved</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be stable'] }} />
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#d4d4d8' }} />
                       <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Stable</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: (IMPACT_COLORS as any)['Will be worsened'] }} />
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#e11d48' }} />
                       <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">Worsened</span>
                     </div>
                   </div>
@@ -378,7 +402,8 @@ export default function DashboardTab() {
             </div>
           </div>
           
-          <div ref={agendaListRef} className={`flex-1 flex flex-col gap-2 min-h-0 overflow-hidden relative ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
+          {/* Using overflow-visible allows the popup to escape the container visually and render over the Enact Button below */}
+          <div ref={agendaListRef} className={`flex-1 flex flex-col gap-2 min-h-0 overflow-visible relative z-10 ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
               currentDeck.slice(0, 4).map((policy, index) => {
@@ -386,8 +411,10 @@ export default function DashboardTab() {
                 const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
 
                 return (
-                  <div key={policy.id} className={`relative flex w-full min-h-0 transition-all duration-500 ${isSelected ? 'flex-[1.4] z-50' : 'flex-1 z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40' : ''}`}>
-                    
+                  <div 
+                    key={policy.id} 
+                    className={`relative flex w-full min-h-0 transition-all duration-500 ${isSelected ? 'flex-[1.4] z-50' : 'flex-1 z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40' : ''}`}
+                  >
                     <div 
                       className={`w-full h-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
                         isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 hover:shadow-sm bg-white'
@@ -401,11 +428,13 @@ export default function DashboardTab() {
                       {/* Main Clickable Area */}
                       <button 
                         disabled={!isAgendaUnlocked || isEnacting}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (isOtherSelectedAndOpen) {
+                            // Dismiss fog only
                             setDetailsOpen(false);
-                            setSelectedPolicy(null);
                           } else {
+                            // Toggle standard selection
                             setSelectedPolicy(isSelected ? null : policy);
                             setDetailsOpen(false); 
                           }
@@ -447,48 +476,45 @@ export default function DashboardTab() {
 
                     {/* DETAILS POP-UP */}
                     {isSelected && detailsOpen && (
-                      <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 z-[100] ${
+                      <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 z-[100] ${
                         index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                       }`}>
                         <span className="text-[10px] font-black uppercase tracking-widest text-pink-500">Policy Rules</span>
                         <div className="flex flex-col gap-2">
                           {policy.specificRules.map((r: any, rIdx: number) => {
-                            const lsRange = r.affectEveryone 
-                              ? 'All citizens' 
-                              : r.minLS !== undefined && r.maxLS !== undefined 
-                                ? `LS ${r.minLS} - ${r.maxLS}` 
-                                : r.minLS !== undefined 
-                                  ? `LS ≥ ${r.minLS}` 
-                                  : r.maxLS !== undefined 
-                                    ? `LS ≤ ${r.maxLS}` 
-                                    : 'All citizens';
+                            const minStr = r.minLS !== undefined ? r.minLS : 0;
+                            const maxStr = r.maxLS !== undefined ? r.maxLS : 10;
+                            const lsRange = `LS ${minStr} to ${maxStr}`;
 
                             const eligible = population.filter((p: any) => 
-                              (r.affectEveryone) || 
-                              (
-                                (r.minLS === undefined || p.currentLS >= r.minLS) &&
-                                (r.maxLS === undefined || p.currentLS <= r.maxLS)
-                              )
+                              (r.minLS === undefined || p.currentLS >= r.minLS) &&
+                              (r.maxLS === undefined || p.currentLS <= r.maxLS)
                             ).length;
                             
                             const coverage = Math.round(eligible * r.proportion);
                             const coveragePercentage = Math.round((coverage / population.length) * 100);
 
+                            const isPositive = r.impact > 0;
+
                             return (
                               <React.Fragment key={rIdx}>
                                 {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full" />}
-                                {/* Left border colour matches band highlight & face segment colour */}
-                                <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4"
-                                     style={{ borderLeftColor: r.impact > 0 ? '#3b82f6' : '#f59e0b', backgroundColor: r.impact > 0 ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)' }}>
-                                  <div className="flex justify-between items-center gap-2 px-2.5 pt-2.5 pb-1.5">
-                                    <span className="font-bold text-[11px] text-zinc-800 leading-snug">{r.note}</span>
-                                    <span className="font-black text-[11px] shrink-0" style={{ color: r.impact > 0 ? '#3b82f6' : '#f59e0b' }}>
-                                      {r.impact > 0 ? '+' : ''}{r.impact} LS
+                                <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4 p-2.5"
+                                     style={{ borderLeftColor: isPositive ? '#10b981' : '#e11d48', backgroundColor: isPositive ? 'rgba(16,185,129,0.04)' : 'rgba(225,29,72,0.04)' }}>
+                                  <div className="flex justify-between items-center gap-2">
+                                    <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
+                                    <span className="font-black text-[13px] shrink-0" style={{ color: isPositive ? '#10b981' : '#e11d48' }}>
+                                      {isPositive ? '+' : ''}{r.impact} LS
                                     </span>
                                   </div>
-                                  <div className="flex gap-2 px-2.5 pb-2 border-t border-zinc-100 pt-1.5">
+                                  <div className="flex gap-2 pt-1.5 items-center">
                                     <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Range</span>
-                                    <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <div className={`w-2 h-2 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                      <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
+                                    </div>
                                     <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
                                     <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}%</span>
                                   </div>
@@ -539,24 +565,28 @@ export default function DashboardTab() {
                       {/* Detail Pop-up */}
                       {isHovered && fullPolicy && (
                         <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100] ${
-                          index < 2 ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]'
+                          index > 2 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                         }`}>
                           <span className="text-[12px] font-black uppercase tracking-widest text-pink-500">Details</span>
                           
                           <div className="flex flex-col gap-1.5">
-                            {fullPolicy.specificRules.map((r: any, rIdx: number) => (
-                              <React.Fragment key={rIdx}>
-                                {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full" />}
-                                <div className="bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 flex flex-col gap-1 shadow-sm">
-                                  <div className="flex justify-between items-center gap-2">
-                                    <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
-                                    <span className={`font-black text-[13px] shrink-0 ${r.impact > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                      {r.impact > 0 ? '+' : ''}{r.impact} LS
-                                    </span>
+                            {fullPolicy.specificRules.map((r: any, rIdx: number) => {
+                              const isPositive = r.impact > 0;
+                              return (
+                                <React.Fragment key={rIdx}>
+                                  {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full" />}
+                                  <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4 p-2.5"
+                                       style={{ borderLeftColor: isPositive ? '#10b981' : '#e11d48', backgroundColor: isPositive ? 'rgba(16,185,129,0.04)' : 'rgba(225,29,72,0.04)' }}>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
+                                      <span className="font-black text-[13px] shrink-0" style={{ color: isPositive ? '#10b981' : '#e11d48' }}>
+                                        {isPositive ? '+' : ''}{r.impact} LS
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </React.Fragment>
-                            ))}
+                                </React.Fragment>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -567,7 +597,7 @@ export default function DashboardTab() {
             )}
           </div>
           
-          <div className="p-4 border-t border-zinc-100 bg-zinc-100 shrink-0">
+          <div className="p-4 border-t border-zinc-100 bg-zinc-100 shrink-0 relative z-0">
             {isParliamentDissolved ? (
               <button 
                 onClick={handleFaceElectorate}

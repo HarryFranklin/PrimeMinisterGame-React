@@ -1,3 +1,4 @@
+// components/D3Chart.tsx
 import React, { useRef, useEffect, useState, useId } from 'react';
 import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
@@ -26,17 +27,12 @@ interface D3ChartProps {
   visualStyle?: 'solid' | 'faces' | 'faces-segmented';
   yAxisMax?: number;
   faceCols?: number;
-  // When set, each histogram band is tinted blue (positive) or amber (negative)
-  // to match the colour of improved/worsened faces in the bottom chart.
   activePolicyRules?: any[] | null;
 }
 
-// ── Colours shared with IMPACT_COLORS in uiHelpers.ts ────────────────────────
-// Keep these in sync with that file so bands, faces, legend, and View Details
-// all use the same visual language.
-const COLOUR_IMPROVE = '#3b82f6';  // blue-500
-const COLOUR_STABLE  = '#d4d4d8';  // zinc-300
-const COLOUR_WORSEN  = '#f59e0b';  // amber-500
+const COLOUR_IMPROVE = '#10b981';  // Emerald
+const COLOUR_STABLE  = '#d4d4d8';  // Zinc
+const COLOUR_WORSEN  = '#e11d48';  // Rose
 
 const getSegmentId = (label: string): 'improve' | 'stable' | 'worsen' => {
   if (label.toLowerCase().includes('improve') || label.toLowerCase().includes('improved')) return 'improve';
@@ -104,7 +100,6 @@ export default function D3Chart({
       .attr('width',  W + margin.left + margin.right)
       .attr('height', H + margin.top  + margin.bottom);
 
-    // Full clear only when the plot structure changes
     if (prevPlot.current !== plotType || prevX.current !== xAxisType || prevY.current !== yAxisType) {
       svg.selectAll('*').remove();
       const g = svg.append('g').attr('class', 'main-group')
@@ -132,18 +127,15 @@ export default function D3Chart({
       sel.selectAll('text').attr('fill', '#52525b').style('font-size', '12px').style('font-weight', '600');
     };
 
-    // ── 1-D HISTOGRAM ────────────────────────────────────────────────────────
     if (plotType === '1D' && histogramData) {
       const xScale = d3.scaleLinear().domain([0, 11]).range([0, W]);
       const rawBw  = W / 11;
-      // 65% width per bar creates visible gaps between columns
       const bw     = rawBw * 0.65;
       const getX   = (name: string | number) => xScale(Number(name)) + (rawBw - bw) / 2;
 
       const yScale = d3.scaleLinear().domain([0, yAxisMax]).range([H, 0]);
       const defs   = svg.selectAll<SVGDefsElement, unknown>('defs').data([0]).join('defs');
 
-      // ── Band highlights (colour matches face segment colours) ─────────────
       chart.select('.background-layer')
         .selectAll<SVGRectElement, number>('rect.band')
         .data(d3.range(11))
@@ -153,7 +145,7 @@ export default function D3Chart({
         .attr('y', 0)
         .attr('width', rawBw)
         .attr('height', H)
-        .transition().duration(300)
+        .style("transition", "fill 0.3s ease-in-out")
         .attr('fill', (d: number) => {
           if (activePolicyRules && activePolicyRules.length > 0) {
             const affecting = activePolicyRules.filter((r: any) => {
@@ -163,16 +155,13 @@ export default function D3Chart({
             });
             if (affecting.length === 0) return 'rgba(244,244,245,0.1)';
             const net = affecting.reduce((s: number, r: any) => s + r.impact, 0);
-            // Use the same blue/amber as the face segments so the
-            // top highlight and bottom faces are visually connected
-            if (net > 0) return 'rgba(59,130,246,0.22)';   // COLOUR_IMPROVE tint
-            if (net < 0) return 'rgba(245,158,11,0.22)';   // COLOUR_WORSEN tint
+            if (net > 0) return 'rgba(16, 185, 129, 0.22)';
+            if (net < 0) return 'rgba(225, 29, 72, 0.22)';
             return 'rgba(212,212,216,0.3)';
           }
           return d % 2 === 0 ? '#f4f4f5' : 'transparent';
         });
 
-      // ── Col groups ───────────────────────────────────────────────────────
       dataLayer.selectAll('rect.bar').remove();
       const cols = dataLayer
         .selectAll<SVGGElement, HistogramEntry>('g.col')
@@ -180,16 +169,13 @@ export default function D3Chart({
         .join('g')
         .attr('class', 'col');
 
-      // ── FACES (plain, one colour per LS value) ───────────────────────────
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
         const rectW    = faceCols * faceSize;
         const xOff     = (bw - rectW) / 2;
 
-        // Remove segmented rects left over from previous renders
         cols.selectAll('rect.segment').remove();
 
-        // Per-bar face patterns (colour = interpolated by LS value)
         defs.selectAll('pattern.seg-pattern').remove();
         defs.selectAll<SVGPatternElement, HistogramEntry>('pattern.face-pattern')
           .data(histogramData, (d: any) => d.name)
@@ -218,14 +204,20 @@ export default function D3Chart({
         cols.selectAll<SVGRectElement, HistogramEntry>('rect.face-bar')
           .data((d: any) => [d])
           .join(
-            e => e.append('rect').attr('class','face-bar').attr('y',H).attr('height',0),
-            u => u,
-            x => x.transition().duration(400).attr('y',H).attr('height',0).remove()
+            (enter: any) => enter.append('rect')
+              .attr('class','face-bar')
+              .attr('x', (d: any) => getX(d.name) + xOff)
+              .attr('width', Math.max(0, rectW - 0.5))
+              .attr('y', H)
+              .attr('height', 0)
+              .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`),
+            (update: any) => update
+              .attr('x', (d: any) => getX(d.name) + xOff)
+              .attr('width', Math.max(0, rectW - 0.5))
+              .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`),
+            (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
-          .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`)
           .transition().duration(1000).ease(d3.easeCubicOut)
-          .attr('x',      (d: any) => getX(d.name) + xOff)
-          .attr('width',  Math.max(0, rectW - 0.5))
           .attr('y', (d: any) => {
             const raw = H - yScale(d.count);
             let n = Math.floor(raw / faceSize);
@@ -239,28 +231,33 @@ export default function D3Chart({
             return n * faceSize;
           });
 
-      // ── FACES-SEGMENTED (three face types: improve / stable / worsen) ─────
       } else if (visualStyle === 'faces-segmented') {
         const faceSize = calcFaceSize(bw, faceCols);
         const rectW    = faceCols * faceSize;
         const xOff     = (bw - rectW) / 2;
 
-        // Remove plain face-bars left over from previous renders
         cols.selectAll('rect.face-bar').remove();
 
-        // One shared pattern per segment type
+        const segPatternData: any[] = [];
+        histogramData.forEach((d: any) => {
+          SEG_TYPES.forEach(st => {
+            segPatternData.push({ colName: d.name, ...st });
+          });
+        });
+
         defs.selectAll('pattern.face-pattern').remove();
-        defs.selectAll<SVGPatternElement, typeof SEG_TYPES[number]>('pattern.seg-pattern')
-          .data(SEG_TYPES, d => d.id)
+        defs.selectAll<SVGPatternElement, any>('pattern.seg-pattern')
+          .data(segPatternData, (d: any) => `${d.colName}-${d.id}`)
           .join('pattern')
           .attr('class', 'seg-pattern')
-          .attr('id',    d => `face-seg-${d.id}-${chartId}`)
+          .attr('id',    (d: any) => `face-seg-${d.colName}-${d.id}-${chartId}`)
           .attr('patternUnits', 'userSpaceOnUse')
           .attr('width',  faceSize)
           .attr('height', faceSize)
-          .attr('x', 0).attr('y', H)
+          .attr('x', (d: any) => getX(d.colName) + xOff) 
+          .attr('y', H)
           .attr('viewBox', '0 0 100 100')
-          .each(function(d) {
+          .each(function(d: any) {
             const p = d3.select(this);
             p.selectAll('*').remove();
             const dark = (d3.color(d.color)?.darker(0.5) as any)?.formatHex() ?? '#000';
@@ -287,18 +284,23 @@ export default function D3Chart({
             });
           }, (d: any) => d.key)
           .join(
-            e => e.append('rect').attr('class','segment').attr('y',H).attr('height',0),
-            u => u,
-            x => x.transition().duration(400).attr('y',H).attr('height',0).remove()
+            (enter: any) => enter.append('rect')
+              .attr('class','segment')
+              .attr('x', (d: any) => getX(d.name) + xOff)
+              .attr('width', Math.max(0, rectW - 0.5))
+              .attr('y', H)
+              .attr('height', 0)
+              .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`),
+            (update: any) => update
+              .attr('x', (d: any) => getX(d.name) + xOff)
+              .attr('width', Math.max(0, rectW - 0.5))
+              .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`),
+            (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
           .transition().duration(1000).ease(d3.easeCubicOut)
-          .attr('x',      (d: any) => getX(d.name) + xOff)
-          .attr('width',  Math.max(0, rectW - 0.5))
           .attr('y',      (d: any) => d.yPos)
-          .attr('height', (d: any) => d.h)
-          .attr('fill',   (d: any) => `url(#face-seg-${getSegmentId(d.label)}-${chartId})`);
+          .attr('height', (d: any) => d.h);
 
-      // ── SOLID bars ────────────────────────────────────────────────────────
       } else {
         cols.selectAll('rect.face-bar').remove();
         cols.selectAll<SVGRectElement, any>('rect.segment')
@@ -314,19 +316,24 @@ export default function D3Chart({
             return [{ key: 'single', name: d.name, color: baseColor, yPos: yScale(d.count), h: H - yScale(d.count) }];
           }, (d: any) => d.key)
           .join(
-            e => e.append('rect').attr('class','segment').attr('y',H).attr('height',0).attr('fill',(d: any) => d.color),
-            u => u,
-            x => x.transition().duration(400).attr('y',H).attr('height',0).remove()
+            (enter: any) => enter.append('rect')
+              .attr('class','segment')
+              .attr('x', (d: any) => getX(d.name))
+              .attr('width', bw)
+              .attr('y', H)
+              .attr('height', 0)
+              .attr('fill',(d: any) => d.color),
+            (update: any) => update
+              .attr('x', (d: any) => getX(d.name))
+              .attr('width', bw)
+              .attr('fill',(d: any) => d.color),
+            (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
           .transition().duration(1200).ease(d3.easeCubicOut)
-          .attr('x',      (d: any) => getX(d.name))
-          .attr('width',  bw)
           .attr('y',      (d: any) => d.yPos)
-          .attr('height', (d: any) => d.h)
-          .attr('fill',   (d: any) => d.color);
+          .attr('height', (d: any) => d.h);
       }
 
-      // ── Axes ─────────────────────────────────────────────────────────────
       chart.select('.axis-x')
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues([0,1,2,3,4,5,6,7,8,9,10]) as any)
@@ -354,7 +361,6 @@ export default function D3Chart({
         .style('text-anchor','middle').style('font-weight','bold')
         .text(getAxisLabel(xAxisType));
 
-      // ── Marker lines ─────────────────────────────────────────────────────
       annoLayer.selectAll('*').remove();
       (markers ?? []).forEach((m, i) => {
         const mx    = xScale(Math.max(0, Math.min(10.9, m.value))) + rawBw / 2;
@@ -373,7 +379,6 @@ export default function D3Chart({
           .style('opacity',0).transition().duration(300).style('opacity',1);
       });
 
-    // ── 2-D SCATTER ──────────────────────────────────────────────────────────
     } else if (plotType === '2D') {
       annoLayer.selectAll('*').remove();
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, W]);
@@ -391,8 +396,7 @@ export default function D3Chart({
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
 
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color,
-      markersJson, rulesJson, visualStyle, dims, faceCols]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }
