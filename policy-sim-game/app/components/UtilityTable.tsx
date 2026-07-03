@@ -107,7 +107,7 @@ export default function UtilityTable({
                 <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none">
                   {pctAfter}
                   {isPreviewing && pctDelta !== 0 && (
-                    <span className={`block text-[8px] font-black mt-0.5 ${pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span className={`block text-[9px] font-black mt-0.5 ${pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {pctDelta > 0 ? '+' : ''}{pctDelta}%
                     </span>
                   )}
