@@ -432,7 +432,7 @@ export default function DashboardTab() {
                         isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 bg-white'
                       }`}
                     >
-                      {/* Main Clickable Area */}
+                      {/* Main Clickable Area*/}
                       <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedPolicy(isSelected ? null : policy); setDetailsOpen(false); }}
                         className={`flex-col items-start text-left p-4 h-auto flex-grow-0 ${isSelected ? 'w-[85%]' : 'w-full'}`}
@@ -449,7 +449,7 @@ export default function DashboardTab() {
                       {isSelected && (
                         <div className="w-[15%] border-l border-pink-200 flex items-center justify-center cursor-pointer hover:bg-pink-100"
                             onClick={() => setDetailsOpen(!detailsOpen)}>
-                          <span className="text-[10px] font-black uppercase text-pink-600">View Details</span>
+                          <span className="text-[10px] font-black uppercase text-pink-600">Details</span>
                         </div>
                       )}
                     </div>
