@@ -1,7 +1,7 @@
-// components/D3Chart.tsx
 import React, { useRef, useEffect, useState, useId } from 'react';
 import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
+import { IMPACT_COLORS } from '../utils/uiHelpers';
 
 export interface ChartMarker {
   value: number;
@@ -30,9 +30,9 @@ interface D3ChartProps {
   activePolicyRules?: any[] | null;
 }
 
-const COLOUR_IMPROVE = '#10b981';  // Emerald
-const COLOUR_STABLE  = '#d4d4d8';  // Zinc
-const COLOUR_WORSEN  = '#e11d48';  // Rose
+const COLOUR_IMPROVE = IMPACT_COLORS['Will improve'];
+const COLOUR_STABLE  = IMPACT_COLORS['Will be stable'];
+const COLOUR_WORSEN  = IMPACT_COLORS['Will worsen'];
 
 const getSegmentId = (label: string): 'improve' | 'stable' | 'worsen' => {
   if (label.toLowerCase().includes('improve') || label.toLowerCase().includes('improved')) return 'improve';
@@ -155,8 +155,8 @@ export default function D3Chart({
             });
             if (affecting.length === 0) return 'rgba(244,244,245,0.1)';
             const net = affecting.reduce((s: number, r: any) => s + r.impact, 0);
-            if (net > 0) return 'rgba(16, 185, 129, 0.22)';
-            if (net < 0) return 'rgba(225, 29, 72, 0.22)';
+            if (net > 0) return 'rgba(59, 130, 246, 0.22)'; // Blue tint
+            if (net < 0) return 'rgba(245, 158, 11, 0.22)'; // Amber tint
             return 'rgba(212,212,216,0.3)';
           }
           return d % 2 === 0 ? '#f4f4f5' : 'transparent';

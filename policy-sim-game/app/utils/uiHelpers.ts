@@ -10,5 +10,5 @@ export const DEMO_COLORS = {
 export const IMPACT_COLORS = {
   'Will improve': '#3b82f6',
   'Will be stable': '#d4d4d8',
-  'Will be worsened': '#f59e0b'
+  'Will worsen': '#f59e0b'
 };
