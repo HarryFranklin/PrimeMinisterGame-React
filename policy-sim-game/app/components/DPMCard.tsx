@@ -80,7 +80,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     <div className="flex-1 rounded-xl border border-zinc-200 bg-white flex flex-col shrink-0 min-h-0 overflow-hidden shadow-sm relative z-0">
       
       <div className="p-3 border-b border-zinc-200 bg-zinc-100 flex items-center gap-3 shrink-0 relative z-10">
-        <span className="text-3xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0"> </span>
+        <span className="text-2xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">⚖️</span>
         <div>
           <p className="text-[12px] font-black uppercase tracking-widest text-zinc-500 leading-tight">
             Deputy Prime Minister
@@ -111,7 +111,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
             </p>
           </div>
           <div className="border-t border-zinc-200 pt-2 flex-1 flex flex-col min-h-0">
-            <span className="text-base font-black uppercase tracking-widest text-pink-600 block mb-1 shrink-0">Advisory Note</span>
+            <span className="text-base font-bold tracking-widest text-pink-600 block mb-1 shrink-0">Advisory Note</span>
             <div className="flex-1 overflow-y-auto pr-1">
               <p className="text-sm text-zinc-700 italic leading-relaxed">"{getAdvisory()}"</p>
             </div>
