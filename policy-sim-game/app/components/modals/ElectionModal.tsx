@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
+import { ModalContent, ModalHeader, FloatingDefinitionPanel } from './SharedModalComponents'; // Removed FloatingPolicyPanel
 
-import { ModalContent, ModalHeader, FloatingDefinitionPanel, FloatingPolicyPanel } from './SharedModalComponents';
-
-
-// Stage components cleanly linked via relative routing
 import StageTermSummary from './ElectionModal/StageTermSummary';
 import StageVerdict from './ElectionModal/StageVerdict';
 import StagePopulationChange from './ElectionModal/StagePopulationChange';
@@ -35,20 +32,16 @@ export default function ElectionModal(props: ElectionModalProps) {
   const [defTitle, setDefTitle] = useState("");
   const [defDesc, setDefDesc] = useState("");
   
-  const [activePolicies, setActivePolicies] = useState<{ id: string, name: string, description: string }[]>([]);
-
   const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0;
-  const isFinalCycle = currentCycle === ElectionCycle.SocietalUtility;
   
-  // Logic to determine if the player can proceed to next term
+  const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
+  
   let canProceed = won || cycleAttempts >= 3;
-  // Restored to 5 total pages as per original design
   const totalPages = canProceed ? 5 : 4;
 
   useEffect(() => {
     setShowDefinition(false);
-    setActivePolicies([]); // Clear policies on page turn
   }, [page]);
 
   const handleToggle = (title: string, desc: string) => {
@@ -75,23 +68,18 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   return (
     <ModalContent 
-      // Changed page 3 from max-w-5xl to max-w-3xl since the sidebar is now floating outside
       maxWidth={page === 1 ? "max-w-xl" : page === 2 ? "max-w-2xl" : "max-w-3xl"}
       floatingPanel={
-        <>
-          <FloatingDefinitionPanel title={defTitle} description={defDesc} isVisible={showDefinition} />
-          {/* Render the new policy panel */}
-          <FloatingPolicyPanel policies={activePolicies} isVisible={page === 3 && activePolicies.length > 0} />
-        </>
+        <FloatingDefinitionPanel title={defTitle} description={defDesc} isVisible={showDefinition} />
       }
     >
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
-            
+      
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
         {page === 0 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
         {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
-        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} setActivePolicies={setActivePolicies} onDefinitionToggle={handleToggle} />}
+        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 

@@ -167,7 +167,6 @@ interface StageElectorateFeedbackProps {
   finalPopulation: Respondent[];
   currentCycle: ElectionCycle;
   onReady: () => void;
-  setActivePolicies: (policies: {id: string, name: string, description: string }[]) => void;
   onDefinitionToggle: (title: string, desc: string) => void;
 }
 
@@ -177,11 +176,9 @@ export default function StageElectorateFeedback({
   finalPopulation,
   currentCycle,
   onReady,
-  setActivePolicies,
   onDefinitionToggle
 }: StageElectorateFeedbackProps) {
   const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
-  const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
     onReady();
@@ -233,29 +230,13 @@ export default function StageElectorateFeedback({
     [voxPops, currentCycle]
   );
 
-  const referencedPolicyIds = useMemo(() => {
-    const ids = new Set<string>();
-    voterData.forEach(({ sentiment }) => {
-      const { kind, bestPolicy, worstPolicy } = sentiment;
-      if (['very_negative', 'negative', 'neutral_mixed'].includes(kind) && worstPolicy?.id) { ids.add(worstPolicy.id); }
-      if (['positive', 'very_positive', 'neutral_mixed'].includes(kind) && bestPolicy?.id) { ids.add(bestPolicy.id); }
-    });
-    return Array.from(ids);
-  }, [voterData]);
-
-  useEffect(() => {
-    const policies = referencedPolicyIds
-      .map(id => availablePolicies.find(p => p.id === id))
-      .filter(Boolean)
-      .map(p => ({ id: p!.id, name: p!.policyName, description: p!.description }));
-      
-    setActivePolicies(policies);
-  }, [referencedPolicyIds, setActivePolicies]);
+  // Removed referencedPolicyIds useMemo
+  // Removed setActivePolicies useEffect
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in h-full min-h-0 overflow-hidden w-full">
       <DPMMessage title="Voter Sentiment">
-        We've tracked how your policies impacted individual voters. Review the legislation referenced in their feedback in the panel.
+        We've tracked how your policies impacted individual voters. Click the legislation referenced in their feedback to review its details.
       </DPMMessage>
       
       <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1">
@@ -277,7 +258,7 @@ export default function StageElectorateFeedback({
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
                   <div className={`flex items-center gap-2 bg-white px-2 py-1 rounded-md border shadow-sm shrink-0 ${borderColor}`}>
                     <span className="text-[12px] font-bold text-zinc-500">LS: {baseRounded.toFixed(1)}</span>
-                    <span className="text-[12px] text-zinc-300 font-black">→</span>
+                    <span className="text-[12px] text-zinc-300 font-black"> </span>
                     <span className={`text-[12px] font-black ${textColor}`}>{finalRounded.toFixed(1)}</span>
                   </div>
                 </div>
