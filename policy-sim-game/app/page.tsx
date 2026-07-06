@@ -67,7 +67,7 @@ export default function Home() {
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
         <GameProvider value={game}>
-          <main className="flex-1 overflow-hidden p-6 flex flex-col relative">
+          <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
             <DashboardTab />
           </main>
 

@@ -91,7 +91,7 @@ export default function ElectionModal(props: ElectionModalProps) {
         {page === 0 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
         {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
-        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} setActivePolicies={setActivePolicies} />}
+        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} setActivePolicies={setActivePolicies} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 

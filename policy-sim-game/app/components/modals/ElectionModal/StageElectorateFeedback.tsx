@@ -52,27 +52,37 @@ function getVoterSentiment(citizen: any, cycle: ElectionCycle): VoterSentiment {
 interface VoterQuoteProps {
   sentiment: VoterSentiment;
   onHoverPolicy: (id: string | null) => void;
+  onDefinitionToggle: (title: string, desc: string) => void;
 }
 
 function PolicySpan({
   policy,
   onHoverPolicy,
+  onDefinitionToggle
 }: {
   policy: PolicyRef;
   onHoverPolicy: (id: string | null) => void;
+  onDefinitionToggle: (title: string, desc: string) => void;
 }) {
   return (
     <span
       className="font-bold underline decoration-pink-300 decoration-2 underline-offset-2 text-pink-700 hover:text-pink-900 transition-colors cursor-pointer"
       onMouseEnter={() => onHoverPolicy(policy.id)}
       onMouseLeave={() => onHoverPolicy(null)}
+      onClick={() => {
+        // Find the full policy definition to show in the floating panel
+        const fullPolicy = availablePolicies.find(p => p.id === policy.id);
+        if (fullPolicy) {
+          onDefinitionToggle(fullPolicy.policyName, fullPolicy.description);
+        }
+      }}
     >
       {policy.name}
     </span>
   );
 }
 
-function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
+function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuoteProps) {
   const { kind, bestPolicy, worstPolicy } = sentiment;
 
   switch (kind) {
@@ -82,7 +92,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Since this government took office, things have gotten really tough.{' '}
           {worstPolicy ? (
             <>
-              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> pass made it so much harder to
+              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to
               get by.
             </>
           ) : (
@@ -96,7 +106,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           I'm definitely worse off than I was.{' '}
           {worstPolicy ? (
             <>
-              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> really didn't help matters.
+              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.
             </>
           ) : (
             "The agenda just didn't work for me."
@@ -109,12 +119,12 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Honestly, I haven't noticed much difference overall.{' '}
           {bestPolicy && (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> helped a bit,{' '}
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
             </>
           )}
           {worstPolicy && (
             <>
-              but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} /> set me back just as much.
+              but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> set me back just as much.
             </>
           )}
         </>
@@ -127,7 +137,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           Things are looking up a bit.{' '}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> actually made things easier for me.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.
             </>
           ) : (
             'The agenda seems to be heading in a good direction.'
@@ -140,7 +150,7 @@ function VoterQuote({ sentiment, onHoverPolicy }: VoterQuoteProps) {
           I've seen a huge difference!{' '}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} /> really helped me out and turned things
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really helped me out and turned things
               around.
             </>
           ) : (
@@ -158,6 +168,7 @@ interface StageElectorateFeedbackProps {
   currentCycle: ElectionCycle;
   onReady: () => void;
   setActivePolicies: (policies: {id: string, name: string, description: string }[]) => void;
+  onDefinitionToggle: (title: string, desc: string) => void;
 }
 
 export default function StageElectorateFeedback({
@@ -166,7 +177,8 @@ export default function StageElectorateFeedback({
   finalPopulation,
   currentCycle,
   onReady,
-  setActivePolicies
+  setActivePolicies,
+  onDefinitionToggle
 }: StageElectorateFeedbackProps) {
   const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -270,7 +282,7 @@ export default function StageElectorateFeedback({
                   </div>
                 </div>
                 <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2">
-                  "<VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} />"
+                  "<VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} onDefinitionToggle={onDefinitionToggle} />"
                 </p>
               </div>
             </div>

@@ -199,7 +199,7 @@ export default function DashboardTab() {
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
-      <div className="grid grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0 overflow-hidden">
+      <div className="grid grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0 overflow-hidden">
         
         {/* LEFT COLUMN: Stacked Graphs OR Utility Table */}
         <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
@@ -208,7 +208,7 @@ export default function DashboardTab() {
             // --- UTILITY CYCLE VIEW (Cycles 3 & 4) ---
             <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-                <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+                <div className="px-4 py-2 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
                     {isParliamentDissolved 
                       ? (hoveredHistoryTurn !== null ? `Population at Turn ${hoveredHistoryTurn - 1}` : "Final Population") 
@@ -234,7 +234,7 @@ export default function DashboardTab() {
               </div>
 
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group relative">
-                <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+                <div className="px-4 py-2 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">Utility Analysis</h3>
                 </div>
                 
@@ -274,7 +274,7 @@ export default function DashboardTab() {
             <>
               {/* TOP: Current Distribution */}
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-                <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+                <div className="px-4 py-2 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900">
                     {isParliamentDissolved 
                       ? (hoveredHistoryTurn !== null ? `Population at Turn ${hoveredHistoryTurn - 1}` : "Final Population") 
@@ -301,7 +301,7 @@ export default function DashboardTab() {
 
               {/* BOTTOM: Projected Distribution */}
               <div className="bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-all group">
-                <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
+                <div className="px-4 py-2 border-b border-zinc-200 bg-zinc-100 rounded-t-xl flex justify-between items-center shrink-0">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-900 truncate pr-2">
                     {bottomChartTitle}
                   </h3>
@@ -418,102 +418,99 @@ export default function DashboardTab() {
           <div ref={agendaListRef} className={`flex-1 flex flex-col gap-2 min-h-0 overflow-visible relative z-[60] ${isParliamentDissolved ? 'p-3' : 'p-2'}`}>
             
             {!isParliamentDissolved ? (
-              currentDeck.slice(0, 4).map((policy, index) => {
-                const isSelected = selectedPolicy?.id === policy.id;
-                const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
+                currentDeck.slice(0, 4).map((policy, index) => {
+                  const isSelected = selectedPolicy?.id === policy.id;
+                  const isOtherSelectedAndOpen = selectedPolicy && !isSelected && detailsOpen;
 
-                return (
-                  <div 
-                    key={policy.id} 
-                    className={`relative flex w-full transition-all duration-300 ease-in-out ${isSelected ? 'flex-[2.5] z-[70]' : 'flex-1 z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40' : ''}`}
-                  >
+                  return (
                     <div 
-                      className={`w-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
-                        isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 bg-white'
-                      }`}
+                      key={policy.id} 
+                      className={`relative flex w-full transition-all duration-300 ease-in-out ${isSelected ? 'flex-[2.5] z-[70]' : 'flex-1 z-10'} ${isOtherSelectedAndOpen ? 'blur-[2px] opacity-40' : ''}`}
                     >
-                      {/* Main Clickable Area*/}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setSelectedPolicy(isSelected ? null : policy); setDetailsOpen(false); }}
-                        className={`flex-col items-start text-left p-4 h-auto flex-grow-0 ${isSelected ? 'w-[85%]' : 'w-full'}`}
+                      <div 
+                        className={`w-full flex rounded-xl border transition-all duration-300 overflow-hidden relative ${
+                          isSelected ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-zinc-200 hover:border-zinc-300 bg-white'
+                        }`}
                       >
-                        <p className={`font-bold text-base leading-tight ${isSelected ? 'text-pink-900' : 'text-zinc-900'}`}>
-                          {policy.policyName}
-                        </p>
-                        <div className={`transition-all duration-300 overflow-hidden ${isSelected ? 'opacity-100 max-h-[120px] mt-2' : 'opacity-0 max-h-0'}`}>
-                          <p className="text-sm text-pink-700/80 leading-relaxed">{policy.description}</p>
-                        </div>
-                      </button>
+                        {/* Main Clickable Area*/}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setSelectedPolicy(isSelected ? null : policy); setDetailsOpen(false); }}
+                          className={`flex-col text-left flex-grow-0 flex transition-all duration-300 ${isSelected ? 'w-[85%] items-start justify-start p-3' : 'w-full items-start justify-center px-4 py-2'}`}
+                        >
+                          <p className={`font-bold text-base leading-tight ${isSelected ? 'text-pink-900' : 'text-zinc-900'}`}>
+                            {policy.policyName}
+                          </p>
+                          <div className={`transition-all duration-300 overflow-hidden ${isSelected ? 'opacity-100 max-h-[120px] mt-1' : 'opacity-0 max-h-0'}`}>
+                            <p className="text-sm text-pink-700/80 leading-relaxed">{policy.description}</p>
+                          </div>
+                        </button>
+                        
+                        {/* View Details*/}
+                        {isSelected && (
+                          <div className="w-[15%] border-l border-pink-200 flex items-center justify-center cursor-pointer hover:bg-pink-100" 
+                              onClick={() => setDetailsOpen(!detailsOpen)}>
+                            <span className="text-[10px] font-black uppercase text-pink-600 text-center leading-tight px-1">View<br/>Details</span>
+                          </div>
+                        )}
+                      </div>
 
-                      {/* View Details*/}
-                      {isSelected && (
-                        <div className="w-[15%] border-l border-pink-200 flex items-center justify-center cursor-pointer hover:bg-pink-100"
-                            onClick={() => setDetailsOpen(!detailsOpen)}>
-                          <span className="text-[10px] font-black uppercase text-pink-600">Details</span>
+                      {/* DETAILS POP-UP */}
+                      {isSelected && detailsOpen && (
+                        <div 
+                          onClick={(e) => e.stopPropagation()}
+                          className={`absolute left-0 right-0 bg-white border border-pink-300 shadow-2xl rounded-xl p-3 z-[100] ${
+                            index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-2 max-h-[25vh] overflow-y-auto pr-1">
+                            {policy.specificRules.map((r: any, rIdx: number) => {
+                              const minStr = r.minLS !== undefined ? r.minLS : 0;
+                              const maxStr = r.maxLS !== undefined ? r.maxLS : 10;
+                              const lsRange = `LS ${minStr} to ${maxStr}`;
+                              const eligible = population.filter((p: any) => 
+                                (r.minLS === undefined || p.currentLS >= r.minLS) && 
+                                (r.maxLS === undefined || p.currentLS <= r.maxLS)
+                              ).length;
+                              
+                              const coverage = Math.round(eligible * r.proportion);
+                              const coveragePercentage = Math.round((coverage / population.length) * 100);
+                              const isPositive = r.impact > 0;
+                              const ruleColor = isPositive ? IMPACT_COLORS['Will improve'] : IMPACT_COLORS['Will worsen'];
+                              const ruleBg = isPositive ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)';
+                              
+                              return (
+                                <React.Fragment key={rIdx}>
+                                  {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full shrink-0" />}
+                                  <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4 p-2.5 shrink-0"
+                                      style={{ borderLeftColor: ruleColor, backgroundColor: ruleBg }}>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
+                                      <span className="font-black text-[13px] shrink-0" style={{ color: ruleColor }}>
+                                        {isPositive ? '+' : ''}{r.impact} LS
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-2 pt-1.5 items-center">
+                                      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Range</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ruleColor }} />
+                                        <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
+                                      </div>
+                                      <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
+                                      <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}%</span>
+                                    </div>
+                                  </div>
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
-
-                    {/* DETAILS POP-UP */}
-                    {isSelected && detailsOpen && (
-                      <div 
-                        onClick={(e) => e.stopPropagation()}
-                        className={`absolute left-0 right-0 bg-white/95 border border-pink-300 shadow-2xl rounded-xl p-3 z-[100] ${
-                          index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
-                        }`}
-                      >
-                        {/* max-h-[25vh] + overflow-y-auto ensures it never spills off the bottom */}
-                        <div className="flex flex-col gap-2 max-h-[25vh] overflow-y-auto pr-1">
-                          {policy.specificRules.map((r: any, rIdx: number) => {
-                            const minStr = r.minLS !== undefined ? r.minLS : 0;
-                            const maxStr = r.maxLS !== undefined ? r.maxLS : 10;
-                            const lsRange = `LS ${minStr} to ${maxStr}`;
-
-                            const eligible = population.filter((p: any) => 
-                              (r.minLS === undefined || p.currentLS >= r.minLS) &&
-                              (r.maxLS === undefined || p.currentLS <= r.maxLS)
-                            ).length;
-                            
-                            const coverage = Math.round(eligible * r.proportion);
-                            const coveragePercentage = Math.round((coverage / population.length) * 100);
-
-                            const isPositive = r.impact > 0;
-                            const ruleColor = isPositive ? IMPACT_COLORS['Will improve'] : IMPACT_COLORS['Will worsen'];
-                            const ruleBg = isPositive ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)';
-
-                            return (
-                              <React.Fragment key={rIdx}>
-                                {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full shrink-0" />}
-                                <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4 p-2.5 shrink-0"
-                                     style={{ borderLeftColor: ruleColor, backgroundColor: ruleBg }}>
-                                  <div className="flex justify-between items-center gap-2">
-                                    <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
-                                    <span className="font-black text-[13px] shrink-0" style={{ color: ruleColor }}>
-                                      {isPositive ? '+' : ''}{r.impact} LS
-                                    </span>
-                                  </div>
-                                  <div className="flex gap-2 pt-1.5 items-center">
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">Range</span>
-                                    <div className="flex items-center gap-1.5">
-                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ruleColor }} />
-                                      <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
-                                    </div>
-                                    <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
-                                    <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}%</span>
-                                  </div>
-                                </div>
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
+                  );
+                })
+              ) : (
               // History View (When Parliament Dissolved)
-              <div className="flex flex-col gap-1.5 h-full min-h-0 overflow-visible justify-between relative">
+              <div className="flex flex-col gap-2 h-full min-h-0 overflow-visible justify-start relative">
                 {enactedLegislation.map((leg, index) => {
                   const isHovered = hoveredEnactedId !== null && hoveredEnactedId === leg.enactedPolicyId;
                   const fullPolicy = availablePolicies.find(p => p.id === leg.enactedPolicyId);
@@ -529,28 +526,30 @@ export default function DashboardTab() {
                         setHoveredEnactedId(null);
                         setHoveredHistoryTurn(null);
                       }}
-                      className={`relative flex flex-col justify-center bg-white ${textScale.pad} rounded-lg border border-zinc-200 shadow-sm cursor-pointer transition-colors shrink-0 ${isHovered ? 'z-50 ring-2 ring-pink-500/20' : 'z-10 hover:bg-zinc-50'}`}
+                      className={`relative flex flex-col justify-center bg-white p-3 rounded-lg border border-zinc-200 shadow-sm cursor-pointer transition-colors shrink-0 ${isHovered ? 'z-50 ring-2 ring-pink-500/20' : 'z-10 hover:bg-zinc-50'}`}
                     >
-                      <div className="flex gap-2 items-center min-w-0">
-                        <div className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">
+                      <div className="flex gap-3 items-center min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center text-sm font-black shrink-0">
                           {index + 1}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className={`font-bold ${textScale.title} text-zinc-900 leading-tight mb-0.5`}>
+                          <p className="font-bold text-base text-zinc-900 leading-tight truncate">
                             {leg.enactedPolicyName}
-                          </p>
-                          <p className={`${textScale.body} text-zinc-500 leading-tight`}>
-                            {leg.description}
                           </p>
                         </div>
                       </div>
-
+                      
                       {/* Detail Pop-up */}
                       {isHovered && fullPolicy && (
                         <div className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100] ${
-                          index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
+                          index >= 3 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                         }`}>
-                          <span className="text-[12px] font-black uppercase tracking-widest text-pink-500">Details</span>
+                          <span className="text-sm font-black uppercase tracking-widest text-pink-500">Details</span>
+                          
+                          {/* Description moved into the pop-up */}
+                          <p className="text-sm text-zinc-600 leading-relaxed mb-1">
+                            {leg.description}
+                          </p>
                           
                           <div className="flex flex-col gap-1.5 max-h-[190px] overflow-y-auto pr-1.5">
                             {fullPolicy.specificRules.map((r: any, rIdx: number) => {
@@ -561,7 +560,7 @@ export default function DashboardTab() {
                                 <React.Fragment key={rIdx}>
                                   {rIdx > 0 && <div className="h-px w-full bg-pink-200/50 my-1 rounded-full shrink-0" />}
                                   <div className="rounded-lg border border-zinc-100 overflow-hidden shadow-sm border-l-4 p-2.5 shrink-0"
-                                       style={{ borderLeftColor: ruleColor, backgroundColor: ruleBg }}>
+                                      style={{ borderLeftColor: ruleColor, backgroundColor: ruleBg }}>
                                     <div className="flex justify-between items-center gap-2">
                                       <span className="font-bold text-[13px] text-zinc-800 leading-snug">{r.note}</span>
                                       <span className="font-black text-[13px] shrink-0" style={{ color: ruleColor }}>
