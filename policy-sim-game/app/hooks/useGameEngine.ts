@@ -249,7 +249,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   };
 
   const handleProceedFromNarrative = () => {
-    if (currentCycle === ElectionCycle.SocietalUtility) {
+    if (currentCycle === ElectionCycle.PersonalUtility) {
       setGamePhase(GamePhase.Debrief);
       return;
     }
