@@ -47,7 +47,14 @@ const lastNames = [
 ];
 
 export function generateVoterName(id: number): string {
-  const firstIndex = (id * 13) % firstNames.length;
-  const lastIndex = (id * 17) % lastNames.length;
+  // Using pseudo-random hashing to avoid the problem where 
+  // exactly matching array lengths (90 and 90) meant only 90 unique 
+  // name combinations were ever generated when using simple modulo logic.
+  const hash1 = Math.sin(id * 1.123) * 10000;
+  const hash2 = Math.cos(id * 1.987) * 10000;
+  
+  const firstIndex = Math.abs(Math.floor(hash1)) % firstNames.length;
+  const lastIndex = Math.abs(Math.floor(hash2)) % lastNames.length;
+  
   return `${firstNames[firstIndex]} ${lastNames[lastIndex]}`;
 }

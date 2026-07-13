@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
-import { ModalContent, ModalHeader, FloatingDefinitionPanel } from './SharedModalComponents'; // Removed FloatingPolicyPanel
+import { ModalContent, ModalHeader } from './SharedModalComponents'; 
 
 import StageTermSummary from './ElectionModal/StageTermSummary';
 import StageVerdict from './ElectionModal/StageVerdict';
@@ -28,9 +28,8 @@ export default function ElectionModal(props: ElectionModalProps) {
   const { currentCycle, approvalRating, cycleAttempts, onNextCycle, onReset, onFinish } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
-  const [showDefinition, setShowDefinition] = useState(false);
-  const [defTitle, setDefTitle] = useState("");
-  const [defDesc, setDefDesc] = useState("");
+  
+  const [definitions, setDefinitions] = useState<{title: string, desc: string}[]>([]);
   
   const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0;
@@ -41,13 +40,17 @@ export default function ElectionModal(props: ElectionModalProps) {
   const totalPages = canProceed ? 5 : 4;
 
   useEffect(() => {
-    setShowDefinition(false);
+    setDefinitions([]);
   }, [page]);
 
   const handleToggle = (title: string, desc: string) => {
-    setDefTitle(title);
-    setDefDesc(desc);
-    setShowDefinition(true);
+    setDefinitions(prev => {
+      const exists = prev.some(d => d.title === title);
+      if (exists) {
+        return prev.filter(d => d.title !== title);
+      }
+      return [...prev, { title, desc }];
+    });
   };
 
   const getModalTitle = () => {
@@ -70,7 +73,23 @@ export default function ElectionModal(props: ElectionModalProps) {
     <ModalContent 
       maxWidth={page === 1 ? "max-w-xl" : page === 2 ? "max-w-2xl" : "max-w-3xl"}
       floatingPanel={
-        <FloatingDefinitionPanel title={defTitle} description={defDesc} isVisible={showDefinition} />
+        definitions.length > 0 ? (
+          <div className="absolute inset-y-0 right-0 translate-x-[105%] flex items-center pointer-events-none z-[100] py-4">
+            <div className="flex flex-col gap-4 w-72 max-h-[100%] overflow-y-auto pointer-events-auto pr-3 pl-1 pb-2 overscroll-contain">
+              {definitions.map((def) => (
+                <div 
+                  key={def.title} 
+                  className="bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 shrink-0 relative animate-in fade-in zoom-in-95 duration-200"
+                >
+                  <span className="text-sm font-black uppercase tracking-widest text-pink-500 block mb-2">
+                    {def.title}
+                  </span>
+                  <p className="text-sm text-zinc-600 leading-relaxed">{def.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : undefined
       }
     >
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
@@ -83,7 +102,6 @@ export default function ElectionModal(props: ElectionModalProps) {
         {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
-      {/* Footer pinned to bottom */}
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
         {page > 0 ? (
           <button 
@@ -105,10 +123,10 @@ export default function ElectionModal(props: ElectionModalProps) {
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
             {!canProceed ? (
-              <button onClick={onReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Mandate Failed - Restart Term</button>
+              <button onClick={onReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
             ) : (
               <>
-                <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Cycle</button>
+                <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
                 
                 {!isFinalCycle && (
                   <button 

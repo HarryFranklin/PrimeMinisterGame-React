@@ -19,9 +19,7 @@ interface EnactedLegislationHistoryProps {
 /**
  * The post-dissolution "Enacted Legislation" list, shown in place of
  * PolicyDeckList once parliament has dissolved. Hovering a row surfaces that
- * policy's rule breakdown via a shared PolicyRuleCard/PolicyRuleList — the
- * same component PolicyDeckList uses, so the two views can't drift apart
- * the way the old hand-duplicated JSX did.
+ * policy's rule breakdown via a shared PolicyRuleCard/PolicyRuleList.
  */
 export default function EnactedLegislationHistory({
   enactedLegislation,
@@ -55,13 +53,13 @@ export default function EnactedLegislationHistory({
 
             {isHovered && fullPolicy && (
               <div
-                className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100] ${
+                className={`absolute left-0 right-0 bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-200 cursor-auto z-[100] before:absolute before:-inset-y-4 before:inset-x-0 before:-z-10 ${
                   index >= 3 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                 }`}
               >
                 <span className="text-sm font-black uppercase tracking-widest text-pink-500">Details</span>
                 <p className="text-sm text-zinc-600 leading-relaxed mb-1">{leg.description}</p>
-                <div className="max-h-[190px] overflow-y-auto pr-1.5">
+                <div className="max-h-[190px] overflow-y-auto pr-1.5 overscroll-contain">
                   <PolicyRuleList rules={fullPolicy.specificRules} />
                 </div>
               </div>

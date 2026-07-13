@@ -89,12 +89,12 @@ export default function D3Chart({
   const rulesJson   = JSON.stringify(activePolicyRules);
 
   useEffect(() => {
-    if (!containerRef.current || !svgRef.current) return;
+      if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 20, right: 20, bottom: 65, left: 50 };
-    const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
-    const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
-    const baseColor = color || '#ec4899';
+      const margin = { top: 20, right: 20, bottom: 45, left: 50 };
+      const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
+      const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
+      const baseColor = color || '#ec4899';
 
     const svg = d3.select(svgRef.current)
       .attr('width',  W + margin.left + margin.right)
@@ -356,7 +356,7 @@ export default function D3Chart({
         .text('Number of People');
 
       chart.select('.label-x')
-        .attr('x', W / 2).attr('y', H + 50)
+        .attr('x', W / 2).attr('y', H + 38)
         .attr('fill','#3f3f46')
         .style('text-anchor','middle').style('font-weight','bold')
         .text(getAxisLabel(xAxisType));

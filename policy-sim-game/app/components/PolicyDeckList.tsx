@@ -13,9 +13,6 @@ interface PolicyDeckListProps {
 
 /**
  * The four selectable policy cards shown while parliament is in session.
- * Extracted from DashboardTab's right column, which previously interleaved
- * this with the (structurally different) enacted-legislation history view —
- * see EnactedLegislationHistory for that counterpart.
  */
 export default function PolicyDeckList({
   deck,
@@ -49,7 +46,7 @@ export default function PolicyDeckList({
                   onSelect(isSelected ? null : policy);
                   onToggleDetails(false);
                 }}
-                className={`flex-col text-left flex-grow-0 flex transition-all duration-300 ${
+                className={`flex-col text-left flex-grow-0 flex transition-all duration-300 cursor-pointer ${
                   isSelected ? 'w-[85%] items-start justify-start p-3' : 'w-full items-start justify-center px-4 py-2'
                 }`}
               >
@@ -82,7 +79,7 @@ export default function PolicyDeckList({
             {isSelected && detailsOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className={`absolute left-0 right-0 bg-white border border-pink-300 shadow-2xl rounded-xl p-3 z-[100] ${
+                className={`absolute left-0 right-0 bg-white border border-pink-300 shadow-2xl rounded-xl p-3 z-[100] cursor-auto ${
                   index > 1 ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]'
                 }`}
               >
