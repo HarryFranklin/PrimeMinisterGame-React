@@ -57,8 +57,19 @@ export interface TurnHistory {
   lsAverage: number;
 }
 
+// Stores the complete outcome of a specific cycle
+export interface CompletedRun {
+  cycle: ElectionCycle;
+  finalPopulation: Respondent[];
+  finalScore: number;
+  targetScore: number;
+  approvalRating: number;
+  enactedLegislation: TurnHistory[];
+}
+
 export enum GamePhase {
   Welcome = 'welcome',
+  LevelSelect = 'levelSelect',
   Briefing = 'briefing',
   Playing = 'playing',
   Election = 'election',
