@@ -5,15 +5,14 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
 
-// Modals
+// Modals & Tabs
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
-import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import WelcomeModal from "./components/modals/WelcomeModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
-
 import GameHeader from "./components/GameHeader";
 import DashboardTab from "./components/tabs/DashboardTab";
+import LevelSelectTab from "./components/tabs/LevelSelectTab";
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
 
@@ -24,7 +23,6 @@ export default function Home() {
 
   useEffect(() => {
     const evaluateViewport = () => {
-      // Rely strictly on viewport dimensions to avoid DevTools / User-Agent spoofing bugs
       const isLowResolution = window.innerWidth < 1024 || window.innerHeight < 600;
       setIsUnsupportedScreen(isLowResolution);
     };
@@ -35,6 +33,7 @@ export default function Home() {
   }, []);
 
   const game = useGameEngine();
+  const isHub = game.gamePhase === GamePhase.LevelSelect || game.gamePhase === GamePhase.Welcome;
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
@@ -59,6 +58,7 @@ export default function Home() {
         currentTurn={game.currentTurn}
         turnsPerCycle={game.TURNS_PER_CYCLE}
         isParliamentDissolved={game.isParliamentDissolved}
+        isHub={isHub}
       />
 
       <UIProvider value={{
@@ -68,17 +68,22 @@ export default function Home() {
       }}>
         <GameProvider value={game}>
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
-            <DashboardTab />
+            {game.gamePhase === GamePhase.LevelSelect ? (
+              <LevelSelectTab />
+            ) : (
+              <DashboardTab />
+            )}
           </main>
 
           <AnimatePresence mode="wait">
-            {game.gamePhase !== GamePhase.Playing && (
+            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && (
               <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
+                  
                   {game.gamePhase === GamePhase.Welcome && (
                     <WelcomeModal 
                       key="welcome" 
-                      onAcknowledge={() => game.setGamePhase(GamePhase.Briefing)} 
+                      onAcknowledge={() => game.setGamePhase(GamePhase.LevelSelect)} 
                     />
                   )}
                   
@@ -101,20 +106,12 @@ export default function Home() {
                       baselinePopulation={game.baselinePopulation}
                       finalPopulation={game.population}
                       yAxisMax={game.yAxisMax}
-                      onNextCycle={game.handleProceedFromNarrative}
+                      onNextCycle={game.handleCompleteTerm} // Routes to LevelSelect
                       onReset={game.handleResetCycle}
-                      onFinish={() => game.setGamePhase(GamePhase.Debrief)}
+                      onFinish={game.handleCompleteTerm} // Final debrief is now on the Hub page itself
                     />
                   )}
-
-                  {game.gamePhase === GamePhase.Debrief && (
-                    <FinalDebriefModal
-                      key="debrief"
-                      baselinePopulation={game.baselinePopulation}
-                      finalPopulation={game.population}
-                      yAxisMax={game.yAxisMax}
-                    />
-                  )}
+                  
                 </AnimatePresence>
               </ModalOverlay>
             )}

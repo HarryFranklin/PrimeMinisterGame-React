@@ -223,7 +223,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCycleAttempts(1);
   };
 
-  // Saves cycle data to central store and routes to the hub
+  // Starts a term cleanly without wiping the save, allowing progression
+  const startLevel = useCallback((cycle: ElectionCycle) => {
+    startCycle(cycle);
+    setCycleAttempts(1);
+  }, [startCycle]);
+
   const handleCompleteTerm = useCallback(() => {
     const rule = FRAMEWORK_RULES[currentCycle];
     const targetScore = cycleMAO * rule.winThresholdScalar;
@@ -282,6 +287,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     turnMetricScore, initialMetricScore, currentMetricScore, turnApprovalRating,
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleCompleteTerm, setCurrentTurn, handleNavigateToPolicy,
+    startLevel,
     gamePhase, setGamePhase, isAgendaUnlocked, yAxisMax,
     TURNS_PER_CYCLE,
     completedRuns,
