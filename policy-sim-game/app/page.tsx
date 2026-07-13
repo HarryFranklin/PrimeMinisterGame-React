@@ -68,7 +68,7 @@ export default function Home() {
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
         <GameProvider value={game}>
-          <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
+          <main className="flex-1 overflow-hidden p-4 pt-0 flex flex-col relative">
             {game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (

@@ -116,7 +116,7 @@ export default function LevelSelectTab() {
                   )}
 
                   {isCompleted && run && (
-                    <div className="flex-1 flex flex-col gap-3 mt-2 border-t border-zinc-100 pt-4">
+                    <div className="flex-1 flex flex-col border-zinc-100">
                        <div className="flex justify-between items-end">
                          <div>
                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-0.5">Public Approval</span>
