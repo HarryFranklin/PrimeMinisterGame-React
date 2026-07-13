@@ -29,7 +29,7 @@ export default function GameHeader({
       </div>
 
       {/* Centered Dashboard Label */}
-      <span className="absolute left-1/2 -translate-x-1/2 text-xs font-bold text-zinc-400 uppercase tracking-[0.25em] z-10">
+      <span className="absolute left-1/2 -translate-x-1/2 text-[14px] font-bold text-zinc-400 uppercase tracking-[0.25em] z-10">
         {isHub ? 'Level Select' : 'Dashboard'}
       </span>
 

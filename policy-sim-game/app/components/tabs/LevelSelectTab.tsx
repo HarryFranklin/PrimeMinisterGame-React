@@ -84,7 +84,7 @@ export default function LevelSelectTab() {
 
            return (
              <div key={profile.cycle} className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-500 ${isLocked ? 'border-zinc-200 bg-zinc-50/50 grayscale opacity-60' : isPlayable ? 'border-zinc-800 bg-white shadow-xl scale-[1.02] ring-4 ring-zinc-900/10' : 'border-zinc-200 bg-white shadow-sm'}`}>
-               <div className={`p-5 border-b ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
+               <div className={`p-5 pb-3 border-b ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
                   <h3 className={`font-black text-xl tracking-tight ${isLocked ? 'text-zinc-500' : 'text-zinc-900'}`}>{profile.name}</h3>
                   <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${isLocked ? 'text-zinc-400' : profile.colorClass}`}>{profile.philosophy}</p>
                </div>
@@ -149,8 +149,8 @@ export default function LevelSelectTab() {
                          ))}
                        </div>
 
-                       <div className="h-40 bg-zinc-50 rounded-lg border border-zinc-200 mt-2 p-2 pt-6 relative overflow-hidden">
-                         <span className="absolute top-2 left-2 text-[9px] font-bold text-zinc-400 uppercase tracking-widest z-10">LS Distribution</span>
+                       <div className="h-55 bg-zinc-50 rounded-lg border border-zinc-200 mt-2 p-2 pt-6 relative overflow-hidden">
+                         <span className="absolute top-3 left-2 text-[11px] font-bold text-zinc-400 uppercase tracking-widest z-10">Life Satisfaction Distribution</span>
                          <D3Chart 
                            plotType="1D"
                            chartData={[]}
