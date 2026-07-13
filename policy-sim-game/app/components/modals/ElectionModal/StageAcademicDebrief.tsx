@@ -23,10 +23,10 @@ export default function StageAcademicDebrief({
 }: StageAcademicDebriefProps) {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
-  
+
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
-  
+
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
 
   const [revealedPU, setRevealedPU] = useState(false);
@@ -72,7 +72,6 @@ export default function StageAcademicDebrief({
     
     let bestCitizen = finalPopulation[0];
     let maxDiff = -1;
-
     for (const r of finalPopulation) {
       if (r.currentLS >= 7) {
         const pu = WelfareMetrics.getUtilityForPerson(r.currentLS, r.personalUtilities);
@@ -85,7 +84,6 @@ export default function StageAcademicDebrief({
   }, [finalPopulation]);
 
   const avgPU = useMemo(() => finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / finalPopulation.length, [finalPopulation]);
-  
   const avgSU = useMemo(() => {
     const allLS = finalPopulation.map((p: any) => p.currentLS);
     return finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / finalPopulation.length;
@@ -200,35 +198,35 @@ export default function StageAcademicDebrief({
       )}
 
       {currentCycle === ElectionCycle.PersonalUtility && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
-          <div onClick={() => setRevealedSU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-emerald-600/70 mb-1 text-center">Term 3: Societal Utility</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          <div onClick={() => setRevealedSU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600/70 mb-2 text-center">Term 3: Societal Utility</h3>
             <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-              <div className="text-center mb-3 mt-2">
-                <span className="text-[9px] uppercase font-bold text-emerald-600/70 block mb-0.5">Average Evaluation</span>
-                <strong className="text-3xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
+              <div className="text-center mb-4 mt-2">
+                <span className="text-xs uppercase font-bold text-emerald-600/70 block mb-1">Average Evaluation</span>
+                <strong className="text-4xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
               </div>
-              <div className="flex-1 text-[10px] text-emerald-800/80 space-y-2 overflow-y-auto pr-1">
+              <div className="flex-1 text-xs md:text-sm text-emerald-800/80 space-y-3 overflow-y-auto pr-1">
                 <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
                 <p><strong>The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
               </div>
             </div>
-            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-emerald-600">Click to Reveal</span></div>}
+            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Click to Reveal</span></div>}
           </div>
-
-          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-4 flex flex-col relative overflow-hidden cursor-pointer flex-1 min-h-0 ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-1 text-center">Term 4: Personal Utility</h3>
+          
+          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Term 4: Personal Utility</h3>
             <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-              <div className="text-center mb-3 mt-2">
-                <span className="text-[9px] uppercase font-bold text-zinc-400 block mb-0.5">Average Evaluation</span>
-                <strong className="text-3xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
+              <div className="text-center mb-4 mt-2">
+                <span className="text-xs uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span>
+                <strong className="text-4xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
               </div>
-              <div className="flex-1 text-[10px] text-zinc-600 space-y-2 overflow-y-auto pr-1">
+              <div className="flex-1 text-xs md:text-sm text-zinc-600 space-y-3 overflow-y-auto pr-1">
                 <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
                 <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
               </div>
             </div>
-            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-3 py-1.5 rounded-full text-[11px] font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
+            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
           </div>
 
           {revealedPU && revealedSU && (

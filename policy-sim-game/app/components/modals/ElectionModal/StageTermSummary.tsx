@@ -53,9 +53,9 @@ const ANALYSIS_MESSAGES: Record<ElectionCycle, (start: number, end: number, diff
   [ElectionCycle.Benthamite]: (s, e, d) =>
     `The National Average Happiness has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, a net ${d >= 0 ? 'gain' : 'loss'} of ${Math.abs(d).toFixed(2)} points.`,
   [ElectionCycle.Rawlsian]: (s, e, d) =>
-    `The baseline standard of living for the poorest citizens has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}.`,
+    `The Minimum Wellbeing Baseline for the poorest citizens has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}.`,
   [ElectionCycle.PersonalUtility]: (s, e, d) =>
-    `Average Voter Satisfaction has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)} based on personal financial impacts.`,
+    `The National Personal Satisfaction has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}.`,
   [ElectionCycle.SocietalUtility]: (s, e, d) =>
     `The National Fairness Index has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, reflecting shifting views on equality.`,
 };
@@ -69,7 +69,6 @@ export default function StageTermSummary({
   onDefinitionToggle
 }: StageTermSummaryProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
-
   const initialHist = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
   const finalHist = useMemo(() => generateHistogramData(finalPopulation), [finalPopulation]);
 
@@ -81,7 +80,6 @@ export default function StageTermSummary({
 
   const startMetric = useMemo(() => computeMetric(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const endMetric = useMemo(() => computeMetric(finalPopulation, currentCycle), [finalPopulation, currentCycle]);
-
   const markerLabel = MARKER_LABELS[currentCycle];
   const diff = endMetric - startMetric;
 
@@ -127,6 +125,7 @@ export default function StageTermSummary({
             />
           </div>
         </div>
+
         <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
           <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800 mb-2 text-center">End of Term</h3>
           <div className="h-[240px] md:h-[260px] w-full">

@@ -29,7 +29,7 @@ export default function ApprovalCard({ approvalRating, isParliamentDissolved, ac
               approvalRating >= 51 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
-            {displayApproval.toFixed(1)}%
+            {displayApproval.toFixed(1) === '100.0' ? '100' : displayApproval.toFixed(1)}%
           </p>
           <p className="text-sm text-zinc-500 mt-2 text-center px-4">
             Requirement: <strong className="text-zinc-300">51.0%</strong>

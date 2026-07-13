@@ -52,8 +52,8 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   const [displayScore, setDisplayScore] = useState(0);
   const [isDone, setIsDone] = useState(false);
   const cleanupRef = useRef<(() => void) | null>(null);
-
   const onReadyRef = useRef(onReady);
+
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
@@ -68,12 +68,10 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
     const animate = (now: number) => {
       if (!start) start = now;
       const elapsed = now - start;
-
       if (elapsed < DELAY) {
         rafId = requestAnimationFrame(animate);
         return;
       }
-
       const progress = Math.min((elapsed - DELAY) / DURATION, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       setDisplayScore(eased * approvalRating);
@@ -87,6 +85,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
     };
 
     rafId = requestAnimationFrame(animate);
+
     cleanupRef.current = () => {
       cancelAnimationFrame(rafId);
       clearTimeout(timeoutId);
@@ -116,50 +115,49 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
             Election Lost
           </div>
         )}
-    </div>
+      </div>
 
-        <motion.div
-          layout
-          className={`p-8 md:p-10 w-full max-w-lg flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 ${
-            showSuccess
-              ? 'bg-emerald-50 border-emerald-200 shadow-xl'
+      <motion.div
+        layout
+        className={`p-8 md:p-10 w-full max-w-lg flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 ${
+          showSuccess
+            ? 'bg-emerald-50 border-emerald-200 shadow-xl'
+            : showFailure
+            ? 'bg-zinc-100 border-zinc-300 shadow-md'
+            : 'bg-zinc-50 border-zinc-200'
+        }`}
+      >
+        <motion.div layout className="flex flex-col items-center">
+          <h1
+            className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${
+              showSuccess ? 'text-emerald-700' : showFailure ? 'text-zinc-700' : 'text-zinc-800'
+            }`}
+          >
+            {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes'}
+          </h1>
+          <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">
+            {showSuccess
+              ? 'The public has backed our vision for the country.'
               : showFailure
-              ? 'bg-zinc-100 border-zinc-300 shadow-md'
-              : 'bg-zinc-50 border-zinc-200'
-          }`}
-        >
-          <motion.div layout className="flex flex-col items-center">
-            <h1
-              className={`text-4xl md:text-5xl font-black mb-2 transition-colors duration-500 ${
-                showSuccess ? 'text-emerald-700' : showFailure ? 'text-zinc-700' : 'text-zinc-800'
+              ? "The public feels we didn't do enough to address their concerns."
+              : 'Awaiting final tally'}
+          </p>
+
+          <div className="flex flex-col items-center justify-center gap-1">
+            <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">
+              Final Approval
+            </span>
+            <span
+              className={`text-8xl font-black tabular-nums transition-colors duration-300 ${
+                showSuccess ? 'text-emerald-600' : showFailure ? 'text-zinc-600' : 'text-zinc-800'
               }`}
             >
-              {showSuccess ? 'Re-Elected' : showFailure ? 'Voted Out' : 'Counting Votes…'}
-            </h1>
-
-            <p className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6 transition-opacity duration-500">
-              {showSuccess
-                ? 'The public has backed our vision for the country.'
-                : showFailure
-                ? "The public feels we didn't do enough to address their concerns."
-                : 'Awaiting final tally'}
-            </p>
-
-            <div className="flex flex-col items-center justify-center gap-1">
-              <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">
-                Final Approval
-              </span>
-              <span
-                className={`text-8xl font-black tabular-nums transition-colors duration-300 ${
-                  showSuccess ? 'text-emerald-600' : showFailure ? 'text-zinc-600' : 'text-zinc-800'
-                }`}
-              >
-                {displayScore.toFixed(1)}%
-              </span>
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
-            </div>
-          </motion.div>
+              {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
+            </span>
+            <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
+          </div>
         </motion.div>
+      </motion.div>
     </div>
   );
 }

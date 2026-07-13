@@ -258,7 +258,7 @@ export default function StageElectorateFeedback({
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
                   <div className={`flex items-center gap-2 bg-white px-2 py-1 rounded-md border shadow-sm shrink-0 ${borderColor}`}>
                     <span className="text-[12px] font-bold text-zinc-500">LS: {baseRounded.toFixed(1)}</span>
-                    <span className="text-[12px] text-zinc-300 font-black"> </span>
+                    <span className="text-[12px] text-zinc-300 font-black">→</span>
                     <span className={`text-[12px] font-black ${textColor}`}>{finalRounded.toFixed(1)}</span>
                   </div>
                 </div>
