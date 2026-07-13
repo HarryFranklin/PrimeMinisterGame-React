@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants, Easing } from 'framer-motion';
 import { useTypewriter } from '../../hooks/useTypewriter';
+import { Button } from '../ui/Button';
 
 const easeOut: Easing = [0.22, 1, 0.36, 1];
 const easeIn: Easing = [0.47, 0, 0.74, 0.58];
@@ -204,20 +205,14 @@ export const DPMMessage = ({ title, children, className = "" }: { title: string,
   </div>
 );
 
-export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onClick: () => void, children: React.ReactNode, variant?: "primary" | "secondary" | "accent" }) => {
-  const baseClass = "w-full py-3 md:py-3.5 text-sm md:text-base font-bold rounded-xl transition-all shadow-md shrink-0 flex-1 cursor-pointer";
-  const variants = {
-    primary: "bg-zinc-900 text-white hover:bg-black",
-    secondary: "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 shadow-none border border-zinc-300",
-    accent: "bg-pink-600 text-white hover:bg-pink-700"
-  };
-
-  return (
-    <button onClick={onClick} className={`${baseClass} ${variants[variant]}`}>
-      {children}
-    </button>
-  );
-};
+export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onClick: () => void, children: React.ReactNode, variant?: "primary" | "secondary" | "accent" }) => (
+  // Thin wrapper over the shared Button atom (see components/ui/Button.tsx) —
+  // this used to maintain its own separate copy of the variant styling.
+  // shrink-0 flex-1 kept as modal-footer-specific layout, not part of Button itself.
+  <Button onClick={onClick} variant={variant} className="md:py-3.5 shrink-0 flex-1">
+    {children}
+  </Button>
+);
 
 export const InteractiveDPMEmail = ({
   title,

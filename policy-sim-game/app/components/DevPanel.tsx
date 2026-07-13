@@ -133,7 +133,7 @@ export default function DevPanel({
           {showOptimalPath && optimalPath.length > 0 && (
             <div className="fixed bottom-14 left-80 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
               <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
-                Optimal Path (MAO: {cycleMAO.toFixed(2)})
+                Optimal Path
               </h3>
               <ol className="flex flex-col gap-3 text-sm">
                 {optimalPath.map((policy, index) => {
