@@ -108,12 +108,12 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
       <div className="h-10 flex items-center justify-center shrink-0">
         {showSuccess && (
           <div className="bg-emerald-500 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg animate-bounce z-50">
-            Majority Secured
+            Election Won
           </div>
         )}
         {showFailure && (
           <div className="bg-rose-600 text-white py-1 px-4 rounded-full font-black uppercase tracking-widest text-[10px] shadow-lg z-50">
-            Mandate Lost
+            Election Lost
           </div>
         )}
     </div>

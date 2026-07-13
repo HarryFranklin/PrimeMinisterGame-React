@@ -56,7 +56,7 @@ export const availablePolicies: Policy[] = [
   {
     id: "corporate-deregulation",
     policyName: "Corporate Deregulation",
-    description: "Removes statutory compliance barriers to spur rapid growth. Heavily boosts the top end, mildly boosts the middle, but erodes protections for the lowest percentiles.",
+    description: "Removes statutory compliance barriers to spur rapid growth. Heavily boosts the top end, mildly boosts the middle, but erodes protections for the worst off.",
     specificRules: [
       { note: "Major economic boost to top earners", minLS: 8.0, maxLS: 9.5, affectEveryone: false, proportion: 0.85, impact: 1.5 },
       { note: "Minor economic boost to middle earners", minLS: 5.0, maxLS: 7.9, affectEveryone: false, proportion: 0.50, impact: 0.4 },
