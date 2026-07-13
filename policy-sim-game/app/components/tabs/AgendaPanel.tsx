@@ -51,7 +51,7 @@ export default function AgendaPanel({
   onFaceElectorate,
 }: AgendaPanelProps) {
   return (
-    <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden h-full min-h-0 relative">
+    <div className="col-span-4 flex flex-col bg-white rounded-xl border border-zinc-200 shadow-sm overflow-visible h-full min-h-0 relative">
       <CardHeaderLarge
         title={isParliamentDissolved ? 'Enacted Legislation' : 'Legislative Agenda'}
         subtitle={

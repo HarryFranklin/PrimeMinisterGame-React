@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../../context/GameStateContext';
 import { ElectionCycle, AxisVariable } from '../../utils/types';
 import { Button } from '../ui';
 import D3Chart from '../D3Chart';
+import { MetricsEngine } from '../../utils/MetricsEngine';
+import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 
 const PM_PROFILES = [
   {
@@ -50,6 +52,9 @@ const generateHistogram = (pop: any[]) => Array.from({ length: 11 }, (_, i) => (
 export default function LevelSelectTab() {
   const { completedRuns, startLevel } = useGame();
   const unlockedIndex = completedRuns.length;
+  
+  // State to hold the current 'lens' being used to view a completed run
+  const [viewLenses, setViewLenses] = useState<Record<number, ElectionCycle>>({});
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-6 animate-in fade-in duration-500">
@@ -59,17 +64,23 @@ export default function LevelSelectTab() {
          </h2>
          <p className="text-zinc-600 text-sm font-medium">
            {unlockedIndex >= 4 
-             ? "You have completed all four ideological frameworks. Review the differing outcomes of your governance below."
+             ? "You have completed all four ideological frameworks. Toggle the metric lenses below to cross-reference how the same outcomes are judged under different philosophies."
              : "Each Prime Minister represents a distinct political philosophy and is judged by a different metric of success. Complete the current administration to unlock the next."}
          </p>
        </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-6">
          {PM_PROFILES.map((profile, idx) => {
            const run = completedRuns.find(r => r.cycle === profile.cycle);
            const isLocked = idx > unlockedIndex;
            const isPlayable = idx === unlockedIndex;
            const isCompleted = !!run;
+
+           const currentLens = viewLenses[profile.cycle] ?? profile.cycle;
+           const lensRule = FRAMEWORK_RULES[currentLens];
+           
+           // Calculate the score of the final population using the selected framework's logic
+           const displayScore = run ? MetricsEngine.getMetricScore(run.finalPopulation, currentLens) : 0;
 
            return (
              <div key={profile.cycle} className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-500 ${isLocked ? 'border-zinc-200 bg-zinc-50/50 grayscale opacity-60' : isPlayable ? 'border-zinc-800 bg-white shadow-xl scale-[1.02] ring-4 ring-zinc-900/10' : 'border-zinc-200 bg-white shadow-sm'}`}>
@@ -114,12 +125,31 @@ export default function LevelSelectTab() {
                            </strong>
                          </div>
                          <div className="text-right">
-                           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-0.5">Final Score</span>
-                           <strong className="text-xl font-black text-zinc-900">{run.finalScore.toFixed(2)}</strong>
+                           <span 
+                             className="text-[10px] font-black uppercase tracking-widest block mb-0.5 transition-colors duration-300"
+                             style={{ color: currentLens !== profile.cycle ? lensRule.graphColor : '#a1a1aa' }}
+                           >
+                             {currentLens === profile.cycle ? 'Final Score' : `${lensRule.targetMetricAbbreviation} Score`}
+                           </span>
+                           <strong className="text-xl font-black text-zinc-900">{displayScore.toFixed(2)}</strong>
                          </div>
                        </div>
                        
-                       <div className="h-28 bg-zinc-50 rounded-lg border border-zinc-200 mt-2 p-2 pt-6 relative overflow-hidden">
+                       <div className="flex justify-end gap-1.5 mt-1 mb-1">
+                         {[ElectionCycle.Benthamite, ElectionCycle.Rawlsian, ElectionCycle.SocietalUtility, ElectionCycle.PersonalUtility].map(lens => (
+                           <button
+                             key={lens}
+                             onClick={() => setViewLenses(prev => ({ ...prev, [profile.cycle]: lens }))}
+                             className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
+                               currentLens === lens ? 'ring-2 ring-offset-1 border-white shadow-sm' : 'opacity-40 hover:opacity-100 border-transparent'
+                             }`}
+                             style={{ backgroundColor: FRAMEWORK_RULES[lens].graphColor }}
+                             title={`View as ${FRAMEWORK_RULES[lens].frameworkTitle}`}
+                           />
+                         ))}
+                       </div>
+
+                       <div className="h-40 bg-zinc-50 rounded-lg border border-zinc-200 mt-2 p-2 pt-6 relative overflow-hidden">
                          <span className="absolute top-2 left-2 text-[9px] font-bold text-zinc-400 uppercase tracking-widest z-10">LS Distribution</span>
                          <D3Chart 
                            plotType="1D"

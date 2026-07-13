@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
 
 // Modals & Tabs
+import IntroModal from "./components/modals/IntroModal";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import WelcomeModal from "./components/modals/WelcomeModal";
@@ -33,7 +34,7 @@ export default function Home() {
   }, []);
 
   const game = useGameEngine();
-  const isHub = game.gamePhase === GamePhase.LevelSelect || game.gamePhase === GamePhase.Welcome;
+  const isHub = game.gamePhase === GamePhase.LevelSelect || game.gamePhase === GamePhase.Intro;
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
@@ -68,7 +69,7 @@ export default function Home() {
       }}>
         <GameProvider value={game}>
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
-            {game.gamePhase === GamePhase.LevelSelect ? (
+            {game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (
               <DashboardTab />
@@ -80,10 +81,17 @@ export default function Home() {
               <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
                   
+                  {game.gamePhase === GamePhase.Intro && (
+                    <IntroModal 
+                      key="intro" 
+                      onAcknowledge={() => game.setGamePhase(GamePhase.LevelSelect)} 
+                    />
+                  )}
+
                   {game.gamePhase === GamePhase.Welcome && (
                     <WelcomeModal 
                       key="welcome" 
-                      onAcknowledge={() => game.setGamePhase(GamePhase.LevelSelect)} 
+                      onAcknowledge={() => game.setGamePhase(GamePhase.Briefing)} 
                     />
                   )}
                   
@@ -106,9 +114,9 @@ export default function Home() {
                       baselinePopulation={game.baselinePopulation}
                       finalPopulation={game.population}
                       yAxisMax={game.yAxisMax}
-                      onNextCycle={game.handleCompleteTerm} // Routes to LevelSelect
+                      onNextCycle={game.handleCompleteTerm}
                       onReset={game.handleResetCycle}
-                      onFinish={game.handleCompleteTerm} // Final debrief is now on the Hub page itself
+                      onFinish={game.handleCompleteTerm}
                     />
                   )}
                   

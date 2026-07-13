@@ -20,12 +20,12 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
     return (
       <div className="flex-1 rounded-xl border-2 border-rose-400 bg-rose-50 flex flex-col shrink-0 min-h-0 overflow-hidden shadow-md">
         <div className="p-3 border-b border-rose-200/50 bg-white/50 flex items-center gap-3 shrink-0">
-          <span className="text-2xl bg-white border border-rose-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0"> </span>
+          <span className="text-2xl bg-white border border-rose-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 leading-tight">
+            <p className="text-[12px] font-black uppercase tracking-widest text-rose-600 leading-tight">
               Deputy Prime Minister
             </p>
-            <p className="text-sm font-bold text-zinc-800 mt-0.5">
+            <p className="text-[14px] font-bold text-zinc-800 mt-0.5">
               Term Concluded
             </p>
           </div>

@@ -91,7 +91,7 @@ export default function D3Chart({
   useEffect(() => {
       if (!containerRef.current || !svgRef.current) return;
 
-      const margin = { top: 20, right: 20, bottom: 45, left: 50 };
+      const margin = { top: 15, right: 15, bottom: 40, left: 45 };
       const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
       const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
       const baseColor = color || '#ec4899';

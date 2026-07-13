@@ -47,7 +47,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
   
-  const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Welcome);
+  // Game starts on Intro phase now
+  const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Intro);
   const isAgendaUnlocked = gamePhase === GamePhase.Playing;
   
   const [currentTurn, setCurrentTurn] = useState(1);
@@ -61,9 +62,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [currentDeck, setCurrentDeck] = useState<Policy[]>([]);
   const [optimalPath, setOptimalPath] = useState<Policy[]>([]);
   
-  // Central Command Store
   const [completedRuns, setCompletedRuns] = useState<CompletedRun[]>([]);
-
   const [dpmConsulted, setDpmConsultedState] = useState<Record<string, boolean>>({});
 
   const setDpmConsulted = useCallback((id: string, value: boolean) => {
@@ -74,7 +73,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setDpmConsultedState({});
   }, []);
 
-  // Handles generating a perfectly clean population internally to isolate the variables
   const startCycle = useCallback((cycle: ElectionCycle) => {
     let freshPop: Respondent[] = loadPopulation().map(p => ({
       ...p,
@@ -103,7 +101,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setPopulation(freshPop);
     setInitialPopulation(freshPop);
     setBaselinePopulation(freshPop);
-    setGamePhase(GamePhase.Briefing);
+    
+    // Sets phase to Welcome when a PM is selected
+    setGamePhase(GamePhase.Welcome);
   }, [resetDpmConsulted]);
 
   const handleSaveLoad = useCallback((parsed: any) => {
@@ -119,12 +119,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCurrentDeck(parsed.currentDeck);
     setOptimalPath(parsed.optimalPath);
     setIsParliamentDissolved(parsed.isParliamentDissolved || false);
-    setGamePhase(parsed.gamePhase || GamePhase.LevelSelect);
+    setGamePhase(parsed.gamePhase || GamePhase.Intro);
     setCompletedRuns(parsed.completedRuns || []);
   }, []);
 
   const handleSaveError = useCallback(() => {
-    setGamePhase(GamePhase.Welcome); 
+    setGamePhase(GamePhase.Intro); 
   }, []);
 
   const gameStateSnapshot = useMemo(() => ({
