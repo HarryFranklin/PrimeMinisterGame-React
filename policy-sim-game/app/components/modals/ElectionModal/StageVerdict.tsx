@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { CYCLE_COLORS } from '../../../utils/uiHelpers';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CYCLE_COLORS } from '../../../utils/uiHelpers'; 
 
 // Reuses the same four framework colours everywhere else in the app, plus one
 // extra celebratory accent (amber) not tied to any specific cycle.
@@ -39,6 +39,9 @@ interface StageVerdictProps {
 export default function StageVerdict({ approvalRating, won, onReady }: StageVerdictProps) {
   const [displayScore, setDisplayScore] = useState(0);
   const [isDone, setIsDone] = useState(false);
+  const [confettiKey, setConfettiKey] = useState(0);
+  const [showReplay, setShowReplay] = useState(false);
+  
   const cleanupRef = useRef<(() => void) | null>(null);
   const onReadyRef = useRef(onReady);
 
@@ -56,12 +59,15 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
     const animate = (now: number) => {
       if (!start) start = now;
       const elapsed = now - start;
+
       if (elapsed < DELAY) {
         rafId = requestAnimationFrame(animate);
         return;
       }
+
       const progress = Math.min((elapsed - DELAY) / DURATION, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
+
       setDisplayScore(eased * approvalRating);
 
       if (progress < 1) {
@@ -87,9 +93,18 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   const showSuccess = isDone && won;
   const showFailure = isDone && !won;
 
+  // Reveal the replay button only after the confetti finishes (~4.5s)
+  useEffect(() => {
+    if (showSuccess) {
+      setShowReplay(false);
+      const timer = setTimeout(() => setShowReplay(true), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess, confettiKey]);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full relative">
-      {showSuccess && <Confetti />}
+      {showSuccess && <Confetti key={confettiKey} />}
 
       <div className="h-10 flex items-center justify-center shrink-0">
         {showSuccess && (
@@ -129,7 +144,6 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
               ? "The public feels we didn't do enough to address their concerns."
               : 'Awaiting final tally'}
           </p>
-
           <div className="flex flex-col items-center justify-center gap-1">
             <span className="text-sm md:text-base font-black text-zinc-400 uppercase tracking-widest">
               Final Approval
@@ -142,6 +156,23 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
               {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
             </span>
             <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
+            
+            {/* The Replay Button */}
+            <div className="h-8 mt-3 flex items-center justify-center">
+              <AnimatePresence>
+                {showReplay && showSuccess && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    onClick={() => setConfettiKey(k => k + 1)}
+                    className="flex items-center gap-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                  >
+                    <span className="text-base">🎉</span> Replay
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </motion.div>
       </motion.div>
