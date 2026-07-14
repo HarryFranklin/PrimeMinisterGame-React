@@ -3,6 +3,7 @@ import { ElectionCycle, Respondent } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
 import { DPMMessage } from '../SharedModalComponents';
 import { LSChangeBadge } from '../../ui';
+import { PM_PROFILES } from '../../../utils/pmProfiles';
 
 interface PolicyRef {
   id: string;
@@ -54,6 +55,7 @@ interface VoterQuoteProps {
   sentiment: VoterSentiment;
   onHoverPolicy: (id: string | null) => void;
   onDefinitionToggle: (title: string, desc: string) => void;
+  pmName: string;
 }
 
 function PolicySpan({
@@ -83,7 +85,7 @@ function PolicySpan({
   );
 }
 
-function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuoteProps) {
+function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: VoterQuoteProps) {
   const { kind, bestPolicy, worstPolicy } = sentiment;
 
   switch (kind) {
@@ -93,11 +95,11 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
           Since this government took office, things have gotten really tough.{'\n'}
           {worstPolicy ? (
             <>
-              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to
-              get by.
+              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by.{'\n'}
+              Not that {pmName} seems to care.
             </>
           ) : (
-            'The policies completely ignored my needs.'
+            `The policies completely ignored my needs.\n${pmName} has lost my trust entirely.`
           )}
         </>
       );
@@ -107,7 +109,8 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
           I'm definitely worse off than I was.{'\n'}
           {worstPolicy ? (
             <>
-              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.
+              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.{'\n'}
+              I expected better from {pmName}'s administration.
             </>
           ) : (
             "The agenda just didn't work for me."
@@ -120,7 +123,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
           Honestly, I haven't noticed much difference overall.{'\n'}
           {bestPolicy && (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{'\n'}
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
             </>
           )}
           {worstPolicy && (
@@ -131,17 +134,23 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
         </>
       );
     case 'neutral':
-      return <>Honestly, my life hasn't changed much at all. The politicians' arguments haven't really affected my day-to-day.</>;
+      return (
+        <>
+          Honestly, my life hasn't changed much at all.{'\n'}
+          All this noise from {pmName} hasn't really affected my day-to-day.
+        </>
+      );
     case 'positive':
       return (
         <>
           Things are looking up a bit.{'\n'}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.{'\n'}
+              I'm glad {pmName} finally delivered on that.
             </>
           ) : (
-            'The agenda seems to be heading in a good direction.'
+            `The agenda seems to be heading in a good direction.`
           )}
         </>
       );
@@ -151,17 +160,16 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
           I've seen a huge difference!{'\n'}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really helped me out and turned things
-              around.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really helped me out and turned things around.{'\n'}
+              {pmName} has definitely earned my vote.
             </>
           ) : (
-            'The agenda directly enhanced my quality of life.'
+            `The agenda directly enhanced my quality of life.\n${pmName} has definitely earned my vote.`
           )}
         </>
       );
   }
 }
-
 interface StageElectorateFeedbackProps {
   initialPopulation: Respondent[];
   baselinePopulation: Respondent[];
@@ -184,6 +192,10 @@ export default function StageElectorateFeedback({
   useEffect(() => {
     onReady();
   }, [onReady]);
+
+  // Find the current PM profile and extract the last word of the name string
+  const currentPMProfile = PM_PROFILES.find((p) => p.cycle === currentCycle);
+  const pmSurname = currentPMProfile?.name.split(' ').pop() || 'the Prime Minister';
 
   const voxPops = useMemo(() => {
     const enriched = finalPopulation.map((p, i) => {
@@ -249,8 +261,13 @@ export default function StageElectorateFeedback({
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
                   <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
-                <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2">
-                  "<VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} onDefinitionToggle={onDefinitionToggle} />"
+                <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2 whitespace-pre-wrap">
+                  "<VoterQuote 
+                    sentiment={vp.sentiment} 
+                    onHoverPolicy={setHoveredPolicyId} 
+                    onDefinitionToggle={onDefinitionToggle} 
+                    pmName={pmSurname} 
+                  />"
                 </p>
               </div>
             </div>
