@@ -56,6 +56,7 @@ interface VoterQuoteProps {
   onHoverPolicy: (id: string | null) => void;
   onDefinitionToggle: (title: string, desc: string) => void;
   pmName: string;
+  altFormat?: boolean;
 }
 
 function PolicySpan({
@@ -85,14 +86,28 @@ function PolicySpan({
   );
 }
 
-function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: VoterQuoteProps) {
+function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName, altFormat = false }: VoterQuoteProps) {
   const { kind, bestPolicy, worstPolicy } = sentiment;
 
   switch (kind) {
     case 'very_negative':
+      if (altFormat) {
+        return (
+          <>
+            {pmName} has completely lost my trust.{'\n'}
+            {worstPolicy ? (
+              <>
+                Things have gotten really tough, and having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by.
+              </>
+            ) : (
+              `Things have gotten really tough, and their policies completely ignored my needs.`
+            )}
+          </>
+        );
+      }
       return (
         <>
-          Things have gotten really tough since this government took office.{' '}
+          Things have gotten really tough since this government took office.{'\n'}
           {worstPolicy ? (
             <>
               Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by, not that {pmName} seems to care.
@@ -102,10 +117,25 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
           )}
         </>
       );
+
     case 'negative':
+      if (altFormat) {
+        return (
+          <>
+            I honestly expected better from {pmName}.{'\n'}
+            {worstPolicy ? (
+              <>
+                I'm definitely worse off than I was, and <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.
+              </>
+            ) : (
+              "I'm definitely worse off than I was, and the agenda just didn't work for me."
+            )}
+          </>
+        );
+      }
       return (
         <>
-          I'm definitely worse off than I was.{' '}
+          I'm definitely worse off than I was.{'\n'}
           {worstPolicy ? (
             <>
               <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters, and I honestly expected better from {pmName}'s administration.
@@ -115,10 +145,28 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
           )}
         </>
       );
+
     case 'neutral_mixed':
+      if (altFormat) {
+        return (
+          <>
+            {pmName}'s agenda has been a mixed bag for me.{'\n'}
+            {bestPolicy && (
+              <>
+                <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
+              </>
+            )}
+            {worstPolicy && (
+              <>
+                but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> set me back just as much.
+              </>
+            )}
+          </>
+        );
+      }
       return (
         <>
-          I haven't noticed much difference overall.{' '}
+          I haven't noticed much difference overall.{'\n'}
           {bestPolicy && (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
@@ -131,16 +179,41 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
           )}
         </>
       );
+
     case 'neutral':
+      if (altFormat) {
+        return (
+          <>
+            {pmName} hasn't really affected my day-to-day.{'\n'}
+            My life hasn't changed much at all despite all the political noise.
+          </>
+        );
+      }
       return (
         <>
-          My life hasn't changed much at all. All the political noise from {pmName} hasn't really affected my day-to-day.
+          My life hasn't changed much at all.{'\n'}
+          All the political noise from {pmName} hasn't really affected my day-to-day.
         </>
       );
+
     case 'positive':
+      if (altFormat) {
+        return (
+          <>
+            I'm glad {pmName} is finally delivering.{'\n'}
+            {bestPolicy ? (
+              <>
+                Things are looking up a bit, and <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.
+              </>
+            ) : (
+              `Things are looking up a bit, and the agenda seems to be heading in a good direction.`
+            )}
+          </>
+        );
+      }
       return (
         <>
-          Things are looking up a bit.{' '}
+          Things are looking up a bit.{'\n'}
           {bestPolicy ? (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me, so I'm glad {pmName} finally delivered on that.
@@ -150,10 +223,25 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
           )}
         </>
       );
+
     case 'very_positive':
+      if (altFormat) {
+        return (
+          <>
+            {pmName} has definitely earned my vote!{'\n'}
+            {bestPolicy ? (
+              <>
+                I've seen a huge difference, and <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really turned things around for me.
+              </>
+            ) : (
+              `I've seen a huge difference, and the agenda directly enhanced my quality of life.`
+            )}
+          </>
+        );
+      }
       return (
         <>
-          I've seen a huge difference!{' '}
+          I've seen a huge difference!{'\n'}
           {bestPolicy ? (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really turned things around for me. {pmName} has definitely earned my vote.
@@ -257,12 +345,13 @@ export default function StageElectorateFeedback({
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
                   <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
-                <p className="text-[13px] text-zinc-600 italic leading-snug line-clamp-3 whitespace-pre-wrap">
+                <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-3 whitespace-pre-wrap">
                   "<VoterQuote 
                     sentiment={vp.sentiment} 
                     onHoverPolicy={setHoveredPolicyId} 
                     onDefinitionToggle={onDefinitionToggle} 
-                    pmName={pmSurname} 
+                    pmName={pmSurname}
+                    altFormat={idx % 2 === 0}
                   />"
                 </p>
               </div>
