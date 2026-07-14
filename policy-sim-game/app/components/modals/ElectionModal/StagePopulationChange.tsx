@@ -20,8 +20,8 @@ interface CohortMember {
 
 interface Cohort {
   count: number;
-  percentage: number;
-  /** Full sorted membership — used for the percentage and as the pool DISPLAY_LIMIT is drawn from. */
+  percentage: number | string;
+  /** Full sorted membership - used for the count/percentage and as the pool DISPLAY_LIMIT is drawn from. */
   members: CohortMember[];
 }
 
@@ -70,14 +70,21 @@ function computeCohortBreakdown(finalPopulation: Respondent[], currentCycle: Ele
   stable.sort((a, b) => Math.abs(a.diff) - Math.abs(b.diff));
 
   const total = finalPopulation.length || 1;
-  const toCohort = (members: CohortMember[]): Cohort => ({
-    count: members.length,
-    percentage: Math.round((members.length / total) * 100),
-    members,
-  });
+    
+    const toCohort = (members: CohortMember[]): Cohort => {
+      const rawPct = (members.length / total) * 100;
+      const rounded = Math.round(rawPct);
+      
+      return {
+        count: members.length,
+        // If there are members but the percentage rounds down to 0, display '<1' instead
+        percentage: members.length > 0 && rounded === 0 ? '<1' : rounded,
+        members,
+      };
+    };
 
-  return { improved: toCohort(improved), stable: toCohort(stable), declined: toCohort(declined) };
-}
+    return { improved: toCohort(improved), stable: toCohort(stable), declined: toCohort(declined) };
+  }
 
 const COHORT_CONFIGS = [
   {
