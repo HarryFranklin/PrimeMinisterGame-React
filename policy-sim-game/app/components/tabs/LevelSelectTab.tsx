@@ -5,46 +5,7 @@ import { Button } from '../ui';
 import D3Chart from '../D3Chart';
 import { MetricsEngine } from '../../utils/MetricsEngine';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
-import { CYCLE_COLORS, CYCLE_TEXT_COLOR_CLASS } from '../../utils/uiHelpers';
-
-const PM_PROFILES = [
-  {
-    cycle: ElectionCycle.Benthamite,
-    name: "PM Victoria Sterling",
-    philosophy: "Utilitarian Growth",
-    governance: "I will govern for the majority. A rising tide lifts all boats, and we must maximise total national happiness, even if some are left behind.",
-    metric: "National Average Happiness",
-    color: CYCLE_COLORS[ElectionCycle.Benthamite],
-    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.Benthamite]
-  },
-  {
-    cycle: ElectionCycle.Rawlsian,
-    name: "PM Evelyn Vance",
-    philosophy: "Social Justice",
-    governance: "A society is judged by how it treats its most vulnerable. I will focus entirely on raising the baseline standard of living.",
-    metric: "Minimum Wellbeing Baseline",
-    color: CYCLE_COLORS[ElectionCycle.Rawlsian],
-    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.Rawlsian]
-  },
-  {
-    cycle: ElectionCycle.SocietalUtility,
-    name: "PM Eleanor Croft",
-    philosophy: "Social Cohesion",
-    governance: "Visible inequality breeds division. The public demands fairness, and we must grow together to avoid resentment.",
-    metric: "National Fairness Index",
-    color: CYCLE_COLORS[ElectionCycle.SocietalUtility],
-    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.SocietalUtility]
-  },
-  {
-    cycle: ElectionCycle.PersonalUtility,
-    name: "PM Julian Thorne",
-    philosophy: "Individual Liberty",
-    governance: "Voters vote with their wallets. We must deliver personal prosperity and protect what citizens have already earned.",
-    metric: "National Personal Satisfaction",
-    color: CYCLE_COLORS[ElectionCycle.PersonalUtility],
-    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.PersonalUtility]
-  }
-];
+import { PM_PROFILES } from '../../utils/pmProfiles';
 
 const generateHistogram = (pop: any[]) => Array.from({ length: 11 }, (_, i) => ({
   name: i, count: pop.filter(r => Math.round(r.currentLS) === i).length
@@ -85,9 +46,17 @@ export default function LevelSelectTab() {
 
            return (
              <div key={profile.cycle} className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-500 ${isLocked ? 'border-zinc-200 bg-zinc-50/50 grayscale opacity-60' : isPlayable ? 'border-zinc-800 bg-white shadow-xl scale-[1.02] ring-4 ring-zinc-900/10' : 'border-zinc-200 bg-white shadow-sm'}`}>
-               <div className={`p-5 pb-3 border-b ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
-                  <h3 className={`font-black text-xl tracking-tight ${isLocked ? 'text-zinc-500' : 'text-zinc-900'}`}>{profile.name}</h3>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${isLocked ? 'text-zinc-400' : profile.colorClass}`}>{profile.philosophy}</p>
+               <div className={`p-5 pb-3 border-b flex items-center gap-3 ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-4xl shrink-0 shadow-inner"
+                    style={{ backgroundColor: isLocked ? undefined : `${profile.color}22` }}
+                  >
+                    {profile.emoji}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className={`font-black text-xl tracking-tight truncate ${isLocked ? 'text-zinc-500' : 'text-zinc-900'}`}>{profile.name}</h3>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${isLocked ? 'text-zinc-400' : profile.colorClass}`}>{profile.philosophy}</p>
+                  </div>
                </div>
                
                <div className="p-5 flex-1 flex flex-col gap-4">

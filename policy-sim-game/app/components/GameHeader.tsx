@@ -1,6 +1,7 @@
 import React from 'react';
 import { ElectionCycle } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
+import { getPMProfile } from '../utils/pmProfiles';
 
 interface GameHeaderProps {
   currentCycle: ElectionCycle;
@@ -14,17 +15,21 @@ export default function GameHeader({
   currentCycle, currentTurn, turnsPerCycle, isParliamentDissolved, isHub
 }: GameHeaderProps) {
   const turnsRemaining = Math.max(0, turnsPerCycle - currentTurn + 1);
+  const pmProfile = getPMProfile(currentCycle);
 
   return (
-    <header className="bg-white border-b border-zinc-200 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm relative z-10">
+    <header className="bg-white border-b border-zinc-200 px-6 py-2.5 flex justify-between items-center shrink-0 shadow-sm relative z-10">
       
-      {/* Prime Minister Game & Framework */}
-      <div className="flex items-baseline gap-4 z-20">
-        <h1 className="text-xl font-black text-zinc-900 tracking-tight">Prime Minister Game</h1>
+      {/* Prime Minister Game, PM face & Framework */}
+      <div className="flex items-center gap-3 z-20">
+        <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none">Prime Minister Game</h1>
         {!isHub && (
-          <p className="text-sm font-bold text-pink-600 uppercase tracking-widest">
-            {FRAMEWORK_RULES[currentCycle]?.frameworkTitle || "Loading..."}
-          </p>
+          <>
+            <span className="text-3xl leading-none select-none" title={pmProfile.name}>{pmProfile.emoji}</span>
+            <p className="text-sm font-bold text-pink-600 uppercase tracking-widest leading-none">
+              {FRAMEWORK_RULES[currentCycle]?.frameworkTitle || "Loading..."}
+            </p>
+          </>
         )}
       </div>
 
