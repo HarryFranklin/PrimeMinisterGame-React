@@ -64,7 +64,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
   // Fade in the replay button after the OmniConfetti clears
   useEffect(() => {
     setShowReplay(false);
-    const timer = setTimeout(() => setShowReplay(true), 6000); // Slightly longer delay for the extra particles
+    const timer = setTimeout(() => setShowReplay(true), 5000); // Slightly longer delay for the extra particles
     return () => clearTimeout(timer);
   }, [confettiKey]);
 

@@ -97,7 +97,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   useEffect(() => {
     if (showSuccess) {
       setShowReplay(false);
-      const timer = setTimeout(() => setShowReplay(true), 3000);
+      const timer = setTimeout(() => setShowReplay(true), 2500);
       return () => clearTimeout(timer);
     }
   }, [showSuccess, confettiKey]);
