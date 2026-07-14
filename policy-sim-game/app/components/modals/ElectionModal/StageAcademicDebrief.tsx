@@ -161,7 +161,7 @@ export default function StageAcademicDebrief({
           {revealedCitizen1 && revealedCitizen2 && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30">
-                {`Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline, it doesn't perfectly map to happiness.\n\nNext term, citizens will vote using their unique Societal Utility.`}
+                {`Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience.\n\nNext term, citizens will vote using their unique Societal Utility.`}
               </DPMMessage>
             </motion.div>
           )}
@@ -232,7 +232,7 @@ export default function StageAcademicDebrief({
           {revealedPU && revealedSU && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="The Final Mandate" className="border-zinc-200 bg-zinc-50/30">
-                {'"You have seen how the same society can be judged completely differently depending on the metrics we use to measure success.\nYou have navigated four different political philosophies.\nIt is time for your final verdict.'}
+                {'"You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies.\nIt is time for your final verdict.'}
               </DPMMessage>
             </motion.div>
           )}
