@@ -90,7 +90,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
     case 'very_negative':
       return (
         <>
-          Since this government took office, things have gotten really tough.{' '}
+          Since this government took office, things have gotten really tough.{'\n'}
           {worstPolicy ? (
             <>
               Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to
@@ -104,7 +104,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
     case 'negative':
       return (
         <>
-          I'm definitely worse off than I was.{' '}
+          I'm definitely worse off than I was.{'\n'}
           {worstPolicy ? (
             <>
               <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.
@@ -117,10 +117,10 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
     case 'neutral_mixed':
       return (
         <>
-          Honestly, I haven't noticed much difference overall.{' '}
+          Honestly, I haven't noticed much difference overall.{'\n'}
           {bestPolicy && (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{'\n'}
             </>
           )}
           {worstPolicy && (
@@ -135,7 +135,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
     case 'positive':
       return (
         <>
-          Things are looking up a bit.{' '}
+          Things are looking up a bit.{'\n'}
           {bestPolicy ? (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.
@@ -148,7 +148,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle }: VoterQuote
     case 'very_positive':
       return (
         <>
-          I've seen a huge difference!{' '}
+          I've seen a huge difference!{'\n'}
           {bestPolicy ? (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really helped me out and turned things
@@ -237,7 +237,7 @@ export default function StageElectorateFeedback({
         {`We've tracked how your policies impacted individual voters.\nClick the legislation referenced in their feedback to review its details.`}
       </DPMMessage>
       
-      <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1">
+      <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1 whitespace-pre-wrap">
         {voterData.map((vp, idx) => {
           return (
             <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full shadow-sm flex-1 min-h-0">
