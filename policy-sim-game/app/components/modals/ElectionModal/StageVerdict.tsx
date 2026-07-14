@@ -93,11 +93,11 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   const showSuccess = isDone && won;
   const showFailure = isDone && !won;
 
-  // Reveal the replay button only after the confetti finishes (~4.5s)
+  // Reveal the replay button only after the confetti finishes
   useEffect(() => {
     if (showSuccess) {
       setShowReplay(false);
-      const timer = setTimeout(() => setShowReplay(true), 4500);
+      const timer = setTimeout(() => setShowReplay(true), 3000);
       return () => clearTimeout(timer);
     }
   }, [showSuccess, confettiKey]);
@@ -168,7 +168,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
                     onClick={() => setConfettiKey(k => k + 1)}
                     className="flex items-center gap-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                   >
-                    <span className="text-base">🎉</span> Replay
+                    <span className="text-base">🎉</span> Celebrate
                   </motion.button>
                 )}
               </AnimatePresence>
