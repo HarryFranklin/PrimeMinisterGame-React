@@ -91,10 +91,10 @@ export default function StageAcademicDebrief({
 
   const getDpmMessage = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering. Let's look at an example of how two societies can have the same average happiness.";
-      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture. Click on these citizens to see how they feel their lives have actually changed.";
-      case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard. Let's see what happens when we shift their focus to pure self-interest.";
-      case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success. Let's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
+      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nLet's look at an example of how two societies can have the same average happiness.";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture.\nClick on these citizens to see how they feel their lives have actually changed.";
+      case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard.\nLet's see what happens when we shift their focus to pure self-interest.";
+      case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success.\nLet's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
     }
   };
@@ -128,7 +128,7 @@ export default function StageAcademicDebrief({
           {revealedBenthamA && revealedBenthamB && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30">
-                "Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality. For Term 2, we will focus on raising the societal floor."
+               {'Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality.\nFor Term 2, we will focus on raising the societal floor.'}
               </DPMMessage>
             </motion.div>
           )}
@@ -190,7 +190,7 @@ export default function StageAcademicDebrief({
           {revealedEmpathy && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
               <DPMMessage title="Moving to Self-Interest" className="border-emerald-200 bg-emerald-50/30">
-                "When citizens evaluate policy strictly based on empathy, consensus is difficult because everyone has a different definition of fairness. For your final term, we will incorporate Personal Utility into their voting logic, modelling pure self-interest."
+                {'When citizens evaluate policy strictly based on empathy, consensus is difficult because everyone has a different definition of fairness.\nFor your final term, we will incorporate Personal Utility into their voting logic, modelling pure self-interest.'}
               </DPMMessage>
             </motion.div>
           )}
@@ -232,7 +232,7 @@ export default function StageAcademicDebrief({
           {revealedPU && revealedSU && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="The Final Mandate" className="border-zinc-200 bg-zinc-50/30">
-                "You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies. It is time for the final verdict."
+                {'"You have seen how the same society can be judged completely differently depending on the metrics we use to measure success.\nYou have navigated four different political philosophies.\nIt is time for your final verdict.'}
               </DPMMessage>
             </motion.div>
           )}

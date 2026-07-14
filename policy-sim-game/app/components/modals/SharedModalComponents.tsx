@@ -62,7 +62,7 @@ export const FloatingDefinitionPanel = ({ title, description, isVisible }: { tit
               {title}
             </h4>
           </div>
-          <p className="text-sm text-pink-800 leading-relaxed font-medium">
+          <p className="text-sm text-pink-800 leading-relaxed font-medium whitespace-pre-wrap">
             {description}
           </p>
         </div>
@@ -96,7 +96,9 @@ export const FloatingPolicyPanel = ({ policies, isVisible }: { policies: { id: s
                 <div key={p.id} className="bg-zinc-50 border border-zinc-100 p-3.5 rounded-lg flex flex-col gap-1.5 shadow-sm shrink-0">
                   <span className="text-[9px] font-black uppercase tracking-widest text-pink-500 block">Enacted</span>
                   <h5 className="font-bold text-sm text-zinc-900 leading-tight">{p.name}</h5>
-                  <p className="text-xs text-zinc-600 leading-relaxed">{p.description}</p>
+                  <p className="text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap">
+                    {p.description}
+                  </p>
                 </div>
               ))
             )}
@@ -201,7 +203,9 @@ export const DPMMessage = ({ title, children, className = "" }: { title: string,
         <span className="font-bold text-zinc-800 text-base">{title}</span>
       </div>
     </div>
-    <div className="italic text-zinc-700 text-sm leading-relaxed">{children}</div>
+    <div className="italic text-zinc-700 text-sm leading-relaxed whitespace-pre-wrap">
+      {children}
+    </div>
   </div>
 );
 

@@ -231,13 +231,10 @@ export default function StageElectorateFeedback({
     [voxPops, currentCycle]
   );
 
-  // Removed referencedPolicyIds useMemo
-  // Removed setActivePolicies useEffect
-
   return (
     <div className="flex flex-col gap-4 animate-in fade-in h-full min-h-0 overflow-hidden w-full">
       <DPMMessage title="Voter Sentiment">
-        We've tracked how your policies impacted individual voters. Click the legislation referenced in their feedback to review its details.
+        {`We've tracked how your policies impacted individual voters.\nClick the legislation referenced in their feedback to review its details.`}
       </DPMMessage>
       
       <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1">

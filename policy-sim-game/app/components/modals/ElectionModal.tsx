@@ -84,7 +84,9 @@ export default function ElectionModal(props: ElectionModalProps) {
                   <span className="text-sm font-black uppercase tracking-widest text-pink-500 block mb-2">
                     {def.title}
                   </span>
-                  <p className="text-sm text-zinc-600 leading-relaxed">{def.desc}</p>
+                  <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
+                    {def.desc}
+                  </p>
                 </div>
               ))}
             </div>
