@@ -21,7 +21,7 @@ interface CohortMember {
 interface Cohort {
   count: number;
   percentage: number;
-  /** Full sorted membership — used for the count/percentage and as the pool DISPLAY_LIMIT is drawn from. */
+  /** Full sorted membership — used for the percentage and as the pool DISPLAY_LIMIT is drawn from. */
   members: CohortMember[];
 }
 
@@ -129,14 +129,13 @@ export default function StagePopulationChange({
 
   const thresholdNote =
     `A citizen counts as "Improved" if their life satisfaction rose by more than ${CHANGE_THRESHOLD} points during your term, and "Declined" if it fell by more than ${CHANGE_THRESHOLD} points.\n\n` +
-    `Smaller movements than that — including real changes like +0.2 or -0.3 — are grouped as "Unchanged".\n\n` +
+    `Smaller movements (i.e. +0.2, -0.3) are grouped as "Unchanged".\n\n` +
     `That threshold exists so the three categories reflect meaningful shifts rather than noise, but it does mean "Unchanged" isn't always literally zero movement.`;
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full h-full min-h-0">
       <DPMMessage title="How The Population Changed">
-        {`We've tracked the electorate based on how their overall life satisfaction shifted during your administration.\n
-        The numbers only tell half the story — look at who's in each group.`}
+        {`We've tracked the electorate based on how their overall life satisfaction shifted during your administration.\nThe numbers only tell half the story — look at who's in each group.`}
       </DPMMessage>
 
       <button
@@ -153,7 +152,6 @@ export default function StagePopulationChange({
         {COHORT_CONFIGS.map(({ key, label, icon, bg, border, iconBg, textColor, labelColor }) => {
           const cohort = cohorts[key];
           const displayMembers = cohort.members.slice(0, DISPLAY_LIMIT);
-          const remaining = cohort.count - displayMembers.length;
 
           return (
             <div
@@ -168,7 +166,6 @@ export default function StagePopulationChange({
                   <h4 className={`font-black ${labelColor} uppercase tracking-widest text-[10px] mb-0.5`}>{label}</h4>
                   <p className={`text-2xl font-black leading-none ${textColor}`}>
                     {cohort.percentage}%{' '}
-                    <span className="text-xs font-bold text-zinc-400 align-middle">({cohort.count})</span>
                   </p>
                 </div>
               </div>
@@ -188,12 +185,6 @@ export default function StagePopulationChange({
                   ))
                 )}
               </div>
-
-              {remaining > 0 && (
-                <p className={`text-[10px] font-bold ${textColor} text-center pt-1.5 shrink-0`}>
-                  +{remaining} more
-                </p>
-              )}
             </div>
           );
         })}
