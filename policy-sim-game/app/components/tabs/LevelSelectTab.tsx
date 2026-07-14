@@ -48,7 +48,7 @@ export default function LevelSelectTab() {
              <div key={profile.cycle} className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-500 ${isLocked ? 'border-zinc-200 bg-zinc-50/50 grayscale opacity-60' : isPlayable ? 'border-zinc-800 bg-white shadow-xl scale-[1.02] ring-4 ring-zinc-900/10' : 'border-zinc-200 bg-white shadow-sm'}`}>
                <div className={`p-5 pb-3 border-b flex items-center gap-3 ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-4xl shrink-0 shadow-inner"
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-3xl shrink-0 shadow-inner"
                     style={{ backgroundColor: isLocked ? undefined : `${profile.color}22` }}
                   >
                     {profile.emoji}
