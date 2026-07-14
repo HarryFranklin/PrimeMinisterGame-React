@@ -92,25 +92,23 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
     case 'very_negative':
       return (
         <>
-          Since this government took office, things have gotten really tough.{'\n'}
+          Things have gotten really tough since this government took office.{' '}
           {worstPolicy ? (
             <>
-              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by.{'\n'}
-              Not that {pmName} seems to care.
+              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by, not that {pmName} seems to care.
             </>
           ) : (
-            `The policies completely ignored my needs.\n${pmName} has lost my trust entirely.`
+            `The policies completely ignored my needs, and ${pmName} has lost my trust entirely.`
           )}
         </>
       );
     case 'negative':
       return (
         <>
-          I'm definitely worse off than I was.{'\n'}
+          I'm definitely worse off than I was.{' '}
           {worstPolicy ? (
             <>
-              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.{'\n'}
-              I expected better from {pmName}'s administration.
+              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters, and I honestly expected better from {pmName}'s administration.
             </>
           ) : (
             "The agenda just didn't work for me."
@@ -120,7 +118,7 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
     case 'neutral_mixed':
       return (
         <>
-          Honestly, I haven't noticed much difference overall.{'\n'}
+          I haven't noticed much difference overall.{' '}
           {bestPolicy && (
             <>
               <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
@@ -136,18 +134,16 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
     case 'neutral':
       return (
         <>
-          Honestly, my life hasn't changed much at all.{'\n'}
-          All this noise from {pmName} hasn't really affected my day-to-day.
+          My life hasn't changed much at all. All the political noise from {pmName} hasn't really affected my day-to-day.
         </>
       );
     case 'positive':
       return (
         <>
-          Things are looking up a bit.{'\n'}
+          Things are looking up a bit.{' '}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.{'\n'}
-              I'm glad {pmName} finally delivered on that.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me, so I'm glad {pmName} finally delivered on that.
             </>
           ) : (
             `The agenda seems to be heading in a good direction.`
@@ -157,19 +153,19 @@ function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName }: Vo
     case 'very_positive':
       return (
         <>
-          I've seen a huge difference!{'\n'}
+          I've seen a huge difference!{' '}
           {bestPolicy ? (
             <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really helped me out and turned things around.{'\n'}
-              {pmName} has definitely earned my vote.
+              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really turned things around for me. {pmName} has definitely earned my vote.
             </>
           ) : (
-            `The agenda directly enhanced my quality of life.\n${pmName} has definitely earned my vote.`
+            `The agenda directly enhanced my quality of life. ${pmName} has definitely earned my vote.`
           )}
         </>
       );
   }
 }
+
 interface StageElectorateFeedbackProps {
   initialPopulation: Respondent[];
   baselinePopulation: Respondent[];
@@ -254,14 +250,14 @@ export default function StageElectorateFeedback({
           return (
             <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full shadow-sm flex-1 min-h-0">
               <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
-                <span className="text-xl">{vp.sentiment.emoji}</span>
+                <span className="text-2xl">{vp.sentiment.emoji}</span>
               </div>
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-1 w-full">
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
                   <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
-                <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2 whitespace-pre-wrap">
+                <p className="text-[13px] text-zinc-600 italic leading-snug line-clamp-3 whitespace-pre-wrap">
                   "<VoterQuote 
                     sentiment={vp.sentiment} 
                     onHoverPolicy={setHoveredPolicyId} 
