@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ElectionCycle, Respondent } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
 import { DPMMessage } from '../SharedModalComponents';
+import { LSChangeBadge } from '../../ui';
 
 interface PolicyRef {
   id: string;
@@ -241,13 +242,6 @@ export default function StageElectorateFeedback({
       
       <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1">
         {voterData.map((vp, idx) => {
-          const baseRounded = Math.round(vp.baselineLS * 10) / 10;
-          const finalRounded = Math.round(vp.finalLS * 10) / 10;
-          const hasChanged = finalRounded !== baseRounded;
-          
-          const borderColor = !hasChanged ? 'border-zinc-200' : (finalRounded > baseRounded ? 'border-emerald-200' : 'border-rose-200');
-          const textColor = !hasChanged ? 'text-zinc-600' : (finalRounded > baseRounded ? 'text-emerald-600' : 'text-rose-600');
-
           return (
             <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full shadow-sm flex-1 min-h-0">
               <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
@@ -256,11 +250,7 @@ export default function StageElectorateFeedback({
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-1 w-full">
                   <h4 className="font-bold text-zinc-900 text-sm truncate pr-2">{vp.name}</h4>
-                  <div className={`flex items-center gap-2 bg-white px-2 py-1 rounded-md border shadow-sm shrink-0 ${borderColor}`}>
-                    <span className="text-[12px] font-bold text-zinc-500">LS: {baseRounded.toFixed(1)}</span>
-                    <span className="text-[12px] text-zinc-300 font-black">→</span>
-                    <span className={`text-[12px] font-black ${textColor}`}>{finalRounded.toFixed(1)}</span>
-                  </div>
+                  <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
                 <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-2">
                   "<VoterQuote sentiment={vp.sentiment} onHoverPolicy={setHoveredPolicyId} onDefinitionToggle={onDefinitionToggle} />"

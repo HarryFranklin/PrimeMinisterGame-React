@@ -5,6 +5,7 @@ import { Button } from '../ui';
 import D3Chart from '../D3Chart';
 import { MetricsEngine } from '../../utils/MetricsEngine';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
+import { CYCLE_COLORS, CYCLE_TEXT_COLOR_CLASS } from '../../utils/uiHelpers';
 
 const PM_PROFILES = [
   {
@@ -13,8 +14,8 @@ const PM_PROFILES = [
     philosophy: "Utilitarian Growth",
     governance: "I will govern for the majority. A rising tide lifts all boats, and we must maximise total national happiness, even if some are left behind.",
     metric: "National Average Happiness",
-    color: "#ec4899",
-    colorClass: "text-pink-600"
+    color: CYCLE_COLORS[ElectionCycle.Benthamite],
+    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.Benthamite]
   },
   {
     cycle: ElectionCycle.Rawlsian,
@@ -22,8 +23,8 @@ const PM_PROFILES = [
     philosophy: "Social Justice",
     governance: "A society is judged by how it treats its most vulnerable. I will focus entirely on raising the baseline standard of living.",
     metric: "Minimum Wellbeing Baseline",
-    color: "#3b82f6",
-    colorClass: "text-blue-600"
+    color: CYCLE_COLORS[ElectionCycle.Rawlsian],
+    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.Rawlsian]
   },
   {
     cycle: ElectionCycle.SocietalUtility,
@@ -31,8 +32,8 @@ const PM_PROFILES = [
     philosophy: "Social Cohesion",
     governance: "Visible inequality breeds division. The public demands fairness, and we must grow together to avoid resentment.",
     metric: "National Fairness Index",
-    color: "#10b981",
-    colorClass: "text-emerald-600"
+    color: CYCLE_COLORS[ElectionCycle.SocietalUtility],
+    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.SocietalUtility]
   },
   {
     cycle: ElectionCycle.PersonalUtility,
@@ -40,8 +41,8 @@ const PM_PROFILES = [
     philosophy: "Individual Liberty",
     governance: "Voters vote with their wallets. We must deliver personal prosperity and protect what citizens have already earned.",
     metric: "National Personal Satisfaction",
-    color: "#8b5cf6",
-    colorClass: "text-purple-600"
+    color: CYCLE_COLORS[ElectionCycle.PersonalUtility],
+    colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.PersonalUtility]
   }
 ];
 

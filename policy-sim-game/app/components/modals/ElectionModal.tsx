@@ -63,15 +63,15 @@ export default function ElectionModal(props: ElectionModalProps) {
   };
 
   const getModalWidth = () => {
-    if (page === 1) return "max-w-xl";  
-    if (page === 2) return "max-w-2xl";
-    if (page === 3) return "max-w-5xl";
+    if (page === 1) return "max-w-xl";
+    if (page === 2) return "max-w-4xl";
+    if (page === 3) return "max-w-2xl";
     return "max-w-3xl";
   };
 
   return (
     <ModalContent 
-      maxWidth={page === 1 ? "max-w-xl" : page === 2 ? "max-w-2xl" : "max-w-3xl"}
+      maxWidth={getModalWidth()}
       floatingPanel={
         definitions.length > 0 ? (
           <div className="absolute inset-y-0 right-0 translate-x-[105%] flex items-center pointer-events-none z-[100] py-4">
@@ -97,7 +97,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
         {page === 0 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
-        {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} />}
+        {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>

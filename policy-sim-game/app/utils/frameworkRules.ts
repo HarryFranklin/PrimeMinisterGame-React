@@ -1,4 +1,5 @@
 import { ElectionCycle, AxisVariable } from "./types";
+import { CYCLE_COLORS } from "./uiHelpers";
 
 export interface FrameworkRule {
   frameworkTitle: string;
@@ -24,7 +25,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
-    graphColor: "#ec4899",
+    graphColor: CYCLE_COLORS[ElectionCycle.Benthamite],
     winThresholdScalar: 0.905,
     briefingText: "Your goal is to increase the total amount of happiness in the country. You must enact policies that raise the national average, even if it leaves a minority of people behind.",
   },
@@ -37,7 +38,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
-    graphColor: "#3b82f6",
+    graphColor: CYCLE_COLORS[ElectionCycle.Rawlsian],
     winThresholdScalar: 0.625,
     briefingText: "Your goal is to protect the most vulnerable people in society. You must enact policies that improve the lives of the absolute worst-off, even if it brings down the national average.",
   },
@@ -50,7 +51,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
-    graphColor: "#8b5cf6",
+    graphColor: CYCLE_COLORS[ElectionCycle.PersonalUtility],
     winThresholdScalar: 0.97,
     briefingText: "Not every improvement counts the same. Helping someone who is already comfortable barely moves the needle — they are doing fine. But helping someone who is struggling makes a real difference to how they feel. Your job is to find those people and lift them, not to keep adding to the lives of those who need it least.",
   },
@@ -63,7 +64,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
-    graphColor: "#10b981",
+    graphColor: CYCLE_COLORS[ElectionCycle.SocietalUtility],
     winThresholdScalar: 0.9675,
     briefingText: "Voters are not just tracking their own lives — they are watching everyone else's too. A rising national average that leaves the bottom behind will cost you votes from citizens who find inequality itself distressing, even if they are personally unaffected. Your task is to grow wellbeing in a way the whole country can see as fair. Visible gaps are politically fatal here.",
   },

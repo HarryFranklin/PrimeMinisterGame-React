@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { CYCLE_COLORS } from '../../../utils/uiHelpers';
 
-const CONFETTI_COLORS = ['#ec4899', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+// Reuses the same four framework colours everywhere else in the app, plus one
+// extra celebratory accent (amber) not tied to any specific cycle.
+const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
 const Confetti = () => (
   <div className="fixed inset-0 overflow-hidden pointer-events-none z-[9999] flex justify-center">
@@ -22,21 +25,6 @@ const Confetti = () => (
           borderRadius: i % 3 === 0 ? '50%' : '2px',
           top: '-20px',
         }}
-      />
-    ))}
-  </div>
-);
-
-const RainEffect = () => (
-  <div className="fixed inset-0 overflow-hidden pointer-events-none z-[9999] flex justify-center">
-    {Array.from({ length: 60 }).map((_, i) => (
-      <motion.div
-        key={i}
-        initial={{ y: -20, opacity: 0.6 }}
-        animate={{ y: window.innerHeight + 20, opacity: 0 }}
-        transition={{ duration: 3 + Math.random() * 2, ease: 'linear', repeat: Infinity, delay: Math.random() * 2 }}
-        className="absolute w-0.5 h-8 bg-rose-500"
-        style={{ left: `${Math.random() * 100}%` }}
       />
     ))}
   </div>
@@ -102,7 +90,6 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full relative">
       {showSuccess && <Confetti />}
-      {showFailure && <RainEffect />}
 
       <div className="h-10 flex items-center justify-center shrink-0">
         {showSuccess && (
