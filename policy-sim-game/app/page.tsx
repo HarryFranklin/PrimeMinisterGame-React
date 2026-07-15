@@ -38,6 +38,25 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
+      
+      {/* --- CINEMATIC CURTAIN --- */}
+      {!isHub && (
+        <motion.div
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0, transitionEnd: { display: "none" } }}
+          transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
+          className="fixed inset-0 z-[9999] bg-zinc-950 pointer-events-none flex flex-col items-center justify-center"
+        >
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-12 h-12 border-4 border-zinc-800 border-t-pink-600 rounded-full animate-spin" />
+            <h2 className="text-zinc-400 font-bold uppercase tracking-widest text-sm animate-pulse">
+              Commencing Term
+            </h2>
+          </div>
+        </motion.div>
+      )}
+      {/* ------------------------- */}
+
       <AnimatePresence>
         {isUnsupportedScreen && (
           <motion.div

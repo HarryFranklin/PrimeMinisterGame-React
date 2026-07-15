@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
 import { ElectionCycle, AxisVariable } from '../../utils/types';
 import { Button } from '../ui';
@@ -17,6 +18,16 @@ export default function LevelSelectTab() {
   
   // State to hold the current 'lens' being used to view a completed run
   const [viewLenses, setViewLenses] = useState<Record<number, ElectionCycle>>({});
+  
+  // State to handle the cinematic transition overlay
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const handleStartLevel = (cycle: ElectionCycle) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      startLevel(cycle);
+    }, 4000); 
+  };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-6 animate-in fade-in duration-500">
@@ -79,7 +90,7 @@ export default function LevelSelectTab() {
 
                   {isPlayable && (
                     <div className="mt-auto pt-4">
-                      <Button variant="primary" fullWidth onClick={() => startLevel(profile.cycle)}>
+                      <Button variant="primary" fullWidth onClick={() => handleStartLevel(profile.cycle)}>
                         Begin Term
                       </Button>
                     </div>
@@ -133,7 +144,7 @@ export default function LevelSelectTab() {
                          />
                        </div>
                        
-                       <Button variant="secondary" size="sm" fullWidth className="mt-2" onClick={() => startLevel(profile.cycle)}>
+                       <Button variant="secondary" size="sm" fullWidth className="mt-2" onClick={() => handleStartLevel(profile.cycle)}>
                          Replay Term
                        </Button>
                     </div>
@@ -143,6 +154,31 @@ export default function LevelSelectTab() {
            );
          })}
        </div>
+
+       {/* Cinematic Transition Overlay */}
+       <AnimatePresence>
+         {isTransitioning && (
+           <motion.div
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             transition={{ duration: 1.5, ease: "easeInOut" }}
+             className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col items-center justify-center pointer-events-auto"
+           >
+             <motion.div
+               initial={{ scale: 0.9, opacity: 0 }}
+               animate={{ scale: 1, opacity: 1 }}
+               transition={{ delay: 0.6, duration: 1.2 }}
+               className="flex flex-col items-center gap-6"
+             >
+               <div className="w-12 h-12 border-4 border-zinc-800 border-t-pink-600 rounded-full animate-spin" />
+               <h2 className="text-zinc-400 font-bold uppercase tracking-widest text-sm animate-pulse">
+                 Commencing Term
+               </h2>
+             </motion.div>
+           </motion.div>
+         )}
+       </AnimatePresence>
     </div>
   );
 }
