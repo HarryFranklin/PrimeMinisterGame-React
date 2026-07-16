@@ -136,6 +136,28 @@ export default function D3Chart({
       const yScale = d3.scaleLinear().domain([0, yAxisMax]).range([H, 0]);
       const defs   = svg.selectAll<SVGDefsElement, unknown>('defs').data([0]).join('defs');
 
+      // Setup dynamic tooltip for hover states
+      let tooltip = d3.select(containerRef.current).select<HTMLDivElement>('.d3-chart-tooltip');
+      if (tooltip.empty()) {
+        tooltip = d3.select(containerRef.current)
+          .append('div')
+          .attr('class', 'd3-chart-tooltip')
+          .style('position', 'absolute')
+          .style('pointer-events', 'none')
+          .style('opacity', 0)
+          .style('background', 'rgba(24, 24, 27, 0.95)')
+          .style('color', 'white')
+          .style('padding', '6px 10px')
+          .style('border-radius', '6px')
+          .style('font-size', '12px')
+          .style('font-weight', '600')
+          .style('z-index', 100)
+          .style('box-shadow', '0 4px 6px -1px rgba(0,0,0,0.1)')
+          .style('transform', 'translate(-50%, -120%)')
+          .style('white-space', 'nowrap')
+          .style('transition', 'opacity 0.15s ease-out');
+      }
+
       chart.select('.background-layer')
         .selectAll<SVGRectElement, number>('rect.band')
         .data(d3.range(11))
@@ -155,8 +177,8 @@ export default function D3Chart({
             });
             if (affecting.length === 0) return 'rgba(244,244,245,0.1)';
             const net = affecting.reduce((s: number, r: any) => s + r.impact, 0);
-            if (net > 0) return 'rgba(59, 130, 246, 0.22)'; // Blue tint
-            if (net < 0) return 'rgba(245, 158, 11, 0.22)'; // Amber tint
+            if (net > 0) return 'rgba(59, 130, 246, 0.22)';
+            if (net < 0) return 'rgba(245, 158, 11, 0.22)';
             return 'rgba(212,212,216,0.3)';
           }
           return d % 2 === 0 ? '#f4f4f5' : 'transparent';
@@ -168,6 +190,20 @@ export default function D3Chart({
         .data(histogramData, (d: any) => d.name)
         .join('g')
         .attr('class', 'col');
+
+      // Bind Tooltip interactions to columns
+      cols.style('cursor', 'crosshair')
+        .on('mouseenter', (event, d: any) => {
+            tooltip.style('opacity', 1)
+                   .html(`<span style="color:#f472b6">LS ${d.name}:</span> ${d.count} million people`);
+        })
+        .on('mousemove', (event) => {
+            const [x, y] = d3.pointer(event, containerRef.current);
+            tooltip.style('left', `${x}px`).style('top', `${y}px`);
+        })
+        .on('mouseleave', () => {
+            tooltip.style('opacity', 0);
+        });
 
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
@@ -219,15 +255,17 @@ export default function D3Chart({
           )
           .transition().duration(1000).ease(d3.easeCubicOut)
           .attr('y', (d: any) => {
-            const raw = H - yScale(d.count);
+            const clampedCount = Math.min(d.count, yAxisMax);
+            const raw = H - yScale(clampedCount);
             let n = Math.floor(raw / faceSize);
-            if (d.count > 0 && n === 0) n = 1;
+            if (clampedCount > 0 && n === 0) n = 1;
             return H - n * faceSize;
           })
           .attr('height', (d: any) => {
-            const raw = H - yScale(d.count);
+            const clampedCount = Math.min(d.count, yAxisMax);
+            const raw = H - yScale(clampedCount);
             let n = Math.floor(raw / faceSize);
-            if (d.count > 0 && n === 0) n = 1;
+            if (clampedCount > 0 && n === 0) n = 1;
             return n * faceSize;
           });
 
@@ -274,10 +312,12 @@ export default function D3Chart({
           .data((d: any) => {
             if (!d.segments || d.segments.length === 0) return [];
             let currentY = H;
+            const clampRatio = d.count > yAxisMax ? yAxisMax / d.count : 1;
             return d.segments.map((seg: any) => {
-              const raw = H - yScale(seg.value);
+              const segVal = seg.value * clampRatio;
+              const raw = H - yScale(segVal);
               let n = Math.floor(raw / faceSize);
-              if (seg.value > 0 && n === 0) n = 1;
+              if (segVal > 0 && n === 0) n = 1;
               const segH = n * faceSize;
               currentY -= segH;
               return { ...seg, name: d.name, key: `${d.name}-${seg.label}`, yPos: currentY, h: segH };
@@ -307,13 +347,16 @@ export default function D3Chart({
           .data((d: any) => {
             if (d.segments) {
               let cY = H;
+              const clampRatio = d.count > yAxisMax ? yAxisMax / d.count : 1;
               return d.segments.map((seg: any) => {
-                const segH = H - yScale(seg.value);
+                const segVal = seg.value * clampRatio;
+                const segH = H - yScale(segVal);
                 cY -= segH;
                 return { ...seg, name: d.name, key: seg.label, yPos: cY, h: segH };
               });
             }
-            return [{ key: 'single', name: d.name, color: baseColor, yPos: yScale(d.count), h: H - yScale(d.count) }];
+            const clampedCount = Math.min(d.count, yAxisMax);
+            return [{ key: 'single', name: d.name, color: baseColor, yPos: yScale(clampedCount), h: H - yScale(clampedCount) }];
           }, (d: any) => d.key)
           .join(
             (enter: any) => enter.append('rect')
@@ -333,6 +376,22 @@ export default function D3Chart({
           .attr('y',      (d: any) => d.yPos)
           .attr('height', (d: any) => d.h);
       }
+
+      // Add Overflow Plus Indicators
+      cols.selectAll('text.overflow-plus').remove();
+      cols.append('text')
+        .attr('class', 'overflow-plus')
+        .attr('x', (d: any) => {
+          const rectW = visualStyle.includes('faces') ? faceCols * calcFaceSize(bw, faceCols) : bw;
+          const xOff = visualStyle.includes('faces') ? (bw - rectW) / 2 : 0;
+          return getX(d.name) + xOff + rectW / 2;
+        })
+        .attr('y', yScale(yAxisMax) - 6)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#ec4899')
+        .attr('font-weight', '900')
+        .attr('font-size', '16px')
+        .text((d: any) => d.count > yAxisMax ? '+' : '');
 
       chart.select('.axis-x')
         .transition().duration(dims.width ? 0 : 500)
