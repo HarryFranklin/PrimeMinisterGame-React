@@ -69,7 +69,7 @@ export default function PopulationPanel({
   const topChart = (
     <Card>
       <CardHeader title={populationTitle} />
-      <div className="flex-1 p-3 min-h-0 relative pointer-events-none">
+      <div className="flex-1 p-3 min-h-0 relative">
         <D3Chart
           plotType="1D"
           chartData={currentChartData}

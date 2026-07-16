@@ -47,7 +47,6 @@ const SEG_TYPES = [
 ] as const;
 
 const getAxisDomain = (a: AxisVariable): [number, number] => [0, 10];
-
 const getTicks = (a: AxisVariable) => [0, 2.5, 5, 7.5, 10];
 
 const getAxisLabel = (a: AxisVariable): string => {
@@ -89,12 +88,12 @@ export default function D3Chart({
   const rulesJson   = JSON.stringify(activePolicyRules);
 
   useEffect(() => {
-      if (!containerRef.current || !svgRef.current) return;
+    if (!containerRef.current || !svgRef.current) return;
 
-      const margin = { top: 15, right: 15, bottom: 40, left: 45 };
-      const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
-      const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
-      const baseColor = color || '#ec4899';
+    const margin = { top: 25, right: 15, bottom: 40, left: 45 };
+    const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
+    const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
+    const baseColor = color || '#ec4899';
 
     const svg = d3.select(svgRef.current)
       .attr('width',  W + margin.left + margin.right)
@@ -128,15 +127,16 @@ export default function D3Chart({
     };
 
     if (plotType === '1D' && histogramData) {
-      const xScale = d3.scaleLinear().domain([0, 11]).range([0, W]);
+      // Shifted domain aligns absolute integer ticks precisely beneath columns
+      const xScale = d3.scaleLinear().domain([-0.5, 10.5]).range([0, W]);
       const rawBw  = W / 11;
       const bw     = rawBw * 0.65;
-      const getX   = (name: string | number) => xScale(Number(name)) + (rawBw - bw) / 2;
+      const getX   = (name: string | number) => xScale(Number(name)) - bw / 2;
 
       const yScale = d3.scaleLinear().domain([0, yAxisMax]).range([H, 0]);
       const defs   = svg.selectAll<SVGDefsElement, unknown>('defs').data([0]).join('defs');
 
-      // Setup dynamic tooltip for hover states
+      // Setup universal tooltip
       let tooltip = d3.select(containerRef.current).select<HTMLDivElement>('.d3-chart-tooltip');
       if (tooltip.empty()) {
         tooltip = d3.select(containerRef.current)
@@ -163,7 +163,7 @@ export default function D3Chart({
         .data(d3.range(11))
         .join('rect')
         .attr('class', 'band')
-        .attr('x', d => xScale(d))
+        .attr('x', d => xScale(d) - rawBw / 2)
         .attr('y', 0)
         .attr('width', rawBw)
         .attr('height', H)
@@ -195,7 +195,7 @@ export default function D3Chart({
       cols.style('cursor', 'crosshair')
         .on('mouseenter', (event, d: any) => {
             tooltip.style('opacity', 1)
-                   .html(`<span style="color:#f472b6">LS ${d.name}:</span> ${d.count} million people`);
+                   .html(`<span style="color:${baseColor}">LS ${d.name}:</span> ~${d.count} million people`);
         })
         .on('mousemove', (event) => {
             const [x, y] = d3.pointer(event, containerRef.current);
@@ -211,8 +211,8 @@ export default function D3Chart({
         const xOff     = (bw - rectW) / 2;
 
         cols.selectAll('rect.segment').remove();
-
         defs.selectAll('pattern.seg-pattern').remove();
+        
         defs.selectAll<SVGPatternElement, HistogramEntry>('pattern.face-pattern')
           .data(histogramData, (d: any) => d.name)
           .join('pattern')
@@ -240,32 +240,28 @@ export default function D3Chart({
         cols.selectAll<SVGRectElement, HistogramEntry>('rect.face-bar')
           .data((d: any) => [d])
           .join(
-            (enter: any) => enter.append('rect')
-              .attr('class','face-bar')
-              .attr('x', (d: any) => getX(d.name) + xOff)
-              .attr('width', Math.max(0, rectW - 0.5))
-              .attr('y', H)
-              .attr('height', 0)
-              .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`),
-            (update: any) => update
-              .attr('x', (d: any) => getX(d.name) + xOff)
-              .attr('width', Math.max(0, rectW - 0.5))
-              .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`),
+            (enter: any) => enter.append('rect').attr('class','face-bar').attr('y', H).attr('height', 0),
+            (update: any) => update,
             (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
+          .attr('x', (d: any) => getX(d.name) + xOff)
+          .attr('width', Math.max(0, rectW - 0.5))
+          .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`)
           .transition().duration(1000).ease(d3.easeCubicOut)
           .attr('y', (d: any) => {
             const clampedCount = Math.min(d.count, yAxisMax);
             const raw = H - yScale(clampedCount);
-            let n = Math.floor(raw / faceSize);
-            if (clampedCount > 0 && n === 0) n = 1;
+            // Snap to the nearest 0.5 of a face
+            let n = Math.round((raw / faceSize) * 2) / 2;
+            if (clampedCount > 0 && n === 0) n = 0.5;
             return H - n * faceSize;
           })
           .attr('height', (d: any) => {
             const clampedCount = Math.min(d.count, yAxisMax);
             const raw = H - yScale(clampedCount);
-            let n = Math.floor(raw / faceSize);
-            if (clampedCount > 0 && n === 0) n = 1;
+            // Snap to the nearest 0.5 of a face
+            let n = Math.round((raw / faceSize) * 2) / 2;
+            if (clampedCount > 0 && n === 0) n = 0.5;
             return n * faceSize;
           });
 
@@ -302,9 +298,7 @@ export default function D3Chart({
             p.append('circle').attr('cx',50).attr('cy',50).attr('r',48).attr('fill',d.color).attr('stroke',dark).attr('stroke-width',4);
             p.append('circle').attr('cx',34).attr('cy',40).attr('r',8).attr('fill','#1f2937');
             p.append('circle').attr('cx',66).attr('cy',40).attr('r',8).attr('fill','#1f2937');
-            const mouthD = d.mouth === 'smile' ? 'M 28 65 Q 50 85 72 65'
-                         : d.mouth === 'frown' ? 'M 28 75 Q 50 55 72 75'
-                         :                        'M 28 65 Q 50 65 72 65';
+            const mouthD = d.mouth === 'smile' ? 'M 28 65 Q 50 85 72 65' : d.mouth === 'frown' ? 'M 28 75 Q 50 55 72 75' : 'M 28 65 Q 50 65 72 65';
             p.append('path').attr('d', mouthD).attr('stroke','#1f2937').attr('stroke-width',6).attr('fill','none').attr('stroke-linecap','round');
           });
 
@@ -312,33 +306,36 @@ export default function D3Chart({
           .data((d: any) => {
             if (!d.segments || d.segments.length === 0) return [];
             let currentY = H;
+            let cumulativeVal = 0;
+            let prevCumulativeN = 0;
             const clampRatio = d.count > yAxisMax ? yAxisMax / d.count : 1;
+            
             return d.segments.map((seg: any) => {
-              const segVal = seg.value * clampRatio;
-              const raw = H - yScale(segVal);
-              let n = Math.floor(raw / faceSize);
-              if (segVal > 0 && n === 0) n = 1;
-              const segH = n * faceSize;
+              cumulativeVal += (seg.value * clampRatio);
+              const cumulativeRaw = H - yScale(cumulativeVal);
+              let cumulativeN = Math.round((cumulativeRaw / faceSize) * 2) / 2;
+              
+              if (cumulativeVal > 0 && cumulativeN === 0) cumulativeN = 0.5;
+              
+              const segN = cumulativeN - prevCumulativeN;
+              const segH = segN * faceSize;
+              
               currentY -= segH;
+              prevCumulativeN = cumulativeN;
+              
               return { ...seg, name: d.name, key: `${d.name}-${seg.label}`, yPos: currentY, h: segH };
             });
           }, (d: any) => d.key)
           .join(
-            (enter: any) => enter.append('rect')
-              .attr('class','segment')
-              .attr('x', (d: any) => getX(d.name) + xOff)
-              .attr('width', Math.max(0, rectW - 0.5))
-              .attr('y', H)
-              .attr('height', 0)
-              .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`),
-            (update: any) => update
-              .attr('x', (d: any) => getX(d.name) + xOff)
-              .attr('width', Math.max(0, rectW - 0.5))
-              .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`),
+            (enter: any) => enter.append('rect').attr('class','segment').attr('y', H).attr('height', 0),
+            (update: any) => update,
             (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
+          .attr('x', (d: any) => getX(d.name) + xOff)
+          .attr('width', Math.max(0, rectW - 0.5))
+          .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`)
           .transition().duration(1000).ease(d3.easeCubicOut)
-          .attr('y',      (d: any) => d.yPos)
+          .attr('y', (d: any) => d.yPos)
           .attr('height', (d: any) => d.h);
 
       } else {
@@ -359,21 +356,15 @@ export default function D3Chart({
             return [{ key: 'single', name: d.name, color: baseColor, yPos: yScale(clampedCount), h: H - yScale(clampedCount) }];
           }, (d: any) => d.key)
           .join(
-            (enter: any) => enter.append('rect')
-              .attr('class','segment')
-              .attr('x', (d: any) => getX(d.name))
-              .attr('width', bw)
-              .attr('y', H)
-              .attr('height', 0)
-              .attr('fill',(d: any) => d.color),
-            (update: any) => update
-              .attr('x', (d: any) => getX(d.name))
-              .attr('width', bw)
-              .attr('fill',(d: any) => d.color),
+            (enter: any) => enter.append('rect').attr('class','segment').attr('y', H).attr('height', 0),
+            (update: any) => update,
             (exit: any) => exit.transition().duration(400).attr('y', H).attr('height', 0).remove()
           )
+          .attr('x', (d: any) => getX(d.name))
+          .attr('width', bw)
+          .attr('fill',(d: any) => d.color)
           .transition().duration(1200).ease(d3.easeCubicOut)
-          .attr('y',      (d: any) => d.yPos)
+          .attr('y', (d: any) => d.yPos)
           .attr('height', (d: any) => d.h);
       }
 
@@ -388,23 +379,24 @@ export default function D3Chart({
         })
         .attr('y', yScale(yAxisMax) - 6)
         .attr('text-anchor', 'middle')
-        .attr('fill', '#ec4899')
+        .attr('fill', baseColor)
         .attr('font-weight', '900')
         .attr('font-size', '16px')
         .text((d: any) => d.count > yAxisMax ? '+' : '');
 
+      // Ticks are no longer translated so they land precisely in the center of the columns
       chart.select('.axis-x')
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues([0,1,2,3,4,5,6,7,8,9,10]) as any)
         .call(styleAxis);
-      chart.select('.axis-x').selectAll('.tick text')
-        .attr('transform', `translate(${rawBw / 2},0)`);
 
       chart.select('.axis-y').selectAll('.custom-y-label').remove();
       chart.select('.axis-y')
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => '') as any)
         .call(styleAxis);
+
+      // Re-add the Axis Labels
       chart.select('.axis-y').append('text')
         .attr('class','custom-y-label')
         .attr('text-anchor','middle')
@@ -422,22 +414,23 @@ export default function D3Chart({
 
       annoLayer.selectAll('*').remove();
       (markers ?? []).forEach((m, i) => {
-        const mx    = xScale(Math.max(0, Math.min(10.9, m.value))) + rawBw / 2;
+        // Markers now evaluate mathematically directly onto the grid
+        const mx    = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
         const mc    = m.color ?? '#3f3f46';
-        const yPos  = 12 + i * 16;
+        const yPos  = -8 + i * 16;
+        
         annoLayer.append('line')
           .attr('x1',mx).attr('x2',mx).attr('y1',0).attr('y2',H)
           .attr('stroke',mc).attr('stroke-width',2)
           .attr('stroke-dasharray', m.dashed ? '6,4' : 'none')
           .style('opacity',0).transition().duration(300).style('opacity',1);
         annoLayer.append('text')
-          .attr('y',yPos).attr('x',mx - 8)
+          .attr('y',yPos).attr('x',mx - 6)
           .attr('fill',mc).attr('font-size','12px').attr('font-weight','900')
           .attr('stroke','white').attr('stroke-width',4).style('paint-order','stroke')
           .attr('text-anchor','end').text(m.label)
           .style('opacity',0).transition().duration(300).style('opacity',1);
       });
-
     } else if (plotType === '2D') {
       annoLayer.selectAll('*').remove();
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, W]);
