@@ -11,7 +11,6 @@ import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import WelcomeModal from "./components/modals/WelcomeModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
-import GameHeader from "./components/GameHeader";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
 import { useGameEngine } from "./hooks/useGameEngine";
@@ -73,21 +72,13 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <GameHeader 
-        currentCycle={game.currentCycle}
-        currentTurn={game.currentTurn}
-        turnsPerCycle={game.TURNS_PER_CYCLE}
-        isParliamentDissolved={game.isParliamentDissolved}
-        isHub={isHub}
-      />
-
       <UIProvider value={{
         setActiveTab: () => {}, 
         pulsePolicy: game.pulsePolicy, 
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
         <GameProvider value={game}>
-          <main className="flex-1 overflow-hidden p-4 pt-0 flex flex-col relative">
+          <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
             {game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (
