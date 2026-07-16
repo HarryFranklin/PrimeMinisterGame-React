@@ -112,16 +112,13 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         </div>
 
         <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-xl shadow-sm flex-1 flex flex-col min-h-0">
-          <div className="mb-2 shrink-0">
-            <span className="text-base font-bold text-zinc-900 block mb-1">
+          <div className="mb-2 shrink-0 pb-2 border-b border-zinc-200">
+            <span className="text-base font-bold text-zinc-900 block">
               Aim: Increase {rule.targetMetricName} <span className="text-zinc-500 font-black ml-1">({rule.targetMetricAbbreviation})</span>
             </span>
-            <p className="text-sm text-zinc-600 leading-relaxed line-clamp-3 2xl:line-clamp-none">
-              {rule.targetMetricDescription}
-            </p>
           </div>
 
-          <div className="border-t border-zinc-200 pt-2 flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
             <span className={`text-base font-black uppercase tracking-widest block mb-1 shrink-0 ${activeTextColor}`}>
               Advisory Note
             </span>
