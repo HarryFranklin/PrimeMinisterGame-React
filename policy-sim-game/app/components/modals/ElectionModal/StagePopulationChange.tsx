@@ -142,7 +142,7 @@ export default function StagePopulationChange({
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full h-full min-h-0">
       <DPMMessage title="How The Population Changed">
-        {`We've tracked the electorate based on how their overall life satisfaction shifted during your administration.\nThe numbers only tell half the story — look at who's in each group.`}
+        {`We've tracked the electorate based on how their overall life satisfaction shifted during your administration.`}
       </DPMMessage>
 
       <button
