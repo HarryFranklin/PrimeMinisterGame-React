@@ -9,6 +9,7 @@ import DPMCard from "../DPMCard";
 import ApprovalCard from "../ApprovalCard";
 import PopulationPanel from "./PopulationPanel";
 import AgendaPanel from "./AgendaPanel";
+import TurnSummaryToast from "../TurnSummaryToast";
 
 /**
  * Orchestrates the main game screen: wires game state + the derived
@@ -24,7 +25,8 @@ export default function DashboardTab() {
     currentCycle, currentTurn, currentChartData, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy,
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
-    population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate
+    population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate,
+    lastTurnSummary, clearLastTurnSummary
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -70,7 +72,13 @@ export default function DashboardTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300 relative">
+      <TurnSummaryToast
+        summary={lastTurnSummary}
+        accentColor={rule.graphColor}
+        metricAbbreviation={rule.targetMetricAbbreviation}
+        onDismiss={clearLastTurnSummary}
+      />
       <div className="grid grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0 overflow-hidden">
 
         {/* LEFT COLUMN: Stacked Graphs OR Utility Table */}
