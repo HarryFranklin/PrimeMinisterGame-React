@@ -22,7 +22,7 @@ const MARKER_LABELS: Record<ElectionCycle, string> = {
 
 const ANALYSIS_MESSAGES: Record<ElectionCycle, (start: number, end: number, diff: number) => string> = {
   [ElectionCycle.Benthamite]: (s, e, d) =>
-    `The National Average Happiness has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, a net ${d >= 0 ? 'gain' : 'loss'} of ${Math.abs(d).toFixed(2)} points.`,
+    `The National Average Life Satisfaction has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, a net ${d >= 0 ? 'gain' : 'loss'} of ${Math.abs(d).toFixed(2)} points.`,
   [ElectionCycle.Rawlsian]: (s, e, d) =>
     `The Minimum Wellbeing Baseline for the poorest citizens has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}.`,
   [ElectionCycle.PersonalUtility]: (s, e, d) =>

@@ -138,7 +138,7 @@ export default function FinalDebriefModal({ baselinePopulation, finalPopulation,
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
         <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex flex-col">
           <h4 className="text-xs font-black uppercase tracking-widest text-zinc-800">1. Benthamite</h4>
-          <span className="text-[10px] font-bold text-pink-600 block mb-2">National Average Happiness</span>
+          <span className="text-[10px] font-bold text-pink-600 block mb-2">National Average Life Satisfaction</span>
           <p className="text-xs text-zinc-600 flex-1 leading-relaxed">Maximising the total average efficiently increases overall societal wellbeing, but it does not account for how that wellbeing is distributed.</p>
         </div>
         

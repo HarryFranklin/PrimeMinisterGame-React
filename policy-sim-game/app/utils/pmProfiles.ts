@@ -28,7 +28,7 @@ export const PM_PROFILES: PMProfile[] = [
     name: "PM Victoria Sterling",
     philosophy: "Utilitarian Growth",
     governance: "I will govern for the majority. A rising tide lifts all boats, and we must maximise total national happiness, even if some are left behind.",
-    metric: "National Average Happiness",
+    metric: "National Average Life Satisfaction",
     color: CYCLE_COLORS[ElectionCycle.Benthamite],
     colorClass: CYCLE_TEXT_COLOR_CLASS[ElectionCycle.Benthamite],
     emoji: "🧑‍💼",

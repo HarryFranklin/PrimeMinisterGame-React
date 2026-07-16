@@ -19,9 +19,9 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
   [ElectionCycle.Benthamite]: {
     frameworkTitle: "Benthamite Framework",
     graphTitle: "Life Satisfaction Distribution",
-    targetMetricName: "National Average Happiness",
-    targetMetricAbbreviation: "NAH",
-    targetMetricDescription: "Calculated by adding up the life satisfaction of every citizen and dividing it by the total population.",
+    targetMetricName: "National Average Life Satisfaction",
+    targetMetricAbbreviation: "NALS",
+    targetMetricDescription: "The average Life Satisfaction of all citizens.",
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.LifeSatisfaction,
