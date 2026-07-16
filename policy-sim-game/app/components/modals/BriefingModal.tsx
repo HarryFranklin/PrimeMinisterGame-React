@@ -58,9 +58,9 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         </p>
 
         <div className="flex items-center justify-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold uppercase tracking-widest bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-full px-3 py-1">
+          {/* <span className="text-[11px] font-bold uppercase tracking-widest bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-full px-3 py-1">
             {rule.frameworkTitle}
-          </span>
+          </span> */}
           <button
             onClick={() => setShowDefinition(true)}
             className="text-[11px] font-bold uppercase tracking-widest bg-pink-50 text-pink-700 border border-pink-200 rounded-full px-3 py-1 hover:bg-pink-100 transition-colors cursor-pointer"
