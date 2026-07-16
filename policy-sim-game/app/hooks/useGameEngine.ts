@@ -55,6 +55,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [currentCycle, setCurrentCycle] = useState<ElectionCycle>(ElectionCycle.Benthamite);
   const [cycleAttempts, setCycleAttempts] = useState(1);
   const [isEnacting, setIsEnacting] = useState(false);
+  const [lastTurnSummary, setLastTurnSummary] = useState<{ policyName: string; scoreBefore: number; scoreAfter: number; turn: number } | null>(null);
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
@@ -96,6 +97,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(freshPop) }]);
     setSelectedPolicy(null);
     setYAxisMax(100);
+    setLastTurnSummary(null);
     resetDpmConsulted();
     
     setPopulation(freshPop);
@@ -181,6 +183,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
     setTimeout(() => {
       const nextPop = recordTurnState(previewPopulation, currentCycle, currentTurn + 1, selectedPolicy.id, selectedPolicy.policyName);
+      const scoreBefore = MetricsEngine.getMetricScore(population, currentCycle);
+      const scoreAfter = MetricsEngine.getMetricScore(nextPop, currentCycle);
+      setLastTurnSummary({ policyName: selectedPolicy.policyName, scoreBefore, scoreAfter, turn: currentTurn });
       setPopulation(nextPop);
       
       setHistory(prev => [...prev, {
@@ -292,6 +297,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     TURNS_PER_CYCLE,
     completedRuns,
     dpmConsulted, setDpmConsulted, resetDpmConsulted,
-    wipeSave
+    wipeSave,
+    lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null)
   };
 }
