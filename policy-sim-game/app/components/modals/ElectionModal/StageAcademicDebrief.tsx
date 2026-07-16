@@ -53,66 +53,51 @@ export default function StageAcademicDebrief({
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
-  // Dynamically find two citizens who had near-identical numeric LS gains but the largest contrast in subjective utility
+  // Smarter Pairing Algorithm: Finds two citizens with almost identical objective gains but maximum difference in subjective utility
   const contrastingCitizens = useMemo(() => {
     if (finalPopulation.length === 0) return [];
 
     const enriched = finalPopulation.map(p => {
       const ledger = p.historicalLedger.find(l => l.cycle === currentCycle);
       
-      // Round everything to 1 decimal place BEFORE math to prevent "2.1 -> 4.6 = +2.6" visual bugs
-      const startLS = Math.round((ledger?.turns[0]?.ls ?? p.currentLS) * 10) / 10;
-      const endLS = Math.round((ledger?.turns[ledger.turns.length - 1]?.ls ?? p.currentLS) * 10) / 10;
-      const lsGained = Math.round((endLS - startLS) * 10) / 10;
+      const startLS = Number((ledger?.turns[0]?.ls ?? p.currentLS).toFixed(1));
+      const endLS = Number((ledger?.turns[ledger.turns.length - 1]?.ls ?? p.currentLS).toFixed(1));
+      const lsGained = Number((endLS - startLS).toFixed(1));
       
       const startPU = WelfareMetrics.getUtilityForPerson(startLS, p.personalUtilities);
       const endPU = WelfareMetrics.getUtilityForPerson(endLS, p.personalUtilities);
-      const puGained = endPU - startPU;
+      const puGained = Number((endPU - startPU).toFixed(2));
       
       return { ...p, startLS, endLS, lsGained, puGained };
     });
 
-    let personA = null;
-    let personB = null;
-    let maxContrastScore = -1;
+    let bestPair = [enriched[0], enriched[1]];
+    let maxContrast = -1;
 
-    // Scan all pairs to find the perfect comparison
     for (let i = 0; i < enriched.length; i++) {
       for (let j = i + 1; j < enriched.length; j++) {
         const p1 = enriched[i];
         const p2 = enriched[j];
-
-        // Only compare people who actually gained a meaningful amount of LS
-        if (p1.lsGained <= 0.2 || p2.lsGained <= 0.2) continue;
-
-        // They must have gained roughly the same objective amount (within 0.4 of each other)
-        const lsGainDiff = Math.abs(p1.lsGained - p2.lsGained);
-        if (lsGainDiff > 0.4) continue;
-
-        // Score this pair: We want the highest difference in subjective utility for the most similar objective gain
-        const puGainDiff = Math.abs(p1.puGained - p2.puGained);
-        const contrastScore = puGainDiff - lsGainDiff; 
-
-        if (contrastScore > maxContrastScore) {
-          maxContrastScore = contrastScore;
-          // Ensure personA is the one who started lower on the ladder
-          if (p1.startLS < p2.startLS) {
-            personA = p1; personB = p2;
-          } else {
-            personA = p2; personB = p1;
-          }
+        
+        // Ensure both actually gained something noticeable
+        if (p1.lsGained < 0.3 || p2.lsGained < 0.3) continue;
+        
+        const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
+        // They must have gained almost identical objective amounts (within 0.3 of each other)
+        if (lsDiff > 0.3) continue; 
+        
+        const puDiff = Math.abs(p1.puGained - p2.puGained);
+        
+        // Heavily penalise objective differences so it prefers identical pairings
+        const score = puDiff - (lsDiff * 2); 
+        
+        if (score > maxContrast) {
+          maxContrast = score;
+          bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
         }
       }
     }
-
-    // Ultimate fallback if the player somehow perfectly equalised everything
-    if (!personA || !personB) {
-      const gainers = enriched.filter(p => p.lsGained > 0);
-      personA = gainers.sort((a,b) => a.startLS - b.startLS)[0] || enriched[0];
-      personB = gainers.sort((a,b) => b.startLS - a.startLS)[0] || enriched[1];
-    }
-
-    return [personA, personB];
+    return bestPair;
   }, [finalPopulation, currentCycle]);
 
   const empathyCitizen = useMemo(() => {
@@ -161,7 +146,7 @@ export default function StageAcademicDebrief({
             <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
               <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
             </div>
-            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
+            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
             {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
           
@@ -170,7 +155,7 @@ export default function StageAcademicDebrief({
             <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
               <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
             </div>
-            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
+            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
             {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
 
@@ -211,7 +196,7 @@ export default function StageAcademicDebrief({
                   </strong>
                 </div>
                 
-                {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Reveal</span></div>}
+                {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Reveal</span></div>}
               </div>
             );
           })}
@@ -242,7 +227,7 @@ export default function StageAcademicDebrief({
               <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
             </div>
 
-            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Reveal Personal Utility</span></div>}
+            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Reveal Personal Utility</span></div>}
           </div>
 
           {revealedEmpathy && (
@@ -269,7 +254,7 @@ export default function StageAcademicDebrief({
                 <p><strong>The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
               </div>
             </div>
-            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Click to Reveal</span></div>}
+            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Click to Reveal</span></div>}
           </div>
           
           <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
@@ -284,7 +269,7 @@ export default function StageAcademicDebrief({
                 <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
               </div>
             </div>
-            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600 border border-zinc-200 animate-pulse">Click to Reveal</span></div>}
+            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600 border border-zinc-200 animate-pulse">Click to Reveal</span></div>}
           </div>
 
           {revealedPU && revealedSU && (
