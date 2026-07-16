@@ -53,18 +53,67 @@ export default function StageAcademicDebrief({
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
+  // Dynamically find two citizens who had near-identical numeric LS gains but the largest contrast in subjective utility
   const contrastingCitizens = useMemo(() => {
-    for (let i = 0; i < finalPopulation.length; i++) {
-      for (let j = i + 1; j < finalPopulation.length; j++) {
-        if (Math.abs(finalPopulation[i].currentLS - finalPopulation[j].currentLS) < 0.2) {
-          const u1 = WelfareMetrics.getUtilityForPerson(finalPopulation[i].currentLS, finalPopulation[i].personalUtilities);
-          const u2 = WelfareMetrics.getUtilityForPerson(finalPopulation[j].currentLS, finalPopulation[j].personalUtilities);
-          if (Math.abs(u1 - u2) > 0.4) return [finalPopulation[i], finalPopulation[j]];
+    if (finalPopulation.length === 0) return [];
+
+    const enriched = finalPopulation.map(p => {
+      const ledger = p.historicalLedger.find(l => l.cycle === currentCycle);
+      
+      // Round everything to 1 decimal place BEFORE math to prevent "2.1 -> 4.6 = +2.6" visual bugs
+      const startLS = Math.round((ledger?.turns[0]?.ls ?? p.currentLS) * 10) / 10;
+      const endLS = Math.round((ledger?.turns[ledger.turns.length - 1]?.ls ?? p.currentLS) * 10) / 10;
+      const lsGained = Math.round((endLS - startLS) * 10) / 10;
+      
+      const startPU = WelfareMetrics.getUtilityForPerson(startLS, p.personalUtilities);
+      const endPU = WelfareMetrics.getUtilityForPerson(endLS, p.personalUtilities);
+      const puGained = endPU - startPU;
+      
+      return { ...p, startLS, endLS, lsGained, puGained };
+    });
+
+    let personA = null;
+    let personB = null;
+    let maxContrastScore = -1;
+
+    // Scan all pairs to find the perfect comparison
+    for (let i = 0; i < enriched.length; i++) {
+      for (let j = i + 1; j < enriched.length; j++) {
+        const p1 = enriched[i];
+        const p2 = enriched[j];
+
+        // Only compare people who actually gained a meaningful amount of LS
+        if (p1.lsGained <= 0.2 || p2.lsGained <= 0.2) continue;
+
+        // They must have gained roughly the same objective amount (within 0.4 of each other)
+        const lsGainDiff = Math.abs(p1.lsGained - p2.lsGained);
+        if (lsGainDiff > 0.4) continue;
+
+        // Score this pair: We want the highest difference in subjective utility for the most similar objective gain
+        const puGainDiff = Math.abs(p1.puGained - p2.puGained);
+        const contrastScore = puGainDiff - lsGainDiff; 
+
+        if (contrastScore > maxContrastScore) {
+          maxContrastScore = contrastScore;
+          // Ensure personA is the one who started lower on the ladder
+          if (p1.startLS < p2.startLS) {
+            personA = p1; personB = p2;
+          } else {
+            personA = p2; personB = p1;
+          }
         }
       }
     }
-    return [finalPopulation[0], finalPopulation[1]];
-  }, [finalPopulation]);
+
+    // Ultimate fallback if the player somehow perfectly equalised everything
+    if (!personA || !personB) {
+      const gainers = enriched.filter(p => p.lsGained > 0);
+      personA = gainers.sort((a,b) => a.startLS - b.startLS)[0] || enriched[0];
+      personB = gainers.sort((a,b) => b.startLS - a.startLS)[0] || enriched[1];
+    }
+
+    return [personA, personB];
+  }, [finalPopulation, currentCycle]);
 
   const empathyCitizen = useMemo(() => {
     if (finalPopulation.length === 0) return null;
@@ -92,7 +141,7 @@ export default function StageAcademicDebrief({
   const getDpmMessage = () => {
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nLet's look at an example of how two societies can have the same average happiness.";
-      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but looking at living standards isn't the whole picture.\nClick on these citizens to see how they feel their lives have actually changed.";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but objective living standards aren't the whole picture.\nClick on these citizens to see how their subjective wellbeing shifted in response to their physical gains.";
       case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard.\nLet's see what happens when we shift their focus to pure self-interest.";
       case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success.\nLet's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
@@ -112,7 +161,7 @@ export default function StageAcademicDebrief({
             <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
               <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
             </div>
-            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
+            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
             {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
           
@@ -121,7 +170,7 @@ export default function StageAcademicDebrief({
             <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
               <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
             </div>
-            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Calculate Average</span></div>}
+            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Calculate</span></div>}
             {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
           </div>
 
@@ -138,30 +187,39 @@ export default function StageAcademicDebrief({
       {currentCycle === ElectionCycle.Rawlsian && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {contrastingCitizens.map((citizen, idx) => {
-            const utility = WelfareMetrics.getUtilityForPerson(citizen.currentLS, citizen.personalUtilities);
             const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
             const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
             
             return (
-              <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[140px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen.name}</p>
-                <div className="mb-1"><span className="text-xs text-zinc-400">Objective Life Satisfaction: </span><strong className="text-xl text-zinc-800 block mt-1">{citizen.currentLS.toFixed(1)}</strong></div>
+              <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
+                <div className="mb-1 flex justify-center items-center gap-2">
+                  <span className="text-xs text-zinc-400">Objective Shift: </span>
+                  <span className="text-sm font-bold text-zinc-500">{citizen?.startLS.toFixed(1)}</span>
+                  <span className="text-zinc-300">→</span>
+                  <strong className="text-lg text-zinc-800">{citizen?.endLS.toFixed(1)}</strong>
+                  <span className="text-[10px] font-black bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded ml-1">
+                    {citizen && citizen.lsGained > 0 ? '+' : ''}{citizen?.lsGained.toFixed(1)} LS
+                  </span>
+                </div>
                 
                 <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
-                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Utility</span>
-                  <strong className="text-2xl text-pink-600">{utility.toFixed(2)}</strong>
+                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
+                  <strong className="text-2xl text-pink-600">
+                    {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
+                  </strong>
                 </div>
                 
-                {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600">Click to Reveal</span></div>}
+                {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Reveal</span></div>}
               </div>
             );
           })}
 
           {revealedCitizen1 && revealedCitizen2 && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-              <DPMMessage title="The Flaw in Objective Metrics" className="border-pink-200 bg-pink-50/30">
-                {`Despite having identical living standards, their internal utility differs wildly. While raising the floor provides a baseline standard, objective metrics do not always map perfectly to personal experience.\n\nNext term, citizens will vote using their unique Societal Utility.`}
+              <DPMMessage title="Unequal Subjective Value" className="border-pink-200 bg-pink-50/30">
+                {`Both citizens experienced a similar objective increase in their living standards. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.`}
               </DPMMessage>
             </motion.div>
           )}
@@ -184,7 +242,7 @@ export default function StageAcademicDebrief({
               <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
             </div>
 
-            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Reveal Personal Utility</span></div>}
+            {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Reveal Personal Utility</span></div>}
           </div>
 
           {revealedEmpathy && (
@@ -211,7 +269,7 @@ export default function StageAcademicDebrief({
                 <p><strong>The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
               </div>
             </div>
-            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600">Click to Reveal</span></div>}
+            {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Click to Reveal</span></div>}
           </div>
           
           <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
@@ -226,7 +284,7 @@ export default function StageAcademicDebrief({
                 <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
               </div>
             </div>
-            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600">Click to Reveal</span></div>}
+            {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600 border border-zinc-200 animate-pulse">Click to Reveal</span></div>}
           </div>
 
           {revealedPU && revealedSU && (
