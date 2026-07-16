@@ -33,25 +33,8 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
 
   const getBriefingMessage = () => {
     let msg = `PRIME MINISTER'S MANDATE: TERM ${currentCycle + 1}\n\n`;
-    msg += `PHILOSOPHY: ${rule.frameworkTitle}\n`;
-    msg += `KEY METRIC: ${rule.targetMetricName} (${rule.targetMetricAbbreviation})\n\n`;
     msg += `THE SITUATION:\n${getDiegeticContext()}\n\n`;
-    msg += `YOUR GOAL:\n${rule.briefingText}\n\n`;
-    msg += `DIRECTIVE:\n`;
-
-    if (currentCycle === ElectionCycle.Benthamite) {
-      msg += `Raise the overall National Average Life Satisfaction.`;
-    }
-    if (currentCycle === ElectionCycle.Rawlsian) {
-      msg += `Prioritise the country's most vulnerable citizens.`;
-    }
-    if (currentCycle === ElectionCycle.SocietalUtility) {
-      msg += `Balance individual outcomes with the public demand for fairness.`;
-    }
-    if (currentCycle === ElectionCycle.PersonalUtility) {
-      msg += `Map voter self-interest and avoid policies that cause personal loss.`;
-    }
-
+    msg += `YOUR GOAL:\n${rule.briefingText}`;
     return msg;
   };
 
@@ -73,19 +56,25 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         <p className="text-zinc-600 text-sm text-center">
           The Civil Service has prepared your mandate for the upcoming term.
         </p>
-        
+
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold uppercase tracking-widest bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-full px-3 py-1">
+            {rule.frameworkTitle}
+          </span>
+          <button
+            onClick={() => setShowDefinition(true)}
+            className="text-[11px] font-bold uppercase tracking-widest bg-pink-50 text-pink-700 border border-pink-200 rounded-full px-3 py-1 hover:bg-pink-100 transition-colors cursor-pointer"
+          >
+            {rule.targetMetricName} ({rule.targetMetricAbbreviation})
+          </button>
+        </div>
+
         <InteractiveDPMEmail 
           title="Official Mandate"
           message={getBriefingMessage()}
           onAcknowledge={onAcknowledge}
           buttonText="Accept Mandate & Begin Term"
           typeSpeed={25}
-          highlights={[
-            { 
-              word: rule.targetMetricName, 
-              onClick: () => setShowDefinition(true) 
-            }
-          ]}
         />
 
         {isRetryingTerm && (
