@@ -213,6 +213,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   };
 
   const handleFaceElectorate = useCallback(() => {
+    setLastTurnSummary(null);
     setGamePhase(GamePhase.Election);
   }, []);
 

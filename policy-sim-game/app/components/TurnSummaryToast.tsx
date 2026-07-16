@@ -8,7 +8,7 @@ interface TurnSummaryToastProps {
   onDismiss: () => void;
 }
 
-const AUTO_DISMISS_MS = 4500;
+const AUTO_DISMISS_MS = 3500;
 
 export default function TurnSummaryToast({ summary, accentColor, metricAbbreviation, onDismiss }: TurnSummaryToastProps) {
   useEffect(() => {
