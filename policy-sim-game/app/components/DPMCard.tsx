@@ -22,9 +22,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         <div className="p-3 border-b border-rose-200/50 bg-white/50 flex items-center gap-3 shrink-0">
           <span className="text-2xl bg-white border border-rose-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
           <div>
-            <p className="text-[12px] font-black uppercase tracking-widest text-rose-600 leading-tight">
-              Deputy Prime Minister
-            </p>
             <p className="text-[14px] font-bold text-zinc-800 mt-0.5">
               Term Concluded
             </p>
@@ -83,9 +80,6 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
       <div className="p-3 border-b border-zinc-200 bg-zinc-100 flex items-center gap-3 shrink-0 relative z-10">
         <span className="text-2xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
         <div>
-          <p className="text-[12px] font-black uppercase tracking-widest text-zinc-500 leading-tight">
-            Deputy Prime Minister
-          </p>
           <h3 className="text-xl font-bold text-zinc-900 tracking-tight">What is your decision, Prime Minister?</h3>
         </div>
       </div>
