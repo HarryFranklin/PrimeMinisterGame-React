@@ -141,22 +141,38 @@ export default function StageAcademicDebrief({
       
       {currentCycle === ElectionCycle.Benthamite && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50 ring-4 ring-pink-100 animate-pulse'}`}>
+          <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-              <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+            <div className="relative h-[200px]">
+              <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
+                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+              </div>
+              {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
             </div>
-            {!revealedBenthamA && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2.5 rounded-full text-sm font-bold shadow-md text-pink-600 border border-pink-200">👆 Click to Calculate</span></div>}
-            {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+            <div className="mt-4 flex justify-center items-center h-8">
+              {!revealedBenthamA ? (
+                <span className="bg-white px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Calculate Average</span>
+              ) : (
+                <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Calculated</span>
+              )}
+            </div>
           </div>
           
-          <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50 ring-4 ring-pink-100 animate-pulse'}`}>
+          <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-            <div className={`h-[200px] pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
-              <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+            <div className="relative h-[200px]">
+              <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
+                <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+              </div>
+              {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
             </div>
-            {!revealedBenthamB && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2.5 rounded-full text-sm font-bold shadow-md text-pink-600 border border-pink-200">👆 Click to Calculate</span></div>}
-            {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+            <div className="mt-4 flex justify-center items-center h-8">
+              {!revealedBenthamB ? (
+                <span className="bg-white px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Calculate Average</span>
+              ) : (
+                <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Calculated</span>
+              )}
+            </div>
           </div>
 
           {revealedBenthamA && revealedBenthamB && (
