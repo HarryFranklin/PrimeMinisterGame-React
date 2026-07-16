@@ -156,7 +156,7 @@ export default function StageTermSummary({
 
       <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
         {/* Dynamic Header */}
-        <div className="flex justify-between items-start md:items-end mb-4 gap-4">
+        <div className="flex justify-between items-start md:items-end gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
               {activeTurn === 0 ? 'Start of Term' : `Turn ${activeTurn}`}
@@ -167,7 +167,7 @@ export default function StageTermSummary({
           </div>
           <div className="text-right shrink-0">
             <p 
-              className="text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 whitespace-nowrap" 
+              className="text-[12px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 whitespace-nowrap" 
               style={{ color: rule.graphColor }}
             >
               {rule.targetMetricName}
@@ -179,7 +179,7 @@ export default function StageTermSummary({
         </div>
 
         {/* Animated Graph */}
-        <div className="h-[200px] w-full mb-4">
+        <div className="h-[240px] w-full mb-4">
           <D3Chart
             plotType="1D"
             chartData={[]}
