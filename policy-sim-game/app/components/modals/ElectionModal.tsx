@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ElectionCycle, Respondent } from '../../utils/types';
+import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
 
@@ -9,6 +9,7 @@ import StageVerdict from './ElectionModal/StageVerdict';
 import StagePopulationChange from './ElectionModal/StagePopulationChange';
 import StageElectorateFeedback from './ElectionModal/StageElectorateFeedback';
 import StageAcademicDebrief from './ElectionModal/StageAcademicDebrief';
+import StagePressConference from './ElectionModal/StagePressConference';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -18,14 +19,16 @@ interface ElectionModalProps {
   initialPopulation: Respondent[];
   baselinePopulation: Respondent[];
   finalPopulation: Respondent[];
+  history: TurnHistory[];
   yAxisMax: number;
   onNextCycle: () => void;
   onReset: () => void;
   onFinish?: () => void;
+  onAnswerPressQuestion: (delta: number) => void;
 }
 
 export default function ElectionModal(props: ElectionModalProps) {
-  const { currentCycle, approvalRating, cycleAttempts, onNextCycle, onReset, onFinish } = props;
+  const { currentCycle, approvalRating, cycleAttempts, onNextCycle, onReset, onFinish, onAnswerPressQuestion } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
   
@@ -37,7 +40,7 @@ export default function ElectionModal(props: ElectionModalProps) {
   const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
   
   let canProceed = won || cycleAttempts >= 3;
-  const totalPages = canProceed ? 5 : 4;
+  const totalPages = canProceed ? 6 : 5;
 
   useEffect(() => {
     setDefinitions([]);
@@ -54,18 +57,20 @@ export default function ElectionModal(props: ElectionModalProps) {
   };
 
   const getModalTitle = () => {
-    if (page === 0) return "Term Summary";
-    if (page === 1) return "Election Verdict";
-    if (page === 2) return "Wellbeing Changes";
-    if (page === 3) return "Electorate Feedback";
-    if (page === 4) return "Academic Debrief";
+    if (page === 0) return "Press Conference";
+    if (page === 1) return "Term Summary";
+    if (page === 2) return "Election Verdict";
+    if (page === 3) return "Wellbeing Changes";
+    if (page === 4) return "Electorate Feedback";
+    if (page === 5) return "Academic Debrief";
     return "Election Sequence";
   };
 
   const getModalWidth = () => {
-    if (page === 1) return "max-w-xl";
-    if (page === 2) return "max-w-[800px]"; // 3.5xl
-    if (page === 3) return "max-w-2xl";
+    if (page === 0) return "max-w-2xl";
+    if (page === 2) return "max-w-xl";
+    if (page === 3) return "max-w-[800px]"; // 3.5xl
+    if (page === 4) return "max-w-2xl";
     return "max-w-3xl";
   };
 
@@ -97,11 +102,12 @@ export default function ElectionModal(props: ElectionModalProps) {
       <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 1 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
-        {page === 2 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 3 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 4 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={() => setPageReady(true)} />}
+        {page === 1 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
+        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
+        {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
+        {page === 4 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
+        {page === 5 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
@@ -120,7 +126,7 @@ export default function ElectionModal(props: ElectionModalProps) {
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Verdict \u2192" : page === 1 ? "View Wellbeing Changes \u2192" : page === 2 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
+            {page === 0 ? "Continue to Term Summary \u2192" : page === 1 ? "Continue to Verdict \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : page === 3 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">

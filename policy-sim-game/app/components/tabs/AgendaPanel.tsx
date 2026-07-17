@@ -88,7 +88,7 @@ export default function AgendaPanel({
       <div className="p-4 border-t border-zinc-100 bg-zinc-100 shrink-0 relative z-0">
         {isParliamentDissolved ? (
           <Button variant="danger" size="lg" shadow="lg" fullWidth pulse loud onClick={onFaceElectorate}>
-            Face the Electorate
+            Hold Press Conference
           </Button>
         ) : (
           <Button

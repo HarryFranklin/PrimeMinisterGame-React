@@ -56,6 +56,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [cycleAttempts, setCycleAttempts] = useState(1);
   const [isEnacting, setIsEnacting] = useState(false);
   const [lastTurnSummary, setLastTurnSummary] = useState<{ policyName: string; scoreBefore: number; scoreAfter: number; turn: number } | null>(null);
+  const [pressConferenceModifier, setPressConferenceModifier] = useState(0);
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
@@ -98,6 +99,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setSelectedPolicy(null);
     setYAxisMax(100);
     setLastTurnSummary(null);
+    setPressConferenceModifier(0);
     resetDpmConsulted();
     
     setPopulation(freshPop);
@@ -168,7 +170,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const turnMetricScore = useMemo(() => MetricsEngine.getMetricScore(population, currentCycle), [population, currentCycle]);
   const currentMetricScore = useMemo(() => MetricsEngine.getMetricScore(previewPopulation, currentCycle), [previewPopulation, currentCycle]);
   
-  const turnApprovalRating = useMemo(() => WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar), [turnMetricScore, cycleMAO, currentCycle]);
+  const turnApprovalRating = useMemo(() => {
+    const base = WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar);
+    return Math.max(0, Math.min(100, base + pressConferenceModifier));
+  }, [turnMetricScore, cycleMAO, currentCycle, pressConferenceModifier]);
+
+  const applyPressConferenceDelta = useCallback((delta: number) => {
+    setPressConferenceModifier(prev => prev + delta);
+  }, []);
 
   const handleNavigateToPolicy = useCallback(() => {
     if (setActiveTab) setActiveTab('legislative');
@@ -299,6 +308,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     completedRuns,
     dpmConsulted, setDpmConsulted, resetDpmConsulted,
     wipeSave,
-    lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null)
+    lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null),
+    applyPressConferenceDelta
   };
 }

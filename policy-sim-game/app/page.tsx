@@ -123,10 +123,12 @@ export default function Home() {
                       initialPopulation={game.initialPopulation}
                       baselinePopulation={game.baselinePopulation}
                       finalPopulation={game.population}
+                      history={game.history}
                       yAxisMax={game.yAxisMax}
                       onNextCycle={game.handleCompleteTerm}
                       onReset={game.handleResetCycle}
                       onFinish={game.handleCompleteTerm}
+                      onAnswerPressQuestion={game.applyPressConferenceDelta}
                     />
                   )}
                   

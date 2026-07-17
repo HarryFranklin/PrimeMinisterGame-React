@@ -27,7 +27,7 @@ const SHADOW_CLASSES = {
  *
  * Preserves the existing visual language as-is: most buttons in this app are
  * sentence-case (e.g. "Enact Policy"), while a small number of high-stakes
- * calls to action (e.g. "Face the Electorate") use the louder uppercase +
+ * calls to action (e.g. "Hold Press Conference") use the louder uppercase +
  * tracking-widest treatment. That's opt-in via `loud`, not the default —
  * don't flip it on everywhere or every button starts shouting.
  */
@@ -49,7 +49,7 @@ export const Button = ({
   variant?: ButtonVariant;
   size?: ButtonSize;
   disabled?: boolean;
-  /** Pulses to draw attention (e.g. "Face the Electorate", "Enacting..."). */
+  /** Pulses to draw attention (e.g. "Hold Press Conference", "Enacting..."). */
   pulse?: boolean;
   /** Uppercase + wide tracking, reserved for the highest-stakes CTAs. */
   loud?: boolean;
