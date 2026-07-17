@@ -51,10 +51,13 @@ export class WelfareMetrics {
 
   // Centralised cycle utility evaluator to prevent logic duplication
   static getCycleUtility(respondent: Respondent, cycle: ElectionCycle, populationLength: number, allLS: number[], multipliers?: number[] | null): number {
+    // Enforce the LS 2 floor across ALL cycles for absolute fairness
+    const flooredLS = Math.max(2.0, respondent.currentLS);
+
     if (cycle === ElectionCycle.Benthamite || cycle === ElectionCycle.Rawlsian) {
-      return respondent.currentLS;
+      return flooredLS;
     } else if (cycle === ElectionCycle.PersonalUtility) {
-      return WelfareMetrics.getUtilityForPerson(respondent.currentLS, respondent.personalUtilities);
+      return WelfareMetrics.getUtilityForPerson(flooredLS, respondent.personalUtilities);
     } else if (cycle === ElectionCycle.SocietalUtility) {
       if (multipliers) {
         let personSocietalUtility = 0;
@@ -65,7 +68,7 @@ export class WelfareMetrics {
       }
       return WelfareMetrics.evaluateDistribution(allLS, respondent.societalUtilities);
     }
-    return respondent.currentLS;
+    return flooredLS;
   }
 
   // Returns per-column stats for the utility table used in cycles 3 & 4.
