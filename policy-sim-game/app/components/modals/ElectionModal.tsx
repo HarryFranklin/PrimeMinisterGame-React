@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
-import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
 
 import StageTermSummary from './ElectionModal/StageTermSummary';
@@ -10,6 +9,7 @@ import StagePopulationChange from './ElectionModal/StagePopulationChange';
 import StageElectorateFeedback from './ElectionModal/StageElectorateFeedback';
 import StageAcademicDebrief from './ElectionModal/StageAcademicDebrief';
 import StagePressConference from './ElectionModal/StagePressConference';
+import PMIdentityBanner from '../PMIdentityBanner';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -34,7 +34,6 @@ export default function ElectionModal(props: ElectionModalProps) {
   
   const [definitions, setDefinitions] = useState<{title: string, desc: string}[]>([]);
   
-  const rule = FRAMEWORK_RULES[currentCycle];
   const won = approvalRating >= 51.0;
   
   const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
@@ -99,7 +98,8 @@ export default function ElectionModal(props: ElectionModalProps) {
         ) : undefined
       }
     >
-      <ModalHeader title={getModalTitle()} subtitle={rule.frameworkTitle} />
+      <ModalHeader title={getModalTitle()} />
+      <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
         {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={() => setPageReady(true)} />}

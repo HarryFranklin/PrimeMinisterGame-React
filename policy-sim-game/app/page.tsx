@@ -9,7 +9,6 @@ import DevPanel from "./components/DevPanel";
 import IntroModal from "./components/modals/IntroModal";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
-import WelcomeModal from "./components/modals/WelcomeModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
@@ -95,14 +94,6 @@ export default function Home() {
                     <IntroModal 
                       key="intro" 
                       onAcknowledge={() => game.setGamePhase(GamePhase.LevelSelect)} 
-                    />
-                  )}
-
-                  {game.gamePhase === GamePhase.Welcome && (
-                    <WelcomeModal 
-                      key="welcome" 
-                      currentCycle={game.currentCycle}
-                      onAcknowledge={() => game.setGamePhase(GamePhase.Briefing)} 
                     />
                   )}
                   

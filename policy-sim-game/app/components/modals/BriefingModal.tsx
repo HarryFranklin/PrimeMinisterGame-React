@@ -4,6 +4,7 @@ import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { getPMProfile } from '../../utils/pmProfiles';
 import { ModalContent, ModalHeader, InteractiveDPMEmail, FloatingDefinitionPanel } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
+import PMIdentityBanner from '../PMIdentityBanner';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
@@ -20,7 +21,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
 
   const getBriefingMessage = () => {
     let msg = `Office of ${profile.name}\n\n`;
-    msg += `I know you are very busy, so I'll get right to it.\n\n`;
+    msg += `Dear ${profile.name},\n\nI know you are very busy, so I'll get right to it.\n\n`;
     msg += rule.briefingText;
     return msg;
   };
@@ -42,18 +43,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
 
         {/* PM identity — carries the character/colour established at Level Select into the mandate itself */}
-        <div className="flex items-center justify-center gap-3 -mt-1">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-4xl shrink-0 shadow-inner"
-            style={{ backgroundColor: `${profile.color}22` }}
-          >
-            {profile.emoji}
-          </div>
-          <div className="text-left">
-            <h3 className="font-black text-base text-zinc-900 leading-tight">{profile.name}</h3>
-            <p className={`text-[10px] font-black uppercase tracking-widest ${profile.colorClass}`}>{rule.frameworkTitle}</p>
-          </div>
-        </div>
+        <PMIdentityBanner cycle={currentCycle} className="-mt-1" />
 
         <p className="text-zinc-600 text-sm text-center">
           The Civil Service has prepared your mandate for the upcoming term.

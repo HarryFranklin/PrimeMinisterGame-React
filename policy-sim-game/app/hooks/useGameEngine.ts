@@ -65,7 +65,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [optimalPath, setOptimalPath] = useState<Policy[]>([]);
   
   const [completedRuns, setCompletedRuns] = useState<CompletedRun[]>([]);
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [dpmConsulted, setDpmConsultedState] = useState<Record<string, boolean>>({});
 
   const setDpmConsulted = useCallback((id: string, value: boolean) => {
@@ -107,15 +106,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setInitialPopulation(freshPop);
     setBaselinePopulation(freshPop);
     
-    // Welcome plays exactly once, on the player's very first PM ever.
-    // Every subsequent term (any cycle, any retry) goes straight to Briefing.
-    if (!hasSeenWelcome) {
-      setHasSeenWelcome(true);
-      setGamePhase(GamePhase.Welcome);
-    } else {
-      setGamePhase(GamePhase.Briefing);
-    }
-  }, [resetDpmConsulted, hasSeenWelcome]);
+    setGamePhase(GamePhase.Briefing);
+  }, [resetDpmConsulted]);
 
   const handleSaveLoad = useCallback((parsed: any) => {
     setPopulation(parsed.population);
@@ -132,7 +124,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setIsParliamentDissolved(parsed.isParliamentDissolved || false);
     setGamePhase(parsed.gamePhase || GamePhase.Intro);
     setCompletedRuns(parsed.completedRuns || []);
-    setHasSeenWelcome(parsed.hasSeenWelcome ?? true); // existing saves predate this flag — assume already seen
   }, []);
 
   const handleSaveError = useCallback(() => {
@@ -143,8 +134,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       population, initialPopulation, baselinePopulation,
       currentTurn, currentCycle, cycleAttempts, history,
       cycleSchedule, cycleMAO, currentDeck, optimalPath,
-      isParliamentDissolved, gamePhase, completedRuns, hasSeenWelcome
-  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase, completedRuns, hasSeenWelcome]);
+      isParliamentDissolved, gamePhase, completedRuns
+  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase, completedRuns]);
 
   const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
