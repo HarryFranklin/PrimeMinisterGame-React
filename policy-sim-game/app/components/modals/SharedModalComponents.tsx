@@ -117,6 +117,8 @@ interface InteractiveDPMEmailProps {
   onAcknowledge: () => void;
   buttonText?: string;
   highlights?: HighlightConfig[];
+  /** Overrides the small "Deputy Prime Minister" kicker label above the title. Pass "" to hide it entirely. */
+  kicker?: string;
 }
 
 export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.ReactNode; exitDelay?: number }) => (
@@ -194,12 +196,12 @@ export const ModalHeader = ({ title, subtitle }: { title: string, subtitle?: str
   </div>
 );
 
-export const DPMMessage = ({ title, children, className = "" }: { title: string, children: React.ReactNode, className?: string }) => (
+export const DPMMessage = ({ title, children, className = "", kicker = "Deputy Prime Minister" }: { title: string, children: React.ReactNode, className?: string, kicker?: string }) => (
   <div className={`p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-left shrink-0 ${className}`}>
     <div className="flex items-center gap-3 mb-3 border-b border-zinc-200/60 pb-3">
       <span className="text-2xl bg-white border border-zinc-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🏛️</span>
       <div>
-        <span className="text-sm font-black uppercase tracking-widest text-pink-600 leading-tight block mb-0.5">Deputy Prime Minister</span>
+        {kicker && <span className="text-sm font-black uppercase tracking-widest text-pink-600 leading-tight block mb-0.5">{kicker}</span>}
         <span className="font-bold text-zinc-800 text-base">{title}</span>
       </div>
     </div>
@@ -225,7 +227,8 @@ export const InteractiveDPMEmail = ({
   delayAfterComplete = 2000,
   onAcknowledge,
   highlights,
-  buttonText = "Begin Term"
+  buttonText = "Begin Term",
+  kicker
 }: InteractiveDPMEmailProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [buttonUnlocked, setButtonUnlocked] = useState(false);
@@ -281,7 +284,7 @@ export const InteractiveDPMEmail = ({
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="flex flex-col gap-4 w-full overflow-hidden"
           >
-            <DPMMessage title={title}>
+            <DPMMessage title={title} kicker={kicker}>
               <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
                 <span className="whitespace-pre-wrap invisible block" aria-hidden="true">
                   <HighlightText text={message} highlights={highlights} />

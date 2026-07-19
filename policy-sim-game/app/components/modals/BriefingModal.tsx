@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ElectionCycle } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
+import { getPMProfile } from '../../utils/pmProfiles';
 import { ModalContent, ModalHeader, InteractiveDPMEmail, FloatingDefinitionPanel } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
 
@@ -11,30 +12,16 @@ interface BriefingModalProps {
 
 export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingModalProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
+  const profile = getPMProfile(currentCycle);
   const { cycleAttempts } = useGame();
   const [showDefinition, setShowDefinition] = useState(false);
 
   const isRetryingTerm = cycleAttempts > 1;
 
-  const getDiegeticContext = () => {
-    switch(currentCycle) {
-      case ElectionCycle.Benthamite:
-        return "Welcome to Number 10, Prime Minister. The country is looking to you for leadership.";
-      case ElectionCycle.Rawlsian:
-        return "Following your re-election, a severe global economic shock has wiped out our previous gains. The national baseline has reset, and we are back to square one.";
-      case ElectionCycle.SocietalUtility:
-        return "Another term, another crisis. Global supply chain collapses have reset the economy. The public is demanding not just recovery, but a fundamentally fairer society.";
-      case ElectionCycle.PersonalUtility:
-        return "A devastating cost-of-living crisis has levelled the playing field once again. The electorate is anxious and hyper-focused on their own survival.";
-      default:
-        return "";
-    }
-  };
-
   const getBriefingMessage = () => {
-    let msg = `PRIME MINISTER'S MANDATE: TERM ${currentCycle + 1}\n\n`;
-    msg += `THE SITUATION:\n${getDiegeticContext()}\n\n`;
-    msg += `YOUR GOAL:\n${rule.briefingText}`;
+    let msg = `Office of ${profile.name}\n\n`;
+    msg += `I know you are very busy, so I'll get right to it.\n\n`;
+    msg += rule.briefingText;
     return msg;
   };
 
@@ -53,14 +40,26 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     >
       <div className="flex-1 flex flex-col w-full gap-4">
         <ModalHeader title="New Term Commencing" subtitle="Classified Briefing" />
+
+        {/* PM identity — carries the character/colour established at Level Select into the mandate itself */}
+        <div className="flex items-center justify-center gap-3 -mt-1">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center text-4xl shrink-0 shadow-inner"
+            style={{ backgroundColor: `${profile.color}22` }}
+          >
+            {profile.emoji}
+          </div>
+          <div className="text-left">
+            <h3 className="font-black text-base text-zinc-900 leading-tight">{profile.name}</h3>
+            <p className={`text-[10px] font-black uppercase tracking-widest ${profile.colorClass}`}>{rule.frameworkTitle}</p>
+          </div>
+        </div>
+
         <p className="text-zinc-600 text-sm text-center">
           The Civil Service has prepared your mandate for the upcoming term.
         </p>
 
         <div className="flex items-center justify-center gap-2 flex-wrap">
-          {/* <span className="text-[11px] font-bold uppercase tracking-widest bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-full px-3 py-1">
-            {rule.frameworkTitle}
-          </span> */}
           <button
             onClick={() => setShowDefinition(true)}
             className="text-[11px] font-bold uppercase tracking-widest bg-pink-50 text-pink-700 border border-pink-200 rounded-full px-3 py-1 hover:bg-pink-100 transition-colors cursor-pointer"

@@ -101,6 +101,7 @@ export default function Home() {
                   {game.gamePhase === GamePhase.Welcome && (
                     <WelcomeModal 
                       key="welcome" 
+                      currentCycle={game.currentCycle}
                       onAcknowledge={() => game.setGamePhase(GamePhase.Briefing)} 
                     />
                   )}
