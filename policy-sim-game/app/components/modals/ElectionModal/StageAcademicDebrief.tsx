@@ -178,7 +178,7 @@ export default function StageAcademicDebrief({
           {revealedBenthamA && revealedBenthamB && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30">
-               {'Under a strictly Benthamite framework, these societies are equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores equality.'}
+               {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores how it is distributed. If unchecked, this can lead to issues such as equality.'}
               </DPMMessage>
             </motion.div>
           )}
