@@ -4,15 +4,11 @@ import { availablePolicies } from '../../../data/policies';
 import { DPMMessage } from '../SharedModalComponents';
 import { LSChangeBadge } from '../../ui';
 import { PM_PROFILES } from '../../../utils/pmProfiles';
-
-interface PolicyRef {
-  id: string;
-  name: string;
-}
+import { VOTER_QUOTES, VoterSentimentKind, PolicyRef } from '../../../content/voterQuotes';
 
 interface VoterSentiment {
   emoji: string;
-  kind: 'very_negative' | 'negative' | 'neutral_mixed' | 'neutral' | 'positive' | 'very_positive';
+  kind: VoterSentimentKind;
   bestPolicy: PolicyRef | null;
   worstPolicy: PolicyRef | null;
 }
@@ -51,14 +47,6 @@ function getVoterSentiment(citizen: any, cycle: ElectionCycle): VoterSentiment {
   return { emoji: '😁', kind: 'very_positive', bestPolicy, worstPolicy };
 }
 
-interface VoterQuoteProps {
-  sentiment: VoterSentiment;
-  onHoverPolicy: (id: string | null) => void;
-  onDefinitionToggle: (title: string, desc: string) => void;
-  pmName: string;
-  altFormat?: boolean;
-}
-
 function PolicySpan({
   policy,
   onHoverPolicy,
@@ -86,172 +74,42 @@ function PolicySpan({
   );
 }
 
-function VoterQuote({ sentiment, onHoverPolicy, onDefinitionToggle, pmName, altFormat = false }: VoterQuoteProps) {
-  const { kind, bestPolicy, worstPolicy } = sentiment;
+/**
+ * Interprets a VOTER_QUOTES template (see content/voterQuotes.ts) into
+ * actual JSX for one voter. This is the "glue" logic — it doesn't contain
+ * any of the actual words, and shouldn't need to change when the copy does.
+ */
+function renderVoterQuote(
+  sentiment: VoterSentiment,
+  pmName: string,
+  altFormat: boolean,
+  onHoverPolicy: (id: string | null) => void,
+  onDefinitionToggle: (title: string, desc: string) => void
+): React.ReactNode {
+  const segments = VOTER_QUOTES[sentiment.kind][altFormat ? 'alt' : 'standard'];
+  const interpolate = (s: string) => s.replace(/\{pmName\}/g, pmName);
 
-  switch (kind) {
-    case 'very_negative':
-      if (altFormat) {
+  return segments.map((segment, i) => {
+    if (segment.policyRef) {
+      const policy = sentiment[segment.policyRef];
+
+      if (policy && segment.withPolicy) {
+        const [before, after] = interpolate(segment.withPolicy).split('{POLICY}');
         return (
-          <>
-            {pmName} has completely lost my trust.{'\n'}
-            {worstPolicy ? (
-              <>
-                Things have gotten really tough, and having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by.
-              </>
-            ) : (
-              `Things have gotten really tough, and their policies completely ignored my needs.`
-            )}
-          </>
+          <React.Fragment key={i}>
+            {before}
+            <PolicySpan policy={policy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} />
+            {after}
+          </React.Fragment>
         );
       }
-      return (
-        <>
-          Things have gotten really tough since this government took office.{'\n'}
-          {worstPolicy ? (
-            <>
-              Having <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> pass made it so much harder to get by, not that {pmName} seems to care.
-            </>
-          ) : (
-            `The policies completely ignored my needs, and ${pmName} has lost my trust entirely.`
-          )}
-        </>
-      );
-
-    case 'negative':
-      if (altFormat) {
-        return (
-          <>
-            I honestly expected better from {pmName}.{'\n'}
-            {worstPolicy ? (
-              <>
-                I'm definitely worse off than I was, and <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters.
-              </>
-            ) : (
-              "I'm definitely worse off than I was, and the agenda just didn't work for me."
-            )}
-          </>
-        );
+      if (!policy && segment.withoutPolicy) {
+        return <React.Fragment key={i}>{interpolate(segment.withoutPolicy)}</React.Fragment>;
       }
-      return (
-        <>
-          I'm definitely worse off than I was.{'\n'}
-          {worstPolicy ? (
-            <>
-              <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really didn't help matters, and I honestly expected better from {pmName}'s administration.
-            </>
-          ) : (
-            "The agenda just didn't work for me."
-          )}
-        </>
-      );
-
-    case 'neutral_mixed':
-      if (altFormat) {
-        return (
-          <>
-            {pmName}'s agenda has been a mixed bag for me.{'\n'}
-            {bestPolicy && (
-              <>
-                <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
-              </>
-            )}
-            {worstPolicy && (
-              <>
-                but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> set me back just as much.
-              </>
-            )}
-          </>
-        );
-      }
-      return (
-        <>
-          I haven't noticed much difference overall.{'\n'}
-          {bestPolicy && (
-            <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> helped a bit,{' '}
-            </>
-          )}
-          {worstPolicy && (
-            <>
-              but <PolicySpan policy={worstPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> set me back just as much.
-            </>
-          )}
-        </>
-      );
-
-    case 'neutral':
-      if (altFormat) {
-        return (
-          <>
-            {pmName} hasn't really affected my day-to-day.{'\n'}
-            My life hasn't changed much at all despite all the political noise.
-          </>
-        );
-      }
-      return (
-        <>
-          My life hasn't changed much at all.{'\n'}
-          All the political noise from {pmName} hasn't really affected my day-to-day.
-        </>
-      );
-
-    case 'positive':
-      if (altFormat) {
-        return (
-          <>
-            I'm glad {pmName} is finally delivering.{'\n'}
-            {bestPolicy ? (
-              <>
-                Things are looking up a bit, and <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me.
-              </>
-            ) : (
-              `Things are looking up a bit, and the agenda seems to be heading in a good direction.`
-            )}
-          </>
-        );
-      }
-      return (
-        <>
-          Things are looking up a bit.{'\n'}
-          {bestPolicy ? (
-            <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> actually made things easier for me, so I'm glad {pmName} finally delivered on that.
-            </>
-          ) : (
-            `The agenda seems to be heading in a good direction.`
-          )}
-        </>
-      );
-
-    case 'very_positive':
-      if (altFormat) {
-        return (
-          <>
-            {pmName} has definitely earned my vote!{'\n'}
-            {bestPolicy ? (
-              <>
-                I've seen a huge difference, and <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really turned things around for me.
-              </>
-            ) : (
-              `I've seen a huge difference, and the agenda directly enhanced my quality of life.`
-            )}
-          </>
-        );
-      }
-      return (
-        <>
-          I've seen a huge difference!{'\n'}
-          {bestPolicy ? (
-            <>
-              <PolicySpan policy={bestPolicy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} /> really turned things around for me. {pmName} has definitely earned my vote.
-            </>
-          ) : (
-            `The agenda directly enhanced my quality of life. ${pmName} has definitely earned my vote.`
-          )}
-        </>
-      );
-  }
+      return null; // no policy to reference and no fallback text — this segment is simply skipped
+    }
+    return <React.Fragment key={i}>{interpolate(segment.text || '')}</React.Fragment>;
+  });
 }
 
 interface StageElectorateFeedbackProps {
@@ -338,7 +196,7 @@ export default function StageElectorateFeedback({
           return (
             <div key={idx} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 flex flex-col sm:flex-row gap-3 items-center w-full shadow-sm flex-1 min-h-0">
               <div className="flex flex-col items-center justify-center bg-white border border-zinc-200 rounded-full w-12 h-12 shrink-0 shadow-sm">
-                <span className="text-2xl">{vp.sentiment.emoji}</span>
+                <span className="text-3xl">{vp.sentiment.emoji}</span>
               </div>
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-1 w-full">
@@ -346,13 +204,7 @@ export default function StageElectorateFeedback({
                   <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
                 <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-3 whitespace-pre-wrap">
-                  "<VoterQuote 
-                    sentiment={vp.sentiment} 
-                    onHoverPolicy={setHoveredPolicyId} 
-                    onDefinitionToggle={onDefinitionToggle} 
-                    pmName={pmSurname}
-                    altFormat={idx % 2 === 0}
-                  />"
+                  "{renderVoterQuote(vp.sentiment, pmSurname, idx % 2 === 0, setHoveredPolicyId, onDefinitionToggle)}"
                 </p>
               </div>
             </div>
