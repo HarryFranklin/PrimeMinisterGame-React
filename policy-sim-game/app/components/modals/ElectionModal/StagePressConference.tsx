@@ -113,7 +113,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
   const q1 = useMemo(() => buildMetricQuestion(currentCycle), [currentCycle]);
   const q2 = useMemo(() => buildPolicyQuestion(history), [history]);
 
-  const displayApproval = useAnimatedNumber(approvalRating, 900);
+  const displayScore = useAnimatedNumber(approvalRating, 900);
 
   // Cinematic Choreography Timer
   useEffect(() => {
@@ -224,7 +224,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
                 className="text-4xl md:text-5xl font-black tabular-nums transition-colors duration-500"
                 style={{ color: approvalRating >= 51 ? '#34d399' : '#fb7185' }}
               >
-                {displayApproval.toFixed(1)}%
+                {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
               </span>
             </div>
 
