@@ -38,7 +38,7 @@ interface MetricQuestionOption {
  * for word.
  */
 const METRIC_REPHRASINGS: Record<ElectionCycle, string> = {
-  [ElectionCycle.Benthamite]: "The average happiness score across the whole population, with every citizen weighted equally.",
+  [ElectionCycle.Benthamite]: "The average happiness score across the whole population, with every citizen's situation considered equally.",
   [ElectionCycle.Rawlsian]: "The wellbeing of whichever single citizen is currently faring the worst in the country.",
   [ElectionCycle.SocietalUtility]: "How fair the overall spread of happiness looks to citizens observing everyone else's lives, not just their own.",
   [ElectionCycle.PersonalUtility]: "How much a change is actually worth to someone, once you account for the fact that comfortable people gain less from help than struggling people do.",
