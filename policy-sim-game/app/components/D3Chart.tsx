@@ -84,6 +84,13 @@ export default function D3Chart({
     return () => ro.disconnect();
   }, []);
 
+  // Guarantee tooltips don't leak into the DOM when charts unmount
+  useEffect(() => {
+    return () => {
+      d3.select('body').select(`#d3-tooltip-${chartId}`).remove();
+    };
+  }, [chartId]);
+
   const markersJson = JSON.stringify(markers);
   const rulesJson   = JSON.stringify(activePolicyRules);
 
@@ -136,12 +143,12 @@ export default function D3Chart({
       const yScale = d3.scaleLinear().domain([0, yAxisMax]).range([H, 0]);
       const defs   = svg.selectAll<SVGDefsElement, unknown>('defs').data([0]).join('defs');
 
-      // Setup universal tooltip
-      let tooltip = d3.select(containerRef.current).select<HTMLDivElement>('.d3-chart-tooltip');
+      // Setup universal tooltip attached to the BODY to escape overflow clipping
+      let tooltip = d3.select('body').select<HTMLDivElement>(`#d3-tooltip-${chartId}`);
       if (tooltip.empty()) {
-        tooltip = d3.select(containerRef.current)
+        tooltip = d3.select('body')
           .append('div')
-          .attr('class', 'd3-chart-tooltip')
+          .attr('id', `d3-tooltip-${chartId}`)
           .style('position', 'absolute')
           .style('pointer-events', 'none')
           .style('opacity', 0)
@@ -151,11 +158,11 @@ export default function D3Chart({
           .style('border-radius', '6px')
           .style('font-size', '12px')
           .style('font-weight', '600')
-          .style('z-index', 100)
+          .style('z-index', 999999) // Extremely high to ensure it pops over modals
           .style('box-shadow', '0 4px 6px -1px rgba(0,0,0,0.1)')
           .style('transform', 'translate(-50%, -120%)')
           .style('white-space', 'nowrap')
-          .style('transition', 'opacity 0.15s ease-out');
+          .style('transition', 'opacity 0.15s ease-out, left 0.1s, top 0.1s');
       }
 
       chart.select('.background-layer')
@@ -194,12 +201,18 @@ export default function D3Chart({
       // Bind Tooltip interactions to columns
       cols.style('cursor', 'crosshair')
         .on('mouseenter', (event, d: any) => {
+            const clampedCount = Math.min(d.count, yAxisMax);
+            const rect = svgRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            // Map internal SVG coordinate space to absolute body coordinates
+            const xPos = rect.left + window.scrollX + margin.left + xScale(Number(d.name));
+            const yPos = rect.top + window.scrollY + margin.top + yScale(clampedCount);
+
             tooltip.style('opacity', 1)
+                   .style('left', `${xPos}px`)
+                   .style('top', `${yPos}px`)
                    .html(`<span style="color:${baseColor}">LS ${d.name}:</span> ~${d.count} million people`);
-        })
-        .on('mousemove', (event) => {
-            const [x, y] = d3.pointer(event, containerRef.current);
-            tooltip.style('left', `${x}px`).style('top', `${y}px`);
         })
         .on('mouseleave', () => {
             tooltip.style('opacity', 0);
