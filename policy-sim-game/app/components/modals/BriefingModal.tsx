@@ -21,7 +21,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
 
   const getBriefingMessage = () => {
     let msg = `Office of ${profile.name}\n\n`;
-    msg += `Dear ${profile.name},\n\nI know you are very busy, so I'll get right to it.\n\n`;
+    msg += `Dear PM,\n\nI know you are very busy, so I'll get right to it.\n\n`;
     msg += rule.briefingText;
     return msg;
   };
