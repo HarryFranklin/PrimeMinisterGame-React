@@ -121,7 +121,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
 
       <motion.div
         layout
-        className={`p-8 md:p-10 w-full max-w-lg flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 ${
+        className={`p-6 md:p-6 w-full max-w-lg flex flex-col items-center justify-center text-center rounded-3xl border-4 transition-all duration-700 ${
           showSuccess
             ? 'bg-emerald-50 border-emerald-200 shadow-xl'
             : showFailure
