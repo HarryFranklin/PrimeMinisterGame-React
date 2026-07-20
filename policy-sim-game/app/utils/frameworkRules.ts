@@ -60,7 +60,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     graphTitle: "Societal Utility Distribution",
     targetMetricName: "National Fairness Index",
     targetMetricAbbreviation: "NFI",
-    targetMetricDescription: "The average of how each citizen evaluates the entire LS distribution — not just their own score. Citizens who observe a highly unequal society report lower utility regardless of their personal situation.",
+    targetMetricDescription: "The average of how each citizen evaluates the entire LS distribution — not just their own score. Citizens who observe a highly unequal society report lower happiness regardless of their personal situation.",
     targetDirection: 'maximize',
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
