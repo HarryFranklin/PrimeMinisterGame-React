@@ -20,8 +20,8 @@ export default function ApprovalCard({ approvalRating, isParliamentDissolved, ac
       {/* Updated Election Counter */}
       {!isParliamentDissolved && (
         <div className="absolute top-3 w-full text-center">
-          <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
-            Election In: <span className="text-zinc-300">{turnsRemaining} Turns</span>
+          <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500">
+            Election In: <span className="text-zinc-300">{turnsRemaining} {turnsRemaining === 1 ? 'Turn' : 'Turns'}</span>
           </span>
         </div>
       )}
