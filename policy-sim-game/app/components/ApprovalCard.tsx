@@ -17,7 +17,7 @@ export default function ApprovalCard({ approvalRating, isParliamentDissolved, ac
     <div className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all">
       <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: accentColor }} />
       
-      {/* Updated Election Counter */}
+      {/* Election Counter */}
       {!isParliamentDissolved && (
         <div className="absolute top-3 w-full text-center">
           <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500">
