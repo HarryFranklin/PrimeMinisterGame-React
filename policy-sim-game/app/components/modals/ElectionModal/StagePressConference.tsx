@@ -88,11 +88,29 @@ const Q2_OPENERS = {
   afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
 };
 
-const CLOSING_LINES: Record<number, string> = {
-  2: "Confident, clear answers. Good luck out there, Prime Minister.",
-  1: "A mixed bag today. We'll see how the electorate feels about that.",
-  0: "Well... that was certainly a press conference. Best of luck at the polls.",
+const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {
+  if (tier === 'comfortable') {
+    if (correctCount === 2) return "Brilliant work out there, Prime Minister. You absolutely smashed it. That just cements our lead even further.";
+    if (correctCount === 1) return "A bit of a mixed bag today, Prime Minister, but frankly, with our current polling, we can afford a minor slip-up.";
+    return "Well, that wasn't your best performance. Luckily, our ratings are strong enough to absorb the hit, but let's not make a habit of it.";
+  }
+  
+  if (tier === 'contested') {
+    if (correctCount === 2) return "Nice work out there, Prime Minister. You smashed it — that should give our ratings a real boost right when we need it to secure this election.";
+    if (correctCount === 1) return "You held your own out there, just about. It's still a tight race, so let's hope the electorate focuses on the positives.";
+    return "I'm honestly not sure what happened out there today, Prime Minister. That's tanked our momentum right when we needed it most.";
+  }
+
+  // Trailing
+  if (correctCount === 2) return "A stellar performance, Prime Minister! That might just be the lifeline we needed to turn this sinking ship around.";
+  if (correctCount === 1) return "Well... that might have just saved us. Just about. We're still in dangerous territory, though.";
+  return "A disaster, frankly. Our ratings were already in the gutter, and that certainly hasn't helped.";
 };
+
+// The closing reaction reads as an internal aide debriefing the PM after the
+// cameras stop rolling, not the journalist — the "our ratings" framing only
+// makes sense coming from someone on the PM's own team.
+const AIDE_REACTION = { name: "Chief of Staff", outlet: "Backstage, Off the Record", emoji: "🧑‍💼" };
 
 type Phase = 'q1' | 'q2' | 'summary';
 
@@ -126,7 +144,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
       ? Q1_OPENERS[tier]
       : phase === 'q2' && q2
       ? (q1Selected === q1.correctIndex ? Q2_OPENERS.afterCorrect : Q2_OPENERS.afterWrong)
-      : CLOSING_LINES[correctCount];
+      : getClosingLine(correctCount, tier);
 
   // Slowed down typing to 35ms per character for readability
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(currentPrompt, 35, introSequence >= 1);
@@ -231,37 +249,40 @@ export default function StagePressConference({ currentCycle, approvalRating, his
             {/* Journalist Dialogue & Answer Flow */}
             <div className="flex-1 flex flex-col justify-center gap-6 max-w-2xl mx-auto w-full mt-16 md:mt-24">
               
-              {introSequence >= 1 && phase !== 'summary' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl relative"
-                >
-                  {/* Decorative speech bubble tail */}
-                  <div className="absolute top-full left-10 -mt-px border-[12px] border-transparent border-t-zinc-900 z-10" />
-                  <div className="absolute top-full left-[39px] -mt-px border-[13px] border-transparent border-t-zinc-800 z-0" />
-                  
-                  <div className="flex items-center gap-4 mb-4 border-b border-zinc-800 pb-4">
-                    <span className="text-3xl bg-zinc-800 border border-zinc-700 w-14 h-14 flex items-center justify-center rounded-full shadow-inner shrink-0">
-                      {pressPerson.emoji}
-                    </span>
-                    <div>
-                      <span className="text-sm font-black uppercase tracking-widest text-pink-500 leading-tight block mb-0.5">
-                        {pressPerson.name}
-                      </span>
-                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{pressPerson.outlet}</span>
-                    </div>
-                  </div>
-                  <div
-                    className={`text-zinc-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap min-h-[4em] ${isTyping ? 'cursor-pointer' : ''}`}
-                    onClick={() => { if (isTyping) skip(); }}
+              {introSequence >= 1 && (() => {
+                const speaker = phase === 'summary' ? AIDE_REACTION : pressPerson;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl relative"
                   >
-                    {displayedText}
-                    {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-500 animate-pulse translate-y-1" />}
-                  </div>
-                </motion.div>
-              )}
+                    {/* Decorative speech bubble tail */}
+                    <div className="absolute top-full left-10 -mt-px border-[12px] border-transparent border-t-zinc-900 z-10" />
+                    <div className="absolute top-full left-[39px] -mt-px border-[13px] border-transparent border-t-zinc-800 z-0" />
+
+                    <div className="flex items-center gap-4 mb-4 border-b border-zinc-800 pb-4">
+                      <span className="text-3xl bg-zinc-800 border border-zinc-700 w-14 h-14 flex items-center justify-center rounded-full shadow-inner shrink-0">
+                        {speaker.emoji}
+                      </span>
+                      <div>
+                        <span className="text-sm font-black uppercase tracking-widest text-pink-500 leading-tight block mb-0.5">
+                          {speaker.name}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{speaker.outlet}</span>
+                      </div>
+                    </div>
+                    <div
+                      className={`text-zinc-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap min-h-[4em] ${isTyping ? 'cursor-pointer' : ''}`}
+                      onClick={() => { if (isTyping) skip(); }}
+                    >
+                      {displayedText}
+                      {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-500 animate-pulse translate-y-1" />}
+                    </div>
+                  </motion.div>
+                );
+              })()}
 
               {/* Answer Options - only appear once typing is fully complete */}
               <AnimatePresence mode="wait">
@@ -278,22 +299,6 @@ export default function StagePressConference({ currentCycle, approvalRating, his
                 )}
               </AnimatePresence>
 
-              {/* Final Summary Phase within the Fullscreen context */}
-              <AnimatePresence>
-                {phase === 'summary' && (
-                  <motion.div
-                    key="summary"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="flex flex-col items-center justify-center gap-4 py-8 text-white"
-                  >
-                    <span className="text-6xl mb-4">{correctCount === 2 ? '🌟' : correctCount === 1 ? '👍' : '😬'}</span>
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Press Conference Concluded</span>
-                    <h2 className="text-3xl font-black">{correctCount} of 2 Answered Correctly</h2>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </motion.div>
         )}
@@ -304,13 +309,10 @@ export default function StagePressConference({ currentCycle, approvalRating, his
         This is what the user is safely returned to once the fullscreen effect ends.
       */}
       {!isFullscreen && (
-        <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 border border-zinc-200 rounded-2xl h-full min-h-[300px] animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 border border-zinc-200 rounded-2xl h-full min-h-[200px] animate-in fade-in zoom-in-95 duration-500 text-center">
           <span className="text-4xl mb-4">🎤</span>
           <h3 className="text-xl font-black text-zinc-900 mb-2">Press Conference Concluded</h3>
-          <p className="text-zinc-600 font-medium">You answered {correctCount} of 2 questions correctly.</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mt-6 animate-pulse">
-            Please continue to the Term Summary
-          </p>
+          <p className="text-zinc-600 font-medium max-w-md mb-6">The Chief of Staff has concluded your debrief.</p>
         </div>
       )}
     </>

@@ -68,7 +68,7 @@ export default function ElectionModal(props: ElectionModalProps) {
   const getModalWidth = () => {
     if (page === 0) return "max-w-2xl";
     if (page === 2) return "max-w-xl";
-    if (page === 3) return "max-w-[800px]"; // 3.5xl
+    if (page === 3) return "max-w-[880px]";
     if (page === 4) return "max-w-2xl";
     return "max-w-3xl";
   };
