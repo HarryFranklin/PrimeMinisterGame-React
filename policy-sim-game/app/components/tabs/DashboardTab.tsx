@@ -15,10 +15,6 @@ import TurnSummaryToast from "../TurnSummaryToast";
  * Orchestrates the main game screen: wires game state + the derived
  * histogram/history data (useDashboardHistograms) into three presentational
  * panels (PopulationPanel, DPMCard + ApprovalCard, AgendaPanel).
- *
- * This file used to be ~600 lines mixing all of the above together. Each
- * panel below now owns its own layout and markup; this component's only job
- * is deciding what data each one gets.
  */
 export default function DashboardTab() {
   const {
