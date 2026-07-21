@@ -6,7 +6,7 @@ interface IntroModalProps {
 }
 
 export default function IntroModal({ onAcknowledge }: IntroModalProps) {
-  const introText = "Welcome to the Prime Minister Game.\n\nYour goal is to understand and balance competing policymaking philosophies. There are four levels. In each, you will play as a different Prime Minister, each governing and judged by different metrics of societla success.\n\nTo succeed, you must learn the logic behind each metric and enact policies that satisfy your specific electorate. Good luck.";
+  const introText = "Welcome to the Prime Minister Game.\n\nThe game is comprised of four levels. In each, you will adopt the persona of a different Prime Minister, each with their own distinct philosophy on how society should be governed. You must master these ideas and enact aligned policies to secure re-election and pass the level.\n\nYour overarching goal is to fully understand and balance these competing political frameworks. Good luck.";
   
   return (
     <ModalContent maxWidth="max-w-[500px]" slideEntry slideExit>
