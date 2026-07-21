@@ -69,7 +69,7 @@ export default function PopulationPanel({
   const topChart = (
     <Card>
       <CardHeader title={populationTitle} />
-      <div className="flex-1 p-3 min-h-0 relative">
+      <div className="flex-1 p-2 min-h-0 relative">
         <D3Chart
           plotType="1D"
           chartData={currentChartData}
@@ -94,7 +94,7 @@ export default function PopulationPanel({
 
         <Card className="relative">
           <CardHeader title="Utility Analysis" />
-          <div className="flex-1 p-3 min-h-0 overflow-y-auto relative">
+          <div className="flex-1 p-2 min-h-0 overflow-y-auto relative">
             <UtilityTable
               population={population}
               previewPopulation={previewPopulation}
