@@ -31,7 +31,7 @@ export default function LevelSelectTab() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-6 animate-in fade-in duration-500">
-       <div className="text-center max-w-2xl mx-auto mt-4 shrink-0">
+       <div className="text-center max-w-3xl mx-auto mt-4 shrink-0">
          <h2 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">
            {unlockedIndex >= 4 ? "Simulation Complete" : "Select Your Persona"}
          </h2>
