@@ -32,13 +32,6 @@ const LEGEND_ITEMS = [
   { label: 'Worsened', color: IMPACT_COLORS['Will worsen'] },
 ];
 
-/**
- * Left column of the dashboard: either the two-chart stack (cycles 1 & 2) or
- * the chart + utility table pairing (cycles 3 & 4, "utility cycles"). Both
- * branches previously lived inline in DashboardTab; extracting this also
- * pulls the three near-identical placeholder overlays into the shared
- * EmptyState atom instead of three hand-typed copies.
- */
 export default function PopulationPanel({
   isUtilityCycle,
   isParliamentDissolved,
@@ -67,7 +60,7 @@ export default function PopulationPanel({
     detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null;
 
   const topChart = (
-    <Card>
+    <Card className={isUtilityCycle ? 'flex-[0.8] min-h-[200px]' : ''}>
       <CardHeader title={populationTitle} />
       <div className="flex-1 p-2 min-h-0 relative">
         <D3Chart
@@ -91,8 +84,7 @@ export default function PopulationPanel({
     return (
       <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
         {topChart}
-
-        <Card className="relative">
+        <Card className="flex-[1.2] min-h-[250px] relative">
           <CardHeader title="Utility Analysis" />
           <div className="flex-1 p-2 min-h-0 overflow-y-auto relative">
             <UtilityTable
@@ -104,10 +96,9 @@ export default function PopulationPanel({
               forecastsRemaining={1}
               onRunForecast={() => {}}
             />
-
             {isParliamentDissolved && (
               <EmptyState
-                icon="⏳"
+                icon="📊"
                 title="Select Legislation"
                 description="Hover over a policy in your Enacted Legislation to review its historical impact on the population."
               />
@@ -123,10 +114,8 @@ export default function PopulationPanel({
   return (
     <>
       {topChart}
-
       <Card className="pb-0">
         <CardHeader title={<span className="truncate pr-2 block">{bottomChartTitle}</span>} />
-
         <div className="flex-1 p-3 pb-0 min-h-0 relative">
           <div className="absolute inset-0 p-3 pb-0 pointer-events-none">
             <D3Chart
@@ -143,16 +132,15 @@ export default function PopulationPanel({
 
           {!selectedPolicy && !isParliamentDissolved && (
             <EmptyState
-              icon="💡"
+              icon="⚖️"
               title="Awaiting Policy"
               description="Select a policy from the Legislative Agenda to forecast its impact."
               maxWidthClassName="max-w-[250px]"
             />
           )}
-
           {isParliamentDissolved && hoveredHistoryTurn === null && (
             <EmptyState
-              icon="⏳"
+              icon="📜"
               title="Select Legislation"
               description="Hover over a policy in your Enacted Legislation to review its historical impact on the population."
             />

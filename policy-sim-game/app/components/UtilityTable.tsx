@@ -146,8 +146,9 @@ export default function UtilityTable({
 
   return (
     <div className="w-full flex flex-col gap-3 h-full flex-1">
-      <div className="flex-1 flex flex-col min-h-0">
-        <table className="w-full h-full table-fixed border-collapse text-center text-[11px]">
+      <div className="flex-1 flex flex-col min-h-0 overflow-x-auto pb-2">
+        {/* Removed h-full and reduced min-w slightly to fit the container better */}
+        <table className="w-full min-w-[450px] table-fixed border-collapse text-center text-[11px]">
           <colgroup>
             <col style={{ width: '60px' }} />
             {DISPLAY_COLUMNS.map(col => <col key={col} />)}
@@ -189,7 +190,8 @@ export default function UtilityTable({
                 const pctDelta = pctAfter - pctBefore;
 
                 return (
-                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100 h-[30%]">
+                  // Removed the forced h-[30%]
+                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100">
                     {pctAfter}
                     {isPreviewing && pctDelta !== 0 && (
                       <span className={`block text-[9px] font-black mt-0.5 ${pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -201,35 +203,29 @@ export default function UtilityTable({
               })}
             </tr>
             
-            {/* Row 2: Value of +/- 1 LS */}
+            {/* Row 2: Value of +/- 1 LS (Straddling Columns) */}
             <tr className="border-b border-zinc-200">
-              <td className="bg-white text-left px-2 py-1.5 font-bold text-zinc-500 text-[9px] uppercase tracking-wide leading-tight">
-                Value of <br/> ±1
+              <td className="bg-white text-left px-2 py-1.5 font-bold text-zinc-500 text-[9px] uppercase tracking-wide leading-tight z-0">
+                Marginal <br/> Transition
               </td>
               {DISPLAY_COLUMNS.map(col => {
-                const gain = marginalGains[col];
-                const loss = marginalLosses[col];
+                const gain = marginalGains[col]; // Transitioning to col + 1
+                const lossFromNext = marginalLosses[col + 1] || 0; // Transitioning from col + 1 to col
+                const isLast = col === 10;
 
                 return (
-                  <td key={col} className="bg-white px-0.5 py-1.5 border-x border-zinc-100 align-middle h-[40%]">
-                    <div className="flex flex-col gap-1 items-center justify-center text-[9px] font-black tracking-tighter">
-                      {col < 10 ? (
-                        <div className="text-emerald-600 bg-emerald-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none gap-0.5">
-                          <span>+{gain.toFixed(2)}</span>
-                          <span className="text-[8px] font-black leading-none">→</span>
+                  // Removed the forced h-[40%]
+                  <td key={col} className="bg-white px-0.5 py-1.5 border-x border-zinc-100 align-middle relative">
+                    {!isLast && (
+                      <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 items-center justify-center z-10 w-10">
+                        <div className="text-emerald-600 bg-emerald-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none border border-emerald-200 shadow-sm">
+                          <span className="text-[8px] font-black tracking-tighter">+{gain.toFixed(2)}</span>
                         </div>
-                      ) : (
-                        <span className="text-zinc-300 px-1 py-0.5">-</span>
-                      )}
-                      {col > 2 ? (
-                        <div className="text-rose-600 bg-rose-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none gap-0.5">
-                          <span className="text-[8px] font-black leading-none">←</span>
-                          <span>-{loss.toFixed(2)}</span>
+                        <div className="text-rose-600 bg-rose-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none border border-rose-200 shadow-sm">
+                          <span className="text-[8px] font-black tracking-tighter">-{lossFromNext.toFixed(2)}</span>
                         </div>
-                      ) : (
-                        <span className="text-zinc-300 px-1 py-0.5">-</span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </td>
                 );
               })}
@@ -250,7 +246,8 @@ export default function UtilityTable({
                 const valPositive = Number(strAfterVal) > Number(strBeforeVal);
 
                 return (
-                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100 h-[30%]">
+                  // Removed the forced h-[30%]
+                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100">
                     {afterVal > 0 ? strAfterVal : '-'}
                     {isPreviewing && !valNeutral && (
                       <span className={`block text-[9px] font-black mt-0.5 ${valPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -266,7 +263,7 @@ export default function UtilityTable({
       </div>
 
       {/* Score Output Box */}
-      <div className="rounded-lg border border-zinc-200 bg-white p-3 flex items-center justify-between shadow-sm shrink-0">
+      <div className="rounded-lg border border-zinc-200 bg-white p-3 flex items-center justify-between shadow-sm shrink-0 mt-auto">
         <span className="text-[11px] font-black uppercase tracking-widest text-zinc-800">
           {metricName}
         </span>
