@@ -13,7 +13,7 @@ const AnimatedUtilityCurve = () => {
     
     const W = containerRef.current.clientWidth;
     const H = 320;
-    const margin = { top: 30, right: 30, bottom: 50, left: 60 };
+    const margin = { top: 30, right: 30, bottom: 50, left: 85 };
     const width = W - margin.left - margin.right;
     const height = H - margin.top - margin.bottom;
 
@@ -55,7 +55,7 @@ const AnimatedUtilityCurve = () => {
     g.append('text')
       .attr('transform', 'rotate(-90)')
       .attr('x', -height / 2)
-      .attr('y', -40)
+      .attr('y', -60) 
       .attr('fill', '#d4d4d8')
       .style('text-anchor', 'middle')
       .style('font-weight', 'bold')
@@ -146,24 +146,24 @@ const AnimatedUtilityCurve = () => {
     // 3. Highlight the Subjective Value Deltas
     // Gain Delta (+1.0)
     g.append('path')
-      .attr('d', `M -10 ${yScale(8.8)} Q -20 ${yScale(9.3)} -10 ${yScale(9.8)}`)
+      .attr('d', `M -10 ${yScale(8.8)} Q -25 ${yScale(9.3)} -10 ${yScale(9.8)}`)
       .attr('fill', 'none').attr('stroke', '#34d399').attr('stroke-width', 2)
       .style('opacity', 0).transition().delay(3000).duration(500).style('opacity', 1);
       
     g.append('text')
-      .attr('x', -25).attr('y', yScale(9.3)).attr('fill', '#34d399')
+      .attr('x', -30).attr('y', yScale(9.3)).attr('fill', '#34d399')
       .style('font-size', '11px').style('font-weight', 'black').style('text-anchor', 'end').attr('alignment-baseline', 'middle')
       .text('+1.0 U')
       .style('opacity', 0).transition().delay(3000).duration(500).style('opacity', 1);
 
     // Loss Delta (-3.8)
     g.append('path')
-      .attr('d', `M -10 ${yScale(8.8)} Q -30 ${yScale(6.9)} -10 ${yScale(5)}`)
+      .attr('d', `M -10 ${yScale(8.8)} Q -35 ${yScale(6.9)} -10 ${yScale(5)}`)
       .attr('fill', 'none').attr('stroke', '#fb7185').attr('stroke-width', 2)
       .style('opacity', 0).transition().delay(4000).duration(500).style('opacity', 1);
       
     g.append('text')
-      .attr('x', -35).attr('y', yScale(6.9)).attr('fill', '#fb7185')
+      .attr('x', -40).attr('y', yScale(6.9)).attr('fill', '#fb7185')
       .style('font-size', '11px').style('font-weight', 'black').style('text-anchor', 'end').attr('alignment-baseline', 'middle')
       .text('-3.8 U')
       .style('opacity', 0).transition().delay(4000).duration(500).style('opacity', 1);
@@ -197,21 +197,21 @@ const CitizenCard = ({
   return (
     <div className="bg-zinc-800 border border-zinc-700 p-5 rounded-2xl flex flex-col gap-4">
       <div>
-        <h3 className="text-zinc-400 font-bold uppercase tracking-widest text-[10px] mb-1">{title}</h3>
-        <p className="text-white font-black text-xl">{name}</p>
+        <h3 className="text-zinc-400 font-bold uppercase tracking-widest text-xs mb-1">{title}</h3>
+        <p className="text-white font-black text-2xl">{name}</p>
       </div>
       
       {/* LS Bar */}
       <div>
         <div className="flex justify-between items-end mb-1">
-          <span className="text-xs font-bold text-zinc-300">Life Satisfaction</span>
+          <span className="text-sm font-bold text-zinc-300">Life Satisfaction</span>
           <div className="flex items-center gap-2">
             {showDiff && (
-              <span className={`text-[10px] font-black ${lsDiff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`text-sm font-black ${lsDiff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {lsDiff >= 0 ? '+' : ''}{lsDiff.toFixed(1)}
               </span>
             )}
-            <span className="text-sm font-black text-white">{ls.toFixed(1)} <span className="text-zinc-500 font-medium text-[10px]">/ 10</span></span>
+            <span className="text-xl font-black text-white">{ls.toFixed(1)} <span className="text-zinc-500 font-medium text-sm">/ 10</span></span>
           </div>
         </div>
         <div className="h-4 bg-zinc-900 rounded-full overflow-hidden border border-zinc-700">
@@ -227,14 +227,14 @@ const CitizenCard = ({
       {/* Utility Bar */}
       <div>
         <div className="flex justify-between items-end mb-1">
-          <span className="text-xs font-bold text-pink-300">Utility (Subjective Value)</span>
+          <span className="text-sm font-bold text-pink-300">Utility (Subjective Value)</span>
           <div className="flex items-center gap-2">
             {showDiff && (
-              <span className={`text-[10px] font-black ${uDiff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`text-sm font-black ${uDiff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {uDiff >= 0 ? '+' : ''}{uDiff.toFixed(1)} U
               </span>
             )}
-            <span className="text-sm font-black text-pink-400">{u.toFixed(1)} <span className="text-zinc-500 font-medium text-[10px]">/ 10</span></span>
+            <span className="text-xl font-black text-pink-400">{u.toFixed(1)} <span className="text-zinc-500 font-medium text-sm">/ 10</span></span>
           </div>
         </div>
         <div className="h-4 bg-zinc-900 rounded-full overflow-hidden border border-zinc-700">
@@ -403,7 +403,7 @@ export default function UtilityInterventionOverlay() {
                         If you rejected these gambles, you acted like a typical voter. We feel the pain of a loss much more sharply than the joy of an equivalent gain—this is called <strong>Loss Aversion</strong>. Furthermore, we are extremely unwilling to risk pushing someone into absolute deprivation, demonstrating <strong>Inequality Aversion</strong>.
                       </p>
                       <p className="text-pink-400 font-bold text-lg mt-2">
-                        This shows that people value a "-2 LS" change much greater than a "+2 LS" change.
+                        This shows that people value a "-2 LS" change much greater than a "+2 LS" change. The scale is not linear.
                       </p>
                     </motion.div>
                   )}
@@ -449,7 +449,7 @@ export default function UtilityInterventionOverlay() {
 
               <div className="flex justify-between items-center mt-2">
                 <p className="text-zinc-500 italic max-w-md text-sm">
-                  Because the curve is flat at the top, taking risks when you are already comfortable is mathematically irrational.
+                  Notice how the curve flattens out at higher levels. Gaining an extra point of satisfaction when you are already secure offers very little actual value compared to the devastation of losing it.
                 </p>
                 <button 
                   onClick={() => setStep(2)}
@@ -490,7 +490,7 @@ export default function UtilityInterventionOverlay() {
                       className="flex flex-col h-full"
                     >
                       <div className="flex items-center justify-between mb-6">
-                        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/30">
+                        <span className="bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest border border-emerald-500/30">
                           Scenario A: Apply +1 LS
                         </span>
                         {demoIndex === 1 && (
@@ -515,11 +515,11 @@ export default function UtilityInterventionOverlay() {
 
                       <div className="mt-auto flex justify-between items-center">
                         {demoIndex === 0 ? (
-                          <p className="text-zinc-500 italic text-sm">
+                          <p className="text-zinc-500 italic text-base">
                             Click to apply a flat +1 LS increase to both citizens.
                           </p>
                         ) : (
-                          <p className="text-zinc-300 font-medium text-sm max-w-md">
+                          <p className="text-zinc-300 font-medium text-base w-full">
                             Citizen A's utility skyrocketed because the +1 lifted them out of hardship. Citizen B barely noticed the same +1 increase.
                           </p>
                         )}
@@ -527,14 +527,14 @@ export default function UtilityInterventionOverlay() {
                         {demoIndex === 0 ? (
                           <button 
                             onClick={() => setDemoIndex(1)}
-                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer"
+                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer shrink-0 ml-4"
                           >
                             Apply +1 LS to Both
                           </button>
                         ) : (
                           <button 
                             onClick={() => setDemoIndex(2)}
-                            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors cursor-pointer"
+                            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors cursor-pointer shrink-0 ml-4"
                           >
                             Next Scenario &rarr;
                           </button>
@@ -552,7 +552,7 @@ export default function UtilityInterventionOverlay() {
                       className="flex flex-col h-full"
                     >
                       <div className="flex items-center justify-between mb-6">
-                        <span className="bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/30">
+                        <span className="bg-rose-500/20 text-rose-400 px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest border border-rose-500/30">
                           Scenario B: Apply -1 LS
                         </span>
                         {demoIndex === 3 && (
@@ -577,11 +577,11 @@ export default function UtilityInterventionOverlay() {
 
                       <div className="mt-auto flex justify-between items-center">
                         {demoIndex === 2 ? (
-                          <p className="text-zinc-500 italic text-sm">
+                          <p className="text-zinc-500 italic text-base">
                             Click to apply a flat -1 LS penalty to both citizens.
                           </p>
                         ) : (
-                          <p className="text-zinc-300 font-medium text-sm max-w-md">
+                          <p className="text-zinc-300 font-medium text-base w-full">
                             Citizen C suffered a massive drop in subjective value because they fell into the steep part of the curve. Citizen D absorbed the -1 with minimal issue.
                           </p>
                         )}
@@ -589,14 +589,14 @@ export default function UtilityInterventionOverlay() {
                         {demoIndex === 2 ? (
                           <button 
                             onClick={() => setDemoIndex(3)}
-                            className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer"
+                            className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer shrink-0 ml-4"
                           >
                             Apply -1 LS to Both
                           </button>
                         ) : (
                           <button 
                             onClick={handleComplete}
-                            className="px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors cursor-pointer"
+                            className="px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors cursor-pointer shrink-0 ml-4"
                           >
                             Resume Simulation
                           </button>
