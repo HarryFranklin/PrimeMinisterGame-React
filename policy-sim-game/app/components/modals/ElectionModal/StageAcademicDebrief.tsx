@@ -206,7 +206,7 @@ export default function StageAcademicDebrief({
                 
                 <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
-                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
+                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value</span>
                   <strong className="text-2xl text-pink-600">
                     {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
                   </strong>
