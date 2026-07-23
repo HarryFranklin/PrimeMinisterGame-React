@@ -9,6 +9,7 @@ import DevPanel from "./components/DevPanel";
 import IntroModal from "./components/modals/IntroModal";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
+import UtilityInterventionOverlay from "./components/modals/UtilityInterventionOverlay";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
@@ -122,6 +123,10 @@ export default function Home() {
                       onFinish={game.handleCompleteTerm}
                       onAnswerPressQuestion={game.applyPressConferenceDelta}
                     />
+                  )}
+
+                  {game.gamePhase === GamePhase.UtilityIntervention && (
+                    <UtilityInterventionOverlay key="utility-intervention" />
                   )}
                   
                 </AnimatePresence>

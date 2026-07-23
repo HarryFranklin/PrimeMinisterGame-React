@@ -46,6 +46,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
+  const [hasSeenUtilityIntervention, setHasSeenUtilityIntervention] = useState(false);
   
   // Game starts on Intro phase now
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Intro);
@@ -124,6 +125,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setIsParliamentDissolved(parsed.isParliamentDissolved || false);
     setGamePhase(parsed.gamePhase || GamePhase.Intro);
     setCompletedRuns(parsed.completedRuns || []);
+    setHasSeenUtilityIntervention(parsed.hasSeenUtilityIntervention || false);
   }, []);
 
   const handleSaveError = useCallback(() => {
@@ -134,8 +136,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       population, initialPopulation, baselinePopulation,
       currentTurn, currentCycle, cycleAttempts, history,
       cycleSchedule, cycleMAO, currentDeck, optimalPath,
-      isParliamentDissolved, gamePhase, completedRuns
-  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase, completedRuns]);
+      isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention
+  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention]);
 
   const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
@@ -239,9 +241,16 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   // Starts a term cleanly without wiping the save, allowing progression
   const startLevel = useCallback((cycle: ElectionCycle) => {
+    // Intercept Cycle 3 if they haven't seen the intervention
+    if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
+      setCurrentCycle(cycle); // Lock in the cycle they are attempting to start
+      setGamePhase(GamePhase.UtilityIntervention);
+      return;
+    }
+
     startCycle(cycle);
     setCycleAttempts(1);
-  }, [startCycle]);
+  }, [startCycle, hasSeenUtilityIntervention]);
 
   const handleCompleteTerm = useCallback(() => {
     const rule = FRAMEWORK_RULES[currentCycle];
@@ -308,6 +317,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     dpmConsulted, setDpmConsulted, resetDpmConsulted,
     wipeSave,
     lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null),
-    applyPressConferenceDelta
+    applyPressConferenceDelta,
+    setHasSeenUtilityIntervention, startCycle
   };
 }

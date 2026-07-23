@@ -73,5 +73,6 @@ export enum GamePhase {
   Briefing = 'briefing',
   Playing = 'playing',
   Election = 'election',
-  Debrief = 'debrief'
+  Debrief = 'debrief',
+  UtilityIntervention = 'utilityIntervention'
 }
