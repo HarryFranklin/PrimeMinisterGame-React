@@ -19,16 +19,13 @@ export default function StageAcademicDebrief({
   currentCycle, 
   finalPopulation, 
   yAxisMax,
-  onReady 
+  onReady
 }: StageAcademicDebriefProps) {
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
-
   const [revealedCitizen1, setRevealedCitizen1] = useState(false);
   const [revealedCitizen2, setRevealedCitizen2] = useState(false);
-
   const [revealedEmpathy, setRevealedEmpathy] = useState(false);
-
   const [revealedPU, setRevealedPU] = useState(false);
   const [revealedSU, setRevealedSU] = useState(false);
 
@@ -53,7 +50,8 @@ export default function StageAcademicDebrief({
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
-  // Smarter Pairing Algorithm: Finds two citizens with almost identical objective gains but maximum difference in subjective utility
+  // Smarter Pairing Algorithm: Finds two citizens with almost identical objective gains 
+  // but maximum difference in subjective utility, FORCING them to start at different points.
   const contrastingCitizens = useMemo(() => {
     if (finalPopulation.length === 0) return [];
 
@@ -86,6 +84,10 @@ export default function StageAcademicDebrief({
         // They must have gained almost identical objective amounts (within 0.3 of each other)
         if (lsDiff > 0.3) continue; 
         
+        // Force them to have started at least 2.5 LS points apart so we are actually comparing different sections of the utility curve.
+        const startDiff = Math.abs(p1.startLS - p2.startLS);
+        if (startDiff < 2.5) continue;
+
         const puDiff = Math.abs(p1.puGained - p2.puGained);
         
         // Heavily penalise objective differences so it prefers identical pairings
@@ -97,6 +99,7 @@ export default function StageAcademicDebrief({
         }
       }
     }
+
     return bestPair;
   }, [finalPopulation, currentCycle]);
 
@@ -206,7 +209,7 @@ export default function StageAcademicDebrief({
                 
                 <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
-                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value</span>
+                  <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
                   <strong className="text-2xl text-pink-600">
                     {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
                   </strong>
