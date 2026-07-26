@@ -27,7 +27,7 @@ export type TelemetryEvent =
         max_scroll_pct: number; // 0 if not scrollable
       };
     }
-
+    
   // ---- Interaction quality: dialogue / text ----
   | { event: "dialogue_shown"; payload: { text_id: string; char_count: number } }
   | {
@@ -98,6 +98,12 @@ export type TelemetryEvent =
   | {
       event: "level_completed";
       payload: { level_id: string; outcome: "win" | "lose"; turns_taken: number; final_score: number };
+    }
+    
+  // ---- Final Debrief ----
+  | {
+      event: "final_debrief_submitted";
+      payload: { best_metric: string; best_society: string };
     };
 
 // Note: Layer 0 (raw) and Layer 1 (derived) events are NOT part of this union.

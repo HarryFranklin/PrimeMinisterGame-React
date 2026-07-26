@@ -142,12 +142,7 @@ export default function Home() {
                   )}
 
                   {game.gamePhase === GamePhase.Debrief && (
-                    <FinalDebriefModal 
-                      key="debrief"
-                      baselinePopulation={game.initialPopulation}
-                      finalPopulation={game.population}
-                      yAxisMax={game.yAxisMax}
-                    />
+                    <FinalDebriefModal key="debrief" />
                   )}
                   
                 </AnimatePresence>

@@ -274,16 +274,16 @@ export default function UtilityTable({
 
       {/* Score Output Box */}
       <div className="rounded-xl border border-zinc-200 bg-white p-4 lg:p-5 flex items-center justify-between shadow-sm shrink-0 mt-auto">
-        <span className="text-xs lg:text-sm font-black uppercase tracking-widest text-zinc-800">
+        <span className="text-sm font-black uppercase tracking-widest text-zinc-800">
           {metricName}
         </span>
         <div className="flex items-center gap-3">
           {forecastState === 'previewing' && !isNeutral ? (
-            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
+            <span className="text-xl font-black tabular-nums text-zinc-800">
               {strBaseScore} <span className="text-zinc-400 font-bold mx-2">→</span> <span className={scoreColor}>{strScore}</span>
             </span>
           ) : (
-            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
+            <span className="text-xl font-black tabular-nums text-zinc-800">
               {strScore}
             </span>
           )}
