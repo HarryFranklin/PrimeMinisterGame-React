@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   isTelemetryDebugEnabled,
   subscribeToEvents,
@@ -23,17 +23,23 @@ const LAYER_COLORS: Record<string, string> = {
 
 function EventEntry({ e }: { e: LoggedEvent }) {
   return (
-    <details style={styles.entry}>
-      <summary style={styles.entrySummary}>
-        <span style={styles.entryTime}>{formatTime(e.ts)}</span>
-        {e.level_id && <span style={styles.tag}>lvl:{e.level_id}</span>}
-        {e.attempt_number !== undefined && <span style={styles.tag}>#{e.attempt_number}</span>}
-        {e.turn !== undefined && <span style={styles.tag}>turn:{e.turn}</span>}
-        {e.ms_since_last_same_event !== null && (
-          <span style={styles.tagMuted}>+{e.ms_since_last_same_event}ms since last {e.event}</span>
-        )}
+    <details className="mt-1 border-t border-zinc-800 pt-1 px-3 pb-2 [&::-webkit-details-marker]:hidden group/entry">
+      <summary className="flex gap-2 items-center cursor-pointer text-[10px] text-zinc-400 hover:text-zinc-200 list-none select-none">
+        <span className="text-zinc-500 font-mono shrink-0">{formatTime(e.ts)}</span>
+        <span className="text-[8px] ml-auto transition-transform group-open/entry:rotate-180">▼</span>
+        
+        <div className="flex flex-wrap gap-1 flex-1">
+            {e.level_id && <span className="bg-zinc-800 rounded px-1.5 py-0.5 text-zinc-300 font-mono">lvl:{e.level_id}</span>}
+            {e.attempt_number !== undefined && <span className="bg-zinc-800 rounded px-1.5 py-0.5 text-zinc-300 font-mono">#{e.attempt_number}</span>}
+            {e.turn !== undefined && <span className="bg-zinc-800 rounded px-1.5 py-0.5 text-zinc-300 font-mono">turn:{e.turn}</span>}
+            {e.ms_since_last_same_event !== null && (
+            <span className="text-zinc-600">+{e.ms_since_last_same_event}ms since last {e.event}</span>
+            )}
+        </div>
       </summary>
-      <pre style={styles.pre}>{JSON.stringify({ payload: e.payload, ms_since_last_event: e.ms_since_last_event }, null, 2)}</pre>
+      <pre className="bg-zinc-950 border border-zinc-800 rounded p-2 text-[10px] overflow-x-auto mt-2 text-pink-300/80 font-mono leading-relaxed">
+        {JSON.stringify({ payload: e.payload, ms_since_last_event: e.ms_since_last_event }, null, 2)}
+      </pre>
     </details>
   );
 }
@@ -54,20 +60,22 @@ function GroupedLog({ log }: { log: LoggedEvent[] }) {
   }, [log]);
 
   if (groups.length === 0) {
-    return <div style={styles.empty}>No events yet — go interact with the game.</div>;
+    return <div className="text-zinc-500 italic text-[11px] p-3 text-center">No events yet — go interact with the game.</div>;
   }
 
   return (
-    <div>
+    <div className="flex flex-col gap-1.5">
       {groups.map(([eventName, entries]) => {
         const layer = entries[0]?.layer ?? "semantic";
         return (
-          <details key={eventName} open={layer !== "raw"} style={styles.group}>
-            <summary style={styles.groupSummary}>
-              <span style={{ ...styles.layerDot, background: LAYER_COLORS[layer] }} />
-              {eventName} <span style={styles.count}>({entries.length})</span>
+          <details key={eventName} open={layer !== "raw"} className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/50 [&::-webkit-details-marker]:hidden group/group">
+            <summary className="bg-zinc-800/80 px-3 py-2 text-[11px] font-bold cursor-pointer hover:bg-zinc-700/80 flex items-center gap-2 list-none select-none">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: LAYER_COLORS[layer] }} />
+              <span className="text-zinc-200">{eventName}</span> 
+              <span className="text-zinc-500 font-normal">({entries.length})</span>
+              <span className="text-[8px] text-zinc-500 ml-auto transition-transform group-open/group:rotate-180">▼</span>
             </summary>
-            <div style={styles.groupBody}>
+            <div className="pb-2">
               {entries
                 .slice()
                 .reverse()
@@ -102,13 +110,13 @@ function TimelineView({ log }: { log: LoggedEvent[] }) {
   );
 
   if (attempts.length === 0) {
-    return <div style={styles.empty}>No attempts yet — call startLevelAttempt() when a level begins.</div>;
+    return <div className="text-zinc-500 italic text-[11px] p-3 text-center">No attempts yet — call startLevelAttempt() when a level begins.</div>;
   }
 
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <select
-        style={styles.select}
+        className="w-full bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] mb-2 shrink-0 outline-none focus:border-zinc-600"
         value={activeAttemptId ?? ""}
         onChange={(e) => setSelected(e.target.value)}
       >
@@ -118,13 +126,13 @@ function TimelineView({ log }: { log: LoggedEvent[] }) {
           </option>
         ))}
       </select>
-      <div style={{ marginTop: 8 }}>
+      <div className="flex-1 overflow-y-auto pr-1">
         {timeline.map((e, i) => (
-          <div key={i} style={styles.timelineRow}>
-            <span style={styles.entryTime}>{formatTime(e.ts)}</span>
-            <span style={{ ...styles.layerDot, background: LAYER_COLORS[e.layer] }} />
-            <span style={styles.timelineEvent}>{e.event}</span>
-            {e.turn !== undefined && <span style={styles.tagMuted}>turn {e.turn}</span>}
+          <div key={i} className="flex items-center gap-2 text-[10px] py-1.5 border-b border-zinc-800/50">
+            <span className="text-zinc-500 font-mono shrink-0">{formatTime(e.ts)}</span>
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: LAYER_COLORS[e.layer] }} />
+            <span className="text-zinc-300 font-mono truncate">{e.event}</span>
+            {e.turn !== undefined && <span className="text-zinc-600 shrink-0 ml-auto">turn {e.turn}</span>}
           </div>
         ))}
       </div>
@@ -148,27 +156,35 @@ export default function TelemetryDevPanel() {
   if (!enabled) return null;
 
   return (
-    <div style={styles.root}>
+    <div className="fixed bottom-4 right-4 z-[99999] flex flex-col items-end gap-3 font-sans">
       {!open && (
-        <button style={styles.tab} onClick={() => setOpen(true)}>
+        <button 
+          className="bg-zinc-800/80 backdrop-blur-sm text-zinc-400 text-[10px] uppercase tracking-widest font-bold px-4 py-2 rounded-full hover:bg-zinc-700 hover:text-white transition-colors border border-zinc-600 shadow-lg cursor-pointer"
+          onClick={() => setOpen(true)}
+        >
           🔭 Telemetry ({log.length})
         </button>
       )}
 
       {open && (
-        <div style={styles.panel}>
-          <div style={styles.header}>
-            <strong>Telemetry (dev)</strong>
-            <button style={styles.iconButton} onClick={() => setOpen(false)}>
+        <div className="bg-zinc-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-zinc-700 w-80 lg:w-[420px] max-h-[70vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+          
+          <div className="flex justify-between items-center p-3 border-b border-zinc-800 shrink-0">
+            <strong className="text-pink-500 uppercase tracking-widest text-xs font-bold">Telemetry (dev)</strong>
+            <button 
+              className="text-zinc-500 hover:text-zinc-300 cursor-pointer text-sm leading-none px-1" 
+              onClick={() => setOpen(false)}
+            >
               ✕
             </button>
           </div>
 
-          <div style={styles.controls}>
-            <label style={styles.checkboxRow}>
+          <div className="flex flex-wrap gap-2 items-center p-3 border-b border-zinc-800 shrink-0">
+            <label className="flex items-center gap-1.5 text-[11px] text-zinc-400 cursor-pointer hover:text-zinc-200">
               <input
                 type="checkbox"
                 checked={consoleOn}
+                className="accent-pink-600 rounded-sm bg-zinc-800 border-zinc-700 cursor-pointer"
                 onChange={(e) => {
                   setConsoleOn(e.target.checked);
                   setConsoleLogging(e.target.checked);
@@ -176,166 +192,55 @@ export default function TelemetryDevPanel() {
               />
               Log to console
             </label>
-            <button style={styles.smallButton} onClick={() => setDataOpen((v) => !v)}>
-              {dataOpen ? "Hide live data" : "Show live data"}
-            </button>
-            <button style={styles.smallButton} onClick={() => downloadLog()}>
-              Download JSON
-            </button>
-            <button
-              style={styles.smallButtonDanger}
-              onClick={() => {
-                clearLog();
-                setLog([]);
-              }}
-            >
-              Clear
-            </button>
+            
+            <div className="flex gap-2 ml-auto">
+              <button 
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-md px-2 py-1 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer" 
+                onClick={() => setDataOpen((v) => !v)}
+              >
+                {dataOpen ? "Hide data" : "Show data"}
+              </button>
+              <button 
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-md px-2 py-1 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer" 
+                onClick={() => downloadLog()}
+              >
+                Download JSON
+              </button>
+              <button
+                className="bg-rose-900/30 hover:bg-rose-900/50 text-rose-400 border border-rose-900/50 rounded-md px-2 py-1 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer"
+                onClick={() => {
+                  clearLog();
+                  setLog([]);
+                }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           {dataOpen && (
-            <>
-              <div style={styles.viewToggle}>
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex gap-1.5 p-3 pb-2 shrink-0 border-b border-zinc-800/50">
                 <button
-                  style={viewMode === "grouped" ? styles.viewTabActive : styles.viewTab}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex-1 ${viewMode === "grouped" ? 'bg-zinc-800 text-zinc-200 border border-pink-600/50 shadow-sm' : 'bg-transparent text-zinc-500 border border-zinc-800 hover:text-zinc-300 hover:bg-zinc-800/50'}`}
                   onClick={() => setViewMode("grouped")}
                 >
-                  Grouped by type
+                  Grouped
                 </button>
                 <button
-                  style={viewMode === "timeline" ? styles.viewTabActive : styles.viewTab}
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex-1 ${viewMode === "timeline" ? 'bg-zinc-800 text-zinc-200 border border-pink-600/50 shadow-sm' : 'bg-transparent text-zinc-500 border border-zinc-800 hover:text-zinc-300 hover:bg-zinc-800/50'}`}
                   onClick={() => setViewMode("timeline")}
                 >
-                  Timeline (per attempt)
+                  Timeline
                 </button>
               </div>
-              <div style={styles.dataView}>
+              <div className="flex-1 overflow-y-auto p-3 pt-2">
                 {viewMode === "grouped" ? <GroupedLog log={log} /> : <TimelineView log={log} />}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  root: { position: "fixed", bottom: 16, right: 16, zIndex: 99999, fontFamily: "-apple-system, system-ui, sans-serif" },
-  tab: {
-    background: "#1e2129",
-    color: "#e6e6e6",
-    border: "1px solid #2a2e38",
-    borderRadius: 20,
-    padding: "8px 14px",
-    fontSize: 13,
-    cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-  },
-  panel: {
-    width: 420,
-    maxHeight: "70vh",
-    display: "flex",
-    flexDirection: "column",
-    background: "#16181d",
-    border: "1px solid #2a2e38",
-    borderRadius: 10,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-    color: "#e6e6e6",
-    overflow: "hidden",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "10px 12px",
-    borderBottom: "1px solid #2a2e38",
-    fontSize: 13,
-  },
-  iconButton: { background: "none", border: "none", color: "#8a8f98", cursor: "pointer", fontSize: 14 },
-  controls: { display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #2a2e38" },
-  checkboxRow: { display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#c9cdd6" },
-  smallButton: {
-    background: "#262a33",
-    color: "#e6e6e6",
-    border: "1px solid #333844",
-    borderRadius: 6,
-    padding: "5px 10px",
-    fontSize: 12,
-    cursor: "pointer",
-  },
-  smallButtonDanger: {
-    background: "#3a2226",
-    color: "#f28b82",
-    border: "1px solid #4a2a2f",
-    borderRadius: 6,
-    padding: "5px 10px",
-    fontSize: 12,
-    cursor: "pointer",
-  },
-  dataView: { overflowY: "auto", padding: "8px 12px 12px" },
-  viewToggle: { display: "flex", gap: 4, padding: "8px 12px 0" },
-  viewTab: {
-    background: "none",
-    color: "#8a8f98",
-    border: "1px solid #2a2e38",
-    borderRadius: 6,
-    padding: "4px 10px",
-    fontSize: 11,
-    cursor: "pointer",
-  },
-  viewTabActive: {
-    background: "#262a33",
-    color: "#e6e6e6",
-    border: "1px solid #3b6ef2",
-    borderRadius: 6,
-    padding: "4px 10px",
-    fontSize: 11,
-    cursor: "pointer",
-  },
-  select: {
-    width: "100%",
-    background: "#0f1115",
-    color: "#e6e6e6",
-    border: "1px solid #2a2e38",
-    borderRadius: 6,
-    padding: "6px 8px",
-    fontSize: 12,
-  },
-  timelineRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 11,
-    padding: "3px 0",
-    borderBottom: "1px solid #1c1f26",
-  },
-  timelineEvent: { color: "#c9cdd6", flex: 1 },
-  layerDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
-  empty: { color: "#8a8f98", fontSize: 12, padding: "12px 0" },
-  group: { marginBottom: 6, border: "1px solid #23262e", borderRadius: 6, overflow: "hidden" },
-  groupSummary: {
-    background: "#1e2129",
-    padding: "8px 10px",
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-    listStyle: "none",
-  },
-  groupBody: { padding: "4px 10px 8px" },
-  count: { color: "#8a8f98", fontWeight: 400 },
-  entry: { marginTop: 4, borderTop: "1px solid #23262e", paddingTop: 4 },
-  entrySummary: { display: "flex", gap: 8, alignItems: "center", cursor: "pointer", fontSize: 11, listStyle: "none" },
-  entryTime: { color: "#8a8f98", fontVariantNumeric: "tabular-nums" },
-  tag: { background: "#262a33", borderRadius: 4, padding: "1px 6px", color: "#c9cdd6" },
-  tagMuted: { color: "#6b7078" },
-  pre: {
-    background: "#0f1115",
-    border: "1px solid #23262e",
-    borderRadius: 4,
-    padding: 8,
-    fontSize: 11,
-    overflowX: "auto",
-    marginTop: 4,
-  },
-};

@@ -12,6 +12,7 @@ interface UtilityTableProps {
   forecastState: ForecastState;
   forecastsRemaining: number;
   onRunForecast: () => void;
+  detailsOpen: boolean;
 }
 
 const ALL_COLUMNS = Array.from({ length: 11 }, (_, i) => i); 
@@ -34,6 +35,7 @@ export default function UtilityTable({
   forecastState,
   forecastsRemaining,
   onRunForecast,
+  detailsOpen,
 }: UtilityTableProps) {
   const currentCtx = useMemo(
     () => buildCycleContext(population, cycle),
@@ -135,42 +137,40 @@ export default function UtilityTable({
   const score       = totalYield / totalPeople;
   const baseScore   = baseYield / totalPeople;
 
-  // Format strings safely to avoid rounding illusion
   const strBaseScore = baseScore.toFixed(2);
   const strScore = score.toFixed(2);
   const isNeutral = strBaseScore === strScore;
   const isPositive = Number(strScore) > Number(strBaseScore);
-  const scoreColor = isNeutral ? 'text-zinc-800' : isPositive ? 'text-emerald-600' : 'text-rose-600';
+  
+  const scoreColor = isNeutral ? 'text-zinc-800' : isPositive ? 'text-blue-500' : 'text-amber-500';
 
   const isPreviewing = forecastState === 'previewing';
 
   return (
     <div className="w-full flex flex-col gap-3 h-full flex-1">
       <div className="flex-1 flex flex-col min-h-0 overflow-x-auto pb-2">
-        {/* Removed h-full and reduced min-w slightly to fit the container better */}
-        <table className="w-full min-w-[450px] table-fixed border-collapse text-center text-[11px]">
+        <table className="w-full min-w-[450px] table-fixed border-collapse text-center text-xs">
           <colgroup>
-            <col style={{ width: '60px' }} />
+            <col style={{ width: '64px' }} />
             {DISPLAY_COLUMNS.map(col => <col key={col} />)}
           </colgroup>
           <thead>
             <tr>
-              <th className="bg-zinc-900 text-white text-left px-2 py-1.5 font-bold uppercase tracking-wider text-[9px] rounded-tl-lg relative">
+              <th className="bg-zinc-900 text-white text-left px-2 py-3 font-bold uppercase tracking-wider text-[10px] rounded-tl-lg relative">
                 <div className="flex items-center gap-1">
                   Life Satis.
                   <div className="group relative inline-flex cursor-pointer">
-                    <span className="bg-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-600 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] font-black transition-colors">?</span>
+                    <span className="bg-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-black transition-colors">?</span>
                     
-                    <div className="absolute hidden group-hover:block top-full left-0 mt-2 w-48 bg-zinc-800 text-white text-[10px] p-2.5 rounded-lg shadow-2xl z-[100] normal-case tracking-normal border border-zinc-700 pointer-events-none text-left">
+                    <div className="absolute hidden group-hover:block top-full left-0 mt-2 w-56 bg-zinc-800 text-white text-[11px] p-3 rounded-lg shadow-2xl z-[100] normal-case tracking-normal border border-zinc-700 pointer-events-none text-left">
                       In this simulation, a score of 2 represents the absolute baseline of survival (0 Utility). Scores cannot mathematically fall below this point.
-                      
                       <div className="absolute bottom-full left-2 -mb-px border-4 border-transparent border-b-zinc-800"></div>
                     </div>
                   </div>
                 </div>
               </th>
               {DISPLAY_COLUMNS.map(col => (
-                <th key={col} className="bg-zinc-900 text-white px-1 py-1.5 font-black">
+                <th key={col} className="bg-zinc-900 text-white px-1 py-3 font-black text-sm">
                   {col}
                 </th>
               ))}
@@ -179,7 +179,7 @@ export default function UtilityTable({
           <tbody>
             {/* Row 1: % People */}
             <tr className="border-b border-zinc-200">
-              <td className="bg-zinc-100 text-left px-2 py-1.5 font-bold text-zinc-600 text-[9px] uppercase tracking-wide">
+              <td className="bg-zinc-100 text-left px-2 py-4 font-bold text-zinc-600 text-[10px] uppercase tracking-wide">
                 People (%)
               </td>
               {DISPLAY_COLUMNS.map(col => {
@@ -188,14 +188,20 @@ export default function UtilityTable({
                 const pctBefore = Math.round((before / population.length) * 100);
                 const pctAfter = Math.round((after / population.length) * 100);
                 const pctDelta = pctAfter - pctBefore;
+                
+                const isPositiveDelta = pctDelta > 0;
+                const hasChanged = isPreviewing && pctDelta !== 0;
+                
+                const cellClasses = hasChanged 
+                  ? (isPositiveDelta ? 'bg-blue-500/10 border-blue-500/20 text-blue-700' : 'bg-amber-500/10 border-amber-500/20 text-amber-700')
+                  : 'bg-zinc-50 border-zinc-100 text-zinc-900';
 
                 return (
-                  // Removed the forced h-[30%]
-                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100">
+                  <td key={col} className={`px-1 py-4 font-bold leading-none border-x transition-colors duration-300 ${cellClasses}`}>
                     {pctAfter}
-                    {isPreviewing && pctDelta !== 0 && (
-                      <span className={`block text-[9px] font-black mt-0.5 ${pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {pctDelta > 0 ? '+' : ''}{pctDelta}%
+                    {hasChanged && detailsOpen && (
+                      <span className={`block text-[11px] font-black mt-1 ${isPositiveDelta ? 'text-blue-600' : 'text-amber-600'}`}>
+                        {isPositiveDelta ? '+' : ''}{pctDelta}%
                       </span>
                     )}
                   </td>
@@ -205,24 +211,23 @@ export default function UtilityTable({
             
             {/* Row 2: Value of +/- 1 LS (Straddling Columns) */}
             <tr className="border-b border-zinc-200">
-              <td className="bg-white text-left px-2 py-1.5 font-bold text-zinc-500 text-[9px] uppercase tracking-wide leading-tight z-0">
-                Marginal <br/> Transition
+              <td className="bg-white text-left px-2 py-3 font-bold text-zinc-500 text-[10px] uppercase tracking-wide leading-tight z-0">
+                Transition <br/> Value
               </td>
               {DISPLAY_COLUMNS.map(col => {
-                const gain = marginalGains[col]; // Transitioning to col + 1
-                const lossFromNext = marginalLosses[col + 1] || 0; // Transitioning from col + 1 to col
+                const gain = marginalGains[col]; 
+                const lossFromNext = marginalLosses[col + 1] || 0; 
                 const isLast = col === 10;
 
                 return (
-                  // Removed the forced h-[40%]
-                  <td key={col} className="bg-white px-0.5 py-1.5 border-x border-zinc-100 align-middle relative">
+                  <td key={col} className="bg-white px-0.5 py-3 border-x border-zinc-100 align-middle relative">
                     {!isLast && (
-                      <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-1 items-center justify-center z-10 w-10">
-                        <div className="text-emerald-600 bg-emerald-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none border border-emerald-200 shadow-sm">
-                          <span className="text-[8px] font-black tracking-tighter">+{gain.toFixed(2)}</span>
+                      <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-1.5 items-center justify-center z-10 w-11">
+                        <div className="text-emerald-600 bg-emerald-50 px-1 rounded-md w-full py-1 flex flex-col items-center leading-none border border-emerald-200 shadow-sm">
+                          <span className="text-[9px] font-black tracking-tighter">+{gain.toFixed(2)}</span>
                         </div>
-                        <div className="text-rose-600 bg-rose-50 px-1 rounded-sm w-full py-0.5 flex flex-col items-center leading-none border border-rose-200 shadow-sm">
-                          <span className="text-[8px] font-black tracking-tighter">-{lossFromNext.toFixed(2)}</span>
+                        <div className="text-rose-600 bg-rose-50 px-1 rounded-md w-full py-1 flex flex-col items-center leading-none border border-rose-200 shadow-sm">
+                          <span className="text-[9px] font-black tracking-tighter">-{lossFromNext.toFixed(2)}</span>
                         </div>
                       </div>
                     )}
@@ -233,7 +238,7 @@ export default function UtilityTable({
 
             {/* Row 3: Contribution to Total Score */}
             <tr>
-              <td className="bg-zinc-100 text-left px-2 py-1.5 font-bold text-zinc-600 text-[9px] uppercase tracking-wide rounded-bl-lg">
+              <td className="bg-zinc-100 text-left px-2 py-4 font-bold text-zinc-600 text-[10px] uppercase tracking-wide rounded-bl-lg">
                 Column Score
               </td>
               {DISPLAY_COLUMNS.map(col => {
@@ -245,12 +250,17 @@ export default function UtilityTable({
                 const valNeutral = strBeforeVal === strAfterVal;
                 const valPositive = Number(strAfterVal) > Number(strBeforeVal);
 
+                const hasChanged = isPreviewing && !valNeutral;
+                
+                const cellClasses = hasChanged 
+                  ? (valPositive ? 'bg-blue-500/10 border-blue-500/20 text-blue-700' : 'bg-amber-500/10 border-amber-500/20 text-amber-700')
+                  : 'bg-zinc-50 border-zinc-100 text-zinc-900';
+
                 return (
-                  // Removed the forced h-[30%]
-                  <td key={col} className="bg-zinc-50 px-1 py-1.5 font-bold text-zinc-900 leading-none border-x border-zinc-100">
+                  <td key={col} className={`px-1 py-4 font-bold leading-none border-x transition-colors duration-300 ${cellClasses}`}>
                     {afterVal > 0 ? strAfterVal : '-'}
-                    {isPreviewing && !valNeutral && (
-                      <span className={`block text-[9px] font-black mt-0.5 ${valPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {hasChanged && detailsOpen && (
+                      <span className={`block text-[11px] font-black mt-1 ${valPositive ? 'text-blue-600' : 'text-amber-600'}`}>
                         {valPositive ? '+' : ''}{(afterVal - beforeVal).toFixed(2)}
                       </span>
                     )}
@@ -263,17 +273,17 @@ export default function UtilityTable({
       </div>
 
       {/* Score Output Box */}
-      <div className="rounded-lg border border-zinc-200 bg-white p-3 flex items-center justify-between shadow-sm shrink-0 mt-auto">
-        <span className="text-[11px] font-black uppercase tracking-widest text-zinc-800">
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 lg:p-5 flex items-center justify-between shadow-sm shrink-0 mt-auto">
+        <span className="text-xs lg:text-sm font-black uppercase tracking-widest text-zinc-800">
           {metricName}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {forecastState === 'previewing' && !isNeutral ? (
-            <span className="text-lg font-black tabular-nums text-zinc-800">
-              {strBaseScore} <span className="text-zinc-400 font-bold mx-1">→</span> <span className={scoreColor}>{strScore}</span>
+            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
+              {strBaseScore} <span className="text-zinc-400 font-bold mx-2">→</span> <span className={scoreColor}>{strScore}</span>
             </span>
           ) : (
-            <span className="text-lg font-black tabular-nums text-zinc-800">
+            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
               {strScore}
             </span>
           )}

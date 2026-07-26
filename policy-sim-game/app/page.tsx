@@ -3,6 +3,7 @@
 import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
 import DevPanel from "./components/DevPanel";
 import TelemetryDevPanel from "./client/TelemetryDevPanel";
 import { initTelemetry } from "./client/telemetry";
@@ -14,9 +15,11 @@ import IntroModal from "./components/modals/IntroModal";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import UtilityInterventionOverlay from "./components/modals/UtilityInterventionOverlay";
+import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
+
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
 
@@ -36,7 +39,6 @@ export default function Home() {
       const isLowResolution = window.innerWidth < 1024 || window.innerHeight < 600;
       setIsUnsupportedScreen(isLowResolution);
     };
-
     evaluateViewport();
     window.addEventListener('resize', evaluateViewport);
     return () => window.removeEventListener('resize', evaluateViewport);
@@ -47,7 +49,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-      
+       
       {/* --- CINEMATIC CURTAIN --- */}
       {!isHub && (
         <motion.div
@@ -138,6 +140,15 @@ export default function Home() {
                   {game.gamePhase === GamePhase.UtilityIntervention && (
                     <UtilityInterventionOverlay key="utility-intervention" />
                   )}
+
+                  {game.gamePhase === GamePhase.Debrief && (
+                    <FinalDebriefModal 
+                      key="debrief"
+                      baselinePopulation={game.initialPopulation}
+                      finalPopulation={game.population}
+                      yAxisMax={game.yAxisMax}
+                    />
+                  )}
                   
                 </AnimatePresence>
               </ModalOverlay>
@@ -158,6 +169,7 @@ export default function Home() {
         optimalPath={game.optimalPath} 
         cycleMAO={game.cycleMAO}
       />
+
       <TelemetryDevPanel />
     </div>
   );

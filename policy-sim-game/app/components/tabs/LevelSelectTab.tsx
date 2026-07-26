@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
-import { ElectionCycle, AxisVariable } from '../../utils/types';
+import { ElectionCycle, AxisVariable, GamePhase } from '../../utils/types';
 import { Button } from '../ui';
 import D3Chart from '../D3Chart';
 import { MetricsEngine } from '../../utils/MetricsEngine';
@@ -14,13 +14,10 @@ const generateHistogram = (pop: any[]) => Array.from({ length: 11 }, (_, i) => (
 }));
 
 export default function LevelSelectTab() {
-  const { completedRuns, startLevel } = useGame();
+  const { completedRuns, startLevel, setGamePhase } = useGame();
   const unlockedIndex = completedRuns.length;
-  
-  // State to hold the current 'lens' being used to view a completed run
+
   const [viewLenses, setViewLenses] = useState<Record<number, ElectionCycle>>({});
-  
-  // State to handle the cinematic transition overlay
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleStartLevel = (cycle: ElectionCycle) => {
@@ -32,21 +29,23 @@ export default function LevelSelectTab() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 gap-6 animate-in fade-in duration-500 relative">
+       
        <div className="absolute top-4 right-4 z-50">
          <SavingIndicator />
        </div>
-       <div className="text-center max-w-3xl mx-auto mt-4 shrink-0">
+
+       <div className="text-center max-w-4xl mx-auto mt-4 shrink-0">
          <h2 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">
            {unlockedIndex >= 4 ? "Simulation Complete" : "Select Your Persona"}
          </h2>
-         <p className="text-zinc-600 text-sm font-medium">
-           {unlockedIndex >= 4 
-             ? "You have completed all four ideological frameworks. Toggle the metric lenses below to cross-reference how the same outcomes are judged under different philosophies."
+         <p className="text-zinc-600 text-sm font-medium text-balance">
+           {unlockedIndex >= 4
+              ? "You have completed all four ideological frameworks. Toggle the metric lenses below to cross-reference how the same outcomes are judged under different philosophies."
              : "Each Prime Minister represents a distinct political philosophy and is judged by a different metric of success. Complete the current administration to unlock the next."}
          </p>
        </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
          {PM_PROFILES.map((profile, idx) => {
            const run = completedRuns.find(r => r.cycle === profile.cycle);
            const isLocked = idx > unlockedIndex;
@@ -56,11 +55,11 @@ export default function LevelSelectTab() {
            const currentLens = viewLenses[profile.cycle] ?? profile.cycle;
            const lensRule = FRAMEWORK_RULES[currentLens];
            
-           // Calculate the score of the final population using the selected framework's logic
            const displayScore = run ? MetricsEngine.getMetricScore(run.finalPopulation, currentLens) : 0;
 
            return (
              <div key={profile.cycle} className={`relative flex flex-col rounded-2xl border-2 overflow-hidden transition-all duration-500 ${isLocked ? 'border-zinc-200 bg-zinc-50/50 grayscale opacity-60' : isPlayable ? 'border-zinc-800 bg-white shadow-xl scale-[1.02] ring-4 ring-zinc-900/10' : 'border-zinc-200 bg-white shadow-sm'}`}>
+               
                <div className={`p-5 pb-3 border-b flex items-center gap-3 ${isLocked ? 'bg-zinc-200 border-zinc-300' : 'bg-zinc-100 border-zinc-200'}`}>
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-3xl shrink-0 shadow-inner"
@@ -159,7 +158,14 @@ export default function LevelSelectTab() {
          })}
        </div>
 
-       {/* Cinematic Transition Overlay */}
+       {unlockedIndex >= 4 && (
+         <div className="mt-4 mb-8 flex justify-center animate-in fade-in slide-in-from-bottom-4">
+           <Button variant="accent" size="lg" loud pulse onClick={() => setGamePhase(GamePhase.Debrief)}>
+             Finish Game & View Final Debrief
+           </Button>
+         </div>
+       )}
+
        <AnimatePresence>
          {isTransitioning && (
            <motion.div
