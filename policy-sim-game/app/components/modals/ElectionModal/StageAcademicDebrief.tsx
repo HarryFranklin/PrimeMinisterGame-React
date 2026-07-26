@@ -50,8 +50,8 @@ export default function StageAcademicDebrief({
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
-  // Smarter Pairing Algorithm: Finds two citizens with almost identical objective gains 
-  // but maximum difference in subjective utility, FORCING them to start at different points.
+  // Robust Pairing Algorithm: Uses weighted scoring to find the best possible comparison pair
+  // instead of rigid pass/fail checks which can cause silent fallbacks.
   const contrastingCitizens = useMemo(() => {
     if (finalPopulation.length === 0) return [];
 
@@ -70,31 +70,37 @@ export default function StageAcademicDebrief({
     });
 
     let bestPair = [enriched[0], enriched[1]];
-    let maxContrast = -1;
+    let maxScore = -Infinity;
 
     for (let i = 0; i < enriched.length; i++) {
       for (let j = i + 1; j < enriched.length; j++) {
         const p1 = enriched[i];
         const p2 = enriched[j];
         
-        // Ensure both actually gained something noticeable
-        if (p1.lsGained < 0.3 || p2.lsGained < 0.3) continue;
+        const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
         
         const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
-        // They must have gained almost identical objective amounts (within 0.3 of each other)
-        if (lsDiff > 0.3) continue; 
-        
-        // Force them to have started at least 2.5 LS points apart so we are actually comparing different sections of the utility curve.
         const startDiff = Math.abs(p1.startLS - p2.startLS);
-        if (startDiff < 2.5) continue;
-
         const puDiff = Math.abs(p1.puGained - p2.puGained);
         
-        // Heavily penalise objective differences so it prefers identical pairings
-        const score = puDiff - (lsDiff * 2); 
+        let score = 0;
         
-        if (score > maxContrast) {
-          maxContrast = score;
+        // Massive bonus for moving in the same direction (both up or both down)
+        if (sameDirection) {
+           score += 100; 
+        }
+        
+        // Heavily penalise differing objective shifts
+        score -= (lsDiff * 20); 
+        
+        // Reward different starting points on the curve
+        score += (startDiff * 2);
+        
+        // Reward diverging subjective utility outcomes
+        score += (puDiff * 5);
+        
+        if (score > maxScore) {
+          maxScore = score;
           bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
         }
       }
@@ -134,6 +140,27 @@ export default function StageAcademicDebrief({
       case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success.\nLet's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
     }
+  };
+
+  const getRawlsianMessage = () => {
+    if (contrastingCitizens.length < 2) return "";
+    
+    const p1 = contrastingCitizens[0];
+    const p2 = contrastingCitizens[1];
+    
+    const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
+    const isGain = p1.lsGained > 0;
+    const similarObjective = Math.abs(p1.lsGained - p2.lsGained) <= 0.5;
+
+    if (sameDirection && similarObjective) {
+      if (isGain) {
+        return "Both citizens experienced a similar objective increase in their living standards. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
+      } else {
+        return "Both citizens experienced a similar objective decrease in their living standards. However, because one was already comfortable and the other was struggling, they felt the pain of that loss completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
+      }
+    }
+    
+    return "These citizens experienced varying objective shifts in their living standards. Notice how their subjective value (utility) does not always scale linearly with their objective gains or losses, depending on where they started on the curve.\n\nNext term, citizens will vote using their unique Societal Utility.";
   };
 
   return (
@@ -223,7 +250,7 @@ export default function StageAcademicDebrief({
           {revealedCitizen1 && revealedCitizen2 && (
             <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
               <DPMMessage title="Unequal Subjective Value" className="border-pink-200 bg-pink-50/30">
-                {`Both citizens experienced a similar objective increase in their living standards. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.`}
+                {getRawlsianMessage()}
               </DPMMessage>
             </motion.div>
           )}
