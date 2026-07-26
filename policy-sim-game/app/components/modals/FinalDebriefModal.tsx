@@ -222,7 +222,7 @@ export default function FinalDebriefModal() {
       
       {/* Baseline Society */}
       <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 flex flex-col shrink-0 w-full md:w-1/2 mx-auto">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Starting Society (Baseline)</h3>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Starting Society (Baseline)</h3>
         <div className="h-[200px] min-h-[200px]">
           <D3Chart 
             plotType="1D"
@@ -246,7 +246,7 @@ export default function FinalDebriefModal() {
           return (
             <div key={run.cycle} className="bg-white rounded-2xl border border-zinc-200 p-4 flex flex-col shadow-sm">
               <h4 className="text-sm font-black uppercase tracking-widest text-zinc-800 text-center">{index + 1}. {rule.frameworkTitle}</h4>
-              <span className="text-[10px] font-bold text-center block mb-3" style={{ color: rule.graphColor }}>
+              <span className="text-[12px] font-bold text-center block mb-3" style={{ color: rule.graphColor }}>
                 {rule.targetMetricName}
               </span>
               <div className="h-[200px] min-h-[200px] mb-3">
