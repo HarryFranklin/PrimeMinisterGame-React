@@ -4,6 +4,10 @@ import { UIProvider, GameProvider } from "./context/GameStateContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
+import TelemetryDevPanel from "./client/TelemetryDevPanel";
+import { initTelemetry } from "./client/telemetry";
+import { startRawCapture } from "./client/rawcapture";
+import { startDerivations } from "./client/derive";
 
 // Modals & Tabs
 import IntroModal from "./components/modals/IntroModal";
@@ -20,6 +24,12 @@ export default function Home() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
+
+  useEffect(() => {
+    initTelemetry({ appVersion: "0.1.0" });
+    startRawCapture();
+    startDerivations();
+  }, []);
 
   useEffect(() => {
     const evaluateViewport = () => {
@@ -148,6 +158,7 @@ export default function Home() {
         optimalPath={game.optimalPath} 
         cycleMAO={game.cycleMAO}
       />
+      <TelemetryDevPanel />
     </div>
   );
 }

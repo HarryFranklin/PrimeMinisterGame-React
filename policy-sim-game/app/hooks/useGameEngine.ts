@@ -8,6 +8,7 @@ import { availablePolicies } from '../data/policies';
 import { FRAMEWORK_RULES } from "../utils/frameworkRules";
 import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
+import { track, setContext, startLevelAttempt } from '../client/telemetry';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -91,6 +92,21 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     const maoResult = MAOEngine.calculateMAO(freshPop, schedule, cycle, MetricsEngine.getMetricScore);
     setCycleMAO(maoResult.maxScore);
     setOptimalPath(maoResult.optimalPath);
+
+    const levelId = ElectionCycle[cycle];
+    startLevelAttempt(levelId); // fresh attempt_id + incrementing attempt_number, resets turn to 0
+    setContext({ levelId, turn: 1 });
+    track("turn_started", {
+      turn: 1,
+      level_id: levelId,
+      score: MetricsEngine.getMetricScore(freshPop, cycle),
+      population: calculateAverage(freshPop),
+    });
+    track("policy_options_presented", {
+      turn: 1,
+      level_id: levelId,
+      options: schedule[0].map(p => p.id),
+    });
     
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
@@ -197,6 +213,27 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       const scoreAfter = MetricsEngine.getMetricScore(nextPop, currentCycle);
       setLastTurnSummary({ policyName: selectedPolicy.policyName, scoreBefore, scoreAfter, turn: currentTurn });
       setPopulation(nextPop);
+
+      const levelId = ElectionCycle[currentCycle];
+      track("policy_selected", {
+        turn: currentTurn,
+        level_id: levelId,
+        policy_id: selectedPolicy.id,
+        options_available: currentDeck.map(p => p.id),
+        score_before: scoreBefore,
+        score_after: scoreAfter,
+        // this game doesn't have a literal "population count" metric that
+        // changes turn to turn - using average life satisfaction here as the
+        // closest per-turn population-wellbeing signal.
+        population_before: calculateAverage(population),
+        population_after: calculateAverage(nextPop),
+      });
+      track("turn_completed", {
+        turn: currentTurn,
+        level_id: levelId,
+        score: scoreAfter,
+        population: calculateAverage(nextPop),
+      });
       
       setHistory(prev => [...prev, {
         turn: currentTurn + 1,
@@ -211,8 +248,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       setCycleSchedule(updatedSchedule);
 
       if (currentTurn < TURNS_PER_CYCLE) {
+        const nextTurn = currentTurn + 1;
         setCurrentDeck(updatedSchedule[currentTurn]);
-        setCurrentTurn(prev => prev + 1);
+        setCurrentTurn(nextTurn);
+        setContext({ turn: nextTurn });
+        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: calculateAverage(nextPop) });
+        track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[currentTurn].map(p => p.id) });
       } else {
         setIsParliamentDissolved(true);
       }
@@ -228,10 +269,16 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, []);
 
   const handleResetCycle = useCallback(() => {
+    track("level_attempt_ended", {
+      level_id: ElectionCycle[currentCycle],
+      attempt_number: cycleAttempts,
+      outcome: "abandoned",
+      turns_taken: currentTurn,
+    });
     wipeSave();
     startCycle(currentCycle);
     setCycleAttempts(prev => prev + 1);
-  }, [currentCycle, wipeSave, startCycle]);
+  }, [currentCycle, currentTurn, cycleAttempts, wipeSave, startCycle]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
     wipeSave();
@@ -256,6 +303,13 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     const rule = FRAMEWORK_RULES[currentCycle];
     const targetScore = cycleMAO * rule.winThresholdScalar;
 
+    track("level_completed", {
+      level_id: ElectionCycle[currentCycle],
+      outcome: turnMetricScore >= targetScore ? "win" : "lose",
+      turns_taken: currentTurn,
+      final_score: turnMetricScore,
+    });
+
     const run: CompletedRun = {
       cycle: currentCycle,
       finalPopulation: [...population],
@@ -277,7 +331,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
 
     setGamePhase(GamePhase.LevelSelect);
-  }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history]);
+  }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn]);
 
   const currentChartData = useMemo(() => {
     if (population.length === 0) return [];

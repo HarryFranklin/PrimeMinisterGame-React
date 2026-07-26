@@ -62,7 +62,7 @@ export default function PopulationPanel({
   const topChart = (
     <Card className={isUtilityCycle ? 'flex-[0.8] min-h-[200px]' : ''}>
       <CardHeader title={populationTitle} />
-      <div className="flex-1 p-2 min-h-0 relative">
+      <div className="flex-1 p-2 min-h-0 relative" data-telemetry-id="population_graph_current" data-telemetry-type="graph">
         <D3Chart
           plotType="1D"
           chartData={currentChartData}
@@ -116,7 +116,7 @@ export default function PopulationPanel({
       {topChart}
       <Card className="pb-0">
         <CardHeader title={<span className="truncate pr-2 block">{bottomChartTitle}</span>} />
-        <div className="flex-1 p-3 pb-0 min-h-0 relative">
+        <div className="flex-1 p-3 pb-0 min-h-0 relative" data-telemetry-id="population_graph_projected" data-telemetry-type="graph">
           <div className="absolute inset-0 p-3 pb-0 pointer-events-none">
             <D3Chart
               plotType="1D"

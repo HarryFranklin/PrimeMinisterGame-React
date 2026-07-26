@@ -1,5 +1,5 @@
 // components/tabs/DashboardTab.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useGame } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { ElectionCycle } from "../../utils/types";
@@ -10,6 +10,8 @@ import ApprovalCard from "../ApprovalCard";
 import PopulationPanel from "./PopulationPanel";
 import AgendaPanel from "./AgendaPanel";
 import TurnSummaryToast from "../TurnSummaryToast";
+import { track, startTimer, stopTimer } from "../../client/telemetry";
+import { useTooltipTelemetry } from "../../client/hooks";
 
 /**
  * Orchestrates the main game screen: wires game state + the derived
@@ -32,10 +34,35 @@ export default function DashboardTab() {
   const [hoveredEnactedId, setHoveredEnactedId] = useState<string | null>(null);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const { trackHover } = useTooltipTelemetry();
 
   useEffect(() => {
     setDetailsOpen(false);
   }, [selectedPolicy]);
+
+  // "Did they click View Details, and for how long, and what did they do
+  // right after" - works no matter which UI path opened/closed it (picking
+  // a different policy, toggling the panel, etc), since it just watches the
+  // (detailsOpen, selectedPolicy) pair rather than a specific click handler.
+  const prevDetailsPolicyId = useRef<string | null>(null);
+  useEffect(() => {
+    const openPolicyId = detailsOpen && selectedPolicy ? selectedPolicy.id : null;
+    const prevId = prevDetailsPolicyId.current;
+
+    if (prevId && prevId !== openPolicyId) {
+      const dwellMs = stopTimer(`view_details_${prevId}`);
+      const resultingAction =
+        selectedPolicy?.id === prevId ? "picked_same_policy" : selectedPolicy ? "picked_other_policy" : "dismissed";
+      track("view_details_closed", { policy_id: prevId, turn: currentTurn, dwell_ms: dwellMs, resulting_action: resultingAction });
+    }
+
+    if (openPolicyId && openPolicyId !== prevId) {
+      startTimer(`view_details_${openPolicyId}`);
+      track("view_details_opened", { policy_id: openPolicyId, turn: currentTurn });
+    }
+
+    prevDetailsPolicyId.current = openPolicyId;
+  }, [detailsOpen, selectedPolicy, currentTurn]);
 
   const activeMarkers = isParliamentDissolved && hoveredHistoryTurn !== null
     ? []
@@ -65,6 +92,7 @@ export default function DashboardTab() {
   const handleHoverEnacted = (policyId: string | null, turn: number | null) => {
     setHoveredEnactedId(policyId);
     setHoveredHistoryTurn(turn);
+    if (policyId) trackHover("enacted_legislation", policyId, currentTurn);
   };
 
   return (

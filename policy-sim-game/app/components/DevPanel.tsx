@@ -37,71 +37,63 @@ export default function DevPanel({
       </button>
 
       {devMode && (
-        <div className="fixed bottom-14 left-4 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 text-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
-          <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2">
+        <div className="fixed bottom-14 left-4 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-zinc-700 w-64 text-sm flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-1.5">
             Developer Panel
           </h3>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-1">
               Jump to Cycle
             </span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => jumpToCycle(ElectionCycle.Benthamite)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
               >
                 1. Benthamite
               </button>
               <button
                 onClick={() => jumpToCycle(ElectionCycle.Rawlsian)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
               >
                 2. Rawlsian
               </button>
               <button
                 onClick={() => jumpToCycle(ElectionCycle.SocietalUtility)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
               >
                 3. Societal
               </button>
               <button
                 onClick={() => jumpToCycle(ElectionCycle.PersonalUtility)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
+                className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
               >
                 4. Personal
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-1">
               Time Controls
             </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setCurrentTurn((prev) => Math.min(turnsPerCycle, prev + 1))}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-              >
-                Skip 1 Turn
-              </button>
-              <button
-                onClick={() => setCurrentTurn(turnsPerCycle)}
-                className="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded-lg text-xs font-bold transition-colors"
-              >
-                Jump to End
-              </button>
-            </div>
+            <button
+              onClick={() => setCurrentTurn(turnsPerCycle)}
+              className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
+            >
+              Jump to End
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-2">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest px-1">
               Cheat Codes
             </span>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-1.5">
               <button
                 onClick={() => setShowOptimalPath(!showOptimalPath)}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                   showOptimalPath
                     ? 'bg-pink-600 text-white'
                     : 'bg-zinc-800 hover:bg-zinc-700'
@@ -114,7 +106,7 @@ export default function DevPanel({
                   localStorage.clear();
                   window.location.href = '/';
                 }}
-                className="bg-red-900/50 hover:bg-red-800 text-red-200 px-3 py-2 rounded-lg text-xs font-bold transition-colors border border-red-900"
+                className="bg-red-900/50 hover:bg-red-800 text-red-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-900"
               >
                 Wipe Save & Restart
               </button>
@@ -122,7 +114,7 @@ export default function DevPanel({
                 onClick={() => {
                   DifficultySimulator.runDeterministicSimulation(10000);
                 }}
-                className="bg-indigo-900/50 hover:bg-indigo-800 text-indigo-200 px-3 py-2 rounded-lg text-xs font-bold transition-colors border border-indigo-900"
+                className="bg-indigo-900/50 hover:bg-indigo-800 text-indigo-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors border border-indigo-900"
               >
                 Run Simulator (Check Console)
               </button>
@@ -131,18 +123,18 @@ export default function DevPanel({
 
           {/* OPTIMAL PATH DEV WIDGET */}
           {showOptimalPath && optimalPath.length > 0 && (
-            <div className="fixed bottom-14 left-80 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-5 rounded-2xl shadow-2xl border border-zinc-700 w-72 animate-in fade-in slide-in-from-left-4">
-              <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-2 mb-3">
+            <div className="fixed bottom-14 left-72 z-[100] bg-zinc-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-zinc-700 w-64 animate-in fade-in slide-in-from-left-4">
+              <h3 className="font-bold text-pink-500 uppercase tracking-widest text-xs border-b border-zinc-800 pb-1.5 mb-2">
                 Optimal Path
               </h3>
-              <ol className="flex flex-col gap-3 text-sm">
+              <ol className="flex flex-col gap-2 text-sm">
                 {optimalPath.map((policy, index) => {
                   const isPast = index + 1 < currentTurn;
                   const isCurrent = index + 1 === currentTurn;
                   return (
                     <li
                       key={index}
-                      className={`flex items-start gap-3 transition-colors ${
+                      className={`flex items-start gap-2 transition-colors ${
                         isPast
                           ? 'opacity-30 line-through'
                           : isCurrent
@@ -151,7 +143,7 @@ export default function DevPanel({
                       }`}
                     >
                       <span className="font-mono text-xs mt-0.5">{index + 1}.</span>
-                      <span className="leading-tight">{policy.policyName}</span>
+                      <span className="leading-tight text-xs">{policy.policyName}</span>
                     </li>
                   );
                 })}

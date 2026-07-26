@@ -32,7 +32,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         <div className="p-3 border-b border-rose-200/50 bg-white/50 flex items-center gap-3 shrink-0">
           <span className="text-2xl bg-white border border-rose-200 w-10 h-10 flex items-center justify-center rounded-full shadow-sm shrink-0">🧑‍💼</span>
           <div>
-            <p className="text-[14px] font-bold text-zinc-800 mt-0.5">
+            <p className="text-xl font-bold text-zinc-800 mt-0.5">
               Term Concluded
             </p>
           </div>
