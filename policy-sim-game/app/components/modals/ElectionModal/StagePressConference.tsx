@@ -128,6 +128,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
   const [isFullscreen, setIsFullscreen] = useState(true);
 
   const readyFiredRef = useRef(false);
+  const finalCorrectCountRef = useRef(0);
 
   const tier = useMemo(() => getApprovalTier(approvalRating), [approvalRating]);
   const q1 = useMemo(() => buildMetricQuestion(currentCycle), [currentCycle]);
@@ -144,9 +145,9 @@ export default function StagePressConference({ currentCycle, approvalRating, his
   const currentPrompt =
     phase === 'q1'
       ? Q1_OPENERS[tier]
-      : phase === 'q2' && q2
+      : phase === 'q2' && q2 !== null
       ? (q1Selected === q1.correctIndex ? Q2_OPENERS.afterCorrect : Q2_OPENERS.afterWrong)
-      : getClosingLine(correctCount, tier);
+      : getClosingLine(finalCorrectCountRef.current, tier);
 
   // Slowed down typing to 35ms per character for readability
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(currentPrompt, 35, introSequence >= 1);
@@ -171,6 +172,10 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     if (q1Selected !== null) return;
     setQ1Selected(index);
     const isCorrect = index === q1.correctIndex;
+    if (isCorrect) {
+      setCorrectCount(c => c + 1);
+      finalCorrectCountRef.current += 1;
+    }
     const skipInfo = tw.getSkipInfo();
     track('press_q1_answered', {
       cycle: ElectionCycle[currentCycle],
@@ -182,19 +187,26 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
     
     // Slowed down transition so the user can register the green check / red cross
-    setPhase(q2 ? 'q2' : 'summary');
+    setTimeout(() => {
+      setPhase(q2 ? 'q2' : 'summary');
+    }, 1500);
   };
 
   const handleAnswerQ2 = (index: number) => {
     if (!q2 || q2Selected !== null) return;
     setQ2Selected(index);
     const isCorrect = index === q2.correctIndex;
+    if (isCorrect) {
+      setCorrectCount(c => c + 1);
+      finalCorrectCountRef.current += 1;
+    }
     const skipInfo = tw.getSkipInfo();
     // Detect if they picked a policy they never actually enacted
     const enactedIds = new Set(history.filter(h => h.enactedPolicyId).map(h => h.enactedPolicyId));
     const chosenOption = q2.options[index];
     const chosenPolicy = availablePolicies.find(p => p.policyName === chosenOption.text);
     const pickedUnenacted = chosenPolicy ? !enactedIds.has(chosenPolicy.id) : false;
+    
     track('press_q2_answered', {
       cycle: ElectionCycle[currentCycle],
       answer_given: chosenOption.text ?? '',
@@ -204,6 +216,11 @@ export default function StagePressConference({ currentCycle, approvalRating, his
       picked_unenacted_policy: pickedUnenacted,
     });
     onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
+
+    // Transition to the summary phase with the same visual delay
+    setTimeout(() => {
+      setPhase('summary');
+    }, 1500);
   };
 
   // Gracefully transition back to the normal Modal flow
