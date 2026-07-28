@@ -3,26 +3,28 @@ import { trackRaw } from "./telemetry";
 // ---------------------------------------------------------------------------
 // Layer 0 — raw capture.
 //
-// Attach these attributes to anything interactive:
-//   data-telemetry-id="carbon_tax_policy_card"   (required — identity)
-//   data-telemetry-type="policy_card"            (optional — grouping/category)
+// This is a BACKUP layer, not the primary source of truth.
+// Your semantic track() calls in components/hooks are the primary signal.
+// Raw capture exists so that "did they click X" has a ground-truth answer
+// even if a semantic event was accidentally not wired up.
 //
-// Any tagged element automatically gets clicks + hover-dwell tracked, no
-// per-component wiring needed. Scrollable containers additionally need:
+// Attach these attributes to elements you want in the raw log:
+//   data-telemetry-id="policy_card_carbon_tax"   (required — identity)
+//   data-telemetry-type="policy_card"             (optional — grouping)
+//
+// For scrollable containers:
 //   data-telemetry-scroll-id="policy_list"
 //
-// This exists so debugging questions like "I saw them click X but the data
-// says they didn't" have a ground-truth answer independent of whatever your
-// semantic track() calls believe happened — and so behavior nobody thought
-// to explicitly instrument still shows up in the log.
+// KEY RULE: raw_click only fires on elements that have data-telemetry-id.
+// Clicks on untagged elements are silently ignored — they add noise without
+// value. Tag something deliberately if you want it in the raw log.
 //
-// Call once, after the DOM exists (e.g. in your root component's effect):
-//   import { startRawCapture } from "./telemetry/rawCapture";
+// Call once at app startup:
 //   useEffect(() => startRawCapture(), []);
 // ---------------------------------------------------------------------------
 
-const HOVER_DWELL_THRESHOLD_MS = 150; // ignore mouse just passing over on the way elsewhere
-const SCROLL_SAMPLE_MS = 250; // throttle scroll loglines per element
+const HOVER_DWELL_THRESHOLD_MS = 150;
+const SCROLL_SAMPLE_MS = 250;
 
 function describeTarget(el: Element | null): { id: string; type: string; text: string } | null {
   const tagged = el?.closest("[data-telemetry-id]");
@@ -40,16 +42,16 @@ export function startRawCapture() {
   if (started || typeof document === "undefined") return;
   started = true;
 
-  // --- clicks ---
+  // --- clicks — ONLY fire if the click landed on a tagged element ---
   document.addEventListener(
     "click",
     (e) => {
       const target = describeTarget(e.target as Element);
+      if (!target) return; // ← ignore untagged clicks entirely
       trackRaw("raw_click", {
-        target_id: target?.id ?? null,
-        target_type: target?.type ?? null,
-        target_text: target?.text ?? null,
-        tagged: !!target,
+        target_id: target.id,
+        target_type: target.type,
+        target_text: target.text,
         x: e.clientX,
         y: e.clientY,
         disabled: (e.target as HTMLButtonElement)?.disabled ?? null,
@@ -77,7 +79,7 @@ export function startRawCapture() {
       hoverStarts.delete(tagged);
       if (!start) return;
       const dwellMs = Date.now() - start;
-      if (dwellMs < HOVER_DWELL_THRESHOLD_MS) return; // too brief to count as real hover
+      if (dwellMs < HOVER_DWELL_THRESHOLD_MS) return;
       trackRaw("raw_hover", {
         target_id: tagged.getAttribute("data-telemetry-id"),
         target_type: tagged.getAttribute("data-telemetry-type") || null,
@@ -87,7 +89,7 @@ export function startRawCapture() {
     { capture: true }
   );
 
-  // --- scroll (capture phase catches descendant scroll containers too) ---
+  // --- scroll (only fires on elements tagged with data-telemetry-scroll-id) ---
   const lastScrollSample = new Map<Element, number>();
   document.addEventListener(
     "scroll",
@@ -111,18 +113,19 @@ export function startRawCapture() {
     { capture: true }
   );
 
-  // --- keys (mainly to catch Enter/Space-mashing through dialogue) ---
+  // --- keys — only Enter/Space/Escape/Tab, and only on tagged elements ---
   document.addEventListener(
     "keydown",
     (e) => {
       if (!["Enter", " ", "Escape", "Tab"].includes(e.key)) return;
       const target = describeTarget(e.target as Element);
-      trackRaw("raw_keydown", { key: e.key, target_id: target?.id ?? null });
+      if (!target) return; // ignore keydowns on untagged elements
+      trackRaw("raw_keydown", { key: e.key, target_id: target.id });
     },
     { capture: true }
   );
 
-  // --- tab visibility (did they alt-tab away mid-modal, etc.) ---
+  // --- tab visibility — this one is always useful regardless of tagging ---
   document.addEventListener("visibilitychange", () => {
     trackRaw("raw_visibility_change", { state: document.visibilityState });
   });
