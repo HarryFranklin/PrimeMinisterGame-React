@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
+import { track } from '../../client/telemetry';
 
 import StageTermSummary from './ElectionModal/StageTermSummary';
 import StageVerdict from './ElectionModal/StageVerdict';
@@ -40,6 +41,28 @@ export default function ElectionModal(props: ElectionModalProps) {
   
   let canProceed = won || cycleAttempts >= 3;
   const totalPages = canProceed ? 6 : 5;
+
+  const cycleKey = ElectionCycle[currentCycle];
+
+  const handleRestartTerm = () => {
+    track('cycle_ended', { cycle: cycleKey, outcome: won ? 'won' : 'lost_retry' });
+    onReset();
+  };
+
+  const handleProceedNextTerm = () => {
+    track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
+    onNextCycle();
+  };
+
+  const handleFinishGame = () => {
+    track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
+    if (onFinish) onFinish();
+  };
+
+  const handleLostFinal = () => {
+    track('cycle_ended', { cycle: cycleKey, outcome: 'lost_final' });
+    onReset();
+  };
 
   useEffect(() => {
     setDefinitions([]);
@@ -131,14 +154,14 @@ export default function ElectionModal(props: ElectionModalProps) {
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
             {!canProceed ? (
-              <button onClick={onReset} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
+              <button onClick={handleLostFinal} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
             ) : (
               <>
-                <button onClick={onReset} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
+                <button onClick={handleRestartTerm} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
                 
                 {!isFinalCycle && (
                   <button 
-                    onClick={onNextCycle} 
+                    onClick={handleProceedNextTerm} 
                     disabled={!pageReady}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
                   >
@@ -148,7 +171,7 @@ export default function ElectionModal(props: ElectionModalProps) {
                 
                 {isFinalCycle && onFinish && (
                   <button 
-                    onClick={onFinish} 
+                    onClick={handleFinishGame} 
                     disabled={!pageReady}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
                   >

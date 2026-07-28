@@ -1,10 +1,11 @@
-import { subscribeToEvents, trackDerived, type LoggedEvent } from "./telemetry";
+import { subscribeToEvents, trackDerived, getCurrentAttemptId, type LoggedEvent } from "./telemetry";
+import { buildCycleSummary } from "./cycleSummary";
 
 // ---------------------------------------------------------------------------
 // Layer 1 — derivations.
 //
 // This is the "virtual sensor" pattern: small functions that listen to the
-// raw event stream, package up what they see, and emit a new synthesized
+// event stream, package up what they see, and emit a new synthesized
 // logline. Game code never calls these directly and doesn't need to know
 // they exist - you can add a new derivation later and it'll apply
 // retroactively to anything still in the log, or live going forward.
@@ -22,6 +23,7 @@ export function startDerivations() {
 
   detectRageClicks();
   detectDialogueReadingDwell();
+  detectCycleEnd();
 }
 
 /** "Mindless clicking" signal: 3+ raw clicks on the same tagged element
@@ -58,10 +60,7 @@ function detectRageClicks() {
  * per-component hook: one raw sensor call when dialogue renders
  * (`trackRaw("raw_dialogue_shown", { text_id, char_count })`, a single line
  * in your dialogue component), matched against the generic raw click on
- * whatever's tagged data-telemetry-id="dialogue_continue_button". This is
- * the pattern from the notes: "log time between dialogue appearing and
- * people clicking continue," done by listening to two streams and emitting
- * a third, rather than hand-computing it at the call site. */
+ * whatever's tagged data-telemetry-id="dialogue_continue_button". */
 function detectDialogueReadingDwell() {
   let lastShown: { text_id: string; char_count: number; ts: number } | null = null;
 
@@ -88,5 +87,26 @@ function detectDialogueReadingDwell() {
       });
       lastShown = null;
     }
+  });
+}
+
+/** Cycle summary rollup. Listens for the semantic "cycle_ended" event
+ * (fired from ElectionModal's Restart Term / Proceed to Next Term / Finish
+ * Game buttons — whichever actually closes out the attempt) and, at that
+ * moment, reduces every event tagged with that attempt_id into one flat
+ * summary object via buildCycleSummary(), then emits it as its own logline
+ * so it lands in the JSON export automatically. */
+function detectCycleEnd() {
+  subscribeToEvents((entry: LoggedEvent) => {
+    if (entry.event !== "cycle_ended") return;
+
+    const attemptId = entry.attempt_id ?? getCurrentAttemptId();
+    if (!attemptId) return;
+
+    const outcome = entry.payload?.outcome as "won" | "lost_retry" | "lost_final" | undefined;
+    const summary = buildCycleSummary(attemptId, outcome);
+    if (!summary) return;
+
+    trackDerived("cycle_summary", summary as unknown as Record<string, unknown>);
   });
 }

@@ -9,6 +9,8 @@ import {
   getFullLog,
   type LoggedEvent,
 } from "./telemetry";
+import { groupTimeline, formatLine, type TimelineGroup } from "./narrative";
+import type { CycleSummary } from "./cycleSummary";
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -51,7 +53,6 @@ function GroupedLog({ log }: { log: LoggedEvent[] }) {
       if (!m.has(e.event)) m.set(e.event, []);
       m.get(e.event)!.push(e);
     }
-    // most-recently-active groups first
     return [...m.entries()].sort((a, b) => {
       const aLast = a[1][a[1].length - 1]?.ts ?? 0;
       const bLast = b[1][b[1].length - 1]?.ts ?? 0;
@@ -90,52 +91,111 @@ function GroupedLog({ log }: { log: LoggedEvent[] }) {
   );
 }
 
-function TimelineView({ log }: { log: LoggedEvent[] }) {
-  const attempts = useMemo(() => {
-    const seen = new Map<string, { attempt_id: string; level_id?: string; attempt_number?: number; started_at: number }>();
-    for (const e of log) {
-      if (!e.attempt_id) continue;
-      if (!seen.has(e.attempt_id)) {
-        seen.set(e.attempt_id, { attempt_id: e.attempt_id, level_id: e.level_id, attempt_number: e.attempt_number, started_at: e.ts });
-      }
-    }
-    return [...seen.values()].sort((a, b) => b.started_at - a.started_at); // most recent first
-  }, [log]);
-
-  const [selected, setSelected] = useState<string | null>(null);
-  const activeAttemptId = selected ?? attempts[0]?.attempt_id ?? null;
-  const timeline = useMemo(
-    () => (activeAttemptId ? log.filter((e) => e.attempt_id === activeAttemptId).sort((a, b) => a.ts - b.ts) : []),
-    [log, activeAttemptId]
+// ---------------------------------------------------------------------------
+// Cycle summary block — rendered inline in the narrative timeline wherever
+// a cycle_summary derived event appears.
+// ---------------------------------------------------------------------------
+function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3 py-0.5">
+      <span className="text-zinc-500">{label}</span>
+      <span className="text-zinc-200 font-mono text-right">{value}</span>
+    </div>
   );
+}
 
-  if (attempts.length === 0) {
-    return <div className="text-zinc-500 italic text-[11px] p-3 text-center">No attempts yet — call startLevelAttempt() when a level begins.</div>;
+function fmtMs(ms: number | null): string {
+  if (ms === null) return "—";
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+}
+
+function CycleSummaryBlock({ summary }: { summary: CycleSummary }) {
+  const turnEntries = Object.entries(summary.time_on_turn).sort((a, b) => Number(a[0]) - Number(b[0]));
+
+  return (
+    <div className="my-2 rounded-lg border border-pink-900/40 bg-pink-950/10 p-3 text-[10px]">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-pink-400 font-bold uppercase tracking-widest text-[10px]">Cycle Summary</span>
+        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${summary.player_won ? "bg-emerald-900/50 text-emerald-400" : "bg-rose-900/50 text-rose-400"}`}>
+          {summary.player_won ? "Won" : "Lost"}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4">
+        <div>
+          <SummaryRow label="Starting Score" value={summary.starting_score?.toFixed(1) ?? "—"} />
+          <SummaryRow label="Final Score" value={summary.final_score?.toFixed(1) ?? "—"} />
+          <SummaryRow
+            label="Score Delta"
+            value={summary.score_delta !== null ? (summary.score_delta >= 0 ? `▲${summary.score_delta.toFixed(1)}` : `▼${Math.abs(summary.score_delta).toFixed(1)}`) : "—"}
+          />
+          <SummaryRow label="Turns Played" value={summary.turns_played} />
+          <SummaryRow label="Total Duration" value={fmtMs(summary.total_cycle_duration_ms)} />
+        </div>
+        <div>
+          <SummaryRow label="Viewed Voter Quotes" value={summary.player_viewed_voter_quotes ? `Yes (${summary.voter_quotes_clicked})` : "No"} />
+          <SummaryRow label="Viewed Enacted History" value={summary.player_viewed_enacted_history ? "Yes" : "No"} />
+          <SummaryRow label="Viewed Academic Reveal" value={summary.player_viewed_animated_histogram ? "Yes" : "No"} />
+          <SummaryRow label="Press Q1 Correct" value={summary.press_conf_q1_correct === null ? "—" : summary.press_conf_q1_correct ? "Yes" : "No"} />
+          <SummaryRow label="Press Q2 Correct" value={summary.press_conf_q2_correct === null ? "—" : summary.press_conf_q2_correct ? "Yes" : "No"} />
+          <SummaryRow label="Q2 Un-enacted Pick" value={summary.press_conf_non_chosen_policy_chosen === null ? "—" : summary.press_conf_non_chosen_policy_chosen ? "Yes" : "No"} />
+        </div>
+      </div>
+      {turnEntries.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-pink-900/30 flex flex-wrap gap-x-3 gap-y-0.5">
+          {turnEntries.map(([turn, ms]) => (
+            <span key={turn} className="text-zinc-500">
+              T{turn}: <span className="text-zinc-300 font-mono">{fmtMs(ms)}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Narrative timeline view — grouped by Intro / Level Select / Cycle+Attempt
+// ---------------------------------------------------------------------------
+function NarrativeTimelineView({ log }: { log: LoggedEvent[] }) {
+  const groups = useMemo(() => groupTimeline(log), [log]);
+
+  if (groups.length === 0) {
+    return <div className="text-zinc-500 italic text-[11px] p-3 text-center">No events yet — go interact with the game.</div>;
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <select
-        className="w-full bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] mb-2 shrink-0 outline-none focus:border-zinc-600"
-        value={activeAttemptId ?? ""}
-        onChange={(e) => setSelected(e.target.value)}
-      >
-        {attempts.map((a) => (
-          <option key={a.attempt_id} value={a.attempt_id}>
-            {a.level_id ?? "?"} — attempt #{a.attempt_number ?? "?"} ({new Date(a.started_at).toLocaleTimeString()})
-          </option>
-        ))}
-      </select>
-      <div className="flex-1 overflow-y-auto pr-1">
-        {timeline.map((e, i) => (
-          <div key={i} className="flex items-center gap-2 text-[10px] py-1.5 border-b border-zinc-800/50">
-            <span className="text-zinc-500 font-mono shrink-0">{formatTime(e.ts)}</span>
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: LAYER_COLORS[e.layer] }} />
-            <span className="text-zinc-300 font-mono truncate">{e.event}</span>
-            {e.turn !== undefined && <span className="text-zinc-600 shrink-0 ml-auto">turn {e.turn}</span>}
+    <div className="flex flex-col gap-3">
+      {groups.map((group: TimelineGroup) => {
+        const turnStartScoreByTurn = new Map<number, number>();
+        const lines = group.events
+          .map((e) => formatLine(e, { turnStartScoreByTurn }))
+          .filter((l): l is NonNullable<typeof l> => l !== null);
+
+        if (lines.length === 0) return null;
+
+        return (
+          <div key={group.key} className="rounded-lg border border-zinc-800 overflow-hidden">
+            <div className="bg-zinc-800/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-300">
+              {group.label}
+            </div>
+            <div className="p-2 flex flex-col">
+              {lines.map((line, i) =>
+                line.isSummaryBlock && line.summary ? (
+                  <CycleSummaryBlock key={i} summary={line.summary} />
+                ) : (
+                  <div
+                    key={i}
+                    className={`flex items-baseline gap-2 py-0.5 text-[10.5px] ${line.minor ? "pl-4 text-zinc-500 italic" : "text-zinc-200"}`}
+                  >
+                    <span className="text-zinc-600 font-mono shrink-0 text-[9px]">{formatTime(line.ts)}</span>
+                    <span className="truncate">{line.text}</span>
+                  </div>
+                )
+              )}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -167,7 +227,7 @@ export default function TelemetryDevPanel() {
       )}
 
       {open && (
-        <div className="bg-zinc-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-zinc-700 w-80 lg:w-[420px] max-h-[70vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+        <div className="bg-zinc-900/95 backdrop-blur-md text-white rounded-2xl shadow-2xl border border-zinc-700 w-80 lg:w-[460px] max-h-[70vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4">
           
           <div className="flex justify-between items-center p-3 border-b border-zinc-800 shrink-0">
             <strong className="text-pink-500 uppercase tracking-widest text-xs font-bold">Telemetry (dev)</strong>
@@ -235,7 +295,7 @@ export default function TelemetryDevPanel() {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-3 pt-2">
-                {viewMode === "grouped" ? <GroupedLog log={log} /> : <TimelineView log={log} />}
+                {viewMode === "grouped" ? <GroupedLog log={log} /> : <NarrativeTimelineView log={log} />}
               </div>
             </div>
           )}

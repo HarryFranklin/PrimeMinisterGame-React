@@ -381,6 +381,16 @@ export type TelemetryEvent =
       payload: {};
     }
 
+  // ---- Cycle lifecycle ----
+  // Fires on whichever exit button actually ends the cycle attempt:
+  // Restart Term (lost, retries left), Proceed to Next Term (won), or
+  // Finish Game (won final cycle). This is the trigger derive.ts listens
+  // for to compute and emit the cycle_summary rollup.
+  | {
+      event: "cycle_ended";
+      payload: { cycle: string; outcome: "won" | "lost_retry" | "lost_final" };
+    }
+
   // ---- Final Debrief ----
   | {
       event: "final_debrief_opened";
