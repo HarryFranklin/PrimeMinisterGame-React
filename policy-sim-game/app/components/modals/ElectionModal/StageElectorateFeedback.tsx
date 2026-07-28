@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ElectionCycle, Respondent } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
 import { DPMMessage } from '../SharedModalComponents';
 import { LSChangeBadge } from '../../ui';
 import { PM_PROFILES } from '../../../utils/pmProfiles';
 import { VOTER_QUOTES, VoterSentimentKind, PolicyRef } from '../../../content/voterQuotes';
+import { track } from '../../../client/telemetry';
 
 interface VoterSentiment {
   emoji: string;
@@ -50,11 +51,13 @@ function getVoterSentiment(citizen: any, cycle: ElectionCycle): VoterSentiment {
 function PolicySpan({
   policy,
   onHoverPolicy,
-  onDefinitionToggle
+  onDefinitionToggle,
+  onPolicyClicked,   // NEW — lets parent count clicks
 }: {
   policy: PolicyRef;
   onHoverPolicy: (id: string | null) => void;
   onDefinitionToggle: (title: string, desc: string) => void;
+  onPolicyClicked: () => void;
 }) {
   return (
     <span
@@ -62,10 +65,10 @@ function PolicySpan({
       onMouseEnter={() => onHoverPolicy(policy.id)}
       onMouseLeave={() => onHoverPolicy(null)}
       onClick={() => {
-        // Find the full policy definition to show in the floating panel
         const fullPolicy = availablePolicies.find(p => p.id === policy.id);
         if (fullPolicy) {
           onDefinitionToggle(fullPolicy.policyName, fullPolicy.description);
+          onPolicyClicked(); // increment counter
         }
       }}
     >
@@ -74,17 +77,13 @@ function PolicySpan({
   );
 }
 
-/**
- * Interprets a VOTER_QUOTES template (see content/voterQuotes.ts) into
- * actual JSX for one voter. This is the "glue" logic — it doesn't contain
- * any of the actual words, and shouldn't need to change when the copy does.
- */
 function renderVoterQuote(
   sentiment: VoterSentiment,
   pmName: string,
   altFormat: boolean,
   onHoverPolicy: (id: string | null) => void,
-  onDefinitionToggle: (title: string, desc: string) => void
+  onDefinitionToggle: (title: string, desc: string) => void,
+  onPolicyClicked: () => void
 ): React.ReactNode {
   const segments = VOTER_QUOTES[sentiment.kind][altFormat ? 'alt' : 'standard'];
   const interpolate = (s: string) => s.replace(/\{pmName\}/g, pmName);
@@ -98,7 +97,12 @@ function renderVoterQuote(
         return (
           <React.Fragment key={i}>
             {before}
-            <PolicySpan policy={policy} onHoverPolicy={onHoverPolicy} onDefinitionToggle={onDefinitionToggle} />
+            <PolicySpan
+              policy={policy}
+              onHoverPolicy={onHoverPolicy}
+              onDefinitionToggle={onDefinitionToggle}
+              onPolicyClicked={onPolicyClicked}
+            />
             {after}
           </React.Fragment>
         );
@@ -106,7 +110,7 @@ function renderVoterQuote(
       if (!policy && segment.withoutPolicy) {
         return <React.Fragment key={i}>{interpolate(segment.withoutPolicy)}</React.Fragment>;
       }
-      return null; // no policy to reference and no fallback text — this segment is simply skipped
+      return null;
     }
     return <React.Fragment key={i}>{interpolate(segment.text || '')}</React.Fragment>;
   });
@@ -131,11 +135,38 @@ export default function StageElectorateFeedback({
 }: StageElectorateFeedbackProps) {
   const [hoveredPolicyId, setHoveredPolicyId] = useState<string | null>(null);
 
+  // Telemetry: track how long they spend here and how many policy links they click
+  const openedAt = useRef(Date.now());
+  const policiesClickedCount = useRef(0);
+
+  useEffect(() => {
+    openedAt.current = Date.now();
+    track('electorate_feedback_opened', { cycle: ElectionCycle[currentCycle] });
+  }, []);
+
+  // Called by onReady — fires just before the Continue button becomes active.
+  // We piggyback on this as the "leave" event since there's no explicit close handler.
   useEffect(() => {
     onReady();
+    // We deliberately DON'T fire the close event here — we fire it when the
+    // component unmounts so we capture the full dwell including reading time.
   }, [onReady]);
 
-  // Find the current PM profile and extract the last word of the name string
+  useEffect(() => {
+    return () => {
+      // This runs when the player navigates away from this stage
+      track('electorate_feedback_closed', {
+        cycle: ElectionCycle[currentCycle],
+        dwell_ms: Date.now() - openedAt.current,
+        policies_clicked: policiesClickedCount.current,
+      });
+    };
+  }, [currentCycle]);
+
+  const handlePolicyClicked = () => {
+    policiesClickedCount.current += 1;
+  };
+
   const currentPMProfile = PM_PROFILES.find((p) => p.cycle === currentCycle);
   const pmSurname = currentPMProfile?.name.split(' ').pop() || 'the Prime Minister';
 
@@ -162,7 +193,7 @@ export default function StageElectorateFeedback({
 
     const poolToUse = uniquePool.length >= 3 ? uniquePool : enriched;
     const sorted = [...poolToUse].sort((a, b) => a.lsDiff - b.lsDiff);
-    
+
     const worst = sorted[0];
     const best = sorted[sorted.length - 1];
     let mid =
@@ -190,7 +221,7 @@ export default function StageElectorateFeedback({
       <DPMMessage title="Voter Sentiment">
         {`We've tracked how your policies impacted individual voters.\nClick the legislation referenced in their feedback to review its details.`}
       </DPMMessage>
-      
+
       <div className="flex flex-col gap-3 w-full flex-1 min-h-0 overflow-y-auto pr-1 whitespace-pre-wrap">
         {voterData.map((vp, idx) => {
           return (
@@ -204,7 +235,14 @@ export default function StageElectorateFeedback({
                   <LSChangeBadge startLS={vp.baselineLS} endLS={vp.finalLS} />
                 </div>
                 <p className="text-[12px] text-zinc-600 italic leading-snug line-clamp-3 whitespace-pre-wrap">
-                  "{renderVoterQuote(vp.sentiment, pmSurname, idx % 2 === 0, setHoveredPolicyId, onDefinitionToggle)}"
+                  "{renderVoterQuote(
+                    vp.sentiment,
+                    pmSurname,
+                    idx % 2 === 0,
+                    setHoveredPolicyId,
+                    onDefinitionToggle,
+                    handlePolicyClicked
+                  )}"
                 </p>
               </div>
             </div>

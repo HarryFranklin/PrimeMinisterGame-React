@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+  import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AxisVariable, ElectionCycle, Respondent } from '../../utils/types';
 import { CYCLE_COLORS } from '../../utils/uiHelpers';
@@ -7,6 +7,7 @@ import D3Chart from '../D3Chart';
 import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
+import { useDwellTimer } from '../../client/hooks';
 
 const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
@@ -162,6 +163,13 @@ export default function FinalDebriefModal() {
     return () => clearTimeout(timer);
   }, [confettiKey]);
 
+  const dwell = useDwellTimer();
+
+  useEffect(() => {
+    track('final_debrief_opened', {});
+    dwell.start();
+  }, []);
+
   const generateHistogramData = (targetPopulation: Respondent[]) => {
     if (!targetPopulation || targetPopulation.length === 0) return [];
     return Array.from({ length: 11 }, (_, i) => {
@@ -192,7 +200,8 @@ export default function FinalDebriefModal() {
 
   const handleSubmit = () => {
     if (!bestMetric || !bestSociety) return;
-    track("final_debrief_submitted", { best_metric: bestMetric, best_society: bestSociety });
+    track('final_debrief_closed', { dwell_ms: dwell.stop() });
+  track("final_debrief_submitted", { best_metric: bestMetric, best_society: bestSociety });
     setSubmitted(true);
   };
 
@@ -330,7 +339,10 @@ export default function FinalDebriefModal() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      onClick={() => setConfettiKey(k => k + 1)}
+                      onClick={() => {
+                        track('final_debrief_celebrate_clicked', {});
+                        setConfettiKey(k => k + 1);
+                      }}
                       className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                     >
                       <span className="text-base">🎉</span> Celebrate

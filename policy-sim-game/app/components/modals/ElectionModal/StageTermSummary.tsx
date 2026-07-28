@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
 import { FRAMEWORK_RULES } from '../../../utils/frameworkRules';
 import D3Chart from '../../D3Chart';
 import { DPMMessage, HighlightText } from '../SharedModalComponents';
+import { track } from '../../../client/telemetry';
+import { useDwellTimer } from '../../../client/hooks';
 
 interface StageTermSummaryProps {
   currentCycle: ElectionCycle;
@@ -101,7 +103,10 @@ export default function StageTermSummary({
 
   // Tell the parent modal it can enable the "Next" button
   useEffect(() => {
-    const timer = setTimeout(() => onReady(), 1000);
+    const timer = setTimeout(() => {
+      track('term_summary_closed', { cycle: ElectionCycle[currentCycle], dwell_ms: dwell.stop() });
+      onReady();
+    }, 1000);
     return () => clearTimeout(timer);
   }, [onReady]);
 
@@ -111,6 +116,10 @@ export default function StageTermSummary({
     
     if (activeTurn >= timelineData.length - 1) {
       setIsPlaying(false);
+      if (!timelineCompletedRef.current) {
+        timelineCompletedRef.current = true;
+        track('term_summary_timeline_completed', { cycle: ElectionCycle[currentCycle], was_auto: true });
+      }
       return;
     }
 
@@ -132,13 +141,23 @@ export default function StageTermSummary({
   }];
 
   const handlePlayPause = () => {
-    if (activeTurn >= timelineData.length - 1) {
-      setActiveTurn(0);
-      setIsPlaying(true);
-    } else {
-      setIsPlaying(!isPlaying);
-    }
-  };
+  if (activeTurn >= timelineData.length - 1) {
+    setActiveTurn(0);
+    setIsPlaying(true);
+    track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
+  } else {
+    if (!isPlaying) track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
+    setIsPlaying(!isPlaying);
+  }
+};
+
+  const dwell = useDwellTimer();
+  const timelineCompletedRef = useRef(false);
+
+  useEffect(() => {
+    track('term_summary_opened', { cycle: ElectionCycle[currentCycle] });
+    dwell.start();
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full whitespace-pre-wrap">
@@ -207,7 +226,11 @@ export default function StageTermSummary({
             {timelineData.map((d, i) => (
               <React.Fragment key={i}>
                 <button
-                  onClick={() => { setIsPlaying(false); setActiveTurn(i); }}
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setActiveTurn(i);
+                    track('term_summary_timeline_jumped', { cycle: ElectionCycle[currentCycle], to_turn: i });
+                  }}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                     activeTurn === i 
                       ? 'bg-pink-600 text-white shadow-md' 

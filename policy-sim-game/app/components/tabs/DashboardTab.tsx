@@ -102,11 +102,23 @@ export default function DashboardTab() {
         accentColor={rule.graphColor}
         metricAbbreviation={rule.targetMetricAbbreviation}
         onDismiss={clearLastTurnSummary}
+        onInteract={(type) => {
+          if (lastTurnSummary) {
+            track('policy_impact_popup_interacted', {
+              policy_id: selectedPolicy?.id ?? lastTurnSummary.policyName,
+              turn: lastTurnSummary.turn,
+              interaction_type: type,
+            });
+          }
+        }}
       />
       <div className="grid grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0 overflow-hidden">
 
         {/* LEFT COLUMN: Stacked Graphs OR Utility Table */}
-        <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
+        <div
+          className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden"
+          onMouseEnter={() => track('graph_hovered', { chart_context: 'dashboard', turn: currentTurn })}
+        >
           <PopulationPanel
             isUtilityCycle={isUtilityCycle}
             isParliamentDissolved={isParliamentDissolved}

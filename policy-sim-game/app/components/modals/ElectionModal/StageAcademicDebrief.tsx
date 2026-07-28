@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ElectionCycle, Respondent, AxisVariable } from '../../../utils/types';
 import { WelfareMetrics } from '../../../utils/WelfareMetrics';
 import D3Chart from '../../D3Chart';
 import { DPMMessage } from '../SharedModalComponents';
 import { motion } from 'framer-motion';
+import { track } from '../../../client/telemetry';
 
 interface StageAcademicDebriefProps {
   currentCycle: ElectionCycle;
@@ -12,12 +13,12 @@ interface StageAcademicDebriefProps {
   onReady: () => void;
 }
 
-const getDummyHistogram = (distribution: Record<number, number>) => 
+const getDummyHistogram = (distribution: Record<number, number>) =>
   Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
 
-export default function StageAcademicDebrief({ 
-  currentCycle, 
-  finalPopulation, 
+export default function StageAcademicDebrief({
+  currentCycle,
+  finalPopulation,
   yAxisMax,
   onReady
 }: StageAcademicDebriefProps) {
@@ -29,7 +30,35 @@ export default function StageAcademicDebrief({
   const [revealedPU, setRevealedPU] = useState(false);
   const [revealedSU, setRevealedSU] = useState(false);
 
+  // ── Telemetry refs ──────────────────────────────────────────────────────
+  const openedAt = useRef(Date.now());
+  const firstInteractionAt = useRef<number | null>(null);
+  const lastInteractionAt = useRef<number | null>(null);
+  const readyFired = useRef(false);
+
   useEffect(() => {
+    openedAt.current = Date.now();
+    track('academic_debrief_opened', { cycle: ElectionCycle[currentCycle] });
+  }, []);
+
+  // Call this from every "click to reveal" handler
+  const markInteraction = () => {
+    const now = Date.now();
+    if (firstInteractionAt.current === null) {
+      firstInteractionAt.current = now;
+      track('academic_debrief_first_interaction', {
+        cycle: ElectionCycle[currentCycle],
+        time_to_first_ms: now - openedAt.current,
+      });
+    }
+    lastInteractionAt.current = now;
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Determine when all required reveals for this cycle are done → unlock Continue
+  useEffect(() => {
+    if (readyFired.current) return;
+
     let isReady = false;
     if (currentCycle === ElectionCycle.Benthamite) {
       isReady = revealedBenthamA && revealedBenthamB;
@@ -38,10 +67,17 @@ export default function StageAcademicDebrief({
     } else if (currentCycle === ElectionCycle.SocietalUtility) {
       isReady = revealedEmpathy;
     } else if (currentCycle === ElectionCycle.PersonalUtility) {
-      isReady = revealedPU && revealedSU; 
+      isReady = revealedPU && revealedSU;
     }
-    
+
     if (isReady) {
+      readyFired.current = true;
+      const now = Date.now();
+      track('academic_debrief_closed', {
+        cycle: ElectionCycle[currentCycle],
+        dwell_ms: now - openedAt.current,
+        idle_before_proceed_ms: lastInteractionAt.current ? now - lastInteractionAt.current : now - openedAt.current,
+      });
       onReady();
     }
   }, [revealedBenthamA, revealedBenthamB, revealedCitizen1, revealedCitizen2, revealedEmpathy, revealedPU, revealedSU, currentCycle, onReady]);
@@ -50,22 +86,20 @@ export default function StageAcademicDebrief({
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
-  // Robust Pairing Algorithm: Uses weighted scoring to find the best possible comparison pair
-  // instead of rigid pass/fail checks which can cause silent fallbacks.
   const contrastingCitizens = useMemo(() => {
     if (finalPopulation.length === 0) return [];
 
     const enriched = finalPopulation.map(p => {
       const ledger = p.historicalLedger.find(l => l.cycle === currentCycle);
-      
+
       const startLS = Number((ledger?.turns[0]?.ls ?? p.currentLS).toFixed(1));
       const endLS = Number((ledger?.turns[ledger.turns.length - 1]?.ls ?? p.currentLS).toFixed(1));
       const lsGained = Number((endLS - startLS).toFixed(1));
-      
+
       const startPU = WelfareMetrics.getUtilityForPerson(startLS, p.personalUtilities);
       const endPU = WelfareMetrics.getUtilityForPerson(endLS, p.personalUtilities);
       const puGained = Number((endPU - startPU).toFixed(2));
-      
+
       return { ...p, startLS, endLS, lsGained, puGained };
     });
 
@@ -76,29 +110,18 @@ export default function StageAcademicDebrief({
       for (let j = i + 1; j < enriched.length; j++) {
         const p1 = enriched[i];
         const p2 = enriched[j];
-        
+
         const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
-        
         const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
         const startDiff = Math.abs(p1.startLS - p2.startLS);
         const puDiff = Math.abs(p1.puGained - p2.puGained);
-        
+
         let score = 0;
-        
-        // Massive bonus for moving in the same direction (both up or both down)
-        if (sameDirection) {
-           score += 100; 
-        }
-        
-        // Heavily penalise differing objective shifts
-        score -= (lsDiff * 20); 
-        
-        // Reward different starting points on the curve
+        if (sameDirection) score += 100;
+        score -= (lsDiff * 20);
         score += (startDiff * 2);
-        
-        // Reward diverging subjective utility outcomes
         score += (puDiff * 5);
-        
+
         if (score > maxScore) {
           maxScore = score;
           bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
@@ -112,7 +135,7 @@ export default function StageAcademicDebrief({
   const empathyCitizen = useMemo(() => {
     if (finalPopulation.length === 0) return null;
     const allLS = finalPopulation.map((p: any) => p.currentLS);
-    
+
     let bestCitizen = finalPopulation[0];
     let maxDiff = -1;
     for (const r of finalPopulation) {
@@ -144,10 +167,10 @@ export default function StageAcademicDebrief({
 
   const getRawlsianMessage = () => {
     if (contrastingCitizens.length < 2) return "";
-    
+
     const p1 = contrastingCitizens[0];
     const p2 = contrastingCitizens[1];
-    
+
     const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
     const isGain = p1.lsGained > 0;
     const similarObjective = Math.abs(p1.lsGained - p2.lsGained) <= 0.5;
@@ -159,7 +182,7 @@ export default function StageAcademicDebrief({
         return "Both citizens experienced a similar objective decrease in their living standards. However, because one was already comfortable and the other was struggling, they felt the pain of that loss completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
       }
     }
-    
+
     return "These citizens experienced varying objective shifts in their living standards. Notice how their subjective value (utility) does not always scale linearly with their objective gains or losses, depending on where they started on the curve.\n\nNext term, citizens will vote using their unique Societal Utility.";
   };
 
@@ -168,10 +191,13 @@ export default function StageAcademicDebrief({
       <DPMMessage title="Academic Debrief">
         {getDpmMessage()}
       </DPMMessage>
-      
+
       {currentCycle === ElectionCycle.Benthamite && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div onClick={() => setRevealedBenthamA(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
+          <div
+            onClick={() => { setRevealedBenthamA(true); markInteraction(); }}
+            className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+          >
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
             <div className="relative h-[200px]">
               <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
@@ -187,8 +213,11 @@ export default function StageAcademicDebrief({
               )}
             </div>
           </div>
-          
-          <div onClick={() => setRevealedBenthamB(true)} className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
+
+          <div
+            onClick={() => { setRevealedBenthamB(true); markInteraction(); }}
+            className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+          >
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
             <div className="relative h-[200px]">
               <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
@@ -220,9 +249,13 @@ export default function StageAcademicDebrief({
           {contrastingCitizens.map((citizen, idx) => {
             const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
             const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
-            
+
             return (
-              <div key={idx} onClick={() => setReveal(true)} className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}>
+              <div
+                key={idx}
+                onClick={() => { setReveal(true); markInteraction(); }}
+                className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
                 <div className="mb-1 flex justify-center items-center gap-2">
                   <span className="text-xs text-zinc-400">Objective Shift: </span>
@@ -233,7 +266,7 @@ export default function StageAcademicDebrief({
                     {citizen && citizen.lsGained > 0 ? '+' : ''}{citizen?.lsGained.toFixed(1)} LS
                   </span>
                 </div>
-                
+
                 <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                   <div className="w-full h-px bg-zinc-200 my-2" />
                   <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
@@ -241,7 +274,7 @@ export default function StageAcademicDebrief({
                     {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
                   </strong>
                 </div>
-                
+
                 {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Reveal</span></div>}
               </div>
             );
@@ -259,13 +292,16 @@ export default function StageAcademicDebrief({
 
       {currentCycle === ElectionCycle.SocietalUtility && empathyCitizen && (
         <div className="flex flex-col gap-4">
-          <div onClick={() => setRevealedEmpathy(true)} className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+          <div
+            onClick={() => { setRevealedEmpathy(true); markInteraction(); }}
+            className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+          >
             <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{empathyCitizen.name}</p>
             <div className="grid grid-cols-2 gap-4 mb-2">
               <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
               <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Societal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong></div>
             </div>
-            
+
             <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
               <div className="w-full h-px bg-zinc-200 my-2" />
               <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Personal Utility (Self-Interest)</span>
@@ -288,7 +324,10 @@ export default function StageAcademicDebrief({
 
       {currentCycle === ElectionCycle.PersonalUtility && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          <div onClick={() => setRevealedSU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
+          <div
+            onClick={() => { setRevealedSU(true); markInteraction(); }}
+            className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+          >
             <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600/70 mb-2 text-center">Term 3: Societal Utility</h3>
             <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
               <div className="text-center mb-4 mt-2">
@@ -302,8 +341,11 @@ export default function StageAcademicDebrief({
             </div>
             {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Click to Reveal</span></div>}
           </div>
-          
-          <div onClick={() => setRevealedPU(true)} className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}>
+
+          <div
+            onClick={() => { setRevealedPU(true); markInteraction(); }}
+            className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}
+          >
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Term 4: Personal Utility</h3>
             <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
               <div className="text-center mb-4 mt-2">

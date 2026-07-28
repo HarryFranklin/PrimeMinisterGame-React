@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
 import { ElectionCycle, AxisVariable, GamePhase } from '../../utils/types';
@@ -8,6 +8,7 @@ import { MetricsEngine } from '../../utils/MetricsEngine';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { PM_PROFILES } from '../../utils/pmProfiles';
 import { SavingIndicator } from '../../client/SavingIndicator';
+import { track } from '../../client/telemetry';
 
 const generateHistogram = (pop: any[]) => Array.from({ length: 11 }, (_, i) => ({
   name: i, count: pop.filter(r => Math.round(r.currentLS) === i).length
@@ -20,11 +21,32 @@ export default function LevelSelectTab() {
   const [viewLenses, setViewLenses] = useState<Record<number, ElectionCycle>>({});
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Track how long they spend on this screen before pressing Begin Term
+  const arrivedAt = useRef(Date.now());
+  useEffect(() => {
+    arrivedAt.current = Date.now();
+  }, []);
+
   const handleStartLevel = (cycle: ElectionCycle) => {
+    track('level_select_continue_clicked', {
+      level_id: ElectionCycle[cycle],
+      dwell_ms: Date.now() - arrivedAt.current,
+      opened_details: false,
+    });
     setIsTransitioning(true);
     setTimeout(() => {
       startLevel(cycle);
-    }, 4000); 
+    }, 4000);
+  };
+
+  // Called when they click one of the coloured lens dots on a completed card.
+  // We track which cycle's card they're on (source_cycle) and which lens they switched to.
+  const handleLensChange = (profileCycle: ElectionCycle, newLens: ElectionCycle) => {
+    setViewLenses(prev => ({ ...prev, [profileCycle]: newLens }));
+    track('level_select_history_explored', {
+      source_cycle: ElectionCycle[profileCycle],
+      lens_cycle: ElectionCycle[newLens],
+    });
   };
 
   return (
@@ -123,7 +145,7 @@ export default function LevelSelectTab() {
                          {[ElectionCycle.Benthamite, ElectionCycle.Rawlsian, ElectionCycle.SocietalUtility, ElectionCycle.PersonalUtility].map(lens => (
                            <button
                              key={lens}
-                             onClick={() => setViewLenses(prev => ({ ...prev, [profile.cycle]: lens }))}
+                             onClick={() => handleLensChange(profile.cycle, lens)}
                              className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
                                currentLens === lens ? 'ring-2 ring-offset-1 border-white shadow-sm' : 'opacity-40 hover:opacity-100 border-transparent'
                              }`}

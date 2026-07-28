@@ -115,6 +115,7 @@ interface InteractiveDPMEmailProps {
   typeSpeed?: number;
   delayAfterComplete?: number;
   onAcknowledge: () => void;
+  onSkip?: () => void;  // optional callback fired when the user clicks to skip the typewriter
   buttonText?: string;
   highlights?: HighlightConfig[];
   /** Overrides the small "Deputy Prime Minister" kicker label above the title. Pass "" to hide it entirely. */
@@ -212,9 +213,6 @@ export const DPMMessage = ({ title, children, className = "", kicker = "Deputy P
 );
 
 export const ModalActionBtn = ({ onClick, children, variant = "primary" }: { onClick: () => void, children: React.ReactNode, variant?: "primary" | "secondary" | "accent" }) => (
-  // Thin wrapper over the shared Button atom (see components/ui/Button.tsx) —
-  // this used to maintain its own separate copy of the variant styling.
-  // shrink-0 flex-1 kept as modal-footer-specific layout, not part of Button itself.
   <Button onClick={onClick} variant={variant} className="md:py-3.5 shrink-0 flex-1">
     {children}
   </Button>
@@ -226,6 +224,7 @@ export const InteractiveDPMEmail = ({
   typeSpeed = 70,
   delayAfterComplete = 2000,
   onAcknowledge,
+  onSkip,
   highlights,
   buttonText = "Begin Term",
   kicker
@@ -247,6 +246,12 @@ export const InteractiveDPMEmail = ({
     if (!buttonUnlocked) return;
     setButtonUnlocked(false);
     onAcknowledge();
+  };
+
+  const handleSkipClick = () => {
+    if (!isTyping) return;
+    skip();
+    onSkip?.();  // ← NEW: notify parent if they care
   };
 
   return (
@@ -285,7 +290,8 @@ export const InteractiveDPMEmail = ({
             className="flex flex-col gap-4 w-full overflow-hidden"
           >
             <DPMMessage title={title} kicker={kicker}>
-              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={() => { if (isTyping) skip(); }}>
+              {/* Clicking anywhere on the text body skips the typewriter */}
+              <div className={`relative ${isTyping ? 'cursor-pointer' : ''}`} onClick={handleSkipClick}>
                 <span className="whitespace-pre-wrap invisible block" aria-hidden="true">
                   <HighlightText text={message} highlights={highlights} />
                 </span>

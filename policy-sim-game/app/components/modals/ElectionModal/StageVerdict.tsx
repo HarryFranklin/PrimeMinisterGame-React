@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CYCLE_COLORS } from '../../../utils/uiHelpers'; 
+import { ElectionCycle } from '../../../utils/types';
+import { CYCLE_COLORS } from '../../../utils/uiHelpers';
+import { track } from '../../../client/telemetry';
 
-// Reuses the same four framework colours everywhere else in the app, plus one
-// extra celebratory accent (amber) not tied to any specific cycle.
 const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
 const Confetti = () => (
@@ -30,24 +30,39 @@ const Confetti = () => (
   </div>
 );
 
+// ── Props now include currentCycle and attemptNumber so we can tag events ──
 interface StageVerdictProps {
   approvalRating: number;
   won: boolean;
+  currentCycle: ElectionCycle;   // NEW — thread from ElectionModal
+  attemptNumber: number;          // NEW — thread from ElectionModal
   onReady: () => void;
 }
 
-export default function StageVerdict({ approvalRating, won, onReady }: StageVerdictProps) {
+export default function StageVerdict({ approvalRating, won, currentCycle, attemptNumber, onReady }: StageVerdictProps) {
   const [displayScore, setDisplayScore] = useState(0);
   const [isDone, setIsDone] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
   const [showReplay, setShowReplay] = useState(false);
-  
+
   const cleanupRef = useRef<(() => void) | null>(null);
   const onReadyRef = useRef(onReady);
+  const shownAt = useRef(Date.now());
 
   useEffect(() => {
     onReadyRef.current = onReady;
   }, [onReady]);
+
+  // Fire verdict_shown once when this stage mounts
+  useEffect(() => {
+    shownAt.current = Date.now();
+    track('verdict_shown', {
+      cycle: ElectionCycle[currentCycle],
+      won,
+      approval_rating: approvalRating,
+      attempt_number: attemptNumber,
+    });
+  }, []);
 
   useEffect(() => {
     let start = 0;
@@ -74,7 +89,15 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
         rafId = requestAnimationFrame(animate);
       } else {
         setIsDone(true);
-        timeoutId = setTimeout(() => onReadyRef.current(), 2000);
+        timeoutId = setTimeout(() => {
+          // Record how long they dwelled on this screen before the Continue button unlocked
+          track('verdict_dwell', {
+            cycle: ElectionCycle[currentCycle],
+            won,
+            dwell_ms: Date.now() - shownAt.current,
+          });
+          onReadyRef.current();
+        }, 2000);
       }
     };
 
@@ -93,7 +116,6 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
   const showSuccess = isDone && won;
   const showFailure = isDone && !won;
 
-  // Reveal the replay button only after the confetti finishes
   useEffect(() => {
     if (showSuccess) {
       setShowReplay(false);
@@ -101,6 +123,11 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
       return () => clearTimeout(timer);
     }
   }, [showSuccess, confettiKey]);
+
+  const handleCelebrate = () => {
+    track('verdict_celebrate_clicked', { cycle: ElectionCycle[currentCycle] });
+    setConfettiKey(k => k + 1);
+  };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full relative">
@@ -156,8 +183,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
               {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
             </span>
             <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest mt-2">Required: 51.0%</span>
-            
-            {/* The Replay Button */}
+
             <div className="h-8 mt-3 flex items-center justify-center">
               <AnimatePresence>
                 {showReplay && showSuccess && (
@@ -165,7 +191,7 @@ export default function StageVerdict({ approvalRating, won, onReady }: StageVerd
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    onClick={() => setConfettiKey(k => k + 1)}
+                    onClick={handleCelebrate}
                     className="flex items-center gap-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                   >
                     <span className="text-base">🎉</span> Celebrate

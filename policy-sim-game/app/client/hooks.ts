@@ -1,9 +1,10 @@
-import { useEffect, useRef, useCallback } from "react";
-import { track } from "./telemetry";
+import { useEffect, useRef, useCallback, useState } from "react";
+import { track, startTimer, stopTimer } from "./telemetry";
 
-/** Generic scroll-depth tracker for any scrollable container.
- * Attach `ref` to the scrolling element; call `getMaxScrollPct()` when you
- * need the reading (e.g. on modal close). */
+// ---------------------------------------------------------------------------
+// Internal helper — tracks max scroll depth on a scrollable container.
+// Shared by useModalTelemetry and usePanelScrollTelemetry.
+// ---------------------------------------------------------------------------
 function useScrollDepthRef<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
   const maxPct = useRef(0);
@@ -13,7 +14,7 @@ function useScrollDepthRef<T extends HTMLElement>() {
     if (!el) return;
     const scrollable = el.scrollHeight - el.clientHeight;
     if (scrollable <= 0) {
-      maxPct.current = 100; // nothing to scroll = fully "seen"
+      maxPct.current = 100;
       return;
     }
     const pct = Math.min(100, Math.round((el.scrollTop / scrollable) * 100));
@@ -24,7 +25,7 @@ function useScrollDepthRef<T extends HTMLElement>() {
     const el = ref.current;
     if (!el) return;
     el.addEventListener("scroll", onScroll, { passive: true });
-    onScroll(); // capture initial state (e.g. content that already fits without scrolling)
+    onScroll();
     return () => el.removeEventListener("scroll", onScroll);
   }, [onScroll]);
 
@@ -37,15 +38,15 @@ function useScrollDepthRef<T extends HTMLElement>() {
   return { ref, getMaxScrollPct, isScrollable };
 }
 
-/**
- * Wire onto any modal. Fires modal_opened when mounted/shown, and returns a
- * `close(reason?)` function to call from your close handler — it computes
- * dwell time and max scroll depth automatically.
- *
- * Usage:
- *   const { scrollRef, close } = useModalTelemetry("policy_detail", "info");
- *   <div ref={scrollRef} onClick={() => close()}>...</div>
- */
+// ---------------------------------------------------------------------------
+// useModalTelemetry
+// Wire onto any modal. Fires modal_opened on mount, returns close() to call
+// from your close handler (computes dwell + scroll depth automatically).
+//
+// Usage:
+//   const { scrollRef, close } = useModalTelemetry("policy_detail", "info");
+//   <div ref={scrollRef} onClick={() => close()}>...</div>
+// ---------------------------------------------------------------------------
 export function useModalTelemetry(modalId: string, modalType: string) {
   const openedAt = useRef<number>(Date.now());
   const closedRef = useRef(false);
@@ -55,12 +56,11 @@ export function useModalTelemetry(modalId: string, modalType: string) {
     openedAt.current = Date.now();
     closedRef.current = false;
     track("modal_opened", { modal_id: modalId, modal_type: modalType, scrollable: isScrollable() });
-    // fire once per mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalId]);
 
   const close = useCallback(() => {
-    if (closedRef.current) return; // avoid double-firing on unmount + explicit close
+    if (closedRef.current) return;
     closedRef.current = true;
     track("modal_closed", {
       modal_id: modalId,
@@ -71,16 +71,16 @@ export function useModalTelemetry(modalId: string, modalType: string) {
     });
   }, [modalId, modalType, getMaxScrollPct, isScrollable]);
 
-  // catch the case where the component just unmounts without an explicit close
   useEffect(() => () => close(), [close]);
 
   return { scrollRef, close };
 }
 
-/**
- * Dialogue/text reading. Call `onAdvance()` from the "Continue"/dismiss
- * handler; it computes words-per-minute from dwell time and character count.
- */
+// ---------------------------------------------------------------------------
+// useDialogueTelemetry
+// Tracks dialogue shown + dwell time when the player advances past it.
+// Call onAdvance() from your Continue/dismiss handler.
+// ---------------------------------------------------------------------------
 export function useDialogueTelemetry(textId: string, text: string) {
   const shownAt = useRef<number>(Date.now());
 
@@ -101,7 +101,10 @@ export function useDialogueTelemetry(textId: string, text: string) {
   return { onAdvance };
 }
 
-/** Level select screen: tracks whether they viewed and how quickly they hit Continue. */
+// ---------------------------------------------------------------------------
+// useLevelSelectTelemetry
+// Tracks time on level select and whether they clicked any graphs/history.
+// ---------------------------------------------------------------------------
 export function useLevelSelectTelemetry(levelId: string) {
   const viewedAt = useRef<number>(Date.now());
   const openedDetails = useRef(false);
@@ -128,11 +131,11 @@ export function useLevelSelectTelemetry(levelId: string) {
   return { markDetailsOpened, onContinue };
 }
 
-/**
- * "View Details" on a policy. Call `open()` when opened, and
- * `close(resultingAction)` when it closes — pass what happened right after:
- * did they dismiss, keep the same policy, or pick a different one.
- */
+// ---------------------------------------------------------------------------
+// useViewDetailsTelemetry
+// "View Details" on a policy. Call open() when opened, close(action) when it
+// closes — pass what happened next: dismissed / picked_same / picked_other.
+// ---------------------------------------------------------------------------
 export function useViewDetailsTelemetry(policyId: string, turn: number) {
   const openedAt = useRef<number | null>(null);
 
@@ -158,9 +161,11 @@ export function useViewDetailsTelemetry(policyId: string, turn: number) {
   return { open, close };
 }
 
-/** Fire-and-forget hover tracking for tooltips / info icons.
- * Throttled per (tooltip_id) per mount so mouse jitter doesn't spam events —
- * only the first hover in a given "visit" to the component is recorded. */
+// ---------------------------------------------------------------------------
+// useTooltipTelemetry
+// Fire-and-forget hover tracking for tooltips / info icons.
+// Throttled per (tooltip_id) per mount so mouse jitter doesn't spam.
+// ---------------------------------------------------------------------------
 export function useTooltipTelemetry() {
   const seen = useRef<Set<string>>(new Set());
 
@@ -174,7 +179,10 @@ export function useTooltipTelemetry() {
   return { trackHover };
 }
 
-/** Generic scroll-depth tracker for non-modal panels (e.g. a long policy list). */
+// ---------------------------------------------------------------------------
+// usePanelScrollTelemetry
+// Generic scroll-depth for non-modal panels (e.g. a long policy list).
+// ---------------------------------------------------------------------------
 export function usePanelScrollTelemetry(panelId: string) {
   const { ref, getMaxScrollPct } = useScrollDepthRef<HTMLDivElement>();
 
@@ -186,4 +194,176 @@ export function usePanelScrollTelemetry(panelId: string) {
   }, [panelId]);
 
   return { ref };
+}
+
+// ---------------------------------------------------------------------------
+// useTypewriterTelemetry
+// Wraps a typewriter sequence to capture:
+//   - when/whether the player skipped the text
+//   - % through the text they were when they skipped
+//
+// Call onSkip() from the skip handler, onComplete() when typing finishes
+// naturally, and getSkipInfo() to read the result before firing your
+// semantic event (e.g. briefing_proceeded).
+//
+// Usage:
+//   const tw = useTypewriterTelemetry(text);
+//   // in your skip handler:  tw.onSkip();  skip();
+//   // in your proceed handler: const info = tw.getSkipInfo(); track(...)
+// ---------------------------------------------------------------------------
+export function useTypewriterTelemetry(text: string) {
+  const startedAt = useRef(Date.now());
+  const skippedAt = useRef<number | null>(null);
+  const displayedLengthRef = useRef(0); // caller should update this each render
+
+  const reset = useCallback(() => {
+    startedAt.current = Date.now();
+    skippedAt.current = null;
+    displayedLengthRef.current = 0;
+  }, []);
+
+  // Call this every render with displayedText.length so we can compute % seen on skip
+  const updateDisplayed = useCallback((len: number) => {
+    displayedLengthRef.current = len;
+  }, []);
+
+  const onSkip = useCallback(() => {
+    skippedAt.current = Date.now();
+  }, []);
+
+  const getSkipInfo = useCallback(() => {
+    const elapsed = (skippedAt.current ?? Date.now()) - startedAt.current;
+    const pct_seen =
+      text.length > 0
+        ? Math.round((displayedLengthRef.current / text.length) * 100)
+        : 100;
+    return {
+      was_skipped: skippedAt.current !== null,
+      elapsed_ms: elapsed,
+      pct_seen,
+    };
+  }, [text]);
+
+  return { reset, updateDisplayed, onSkip, getSkipInfo };
+}
+
+// ---------------------------------------------------------------------------
+// useTurnTimer
+// Simple named timer scoped to a turn. start() on turn_started,
+// stop() returns elapsed ms for the time_on_turn_ms payload field.
+//
+// The underlying startTimer/stopTimer in telemetry.ts is a plain Map so this
+// is just a thin convenience wrapper that names the key consistently.
+// ---------------------------------------------------------------------------
+export function useTurnTimer() {
+  const timerKey = "turn_active";
+
+  const start = useCallback(() => {
+    startTimer(timerKey);
+  }, []);
+
+  const stop = useCallback((): number => {
+    return stopTimer(timerKey);
+  }, []);
+
+  return { start, stop };
+}
+
+// ---------------------------------------------------------------------------
+// useDwellTimer
+// Generic start/stop dwell timer for any stage/screen.
+// Returns elapsed ms when stop() is called. Safe to call stop multiple times.
+//
+// Usage:
+//   const dwell = useDwellTimer();
+//   useEffect(() => { dwell.start(); }, []);
+//   // on proceed: const ms = dwell.stop(); track("foo_closed", { dwell_ms: ms });
+// ---------------------------------------------------------------------------
+export function useDwellTimer() {
+  const startedAt = useRef<number | null>(null);
+  const stopped = useRef<number | null>(null);
+
+  const start = useCallback(() => {
+    startedAt.current = Date.now();
+    stopped.current = null;
+  }, []);
+
+  const stop = useCallback((): number => {
+    if (stopped.current !== null) return stopped.current;
+    if (startedAt.current === null) return 0;
+    stopped.current = Date.now() - startedAt.current;
+    return stopped.current;
+  }, []);
+
+  const peek = useCallback((): number => {
+    if (stopped.current !== null) return stopped.current;
+    return startedAt.current !== null ? Date.now() - startedAt.current : 0;
+  }, []);
+
+  return { start, stop, peek };
+}
+
+// ---------------------------------------------------------------------------
+// useFirstInteractionTimer
+// For screens like Academic Debrief where you want to track both:
+//   a) time until first interaction
+//   b) time between last interaction and clicking Proceed
+//
+// Call markInteraction() on every interactive click/reveal.
+// Call getFinalTimes() just before the Proceed handler fires.
+// ---------------------------------------------------------------------------
+export function useFirstInteractionTimer() {
+  const mountedAt = useRef(Date.now());
+  const firstInteractionAt = useRef<number | null>(null);
+  const lastInteractionAt = useRef<number | null>(null);
+
+  const markInteraction = useCallback(() => {
+    const now = Date.now();
+    if (firstInteractionAt.current === null) firstInteractionAt.current = now;
+    lastInteractionAt.current = now;
+  }, []);
+
+  const getFinalTimes = useCallback(() => {
+    const now = Date.now();
+    return {
+      time_to_first_ms: firstInteractionAt.current !== null
+        ? firstInteractionAt.current - mountedAt.current
+        : now - mountedAt.current,
+      idle_before_proceed_ms: lastInteractionAt.current !== null
+        ? now - lastInteractionAt.current
+        : now - mountedAt.current,
+    };
+  }, []);
+
+  return { markInteraction, getFinalTimes };
+}
+
+// ---------------------------------------------------------------------------
+// useEnactedPoliciesReview
+// After turn 5, tracks how many policies the player viewed in the enacted
+// policy history list and for how long before proceeding.
+// ---------------------------------------------------------------------------
+export function useEnactedPoliciesReview() {
+  const openedAt = useRef<number | null>(null);
+  const viewedCount = useRef(0);
+
+  const onOpen = useCallback(() => {
+    openedAt.current = Date.now();
+  }, []);
+
+  const onPolicyViewed = useCallback(() => {
+    viewedCount.current += 1;
+  }, []);
+
+  /** Call just before the "Hold Press Conference" button is clicked. */
+  const onProceed = useCallback((turn: number) => {
+    if (openedAt.current === null) return;
+    track("enacted_policies_reviewed", {
+      turn,
+      policies_viewed: viewedCount.current,
+      dwell_ms: Date.now() - openedAt.current,
+    });
+  }, []);
+
+  return { onOpen, onPolicyViewed, onProceed };
 }

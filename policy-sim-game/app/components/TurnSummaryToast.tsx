@@ -5,6 +5,7 @@ interface TurnSummaryToastProps {
   summary: { policyName: string; scoreBefore: number; scoreAfter: number; turn: number } | null;
   accentColor: string;
   metricAbbreviation: string;
+  onInteract?: (type: 'hover' | 'click') => void
   onDismiss: () => void;
 }
 

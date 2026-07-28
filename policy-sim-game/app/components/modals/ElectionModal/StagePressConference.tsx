@@ -5,6 +5,8 @@ import { availablePolicies } from '../../../data/policies';
 import { useTypewriter } from '../../../hooks/useTypewriter';
 import { useAnimatedNumber } from '../../../hooks/useAnimatedNumber';
 import { getRandomPressPerson, buildMetricQuestion } from '../../../utils/pressConferenceData';
+import { track } from '../../../client/telemetry';
+import { useTypewriterTelemetry, useDwellTimer } from '../../../client/hooks';
 
 interface StagePressConferenceProps {
   currentCycle: ElectionCycle;
@@ -149,31 +151,59 @@ export default function StagePressConference({ currentCycle, approvalRating, his
   // Slowed down typing to 35ms per character for readability
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(currentPrompt, 35, introSequence >= 1);
 
+  const tw = useTypewriterTelemetry(currentPrompt);
+  const questionReadyAt = useRef<number | null>(null);
+
+  // Reset timer each time the question text changes (q1 → q2 → summary)
+  useEffect(() => {
+    tw.reset();
+    questionReadyAt.current = null;
+  }, [phase]);
+
+  // When typing completes (or is skipped), record when answers become available
+  useEffect(() => {
+    if (isComplete && questionReadyAt.current === null) {
+      questionReadyAt.current = Date.now();
+    }
+  }, [isComplete]);
+
   const handleAnswerQ1 = (index: number) => {
     if (q1Selected !== null) return;
     setQ1Selected(index);
     const isCorrect = index === q1.correctIndex;
-    if (isCorrect) setCorrectCount(c => c + 1);
-    
+    const skipInfo = tw.getSkipInfo();
+    track('press_q1_answered', {
+      cycle: ElectionCycle[currentCycle],
+      answer_given: q1.options[index].text ?? '',
+      correct: isCorrect,
+      time_to_answer_ms: questionReadyAt.current ? Date.now() - questionReadyAt.current : 0,
+      text_was_skipped: skipInfo.was_skipped,
+    });
     onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
     
     // Slowed down transition so the user can register the green check / red cross
-    setTimeout(() => {
-      setPhase(q2 ? 'q2' : 'summary');
-    }, 2500);
+    setPhase(q2 ? 'q2' : 'summary');
   };
 
   const handleAnswerQ2 = (index: number) => {
     if (!q2 || q2Selected !== null) return;
     setQ2Selected(index);
     const isCorrect = index === q2.correctIndex;
-    if (isCorrect) setCorrectCount(c => c + 1);
-    
+    const skipInfo = tw.getSkipInfo();
+    // Detect if they picked a policy they never actually enacted
+    const enactedIds = new Set(history.filter(h => h.enactedPolicyId).map(h => h.enactedPolicyId));
+    const chosenOption = q2.options[index];
+    const chosenPolicy = availablePolicies.find(p => p.policyName === chosenOption.text);
+    const pickedUnenacted = chosenPolicy ? !enactedIds.has(chosenPolicy.id) : false;
+    track('press_q2_answered', {
+      cycle: ElectionCycle[currentCycle],
+      answer_given: chosenOption.text ?? '',
+      correct: isCorrect,
+      time_to_answer_ms: questionReadyAt.current ? Date.now() - questionReadyAt.current : 0,
+      text_was_skipped: skipInfo.was_skipped,
+      picked_unenacted_policy: pickedUnenacted,
+    });
     onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
-    
-    setTimeout(() => {
-      setPhase('summary');
-    }, 2500);
   };
 
   // Gracefully transition back to the normal Modal flow
@@ -187,6 +217,13 @@ export default function StagePressConference({ currentCycle, approvalRating, his
       return () => clearTimeout(t1);
     }
   }, [phase, onReady]);
+
+  useEffect(() => {
+    track('press_conference_started', {
+      cycle: ElectionCycle[currentCycle],
+      approval_rating: approvalRating,
+    });
+  }, []);
 
   const renderOptions = (options: AnswerOption[], selected: number | null, onSelect: (i: number) => void) => (
     <div className="flex flex-col gap-3 w-full">
@@ -275,7 +312,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
                     </div>
                     <div
                       className={`text-zinc-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap min-h-[4em] ${isTyping ? 'cursor-pointer' : ''}`}
-                      onClick={() => { if (isTyping) skip(); }}
+                      onClick={() => { if (isTyping) { skip(); tw.onSkip(); questionReadyAt.current = Date.now(); } }}
                     >
                       {displayedText}
                       {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-500 animate-pulse translate-y-1" />}

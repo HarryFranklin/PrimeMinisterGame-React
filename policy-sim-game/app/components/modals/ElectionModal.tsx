@@ -104,7 +104,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
         {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={() => setPageReady(true)} />}
         {page === 1 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} onReady={() => setPageReady(true)} />}
+        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={() => setPageReady(true)} />}
         {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 5 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}

@@ -2,6 +2,8 @@ import React, { useEffect, useMemo } from 'react';
 import { ElectionCycle, Respondent } from '../../../utils/types';
 import { DPMMessage } from '../SharedModalComponents';
 import { LSChangeBadge } from '../../ui';
+import { track } from '../../../client/telemetry';
+import { useDwellTimer } from '../../../client/hooks';
 
 interface StagePopulationChangeProps {
   finalPopulation: Respondent[];
@@ -130,7 +132,15 @@ export default function StagePopulationChange({
     [finalPopulation, currentCycle]
   );
 
+  const dwell = useDwellTimer();
+
   useEffect(() => {
+    track('wellbeing_changes_opened', { cycle: ElectionCycle[currentCycle] });
+    dwell.start();
+  }, []);
+
+  useEffect(() => {
+    track('wellbeing_changes_closed', { cycle: ElectionCycle[currentCycle], dwell_ms: dwell.stop() });
     onReady();
   }, [onReady]);
 
@@ -146,7 +156,11 @@ export default function StagePopulationChange({
       </DPMMessage>
 
       <button
-        onClick={() => onDefinitionToggle('Change Thresholds', thresholdNote)}
+        onClick={() => 
+        {
+          track('wellbeing_note_clicked', { cycle: ElectionCycle[currentCycle] });
+          onDefinitionToggle('Change Thresholds', thresholdNote)}
+        }
         className="self-start flex items-center gap-1.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-full pl-1.5 pr-3 py-1 transition-colors cursor-pointer shrink-0"
       >
         <span className="w-4 h-4 rounded-full bg-pink-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">

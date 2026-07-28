@@ -8,7 +8,7 @@ import { availablePolicies } from '../data/policies';
 import { FRAMEWORK_RULES } from "../utils/frameworkRules";
 import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
-import { track, setContext, startLevelAttempt } from '../client/telemetry';
+import { track, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -102,11 +102,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       score: MetricsEngine.getMetricScore(freshPop, cycle),
       population: calculateAverage(freshPop),
     });
-    track("policy_options_presented", {
+     track("policy_options_presented", {
       turn: 1,
       level_id: levelId,
       options: schedule[0].map(p => p.id),
     });
+    startTimer('turn_active');
     
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
@@ -205,6 +206,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleApplyPolicy = () => {
     if (!selectedPolicy || isEnacting) return;
 
+    // then immediately restart for the next turn:
+    startTimer('turn_active');
+
     setIsEnacting(true);
 
     setTimeout(() => {
@@ -228,11 +232,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         population_before: calculateAverage(population),
         population_after: calculateAverage(nextPop),
       });
+
+      const timeOnTurnMs = stopTimer('turn_active');
       track("turn_completed", {
         turn: currentTurn,
         level_id: levelId,
         score: scoreAfter,
         population: calculateAverage(nextPop),
+        time_on_turn_ms: timeOnTurnMs,
       });
       
       setHistory(prev => [...prev, {
@@ -254,6 +261,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         setContext({ turn: nextTurn });
         track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: calculateAverage(nextPop) });
         track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[currentTurn].map(p => p.id) });
+        startTimer('turn_active');
       } else {
         setIsParliamentDissolved(true);
       }
