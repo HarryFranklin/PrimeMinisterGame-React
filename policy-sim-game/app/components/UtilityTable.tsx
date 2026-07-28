@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Respondent, ElectionCycle } from "../utils/types";
+import { Respondent, ElectionCycle, Policy } from "../utils/types";
 import { WelfareMetrics } from "../utils/WelfareMetrics";
 
 type ForecastState = 'idle' | 'policy-selected' | 'previewing';
@@ -13,6 +13,7 @@ interface UtilityTableProps {
   forecastsRemaining: number;
   onRunForecast: () => void;
   detailsOpen: boolean;
+  selectedPolicy: Policy | null;
 }
 
 const ALL_COLUMNS = Array.from({ length: 11 }, (_, i) => i); 
@@ -36,6 +37,7 @@ export default function UtilityTable({
   forecastsRemaining,
   onRunForecast,
   detailsOpen,
+  selectedPolicy,
 }: UtilityTableProps) {
   const currentCtx = useMemo(
     () => buildCycleContext(population, cycle),
@@ -70,62 +72,26 @@ export default function UtilityTable({
     });
   }, [population, cycle, currentCtx]);
 
+  // We now only need to calculate the magnitude of the change once
   const marginalGains = useMemo(() => {
     return ALL_COLUMNS.map(col => {
       if (col >= 10) return 0;
       if (cycle === ElectionCycle.Benthamite || cycle === ElectionCycle.Rawlsian) return 1;
 
       if (cycle === ElectionCycle.PersonalUtility) {
-        return population.reduce((sum, r) => {
-          const uBefore = WelfareMetrics.getUtilityForPerson(Math.max(2, col), r.personalUtilities);
-          const uAfter = WelfareMetrics.getUtilityForPerson(Math.max(2, col + 1), r.personalUtilities);
-          return sum + (uAfter - uBefore);
-        }, 0) / population.length;
+        const uBefore = WelfareMetrics.getUtility(Math.max(2, col), 'personal');
+        const uAfter = WelfareMetrics.getUtility(Math.max(2, col + 1), 'personal');
+        return uAfter - uBefore;
       }
 
       if (cycle === ElectionCycle.SocietalUtility) {
-        const multsBefore = WelfareMetrics.getPopulationCurveMultipliers([Math.max(2, col)]);
-        const multsAfter = WelfareMetrics.getPopulationCurveMultipliers([Math.max(2, col + 1)]);
-        const multsDelta = multsAfter.map((m, i) => m - multsBefore[i]);
-        
-        return population.reduce((sum, r) => {
-          let pDelta = 0;
-          for (let i = 0; i < 6; i++) pDelta += multsDelta[i] * r.societalUtilities[i];
-          return sum + (pDelta / population.length);
-        }, 0);
+        const uBefore = WelfareMetrics.getUtility(Math.max(2, col), 'societal');
+        const uAfter = WelfareMetrics.getUtility(Math.max(2, col + 1), 'societal');
+        return uAfter - uBefore;
       }
       return 0;
     });
-  }, [population, cycle]);
-
-  const marginalLosses = useMemo(() => {
-    return ALL_COLUMNS.map(col => {
-      if (col <= 2) return 0;
-      if (cycle === ElectionCycle.Benthamite || cycle === ElectionCycle.Rawlsian) return 1;
-
-      if (cycle === ElectionCycle.PersonalUtility) {
-        return population.reduce((sum, r) => {
-          const uBefore = WelfareMetrics.getUtilityForPerson(Math.max(2, col), r.personalUtilities);
-          const uAfter = WelfareMetrics.getUtilityForPerson(Math.max(2, col - 1), r.personalUtilities);
-          return sum + (uBefore - uAfter); 
-        }, 0) / population.length;
-      }
-
-      if (cycle === ElectionCycle.SocietalUtility) {
-        const multsBefore = WelfareMetrics.getPopulationCurveMultipliers([Math.max(2, col)]);
-        const multsAfter = WelfareMetrics.getPopulationCurveMultipliers([Math.max(2, col - 1)]);
-        const multsDelta = multsAfter.map((m, i) => m - multsBefore[i]);
-        
-        const yieldDelta = population.reduce((sum, r) => {
-          let pDelta = 0;
-          for (let i = 0; i < 6; i++) pDelta += multsDelta[i] * r.societalUtilities[i];
-          return sum + (pDelta / population.length);
-        }, 0);
-        return -yieldDelta;
-      }
-      return 0;
-    });
-  }, [population, cycle]);
+  }, [cycle]);
 
   const displayedCounts = previewStats ? previewStats.map(s => s.count) : baseStats.map(s => s.count);
   const displayedYield  = previewStats ? previewStats.map(s => s.totalYield) : baseStats.map(s => s.totalYield);
@@ -192,16 +158,31 @@ export default function UtilityTable({
                 const isPositiveDelta = pctDelta > 0;
                 const hasChanged = isPreviewing && pctDelta !== 0;
                 
-                const cellClasses = hasChanged 
-                  ? (isPositiveDelta ? 'bg-blue-500/10 border-blue-500/20 text-blue-700' : 'bg-amber-500/10 border-amber-500/20 text-amber-700')
+                // Color matches histogram intent, NOT demographic shifting
+                let netImpact = 0;
+                if (isPreviewing && selectedPolicy) {
+                  const affecting = selectedPolicy.specificRules.filter(r => {
+                      const min = r.minLS !== undefined ? r.minLS : 0;
+                      const max = r.maxLS !== undefined ? r.maxLS : 10;
+                      return col >= min && col <= max;
+                  });
+                  netImpact = affecting.reduce((sum, r) => sum + r.impact, 0);
+                }
+
+                const cellClasses = netImpact > 0 
+                  ? 'bg-blue-500/10 border-blue-500/20 text-blue-800' 
+                  : netImpact < 0 
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-800' 
                   : 'bg-zinc-50 border-zinc-100 text-zinc-900';
+
+                const detailTextClass = netImpact > 0 ? 'text-blue-600' : netImpact < 0 ? 'text-amber-600' : (pctDelta > 0 ? 'text-emerald-600' : 'text-rose-600');
 
                 return (
                   <td key={col} className={`px-1 py-4 font-bold leading-none border-x transition-colors duration-300 ${cellClasses}`}>
                     {pctAfter}
                     {hasChanged && detailsOpen && (
-                      <span className={`block text-[11px] font-black mt-1 ${isPositiveDelta ? 'text-blue-600' : 'text-amber-600'}`}>
-                        {isPositiveDelta ? '+' : ''}{pctDelta}%
+                      <span className={`block text-[11px] font-black mt-1 ${detailTextClass}`}>
+                        {pctDelta > 0 ? '+' : ''}{pctDelta}%
                       </span>
                     )}
                   </td>
@@ -216,18 +197,16 @@ export default function UtilityTable({
               </td>
               {DISPLAY_COLUMNS.map(col => {
                 const gain = marginalGains[col]; 
-                const lossFromNext = marginalLosses[col + 1] || 0; 
                 const isLast = col === 10;
 
                 return (
                   <td key={col} className="bg-white px-0.5 py-3 border-x border-zinc-100 align-middle relative">
                     {!isLast && (
-                      <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-1.5 items-center justify-center z-10 w-11">
-                        <div className="text-emerald-600 bg-emerald-50 px-1 rounded-md w-full py-1 flex flex-col items-center leading-none border border-emerald-200 shadow-sm">
-                          <span className="text-[9px] font-black tracking-tighter">+{gain.toFixed(2)}</span>
-                        </div>
-                        <div className="text-rose-600 bg-rose-50 px-1 rounded-md w-full py-1 flex flex-col items-center leading-none border border-rose-200 shadow-sm">
-                          <span className="text-[9px] font-black tracking-tighter">-{lossFromNext.toFixed(2)}</span>
+                      <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-10 w-11">
+                        <div className="bg-zinc-100 px-2 py-1.5 rounded-md border border-zinc-200 shadow-sm flex items-center justify-center w-full">
+                          <span className="text-[12px] font-black text-zinc-700 tracking-tighter">
+                            ±{gain.toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -251,16 +230,30 @@ export default function UtilityTable({
                 const valPositive = Number(strAfterVal) > Number(strBeforeVal);
 
                 const hasChanged = isPreviewing && !valNeutral;
-                
-                const cellClasses = hasChanged 
-                  ? (valPositive ? 'bg-blue-500/10 border-blue-500/20 text-blue-700' : 'bg-amber-500/10 border-amber-500/20 text-amber-700')
+
+                let netImpact = 0;
+                if (isPreviewing && selectedPolicy) {
+                  const affecting = selectedPolicy.specificRules.filter(r => {
+                      const min = r.minLS !== undefined ? r.minLS : 0;
+                      const max = r.maxLS !== undefined ? r.maxLS : 10;
+                      return col >= min && col <= max;
+                  });
+                  netImpact = affecting.reduce((sum, r) => sum + r.impact, 0);
+                }
+
+                const cellClasses = netImpact > 0 
+                  ? 'bg-blue-500/10 border-blue-500/20 text-blue-800' 
+                  : netImpact < 0 
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-800' 
                   : 'bg-zinc-50 border-zinc-100 text-zinc-900';
+
+                const detailTextClass = netImpact > 0 ? 'text-blue-600' : netImpact < 0 ? 'text-amber-600' : (valPositive ? 'text-emerald-600' : 'text-rose-600');
 
                 return (
                   <td key={col} className={`px-1 py-4 font-bold leading-none border-x transition-colors duration-300 ${cellClasses}`}>
                     {afterVal > 0 ? strAfterVal : '-'}
                     {hasChanged && detailsOpen && (
-                      <span className={`block text-[11px] font-black mt-1 ${valPositive ? 'text-blue-600' : 'text-amber-600'}`}>
+                      <span className={`block text-[11px] font-black mt-1 ${detailTextClass}`}>
                         {valPositive ? '+' : ''}{(afterVal - beforeVal).toFixed(2)}
                       </span>
                     )}
@@ -274,16 +267,16 @@ export default function UtilityTable({
 
       {/* Score Output Box */}
       <div className="rounded-xl border border-zinc-200 bg-white p-4 lg:p-5 flex items-center justify-between shadow-sm shrink-0 mt-auto">
-        <span className="text-sm font-black uppercase tracking-widest text-zinc-800">
+        <span className="text-xs lg:text-sm font-black uppercase tracking-widest text-zinc-800">
           {metricName}
         </span>
         <div className="flex items-center gap-3">
           {forecastState === 'previewing' && !isNeutral ? (
-            <span className="text-xl font-black tabular-nums text-zinc-800">
+            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
               {strBaseScore} <span className="text-zinc-400 font-bold mx-2">→</span> <span className={scoreColor}>{strScore}</span>
             </span>
           ) : (
-            <span className="text-xl font-black tabular-nums text-zinc-800">
+            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
               {strScore}
             </span>
           )}

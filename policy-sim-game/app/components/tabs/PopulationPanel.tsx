@@ -96,6 +96,7 @@ export default function PopulationPanel({
               forecastsRemaining={1}
               onRunForecast={() => {}}
               detailsOpen={detailsOpen}
+              selectedPolicy={selectedPolicy}
             />
             {isParliamentDissolved && (
               <EmptyState
