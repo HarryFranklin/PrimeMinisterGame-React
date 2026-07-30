@@ -29,7 +29,15 @@ export class WelfareMetrics {
     return null;
   }
 
-  static evaluateDistribution(populationLS: number[]): number {
+  /** Alias for getUtility(ls, 'personal') — kept for call sites that
+   * still use the old method name. The second arg (_personalUtilities) was
+   * from an older per-person utility table; it's ignored now that we use
+   * the universal table. */
+  static getUtilityForPerson(lsScore: number, _personalUtilities?: unknown): number {
+    return this.getUtility(lsScore, 'personal');
+  }
+
+  static evaluateDistribution(populationLS: number[], _societalUtilities?: unknown): number {
     let totalUtility = 0;
     for (let i = 0; i < populationLS.length; i++) {
       totalUtility += this.getUtility(populationLS[i], 'societal');
