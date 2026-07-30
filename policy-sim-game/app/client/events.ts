@@ -18,6 +18,13 @@ export type TelemetryEvent =
   // ---- Intro / initial load ----
   | { event: "intro_opened"; payload: {} }
   | {
+      // Fires when the player clicks the closed envelope to actually open
+      // it - distinct from intro_opened (the modal appearing on screen).
+      // The gap between the two tells you how long it sat unopened.
+      event: "intro_envelope_opened";
+      payload: {};
+    }
+  | {
       event: "intro_text_skipped";
       payload: {
         /** ms elapsed before the skip click */
@@ -49,6 +56,15 @@ export type TelemetryEvent =
         /** true when the Skip Briefing button is visible (retry) */
         is_retry: boolean;
       };
+    }
+  | {
+      // Fires when the player clicks the closed envelope ("Open Briefing")
+      // to actually reveal the mandate text - distinct from briefing_opened
+      // (the modal appearing on screen). On a retry, the player may instead
+      // hit "Skip Briefing" without this ever firing at all, which is
+      // itself useful signal (they didn't even glance at it this time).
+      event: "briefing_envelope_opened";
+      payload: { cycle: string; attempt_number: number };
     }
   | {
       event: "briefing_metric_definition_clicked";
@@ -97,6 +113,16 @@ export type TelemetryEvent =
   | {
       event: "tooltip_hovered";
       payload: { tooltip_type: string; tooltip_id: string; turn?: number };
+    }
+  | {
+      // Fires when the player clicks a policy card in the deck to make it
+      // their current pick (or clicks it again to deselect it). Distinct
+      // from view_details_opened (they opened the details panel on an
+      // already-picked policy) and policy_selected (the policy they ended
+      // up enacting) - this is "what did they pick as a candidate, and did
+      // they change their mind".
+      event: "policy_card_selected";
+      payload: { turn: number; level_id: string; policy_id: string | null; action: "picked" | "deselected" };
     }
   | { event: "view_details_opened"; payload: { policy_id: string; turn: number } }
   | {

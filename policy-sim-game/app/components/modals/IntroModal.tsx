@@ -15,18 +15,27 @@ export default function IntroModal({ onAcknowledge }: IntroModalProps) {
 
   useEffect(() => {
     track('intro_opened', {});
-    dwell.start();
   }, []);
+
+  const handleOpenIntro = () => {
+    track('intro_envelope_opened', {});
+    // Reset here, not at mount - time spent with the envelope closed
+    // shouldn't count as reading/dwell time.
+    tw.reset();
+    dwell.start();
+  };
 
   const handleSkip = () => {
     tw.onSkip();
+    // Track right here, at the moment the skip actually happens - not
+    // deferred until Proceed is clicked, otherwise the skip and proceed
+    // events end up with (almost) the same timestamp even though they may
+    // have been minutes apart.
+    const info = tw.getSkipInfo();
+    track('intro_text_skipped', { elapsed_ms: info.elapsed_ms, pct_seen: info.pct_seen });
   };
 
   const handleProceed = () => {
-    const info = tw.getSkipInfo();
-    if (info.was_skipped) {
-      track('intro_text_skipped', { elapsed_ms: info.elapsed_ms, pct_seen: info.pct_seen });
-    }
     track('intro_proceeded', { dwell_ms: dwell.stop() });
     onAcknowledge();
   };
@@ -39,6 +48,8 @@ export default function IntroModal({ onAcknowledge }: IntroModalProps) {
         message={introText}
         onAcknowledge={handleProceed}
         onSkip={handleSkip}          // ← see note below
+        onProgress={tw.updateDisplayed}
+        onOpen={handleOpenIntro}
         buttonText="Proceed to Level Select"
       />
     </ModalContent>

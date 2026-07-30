@@ -162,7 +162,16 @@ export default function DashboardTab() {
           isParliamentDissolved={isParliamentDissolved}
           currentDeck={currentDeck}
           selectedPolicy={selectedPolicy}
-          onSelectPolicy={(policy) => { setSelectedPolicy(policy); setDetailsOpen(false); }}
+          onSelectPolicy={(policy) => {
+            track("policy_card_selected", {
+              turn: currentTurn,
+              level_id: ElectionCycle[currentCycle],
+              policy_id: policy?.id ?? null,
+              action: policy ? "picked" : "deselected",
+            });
+            setSelectedPolicy(policy);
+            setDetailsOpen(false);
+          }}
           population={population}
           detailsOpen={detailsOpen}
           onToggleDetails={setDetailsOpen}

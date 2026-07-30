@@ -39,7 +39,6 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
       attempt_number: cycleAttempts,
       is_retry: isRetryingTerm,
     });
-    dwell.start();
   }, []);
 
   const handleMetricClick = () => {
@@ -50,15 +49,28 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
     });
   };
 
+  const handleOpenBriefing = () => {
+    track('briefing_envelope_opened', { cycle: cycleKey, attempt_number: cycleAttempts });
+    // Reset here rather than at mount - the player may have left the
+    // closed envelope sitting on screen for a while first, and none of
+    // that waiting should count as "reading" or "dwell" time.
+    tw.reset();
+    dwell.start();
+  };
+
   const handleSkip = () => {
     tw.onSkip();
+    // Track right here, at the moment the skip actually happens - not
+    // deferred until Proceed is clicked, otherwise the skip and proceed
+    // events end up with (almost) the same timestamp even though they may
+    // have been minutes apart. (This is only ever wired to the typewriter's
+    // own skip action, never to the separate "Skip Briefing" button, so no
+    // extra guard is needed here.)
+    const info = tw.getSkipInfo();
+    track('briefing_text_skipped', { cycle: cycleKey, elapsed_ms: info.elapsed_ms, pct_seen: info.pct_seen });
   };
 
   const handleProceed = (usedSkipButton = false) => {
-    const info = tw.getSkipInfo();
-    if (info.was_skipped && !usedSkipButton) {
-      track('briefing_text_skipped', { cycle: cycleKey, elapsed_ms: info.elapsed_ms, pct_seen: info.pct_seen });
-    }
     track('briefing_proceeded', {
       cycle: cycleKey,
       dwell_ms: dwell.stop(),
@@ -99,6 +111,8 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
           message={briefingText}
           onAcknowledge={() => handleProceed(false)}
           onSkip={handleSkip}
+          onProgress={tw.updateDisplayed}
+          onOpen={handleOpenBriefing}
           buttonText="Accept Mandate & Begin Term"
           typeSpeed={25}
         />

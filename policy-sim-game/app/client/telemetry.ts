@@ -141,6 +141,7 @@ let currentTurn: number | undefined;
 
 let lastEventTs: number | null = null;
 const lastEventTsByType = new Map<string, number>();
+const lastPayloadByType = new Map<string, string>();
 
 /** Register something to receive every event as it's tracked.
  * This is the extension point for Phase 2: `registerSink(networkSink)`
@@ -238,8 +239,22 @@ function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<st
   const now = Date.now();
   const ms_since_last_event = lastEventTs !== null ? now - lastEventTs : null;
   const ms_since_last_same_event = lastEventTsByType.has(event) ? now - lastEventTsByType.get(event)! : null;
+
+  // Guard against accidental double-fires of the exact same event (e.g. a
+  // component's mount effect running twice in the same tick due to a
+  // re-render/remount race) - if we just logged this event with identical
+  // payload under 50ms ago, treat it as a duplicate and drop it silently
+  // rather than recording it twice.
+  if (ms_since_last_same_event !== null && ms_since_last_same_event < 50) {
+    const serialized = JSON.stringify(payload ?? {});
+    if (lastPayloadByType.get(event) === serialized) {
+      return null;
+    }
+  }
+
   lastEventTs = now;
   lastEventTsByType.set(event, now);
+  lastPayloadByType.set(event, JSON.stringify(payload ?? {}));
 
   const entry: LoggedEvent = {
     event,
@@ -346,6 +361,7 @@ export function clearLog() {
   fullLog.length = 0;
   lastEventTs = null;
   lastEventTsByType.clear();
+  lastPayloadByType.clear();
   try {
     localStorage.removeItem(LOCAL_STORAGE_LOG_KEY);
   } catch {

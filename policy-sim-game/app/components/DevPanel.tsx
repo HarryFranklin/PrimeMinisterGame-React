@@ -1,6 +1,7 @@
 import React from 'react';
 import { ElectionCycle, Policy } from '../utils/types';
 import { DifficultySimulator } from '../utils/DifficultySimulator';
+import { clearLog } from '../client/telemetry';
 
 interface DevPanelProps {
   devMode: boolean;
@@ -103,6 +104,7 @@ export default function DevPanel({
               </button>
               <button
                 onClick={() => {
+                  clearLog();
                   localStorage.clear();
                   window.location.href = '/';
                 }}

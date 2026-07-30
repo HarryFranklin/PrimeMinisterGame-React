@@ -96,19 +96,13 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     const levelId = ElectionCycle[cycle];
     startLevelAttempt(levelId); // fresh attempt_id + incrementing attempt_number, resets turn to 0
     setContext({ levelId, turn: 1 });
-    track("turn_started", {
-      turn: 1,
-      level_id: levelId,
-      score: MetricsEngine.getMetricScore(freshPop, cycle),
-      population: calculateAverage(freshPop),
-    });
-     track("policy_options_presented", {
-      turn: 1,
-      level_id: levelId,
-      options: schedule[0].map(p => p.id),
-    });
-    startTimer('turn_active');
-    
+    // NOTE: turn_started / policy_options_presented / the turn timer for
+    // turn 1 are deliberately NOT fired here. At this point the player
+    // hasn't seen the briefing modal yet, let alone accepted it - starting
+    // the clock now would count the entire time spent reading/skipping the
+    // briefing as "time on turn 1". They're fired from
+    // handleBriefingAcknowledged() instead, once the player actually begins
+    // the term.
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
     setCurrentCycle(cycle);
@@ -206,61 +200,76 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleApplyPolicy = () => {
     if (!selectedPolicy || isEnacting) return;
 
-    // then immediately restart for the next turn:
-    startTimer('turn_active');
+    // Stop the turn timer right now, at the actual moment "Enact" is
+    // clicked - this is what time_on_turn_ms is supposed to measure (how
+    // long the player spent deciding since the turn's options were
+    // presented). The old code re-started this same timer here and only
+    // stopped it 800ms later inside the setTimeout below, so it was only
+    // ever measuring the fixed "Enacting Legislation..." animation delay
+    // (hence every turn reporting ~800ms) instead of real decision time.
+    const timeOnTurnMs = stopTimer('turn_active');
+
+    // Compute everything synchronously now too, and fire policy_selected /
+    // turn_completed immediately - not 800ms from now once the animation
+    // finishes - so their timestamps reflect the actual click rather than
+    // lagging behind it.
+    const enactedTurn = currentTurn;
+    const enactedPolicy = selectedPolicy;
+    const levelId = ElectionCycle[currentCycle];
+    const nextPop = recordTurnState(previewPopulation, currentCycle, enactedTurn + 1, enactedPolicy.id, enactedPolicy.policyName);
+    const scoreBefore = MetricsEngine.getMetricScore(population, currentCycle);
+    const scoreAfter = MetricsEngine.getMetricScore(nextPop, currentCycle);
+    const populationBefore = calculateAverage(population);
+    const populationAfter = calculateAverage(nextPop);
+
+    track("policy_selected", {
+      turn: enactedTurn,
+      level_id: levelId,
+      policy_id: enactedPolicy.id,
+      options_available: currentDeck.map(p => p.id),
+      score_before: scoreBefore,
+      score_after: scoreAfter,
+      // this game doesn't have a literal "population count" metric that
+      // changes turn to turn - using average life satisfaction here as the
+      // closest per-turn population-wellbeing signal.
+      population_before: populationBefore,
+      population_after: populationAfter,
+    });
+    track("turn_completed", {
+      turn: enactedTurn,
+      level_id: levelId,
+      score: scoreAfter,
+      population: populationAfter,
+      time_on_turn_ms: timeOnTurnMs,
+    });
 
     setIsEnacting(true);
 
     setTimeout(() => {
-      const nextPop = recordTurnState(previewPopulation, currentCycle, currentTurn + 1, selectedPolicy.id, selectedPolicy.policyName);
-      const scoreBefore = MetricsEngine.getMetricScore(population, currentCycle);
-      const scoreAfter = MetricsEngine.getMetricScore(nextPop, currentCycle);
-      setLastTurnSummary({ policyName: selectedPolicy.policyName, scoreBefore, scoreAfter, turn: currentTurn });
+      setLastTurnSummary({ policyName: enactedPolicy.policyName, scoreBefore, scoreAfter, turn: enactedTurn });
       setPopulation(nextPop);
 
-      const levelId = ElectionCycle[currentCycle];
-      track("policy_selected", {
-        turn: currentTurn,
-        level_id: levelId,
-        policy_id: selectedPolicy.id,
-        options_available: currentDeck.map(p => p.id),
-        score_before: scoreBefore,
-        score_after: scoreAfter,
-        // this game doesn't have a literal "population count" metric that
-        // changes turn to turn - using average life satisfaction here as the
-        // closest per-turn population-wellbeing signal.
-        population_before: calculateAverage(population),
-        population_after: calculateAverage(nextPop),
-      });
-
-      const timeOnTurnMs = stopTimer('turn_active');
-      track("turn_completed", {
-        turn: currentTurn,
-        level_id: levelId,
-        score: scoreAfter,
-        population: calculateAverage(nextPop),
-        time_on_turn_ms: timeOnTurnMs,
-      });
-      
       setHistory(prev => [...prev, {
-        turn: currentTurn + 1,
-        enactedPolicyId: selectedPolicy.id,
-        enactedPolicyName: selectedPolicy.policyName,
+        turn: enactedTurn + 1,
+        enactedPolicyId: enactedPolicy.id,
+        enactedPolicyName: enactedPolicy.policyName,
         lsAverage: calculateAverage(previewPopulation)
       }]);
 
       const updatedSchedule = cycleSchedule.map((deck, idx) =>
-        idx >= currentTurn ? deck.filter(p => p.id !== selectedPolicy.id) : deck
+        idx >= enactedTurn ? deck.filter(p => p.id !== enactedPolicy.id) : deck
       );
       setCycleSchedule(updatedSchedule);
 
-      if (currentTurn < TURNS_PER_CYCLE) {
-        const nextTurn = currentTurn + 1;
-        setCurrentDeck(updatedSchedule[currentTurn]);
+      if (enactedTurn < TURNS_PER_CYCLE) {
+        const nextTurn = enactedTurn + 1;
+        setCurrentDeck(updatedSchedule[enactedTurn]);
         setCurrentTurn(nextTurn);
         setContext({ turn: nextTurn });
-        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: calculateAverage(nextPop) });
-        track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[currentTurn].map(p => p.id) });
+        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: populationAfter });
+        track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[enactedTurn].map(p => p.id) });
+        // Timer for the *new* turn correctly starts now, once its options
+        // are actually on screen - this part was already right.
         startTimer('turn_active');
       } else {
         setIsParliamentDissolved(true);
@@ -270,6 +279,28 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       setIsEnacting(false);
     }, 800);
   };
+
+  // Called when the player accepts the mandate in BriefingModal (or uses the
+  // retry "Skip Briefing" button) - this is the true start of turn 1, so
+  // turn_started/policy_options_presented/the turn timer belong here rather
+  // than back in startCycle (see note there).
+  const handleBriefingAcknowledged = useCallback(() => {
+    const levelId = ElectionCycle[currentCycle];
+    setContext({ levelId, turn: 1 });
+    track("turn_started", {
+      turn: 1,
+      level_id: levelId,
+      score: MetricsEngine.getMetricScore(population, currentCycle),
+      population: calculateAverage(population),
+    });
+    track("policy_options_presented", {
+      turn: 1,
+      level_id: levelId,
+      options: currentDeck.map(p => p.id),
+    });
+    startTimer('turn_active');
+    setGamePhase(GamePhase.Playing);
+  }, [currentCycle, population, currentDeck]);
 
   const handleFaceElectorate = useCallback(() => {
     setLastTurnSummary(null);
@@ -372,6 +403,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     turnMetricScore, initialMetricScore, currentMetricScore, turnApprovalRating,
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleCompleteTerm, setCurrentTurn, handleNavigateToPolicy,
+    handleBriefingAcknowledged,
     startLevel,
     gamePhase, setGamePhase, isAgendaUnlocked, yAxisMax,
     TURNS_PER_CYCLE,

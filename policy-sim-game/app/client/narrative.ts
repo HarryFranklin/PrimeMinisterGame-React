@@ -82,7 +82,20 @@ function fmtDur(ms: unknown): string {
 }
 
 function fmtScore(n: unknown): string {
-  return typeof n === "number" ? n.toFixed(1) : "?";
+  // Matches the in-game score display (DPMCard, UtilityTable, etc all use
+  // .toFixed(2)) - telemetry was previously rounding to 1dp here, which
+  // made turn-to-turn score deltas look coarser/less precise than what the
+  // player actually sees on screen.
+  return typeof n === "number" ? n.toFixed(2) : "?";
+}
+
+function fmtPct(n: unknown): string {
+  // Approval rating is a %, shown in-game to 1dp (with the "100.0"->"100"
+  // special case) - kept separate from fmtScore since it's a different
+  // unit/precision than the raw metric score.
+  if (typeof n !== "number") return "?";
+  const s = n.toFixed(1);
+  return s === "100.0" ? "100" : s;
 }
 
 function humanize(eventName: string): string {
@@ -141,6 +154,8 @@ export function formatLine(
     // ---- Intro ----
     case "intro_opened":
       return { ts: e.ts, text: "Welcome Modal Started", minor };
+    case "intro_envelope_opened":
+      return { ts: e.ts, text: "Welcome Message Opened", minor: true };
     case "intro_text_skipped":
       return { ts: e.ts, text: "Welcome Modal Skipped Typing", minor };
     case "intro_proceeded":
@@ -157,6 +172,8 @@ export function formatLine(
     // ---- Briefing ----
     case "briefing_opened":
       return { ts: e.ts, text: "New Term Commencing Modal Shown", minor };
+    case "briefing_envelope_opened":
+      return { ts: e.ts, text: "Briefing Opened", minor: true };
     case "briefing_metric_definition_clicked":
       return { ts: e.ts, text: "Metric Definition Opened", minor };
     case "briefing_text_skipped":
@@ -170,8 +187,14 @@ export function formatLine(
         ctx.turnStartScoreByTurn.set(e.turn, p.score as number);
       }
       return { ts: e.ts, text: `── Turn ${e.turn} Start — Score: ${fmtScore(p.score)} ──`, minor: false };
+    case "policy_card_selected":
+      return {
+        ts: e.ts,
+        text: p.action === "picked" ? `Policy "${p.policy_id}" Picked` : `Policy "${p.policy_id}" Deselected`,
+        minor: true,
+      };
     case "policy_selected":
-      return { ts: e.ts, text: `Policy "${p.policy_id}" Selected`, minor };
+      return { ts: e.ts, text: `Policy "${p.policy_id}" Enacted`, minor };
     case "view_details_closed":
       return { ts: e.ts, text: `Policy "${p.policy_id}" Details Viewed (${fmtDur(p.dwell_ms)})`, minor: true };
     case "graph_hovered":
@@ -188,7 +211,7 @@ export function formatLine(
       let arrow = "";
       if (typeof startScore === "number" && typeof endScore === "number") {
         const delta = endScore - startScore;
-        arrow = delta === 0 ? " (–)" : delta > 0 ? ` (▲${delta.toFixed(1)})` : ` (▼${Math.abs(delta).toFixed(1)})`;
+        arrow = delta === 0 ? " (–)" : delta > 0 ? ` (▲${delta.toFixed(2)})` : ` (▼${Math.abs(delta).toFixed(2)})`;
       }
       return {
         ts: e.ts,
@@ -235,7 +258,7 @@ export function formatLine(
 
     // ---- Verdict ----
     case "verdict_shown":
-      return { ts: e.ts, text: `Verdict Shown — ${p.won ? "WON" : "LOST"} (${fmtScore(p.approval_rating)}%)`, minor: false };
+      return { ts: e.ts, text: `Verdict Shown — ${p.won ? "WON" : "LOST"} (${fmtPct(p.approval_rating)}%)`, minor: false };
     case "verdict_celebrate_clicked":
       return { ts: e.ts, text: "Clicked Celebrate", minor };
     case "verdict_dwell":

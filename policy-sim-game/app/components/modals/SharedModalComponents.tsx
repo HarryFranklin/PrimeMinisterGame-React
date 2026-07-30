@@ -120,6 +120,15 @@ interface InteractiveDPMEmailProps {
   highlights?: HighlightConfig[];
   /** Overrides the small "Deputy Prime Minister" kicker label above the title. Pass "" to hide it entirely. */
   kicker?: string;
+  /** Called whenever the visible portion of the typewriter text changes,
+   * with its current character length. Lets a caller track "how much was
+   * visible when they skipped/proceeded" (e.g. useTypewriterTelemetry's
+   * updateDisplayed) without needing displayedText itself lifted up. */
+  onProgress?: (displayedLength: number) => void;
+  /** Called the moment the player clicks the closed envelope to open it -
+   * this is when reading actually begins, as opposed to whenever the modal
+   * happened to mount. */
+  onOpen?: () => void;
 }
 
 export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.ReactNode; exitDelay?: number }) => (
@@ -227,11 +236,17 @@ export const InteractiveDPMEmail = ({
   onSkip,
   highlights,
   buttonText = "Begin Term",
-  kicker
+  kicker,
+  onProgress,
+  onOpen
 }: InteractiveDPMEmailProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [buttonUnlocked, setButtonUnlocked] = useState(false);
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(message, typeSpeed, isOpen);
+
+  useEffect(() => {
+    onProgress?.(displayedText.length);
+  }, [displayedText, onProgress]);
 
   useEffect(() => {
     if (isComplete) {
@@ -265,7 +280,7 @@ export const InteractiveDPMEmail = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3 }}
-            onClick={() => setIsOpen(true)}
+            onClick={() => { setIsOpen(true); onOpen?.(); }}
             className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between shadow-sm group hover:bg-zinc-100 transition-colors cursor-pointer text-left"
           >
             <div className="flex items-center gap-4">

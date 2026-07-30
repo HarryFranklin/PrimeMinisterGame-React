@@ -110,8 +110,6 @@ function fmtMs(ms: number | null): string {
 }
 
 function CycleSummaryBlock({ summary }: { summary: CycleSummary }) {
-  const turnEntries = Object.entries(summary.time_on_turn).sort((a, b) => Number(a[0]) - Number(b[0]));
-
   return (
     <div className="my-2 rounded-lg border border-pink-900/40 bg-pink-950/10 p-3 text-[10px]">
       <div className="flex items-center gap-2 mb-2">
@@ -122,11 +120,11 @@ function CycleSummaryBlock({ summary }: { summary: CycleSummary }) {
       </div>
       <div className="grid grid-cols-2 gap-x-4">
         <div>
-          <SummaryRow label="Starting Score" value={summary.starting_score?.toFixed(1) ?? "—"} />
-          <SummaryRow label="Final Score" value={summary.final_score?.toFixed(1) ?? "—"} />
+          <SummaryRow label="Starting Score" value={summary.starting_score?.toFixed(2) ?? "—"} />
+          <SummaryRow label="Final Score" value={summary.final_score?.toFixed(2) ?? "—"} />
           <SummaryRow
             label="Score Delta"
-            value={summary.score_delta !== null ? (summary.score_delta >= 0 ? `▲${summary.score_delta.toFixed(1)}` : `▼${Math.abs(summary.score_delta).toFixed(1)}`) : "—"}
+            value={summary.score_delta !== null ? (summary.score_delta >= 0 ? `▲${summary.score_delta.toFixed(2)}` : `▼${Math.abs(summary.score_delta).toFixed(2)}`) : "—"}
           />
           <SummaryRow label="Turns Played" value={summary.turns_played} />
           <SummaryRow label="Total Duration" value={fmtMs(summary.total_cycle_duration_ms)} />
@@ -135,17 +133,32 @@ function CycleSummaryBlock({ summary }: { summary: CycleSummary }) {
           <SummaryRow label="Viewed Voter Quotes" value={summary.player_viewed_voter_quotes ? `Yes (${summary.voter_quotes_clicked})` : "No"} />
           <SummaryRow label="Viewed Enacted History" value={summary.player_viewed_enacted_history ? "Yes" : "No"} />
           <SummaryRow label="Viewed Academic Reveal" value={summary.player_viewed_animated_histogram ? "Yes" : "No"} />
-          <SummaryRow label="Press Q1 Correct" value={summary.press_conf_q1_correct === null ? "—" : summary.press_conf_q1_correct ? "Yes" : "No"} />
-          <SummaryRow label="Press Q2 Correct" value={summary.press_conf_q2_correct === null ? "—" : summary.press_conf_q2_correct ? "Yes" : "No"} />
+          <SummaryRow
+            label="Press Conf. Score"
+            value={summary.press_conference_correct_count === null ? "—" : `${summary.press_conference_correct_count}/2 (${summary.press_conference_score_pct}%)`}
+          />
           <SummaryRow label="Q2 Un-enacted Pick" value={summary.press_conf_non_chosen_policy_chosen === null ? "—" : summary.press_conf_non_chosen_policy_chosen ? "Yes" : "No"} />
         </div>
       </div>
-      {turnEntries.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-pink-900/30 flex flex-wrap gap-x-3 gap-y-0.5">
-          {turnEntries.map(([turn, ms]) => (
-            <span key={turn} className="text-zinc-500">
-              T{turn}: <span className="text-zinc-300 font-mono">{fmtMs(ms)}</span>
-            </span>
+
+      <div className="mt-2 pt-2 border-t border-pink-900/30 grid grid-cols-2 gap-x-4">
+        <SummaryRow label="Options Previewed" value={summary.pct_policy_options_previewed === null ? "—" : `${summary.pct_policy_options_previewed}%`} />
+        <SummaryRow label="View Details Opened" value={summary.pct_policy_options_view_details_opened === null ? "—" : `${summary.pct_policy_options_view_details_opened}%`} />
+      </div>
+
+      {summary.turns.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-pink-900/30 flex flex-col gap-1">
+          {summary.turns.map((t) => (
+            <div key={t.turn} className="flex items-center gap-2 text-zinc-500">
+              <span className="text-zinc-300 font-mono w-6 shrink-0">T{t.turn}</span>
+              <span className="font-mono shrink-0">{fmtMs(t.time_on_turn_ms)}</span>
+              <span className="truncate">
+                {t.score_start !== null && t.score_end !== null ? `${t.score_start.toFixed(2)} → ${t.score_end.toFixed(2)}` : "—"}
+              </span>
+              <span className="ml-auto shrink-0">
+                previewed {t.options_previewed.length}/{t.options_available.length}, details {t.options_view_details_opened.length}/{t.options_available.length}
+              </span>
+            </div>
           ))}
         </div>
       )}

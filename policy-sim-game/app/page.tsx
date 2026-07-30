@@ -114,7 +114,7 @@ export default function Home() {
                     <BriefingModal 
                       key="briefing" 
                       currentCycle={game.currentCycle} 
-                      onAcknowledge={() => game.setGamePhase(GamePhase.Playing)} 
+                      onAcknowledge={game.handleBriefingAcknowledged} 
                     />
                   )}
 
