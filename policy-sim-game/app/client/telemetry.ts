@@ -135,6 +135,7 @@ export type Sink = (entry: LoggedEvent) => void;
 
 const sinks: Sink[] = [];
 const fullLog: LoggedEvent[] = [];
+let telemetryInitialized = false;
 let appVersion = "dev";
 let currentLevelId: string | undefined;
 let currentTurn: number | undefined;
@@ -209,6 +210,9 @@ export function subscribeSaveStatus(cb: (s: SaveStatus) => void): () => void {
 // ---------------------------------------------------------------------------
 
 export function initTelemetry(options?: { appVersion?: string }) {
+  if (telemetryInitialized) return;
+  telemetryInitialized = true;
+
   if (options?.appVersion) appVersion = options.appVersion;
 
   if (isTelemetryDebugEnabled()) {
@@ -374,7 +378,8 @@ export function getCurrentAttemptId(): string | undefined {
 }
 
 export function downloadLog(filename?: string) {
-  const blob = new Blob([JSON.stringify(fullLog, null, 2)], { type: "application/json" });
+  const sorted = [...fullLog].sort((a, b) => a.ts - b.ts);
+  const blob = new Blob([JSON.stringify(sorted, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
