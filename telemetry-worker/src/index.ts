@@ -2,14 +2,18 @@ export interface Env {
   DB: D1Database;
 }
 
-const ALLOWED_ORIGIN = "https://prime-minister-game.pages.dev"; // your game's URL
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return /^https:\/\/([a-z0-9-]+\.)?prime-minister-game\.pages\.dev$/.test(origin);
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const origin = request.headers.get("Origin");
     const corsHeaders = {
-      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin! : "",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
     };
 
     if (request.method === "OPTIONS") {
