@@ -1,4 +1,5 @@
 import type { TelemetryEventName, PayloadFor } from "./events";
+import { getProlificMeta } from "./sessionMeta";
 
 // ---------------------------------------------------------------------------
 // Environment / debug detection
@@ -121,6 +122,9 @@ export interface LoggedEvent {
   ts: number;
   user_id: string;
   session_id: string;
+  prolific_pid?: string | null;
+  study_id?: string | null;
+  prolific_session_id?: string | null;
   level_id?: string;
   attempt_id?: string;
   attempt_number?: number;
@@ -266,6 +270,7 @@ function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<st
     ts: now,
     user_id: getUserId(),
     session_id: getSessionId(),
+    ...getProlificMeta(),
     level_id: currentLevelId,
     attempt_id: currentAttemptId,
     attempt_number: currentAttemptNumber,

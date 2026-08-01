@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import DevPanel from "./components/DevPanel";
 import TelemetryDevPanel from "./client/TelemetryDevPanel";
-import { initTelemetry } from "./client/telemetry";
+import { initTelemetry, registerSink, endSession } from "./client/telemetry";
+import { networkSink, flushOnExit } from "./client/networkSink";
 import { startRawCapture } from "./client/rawcapture";
 import { startDerivations } from "./client/derive";
 
@@ -32,6 +33,19 @@ export default function Home() {
     initTelemetry({ appVersion: "0.1.0" });
     startRawCapture();
     startDerivations();
+    registerSink(networkSink);
+
+    const start = Date.now();
+    const onExit = () => {
+      endSession(Date.now() - start);
+      flushOnExit();
+    };
+    window.addEventListener("pagehide", onExit);
+    window.addEventListener("beforeunload", onExit);
+    return () => {
+      window.removeEventListener("pagehide", onExit);
+      window.removeEventListener("beforeunload", onExit);
+    };
   }, []);
 
   useEffect(() => {
