@@ -4,16 +4,26 @@ export interface Env {
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  return /^https:\/\/([a-z0-9-]+\.)?prime-minister-game\.pages\.dev$/.test(origin);
+  return (
+    // Matches primary domain AND any Cloudflare Pages preview subdomains (e.g. b6d647d7.prime-minister-game.pages.dev)
+    /^https:\/\/([a-z0-9-]+\.)?prime-minister-game\.pages\.dev$/.test(origin) ||
+    // Local development fallback
+    /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)
+  );
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = request.headers.get("Origin");
+    const allowed = isAllowedOrigin(origin);
+
     const corsHeaders = {
-        "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin! : "",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+      // Dynamically echo back the exact requesting origin if it matches the pattern
+      "Access-Control-Allow-Origin": allowed && origin ? origin : "",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin", // Prevents browsers/CDNs from caching CORS responses for different subdomains
     };
 
     if (request.method === "OPTIONS") {
