@@ -1,11 +1,9 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'export',
-  // This tells Next.js to use relative paths for all your CSS and JS
-  assetPrefix: './',
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   images: {
-    unoptimized: true, // Often needed for static exports
+    unoptimized: true,
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
