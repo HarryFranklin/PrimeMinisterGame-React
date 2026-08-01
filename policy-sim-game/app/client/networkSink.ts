@@ -5,7 +5,7 @@
 
 import type { LoggedEvent } from "./telemetry";
 
-const ENDPOINT = "/api/events";
+const ENDPOINT = "https://telemetry-worker.franklinh.workers.dev/";
 const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH = 50;
 

@@ -1,0 +1,8 @@
+name = "telemetry-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "policy-sim-telemetry"
+database_id = "dc3c30fd-b93f-44b6-9f72-460e51265384"
