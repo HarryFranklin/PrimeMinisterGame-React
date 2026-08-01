@@ -23,7 +23,7 @@ interface ElectionModalProps {
   history: TurnHistory[];
   yAxisMax: number;
   onNextCycle: () => void;
-  onReset: () => void;
+  onReset: (outcome?: "win" | "lose") => void;
   onFinish?: () => void;
   onAnswerPressQuestion: (delta: number) => void;
 }
@@ -46,7 +46,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   const handleRestartTerm = () => {
     track('cycle_ended', { cycle: cycleKey, outcome: won ? 'won' : 'lost_retry' });
-    onReset();
+    onReset(won ? "win" : "lose");
   };
 
   const handleProceedNextTerm = () => {
@@ -61,7 +61,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   const handleLostFinal = () => {
     track('cycle_ended', { cycle: cycleKey, outcome: 'lost_final' });
-    onReset();
+    onReset("lose");
   };
 
   useEffect(() => {

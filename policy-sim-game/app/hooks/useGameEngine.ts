@@ -307,11 +307,11 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.Election);
   }, []);
 
-  const handleResetCycle = useCallback(() => {
+  const handleResetCycle = useCallback((outcome: "win" | "lose" = "lose") => {
     track("level_attempt_ended", {
       level_id: ElectionCycle[currentCycle],
       attempt_number: cycleAttempts,
-      outcome: "abandoned",
+      outcome,
       turns_taken: currentTurn,
     });
     wipeSave();
