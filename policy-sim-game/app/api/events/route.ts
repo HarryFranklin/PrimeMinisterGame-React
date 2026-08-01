@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, inserted: 0 });
   }
 
-  const db = (process.env as any).DB;
+  const db = (process.env as any).policy_sim_telemetry;
 
   const stmt = db.prepare(`
     INSERT INTO events (
