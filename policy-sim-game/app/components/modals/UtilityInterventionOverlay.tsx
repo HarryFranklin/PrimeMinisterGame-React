@@ -158,7 +158,6 @@ const AnimatedUtilityCurve = ({ onAnimationComplete }: { onAnimationComplete: ()
       .text('-3.8 U')
       .style('opacity', 0).transition().delay(4000).duration(500).style('opacity', 1);
 
-    // Fire "animation complete" callback after the last element appears (~4.5s)
     const animTimer = setTimeout(() => {
       if (!completedRef.current) {
         completedRef.current = true;
@@ -172,7 +171,7 @@ const AnimatedUtilityCurve = ({ onAnimationComplete }: { onAnimationComplete: ()
   return <div ref={containerRef} className="w-full h-full"><svg ref={svgRef}></svg></div>;
 };
 
-// --- STEP 2: DYNAMIC CITIZEN CARD (unchanged) ---
+// --- STEP 2: DYNAMIC CITIZEN CARD & DIFF BAR ---
 const CitizenCard = ({
   name, title, ls, u, prevLs, prevU, showDiff
 }: {
@@ -180,6 +179,66 @@ const CitizenCard = ({
 }) => {
   const lsDiff = ls - prevLs;
   const uDiff = u - prevU;
+
+  // Reusable function to render the stacked bar with contextual animations
+  const renderBar = (current: number, prev: number, diff: number, isUtility: boolean) => {
+    const isGain = diff > 0;
+    const color1 = isGain ? '#34d399' : '#fb7185';
+    const color2 = isGain ? '#059669' : '#e11d48';
+    
+    const bgImage = `repeating-linear-gradient(45deg, ${color1}, ${color1} 6px, ${color2} 6px, ${color2} 12px)`;
+    const baseClass = isUtility ? 'bg-pink-500' : 'bg-zinc-300';
+    
+    const delay = isUtility ? 0.2 : 0;
+    // Slower animation duration for losses to make it clearer to the user
+    const animDuration = (showDiff && !isGain) ? 2.5 : 0.8;
+
+    return (
+      <div className="h-4 bg-zinc-900 rounded-full relative border border-zinc-700 w-full overflow-hidden shadow-inner">
+        
+        {/* Stripe Layer (Bottom) */}
+        {showDiff && diff !== 0 && (
+          <motion.div
+            className="absolute top-0 left-0 bottom-0 rounded-full"
+            style={{ backgroundImage: bgImage }}
+            initial={{ 
+              width: `${(prev / 10) * 100}%`, 
+              opacity: isGain ? 0 : 1 
+            }}
+            animate={
+              isGain 
+                // For a gain, animate the width outwards
+                ? { width: `${(current / 10) * 100}%`, opacity: 1 }
+                // For a loss, keep width at prev, but pulse the opacity after the base bar has shrunk
+                : { width: `${(prev / 10) * 100}%`, opacity: [1, 0.3, 1] }
+            }
+            transition={
+              isGain
+                ? { duration: animDuration, ease: "easeOut", delay }
+                : {
+                    opacity: {
+                      repeat: Infinity,
+                      duration: 2, // Slow 2 second pulse
+                      ease: "easeInOut",
+                      delay: animDuration + delay // Wait until the base bar finishes revealing it
+                    }
+                  }
+            }
+          />
+        )}
+        
+        {/* Base Solid Layer (Top) */}
+        <motion.div
+          className={`absolute top-0 left-0 bottom-0 rounded-full ${baseClass} shadow-[2px_0_4px_rgba(0,0,0,0.3)]`}
+          initial={{ width: `${(prev / 10) * 100}%` }}
+          animate={{ 
+            width: (showDiff && isGain) ? `${(prev / 10) * 100}%` : `${(current / 10) * 100}%` 
+          }}
+          transition={{ duration: animDuration, ease: "easeOut", delay }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="bg-zinc-800 border border-zinc-700 p-5 rounded-2xl flex flex-col gap-4">
@@ -200,14 +259,7 @@ const CitizenCard = ({
             <span className="text-xl font-black text-white">{ls.toFixed(1)} <span className="text-zinc-500 font-medium text-sm">/ 10</span></span>
           </div>
         </div>
-        <div className="h-4 bg-zinc-900 rounded-full overflow-hidden border border-zinc-700">
-          <motion.div
-            initial={{ width: `${(prevLs / 10) * 100}%` }}
-            animate={{ width: `${(ls / 10) * 100}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="h-full bg-zinc-300"
-          />
-        </div>
+        {renderBar(ls, prevLs, lsDiff, false)}
       </div>
 
       <div>
@@ -222,14 +274,7 @@ const CitizenCard = ({
             <span className="text-xl font-black text-pink-400">{u.toFixed(1)} <span className="text-zinc-500 font-medium text-sm">/ 10</span></span>
           </div>
         </div>
-        <div className="h-4 bg-zinc-900 rounded-full overflow-hidden border border-zinc-700">
-          <motion.div
-            initial={{ width: `${(prevU / 10) * 100}%` }}
-            animate={{ width: `${(u / 10) * 100}%` }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="h-full bg-pink-500"
-          />
-        </div>
+        {renderBar(u, prevU, uDiff, true)}
       </div>
     </div>
   );
@@ -243,14 +288,12 @@ export default function UtilityInterventionOverlay() {
   const [gambleIndex, setGambleIndex] = useState(0);
   const [votes, setVotes] = useState<{ personal: boolean | null, societal: boolean | null }>({ personal: null, societal: null });
   const [demoIndex, setDemoIndex] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
 
   // ── Telemetry refs ──────────────────────────────────────────────────────
   const openedAt = useRef(Date.now());
-  // Per-step timing
   const stepStartedAt = useRef(Date.now());
-  // Gamble scenario timing
   const scenarioStartedAt = useRef(Date.now());
-  // Graph animation tracking
   const graphShownAt = useRef<number | null>(null);
   const graphAnimationFinished = useRef(false);
 
@@ -259,7 +302,6 @@ export default function UtilityInterventionOverlay() {
     track('utility_intervention_opened', { after_cycle: 'Rawlsian' });
   }, []);
 
-  // Reset step timer whenever we transition between steps
   useEffect(() => {
     stepStartedAt.current = Date.now();
     if (step === 1) {
@@ -268,14 +310,13 @@ export default function UtilityInterventionOverlay() {
     }
   }, [step]);
 
-  // Reset scenario timer whenever gamble question changes
   useEffect(() => {
     scenarioStartedAt.current = Date.now();
   }, [gambleIndex]);
   // ────────────────────────────────────────────────────────────────────────
 
   const handleVote = (type: 'personal' | 'societal', vote: boolean) => {
-    const scenarioIndex = gambleIndex; // 0 = personal, 1 = societal
+    const scenarioIndex = gambleIndex; 
     const timeToAnswer = Date.now() - scenarioStartedAt.current;
     const answerText = vote ? 'FOR' : 'AGAINST';
 
@@ -290,9 +331,8 @@ export default function UtilityInterventionOverlay() {
   };
 
   const handleSeeTheMaths = () => {
-    // Time from seeing the gamble result to clicking "See the Maths"
     track('utility_maths_seen', {
-      scenario_index: 1, // after both scenarios
+      scenario_index: 1, 
       time_to_maths_ms: Date.now() - stepStartedAt.current,
     });
     setStep(1);
@@ -310,13 +350,22 @@ export default function UtilityInterventionOverlay() {
   };
 
   const handleDemoProceed = () => {
-    // demoIndex 1 = after +1 applied, clicking "Next Scenario"
-    // demoIndex 3 = after -1 applied, clicking "Resume Simulation"
     track('utility_objective_subjective_proceeded', {
       scenario_index: demoIndex === 1 ? 0 : 1,
       dwell_ms: Date.now() - stepStartedAt.current,
     });
     setDemoIndex(prev => prev + 1);
+  };
+
+  const handleReplay = () => {
+    const currentScenarioIndex = demoIndex === 1 ? 0 : 1;
+    track('utility_demo_replayed', {
+      scenario_index: currentScenarioIndex,
+      ts: Date.now()
+    });
+    // Incrementing the key forces Framer Motion to unmount and remount the components,
+    // re-triggering their 'initial' states and animations.
+    setReplayKey(prev => prev + 1);
   };
 
   const handleComplete = () => {
@@ -559,7 +608,7 @@ export default function UtilityInterventionOverlay() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div key={replayKey} className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <CitizenCard
                           title="Struggling Citizen" name="Citizen A"
                           ls={demoIndex === 1 ? 4 : 3} u={demoIndex === 1 ? 5.0 : 2.5}
@@ -572,32 +621,42 @@ export default function UtilityInterventionOverlay() {
                         />
                       </div>
 
-                      <div className="mt-auto flex justify-between items-center">
+                      <div className="mt-auto flex justify-between items-end">
                         {demoIndex === 0 ? (
                           <p className="text-zinc-500 italic text-base">
                             Click to apply a flat +1 LS increase to both citizens.
                           </p>
                         ) : (
-                          <p className="text-zinc-300 font-medium text-base w-full">
+                          <p className="text-zinc-300 font-medium text-base w-full pr-4">
                             Citizen A's utility skyrocketed because the +1 lifted them out of hardship. Citizen B barely noticed the same +1 increase.
                           </p>
                         )}
 
-                        {demoIndex === 0 ? (
-                          <button
-                            onClick={() => setDemoIndex(1)}
-                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer shrink-0 ml-4"
-                          >
-                            Apply +1 LS to Both
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleDemoProceed}
-                            className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors cursor-pointer shrink-0 ml-4"
-                          >
-                            Next Scenario &rarr;
-                          </button>
-                        )}
+                        <div className="flex items-center gap-3 shrink-0">
+                          {demoIndex === 1 && (
+                            <button
+                              onClick={handleReplay}
+                              className="px-4 py-3 border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-colors cursor-pointer text-sm"
+                            >
+                              ↺ Replay
+                            </button>
+                          )}
+                          {demoIndex === 0 ? (
+                            <button
+                              onClick={() => setDemoIndex(1)}
+                              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer"
+                            >
+                              Apply +1 LS to Both
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleDemoProceed}
+                              className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors cursor-pointer"
+                            >
+                              Next Scenario &rarr;
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -621,7 +680,7 @@ export default function UtilityInterventionOverlay() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div key={replayKey} className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <CitizenCard
                           title="Lower-Middle Citizen" name="Citizen C"
                           ls={demoIndex === 3 ? 3 : 4} u={demoIndex === 3 ? 2.5 : 5.0}
@@ -634,32 +693,42 @@ export default function UtilityInterventionOverlay() {
                         />
                       </div>
 
-                      <div className="mt-auto flex justify-between items-center">
+                      <div className="mt-auto flex justify-between items-end">
                         {demoIndex === 2 ? (
                           <p className="text-zinc-500 italic text-base">
                             Click to apply a flat -1 LS penalty to both citizens.
                           </p>
                         ) : (
-                          <p className="text-zinc-300 font-medium text-base w-full">
+                          <p className="text-zinc-300 font-medium text-base w-full pr-4">
                             Citizen C suffered a massive drop in subjective value because they fell into the steep part of the curve. Citizen D absorbed the -1 with minimal issue.
                           </p>
                         )}
 
-                        {demoIndex === 2 ? (
-                          <button
-                            onClick={() => setDemoIndex(3)}
-                            className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer shrink-0 ml-4"
-                          >
-                            Apply -1 LS to Both
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleComplete}
-                            className="px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors cursor-pointer shrink-0 ml-4"
-                          >
-                            Resume Simulation
-                          </button>
-                        )}
+                        <div className="flex items-center gap-3 shrink-0">
+                          {demoIndex === 3 && (
+                            <button
+                              onClick={handleReplay}
+                              className="px-4 py-3 border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-colors cursor-pointer text-sm"
+                            >
+                              ↺ Replay
+                            </button>
+                          )}
+                          {demoIndex === 2 ? (
+                            <button
+                              onClick={() => setDemoIndex(3)}
+                              className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors shadow-lg cursor-pointer"
+                            >
+                              Apply -1 LS to Both
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleComplete}
+                              className="px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl transition-colors cursor-pointer"
+                            >
+                              Resume Simulation
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   )}

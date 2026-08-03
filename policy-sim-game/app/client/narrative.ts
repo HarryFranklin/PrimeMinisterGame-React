@@ -133,6 +133,9 @@ const MINOR_EVENTS = new Set([
   "utility_maths_seen",
   "utility_graph_animation_awaited",
   "utility_table_help_clicked",
+  "utility_graph_animation_awaited",
+  "utility_table_help_clicked",
+  "utility_demo_replayed",
 ]);
 
 /**
@@ -311,6 +314,8 @@ export function formatLine(
       return { ts: e.ts, text: `Scenario ${p.scenario_index} Answered — ${p.answer_given} (${fmtDur(p.time_to_answer_ms)})`, minor };
     case "utility_resume_clicked":
       return { ts: e.ts, text: "Resumed Simulation", minor: false };
+    case "utility_demo_replayed":
+      return { ts: e.ts, text: `Scenario ${p.scenario_index} Replayed`, minor };
     case "utility_intervention_completed":
       return { ts: e.ts, text: `Utility Intervention Completed (${fmtDur(p.dwell_ms)})`, minor: false };
 

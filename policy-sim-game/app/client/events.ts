@@ -361,6 +361,7 @@ export type TelemetryEvent =
         time_to_maths_ms: number;
       };
     }
+    
   | {
       event: "utility_graph_animation_awaited";
       payload: {
@@ -368,6 +369,13 @@ export type TelemetryEvent =
         /** ms on the graph screen; did they wait for the animation to finish? */
         dwell_ms: number;
         animation_finished: boolean;
+      };
+    }
+    | {
+      event: "utility_demo_replayed";
+      payload: { 
+        scenario_index: number;
+        ts: number;
       };
     }
   | {
