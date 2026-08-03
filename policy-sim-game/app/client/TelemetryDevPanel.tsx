@@ -221,11 +221,19 @@ export default function TelemetryDevPanel() {
   const [consoleOn, setConsoleOn] = useState(() => isConsoleLoggingEnabled());
   const [log, setLog] = useState<LoggedEvent[]>(() => getFullLog());
 
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
     return subscribeToEvents((_entry, fullLog) => setLog([...fullLog]));
   }, [enabled]);
 
+  // If not mounted yet (server-side or first client pass), render nothing.
+  if (!isMounted) return null;
   if (!enabled) return null;
 
   return (

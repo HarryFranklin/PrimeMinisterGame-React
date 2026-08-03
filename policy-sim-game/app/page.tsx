@@ -16,6 +16,7 @@ import IntroModal from "./components/modals/IntroModal";
 import BriefingModal from "./components/modals/BriefingModal";
 import ElectionModal from "./components/modals/ElectionModal";
 import UtilityInterventionOverlay from "./components/modals/UtilityInterventionOverlay";
+import AcademicDebriefOverlay from "./components/modals/AcademicDebriefOverlay";
 import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
@@ -144,15 +145,18 @@ export default function Home() {
                       finalPopulation={game.population}
                       history={game.history}
                       yAxisMax={game.yAxisMax}
-                      onNextCycle={game.handleCompleteTerm}
                       onReset={game.handleResetCycle}
-                      onFinish={game.handleCompleteTerm}
+                      onRequestDebrief={game.requestAcademicDebrief}
                       onAnswerPressQuestion={game.applyPressConferenceDelta}
                     />
                   )}
 
                   {game.gamePhase === GamePhase.UtilityIntervention && (
                     <UtilityInterventionOverlay key="utility-intervention" />
+                  )}
+
+                  {game.gamePhase === GamePhase.AcademicDebrief && (
+                    <AcademicDebriefOverlay key="academic-debrief" />
                   )}
 
                   {game.gamePhase === GamePhase.Debrief && (

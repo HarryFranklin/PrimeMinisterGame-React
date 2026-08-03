@@ -8,7 +8,6 @@ import StageTermSummary from './ElectionModal/StageTermSummary';
 import StageVerdict from './ElectionModal/StageVerdict';
 import StagePopulationChange from './ElectionModal/StagePopulationChange';
 import StageElectorateFeedback from './ElectionModal/StageElectorateFeedback';
-import StageAcademicDebrief from './ElectionModal/StageAcademicDebrief';
 import StagePressConference from './ElectionModal/StagePressConference';
 import PMIdentityBanner from '../PMIdentityBanner';
 
@@ -22,14 +21,13 @@ interface ElectionModalProps {
   finalPopulation: Respondent[];
   history: TurnHistory[];
   yAxisMax: number;
-  onNextCycle: () => void;
   onReset: (outcome?: "win" | "lose") => void;
-  onFinish?: () => void;
+  onRequestDebrief: (action: 'restart' | 'complete', outcome: 'win' | 'lose') => void;
   onAnswerPressQuestion: (delta: number) => void;
 }
 
 export default function ElectionModal(props: ElectionModalProps) {
-  const { currentCycle, approvalRating, cycleAttempts, onNextCycle, onReset, onFinish, onAnswerPressQuestion } = props;
+  const { currentCycle, approvalRating, cycleAttempts, onReset, onRequestDebrief, onAnswerPressQuestion } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
   
@@ -40,23 +38,23 @@ export default function ElectionModal(props: ElectionModalProps) {
   const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
   
   let canProceed = won || cycleAttempts >= 3;
-  const totalPages = canProceed ? 6 : 5;
+  const totalPages = 5;
 
   const cycleKey = ElectionCycle[currentCycle];
 
   const handleRestartTerm = () => {
     track('cycle_ended', { cycle: cycleKey, outcome: won ? 'won' : 'lost_retry' });
-    onReset(won ? "win" : "lose");
+    onRequestDebrief('restart', won ? "win" : "lose");
   };
 
   const handleProceedNextTerm = () => {
     track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
-    onNextCycle();
+    onRequestDebrief('complete', 'win');
   };
 
   const handleFinishGame = () => {
     track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
-    if (onFinish) onFinish();
+    onRequestDebrief('complete', 'win');
   };
 
   const handleLostFinal = () => {
@@ -84,7 +82,6 @@ export default function ElectionModal(props: ElectionModalProps) {
     if (page === 2) return "Election Verdict";
     if (page === 3) return "Wellbeing Changes";
     if (page === 4) return "Electorate Feedback";
-    if (page === 5) return "Academic Debrief";
     return "Election Sequence";
   };
 
@@ -130,7 +127,6 @@ export default function ElectionModal(props: ElectionModalProps) {
         {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={() => setPageReady(true)} />}
         {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 5 && <StageAcademicDebrief currentCycle={currentCycle} finalPopulation={props.finalPopulation} yAxisMax={props.yAxisMax} onReady={() => setPageReady(true)} />}
       </motion.div>
 
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
@@ -149,7 +145,7 @@ export default function ElectionModal(props: ElectionModalProps) {
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Term Summary \u2192" : page === 1 ? "Continue to Verdict \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : page === 3 ? "Electorate Feedback \u2192" : "Academic Debrief \u2192"}
+            {page === 0 ? "Continue to Term Summary \u2192" : page === 1 ? "Continue to Verdict \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : "Electorate Feedback \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
@@ -169,7 +165,7 @@ export default function ElectionModal(props: ElectionModalProps) {
                   </button>
                 )}
                 
-                {isFinalCycle && onFinish && (
+                {isFinalCycle && (
                   <button 
                     onClick={handleFinishGame} 
                     disabled={!pageReady}

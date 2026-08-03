@@ -48,6 +48,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
   const [hasSeenUtilityIntervention, setHasSeenUtilityIntervention] = useState(false);
+  const [pendingDebriefAction, setPendingDebriefAction] = useState<{ type: 'restart' | 'complete'; outcome: 'win' | 'lose' } | null>(null);
   
   // Game starts on Intro phase now
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Intro);
@@ -372,6 +373,28 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.LevelSelect);
   }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn]);
 
+  // Called from ElectionModal once the player has confirmed a win/final-loss
+  // outcome, before the actual restart/completion is carried out - hands off
+  // to the fullscreen Academic Debrief phase first.
+  const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
+    setPendingDebriefAction({ type, outcome });
+    setGamePhase(GamePhase.AcademicDebrief);
+  }, []);
+
+  // Called once the player dismisses the fullscreen Academic Debrief -
+  // carries out whichever action was queued up by requestAcademicDebrief.
+  const resolveAcademicDebrief = useCallback(() => {
+    setPendingDebriefAction(pending => {
+      if (!pending) return pending;
+      if (pending.type === 'restart') {
+        handleResetCycle(pending.outcome);
+      } else {
+        handleCompleteTerm();
+      }
+      return null;
+    });
+  }, [handleResetCycle, handleCompleteTerm]);
+
   const currentChartData = useMemo(() => {
     if (population.length === 0) return [];
     const allLS = population.map(p => p.currentLS);
@@ -412,6 +435,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     wipeSave,
     lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null),
     applyPressConferenceDelta,
-    setHasSeenUtilityIntervention, startCycle
+    setHasSeenUtilityIntervention, startCycle,
+    requestAcademicDebrief, resolveAcademicDebrief
   };
 }
