@@ -40,25 +40,21 @@ export default function ElectionModal(props: ElectionModalProps) {
   let canProceed = won || cycleAttempts >= 3;
   const totalPages = 5;
 
-  const cycleKey = ElectionCycle[currentCycle];
-
+  // We removed all track('cycle_ended', ...) calls from these handlers.
+  // The cycle isn't truly over until the Academic Debrief finishes.
   const handleRestartTerm = () => {
-    track('cycle_ended', { cycle: cycleKey, outcome: won ? 'won' : 'lost_retry' });
     onRequestDebrief('restart', won ? "win" : "lose");
   };
 
   const handleProceedNextTerm = () => {
-    track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
     onRequestDebrief('complete', 'win');
   };
 
   const handleFinishGame = () => {
-    track('cycle_ended', { cycle: cycleKey, outcome: 'won' });
     onRequestDebrief('complete', 'win');
   };
 
   const handleLostFinal = () => {
-    track('cycle_ended', { cycle: cycleKey, outcome: 'lost_final' });
     onReset("lose");
   };
 

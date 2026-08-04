@@ -31,10 +31,10 @@ export default function Home() {
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
 
   useEffect(() => {
+    registerSink(networkSink);
     initTelemetry({ appVersion: process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? "dev" });
     startRawCapture();
     startDerivations();
-    registerSink(networkSink);
 
     const start = Date.now();
     const onExit = () => {

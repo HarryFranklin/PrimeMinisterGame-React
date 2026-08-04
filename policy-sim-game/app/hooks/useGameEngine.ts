@@ -95,15 +95,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setOptimalPath(maoResult.optimalPath);
 
     const levelId = ElectionCycle[cycle];
-    startLevelAttempt(levelId); // fresh attempt_id + incrementing attempt_number, resets turn to 0
+    startLevelAttempt(levelId); 
     setContext({ levelId, turn: 1 });
-    // NOTE: turn_started / policy_options_presented / the turn timer for
-    // turn 1 are deliberately NOT fired here. At this point the player
-    // hasn't seen the briefing modal yet, let alone accepted it - starting
-    // the clock now would count the entire time spent reading/skipping the
-    // briefing as "time on turn 1". They're fired from
-    // handleBriefingAcknowledged() instead, once the player actually begins
-    // the term.
     setCurrentDeck(schedule[0]);
     setCurrentTurn(1);
     setCurrentCycle(cycle);
@@ -201,19 +194,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleApplyPolicy = () => {
     if (!selectedPolicy || isEnacting) return;
 
-    // Stop the turn timer right now, at the actual moment "Enact" is
-    // clicked - this is what time_on_turn_ms is supposed to measure (how
-    // long the player spent deciding since the turn's options were
-    // presented). The old code re-started this same timer here and only
-    // stopped it 800ms later inside the setTimeout below, so it was only
-    // ever measuring the fixed "Enacting Legislation..." animation delay
-    // (hence every turn reporting ~800ms) instead of real decision time.
     const timeOnTurnMs = stopTimer('turn_active');
 
-    // Compute everything synchronously now too, and fire policy_selected /
-    // turn_completed immediately - not 800ms from now once the animation
-    // finishes - so their timestamps reflect the actual click rather than
-    // lagging behind it.
     const enactedTurn = currentTurn;
     const enactedPolicy = selectedPolicy;
     const levelId = ElectionCycle[currentCycle];
@@ -230,9 +212,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       options_available: currentDeck.map(p => p.id),
       score_before: scoreBefore,
       score_after: scoreAfter,
-      // this game doesn't have a literal "population count" metric that
-      // changes turn to turn - using average life satisfaction here as the
-      // closest per-turn population-wellbeing signal.
       population_before: populationBefore,
       population_after: populationAfter,
     });
@@ -269,8 +248,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         setContext({ turn: nextTurn });
         track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: populationAfter });
         track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[enactedTurn].map(p => p.id) });
-        // Timer for the *new* turn correctly starts now, once its options
-        // are actually on screen - this part was already right.
         startTimer('turn_active');
       } else {
         setIsParliamentDissolved(true);
@@ -281,10 +258,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     }, 800);
   };
 
-  // Called when the player accepts the mandate in BriefingModal (or uses the
-  // retry "Skip Briefing" button) - this is the true start of turn 1, so
-  // turn_started/policy_options_presented/the turn timer belong here rather
-  // than back in startCycle (see note there).
   const handleBriefingAcknowledged = useCallback(() => {
     const levelId = ElectionCycle[currentCycle];
     setContext({ levelId, turn: 1 });
@@ -309,6 +282,15 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, []);
 
   const handleResetCycle = useCallback((outcome: "win" | "lose" = "lose") => {
+    // Determine the exact outcome. If they ran out of retries (>=3), it's a final loss.
+    const cycleOutcome = outcome === 'win' ? 'won' : (cycleAttempts >= 3 ? 'lost_final' : 'lost_retry');
+    
+    // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
+    track("cycle_ended", { 
+      cycle: ElectionCycle[currentCycle], 
+      outcome: cycleOutcome 
+    });
+
     track("level_attempt_ended", {
       level_id: ElectionCycle[currentCycle],
       attempt_number: cycleAttempts,
@@ -326,15 +308,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCycleAttempts(1);
   };
 
-  // Starts a term cleanly without wiping the save, allowing progression
   const startLevel = useCallback((cycle: ElectionCycle) => {
-    // Intercept Cycle 3 if they haven't seen the intervention
     if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
-      setCurrentCycle(cycle); // Lock in the cycle they are attempting to start
+      setCurrentCycle(cycle); 
       setGamePhase(GamePhase.UtilityIntervention);
       return;
     }
-
     startCycle(cycle);
     setCycleAttempts(1);
   }, [startCycle, hasSeenUtilityIntervention]);
@@ -342,6 +321,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleCompleteTerm = useCallback(() => {
     const rule = FRAMEWORK_RULES[currentCycle];
     const targetScore = cycleMAO * rule.winThresholdScalar;
+
+    // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
+    track("cycle_ended", { 
+      cycle: ElectionCycle[currentCycle], 
+      outcome: 'won' 
+    });
 
     track("level_completed", {
       level_id: ElectionCycle[currentCycle],
@@ -373,16 +358,11 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.LevelSelect);
   }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn]);
 
-  // Called from ElectionModal once the player has confirmed a win/final-loss
-  // outcome, before the actual restart/completion is carried out - hands off
-  // to the fullscreen Academic Debrief phase first.
   const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
     setPendingDebriefAction({ type, outcome });
     setGamePhase(GamePhase.AcademicDebrief);
   }, []);
 
-  // Called once the player dismisses the fullscreen Academic Debrief -
-  // carries out whichever action was queued up by requestAcademicDebrief.
   const resolveAcademicDebrief = useCallback(() => {
     setPendingDebriefAction(pending => {
       if (!pending) return pending;

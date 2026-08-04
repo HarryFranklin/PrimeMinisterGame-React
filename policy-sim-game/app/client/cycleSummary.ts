@@ -32,6 +32,12 @@ export interface TurnSummary {
 
   pct_options_previewed: number | null;
   pct_options_view_details_opened: number | null;
+
+  /** ms each policy was the selected/candidate policy before being swapped
+   * out or the turn ending - one entry per pick, order doesn't matter */
+  preview_durations_ms: number[];
+  /** ms each "View Details" panel stayed open - one entry per open/close */
+  view_details_durations_ms: number[];
 }
 
 export interface CycleSummary {
@@ -46,9 +52,6 @@ export interface CycleSummary {
   final_score: number | null;
   score_delta: number | null;
   turns_played: number;
-  /** turn number -> ms spent on that turn (kept for backwards compat - see
-   * `turns` below for the fuller per-turn breakdown) */
-  time_on_turn: Record<number, number>;
 
   time_on_briefing_ms: number | null;
   time_on_term_summary_ms: number | null;
@@ -113,10 +116,10 @@ function buildTurnSummaries(events: LoggedEvent[]): TurnSummary[] {
       ? (optionsPresented!.payload!.options as unknown[]).filter((x): x is string => typeof x === "string")
       : [];
 
+    const turnEvents = events.filter((e) => e.turn === turn);
     const previewed = new Set<string>();
     const viewDetailsOpened = new Set<string>();
-    for (const e of events) {
-      if (e.turn !== turn) continue;
+    for (const e of turnEvents) {
       if (e.event === "policy_card_selected" && e.payload?.action === "picked" && typeof e.payload?.policy_id === "string") {
         previewed.add(e.payload.policy_id as string);
       }
@@ -124,6 +127,24 @@ function buildTurnSummaries(events: LoggedEvent[]): TurnSummary[] {
         viewDetailsOpened.add(e.payload.policy_id as string);
       }
     }
+
+    // Preview duration per pick = time until the next selection change
+    // (another pick, a deselect, or the turn ending) - selection is
+    // exclusive so this needs no extra instrumentation, just the existing
+    // policy_card_selected sequence.
+    const turnEndTs = completed?.ts ?? turnEvents[turnEvents.length - 1]?.ts ?? started?.ts ?? 0;
+    const selections = turnEvents.filter((e) => e.event === "policy_card_selected").sort((a, b) => a.ts - b.ts);
+    const previewDurationsMs: number[] = [];
+    for (let i = 0; i < selections.length; i++) {
+      if (selections[i].payload?.action !== "picked") continue;
+      const endTs = selections[i + 1]?.ts ?? turnEndTs;
+      previewDurationsMs.push(endTs - selections[i].ts);
+    }
+
+    const viewDetailsDurationsMs = turnEvents
+      .filter((e) => e.event === "view_details_closed")
+      .map((e) => num(e.payload?.dwell_ms))
+      .filter((v): v is number => v !== null);
 
     const scoreStart = num(started?.payload?.score);
     const scoreEnd = num(completed?.payload?.score);
@@ -140,6 +161,8 @@ function buildTurnSummaries(events: LoggedEvent[]): TurnSummary[] {
       options_view_details_opened: [...viewDetailsOpened],
       pct_options_previewed: optionsAvailable.length > 0 ? Math.round((previewed.size / optionsAvailable.length) * 100) : null,
       pct_options_view_details_opened: optionsAvailable.length > 0 ? Math.round((viewDetailsOpened.size / optionsAvailable.length) * 100) : null,
+      preview_durations_ms: previewDurationsMs,
+      view_details_durations_ms: viewDetailsDurationsMs,
     };
   });
 }
@@ -152,12 +175,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
 
   const turnStarted = events.filter((e) => e.event === "turn_started");
   const turnCompleted = events.filter((e) => e.event === "turn_completed");
-
-  const timeOnTurn: Record<number, number> = {};
-  for (const e of turnCompleted) {
-    const ms = num(e.payload?.time_on_turn_ms);
-    if (e.turn !== undefined && ms !== null) timeOnTurn[e.turn] = ms;
-  }
 
   const verdict = findFirst(events, "verdict_shown");
   const startingScore = num(turnStarted[0]?.payload?.score);
@@ -191,7 +208,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
     final_score: finalScore,
     score_delta: startingScore !== null && finalScore !== null ? finalScore - startingScore : null,
     turns_played: turnCompleted.length,
-    time_on_turn: timeOnTurn,
 
     time_on_briefing_ms: num(findFirst(events, "briefing_proceeded")?.payload?.dwell_ms),
     time_on_term_summary_ms: num(findFirst(events, "term_summary_closed")?.payload?.dwell_ms),

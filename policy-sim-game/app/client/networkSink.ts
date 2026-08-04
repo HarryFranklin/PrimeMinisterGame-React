@@ -1,56 +1,59 @@
 // app/client/networkSink.ts
-// Ships semantic + derived events to /api/events (D1-backed). Batches and
-// flushes periodically, and force-flushes via sendBeacon on tab hide/close
-// so the last few events of a session aren't lost.
+// Ships two lightweight payload shapes to the D1-backed worker: a
+// participant identity/completion ping, and a per-attempt cycle_summary
+// rollup. Per-turn/raw/derived noise never leaves the device - it's already
+// folded into the cycle_summary by the time this sees it (see derive.ts).
 
 import type { LoggedEvent } from "./telemetry";
 
-const ENDPOINT = "https://telemetry-worker.franklinh.workers.dev/";
-const FLUSH_INTERVAL_MS = 5000;
-const MAX_BATCH = 50;
+const BASE = "https://telemetry-worker.franklinh.workers.dev";
 
-let queue: LoggedEvent[] = [];
-let flushTimer: ReturnType<typeof setInterval> | null = null;
-
-function ensureTimer() {
-  if (flushTimer !== null) return;
-  flushTimer = setInterval(() => flush(), FLUSH_INTERVAL_MS);
+function send(path: string, body: unknown, useBeacon = false) {
+  const json = JSON.stringify(body);
+  if (useBeacon && "sendBeacon" in navigator) {
+    navigator.sendBeacon(BASE + path, new Blob([json], { type: "application/json" }));
+    return;
+  }
+  fetch(BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: json,
+    keepalive: true,
+  }).catch(() => {
+    // best-effort - at this write volume a dropped ping isn't worth a retry queue
+  });
 }
 
-async function flush(useBeacon = false) {
-  if (queue.length === 0) return;
-  const batch = queue.splice(0, MAX_BATCH);
-  const body = JSON.stringify({ events: batch });
+function identity(entry: LoggedEvent, extra: Record<string, unknown> = {}) {
+  return {
+    user_id: entry.user_id,
+    session_id: entry.session_id,
+    prolific_pid: entry.prolific_pid ?? null,
+    study_id: entry.study_id ?? null,
+    prolific_session_id: entry.prolific_session_id ?? null,
+    app_version: entry.app_version ?? null,
+    ...extra,
+  };
+}
 
-  if (useBeacon && "sendBeacon" in navigator) {
-    const blob = new Blob([body], { type: "application/json" });
-    const ok = navigator.sendBeacon(ENDPOINT, blob);
-    if (!ok) queue.unshift(...batch); // beacon queue was full - retry next tick
+/** Pass this to registerSink() in telemetry.ts. */
+export function networkSink(entry: LoggedEvent) {
+  if (entry.event === "session_started") {
+    send("/participant", identity(entry));
     return;
   }
 
-  try {
-    await fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: true,
-    });
-  } catch {
-    queue.unshift(...batch); // network hiccup - retry on next timer tick
+  if (entry.event === "cycle_summary") {
+    send("/cycle-attempt", { ...identity(entry), ...entry.payload });
+    return;
+  }
+
+  if (entry.event === "final_debrief_closed") {
+    send("/participant", identity(entry, { completed: true, final_outcome: entry.payload?.outcome ?? null }), true);
+    return;
   }
 }
 
-/** Pass this to registerSink() in telemetry - raw events are filtered out
- * here so hover/click noise never leaves the device. */
-export function networkSink(entry: LoggedEvent) {
-  if (entry.layer === "raw") return;
-  queue.push(entry);
-  ensureTimer();
-  if (queue.length >= MAX_BATCH) flush();
-}
-
-/** Call this from a beforeunload/pagehide listener. */
-export function flushOnExit() {
-  flush(true);
-}
+/** Kept for call-site compatibility with page.tsx's beforeunload listener -
+ * there's no queue to flush any more, sinks fire immediately. */
+export function flushOnExit() {}
