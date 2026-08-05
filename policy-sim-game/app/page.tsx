@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import DevPanel from "./components/DevPanel";
 import TelemetryDevPanel from "./client/TelemetryDevPanel";
 import { initTelemetry, registerSink, endSession } from "./client/telemetry";
-import { networkSink, flushOnExit } from "./client/networkSink";
+import { networkSink, flushOnExit, pingProgress } from "./client/networkSink";
 import { startRawCapture } from "./client/rawcapture";
 import { startDerivations } from "./client/derive";
 
@@ -40,12 +40,22 @@ export default function Home() {
     const onExit = () => {
       endSession(Date.now() - start);
       flushOnExit();
+      pingProgress();
+    };
+    let progressPinged = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && !progressPinged) {
+        progressPinged = true;
+        pingProgress();
+      }
     };
     window.addEventListener("pagehide", onExit);
     window.addEventListener("beforeunload", onExit);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("pagehide", onExit);
       window.removeEventListener("beforeunload", onExit);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 

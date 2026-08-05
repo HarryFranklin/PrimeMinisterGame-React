@@ -17,6 +17,7 @@ function corsHeadersFor(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Origin": allowed && origin ? origin : "",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Credentials": "true",
     "Vary": "Origin",
   };
 }
@@ -28,19 +29,27 @@ async function upsertParticipant(env: Env, body: any, now: number) {
   await env.DB.prepare(`
     INSERT INTO participants (
       participant_key, user_id, session_id, prolific_pid, study_id, prolific_session_id,
-      app_version, first_seen_at, last_seen_at, completed, final_outcome
+      app_version, first_seen_at, last_seen_at, completed, final_outcome,
+      last_event, last_cycle, last_attempt_number, last_turn, last_progress_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(participant_key) DO UPDATE SET
       last_seen_at = excluded.last_seen_at,
       session_id = excluded.session_id,
       app_version = excluded.app_version,
       completed = MAX(participants.completed, excluded.completed),
-      final_outcome = COALESCE(excluded.final_outcome, participants.final_outcome)
+      final_outcome = COALESCE(excluded.final_outcome, participants.final_outcome),
+      last_event = COALESCE(excluded.last_event, participants.last_event),
+      last_cycle = COALESCE(excluded.last_cycle, participants.last_cycle),
+      last_attempt_number = COALESCE(excluded.last_attempt_number, participants.last_attempt_number),
+      last_turn = COALESCE(excluded.last_turn, participants.last_turn),
+      last_progress_at = COALESCE(excluded.last_progress_at, participants.last_progress_at)
   `).bind(
     participantKey, body.user_id ?? null, body.session_id ?? null,
     body.prolific_pid ?? null, body.study_id ?? null, body.prolific_session_id ?? null,
-    body.app_version ?? null, now, now, body.completed ? 1 : 0, body.final_outcome ?? null
+    body.app_version ?? null, now, now, body.completed ? 1 : 0, body.final_outcome ?? null,
+    body.last_event ?? null, body.last_cycle ?? null, body.last_attempt_number ?? null,
+    body.last_turn ?? null, body.last_progress_at ?? null
   ).run();
 
   return { ok: true as const, participantKey };
@@ -55,7 +64,7 @@ async function getParticipantId(env: Env, participantKey: string): Promise<numbe
 async function insertCycleAttempt(env: Env, participantId: number, body: any, now: number) {
   await env.DB.prepare(`
     INSERT INTO cycle_attempts (
-      participant_id, attempt_id, cycle, attempt_number, outcome, player_won,
+      participant_id, attempt_id, cycle, attempt_number, outcome, player_won, app_version,
       starting_score, final_score, score_delta, turns_played,
       time_on_briefing_ms, time_on_term_summary_ms, time_on_verdict_ms,
       time_on_wellbeing_changes_ms, time_on_electorate_feedback_ms, time_on_academic_debrief_ms,
@@ -63,7 +72,7 @@ async function insertCycleAttempt(env: Env, participantId: number, body: any, no
       press_conf_q1_correct, press_conf_q2_correct, press_conf_non_chosen_policy_chosen,
       pct_policy_options_previewed, pct_policy_options_view_details_opened,
       total_cycle_duration_ms, turns, received_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(attempt_id) DO NOTHING
   `).bind(
     participantId, body.attempt_id, body.cycle ?? null, body.attempt_number ?? null,

@@ -36,8 +36,17 @@ function identity(entry: LoggedEvent, extra: Record<string, unknown> = {}) {
   };
 }
 
+// Last semantic event seen - kept in memory only, no network cost until
+// pingProgress() actually sends it. Lets us answer "where did people quit"
+// without a new event type or extra instrumentation anywhere else.
+let latestSemanticEntry: LoggedEvent | null = null;
+
 /** Pass this to registerSink() in telemetry.ts. */
 export function networkSink(entry: LoggedEvent) {
+  if (entry.layer === "semantic") {
+    latestSemanticEntry = entry;
+  }
+
   if (entry.event === "session_started") {
     send("/participant", identity(entry));
     return;
@@ -57,3 +66,20 @@ export function networkSink(entry: LoggedEvent) {
 /** Kept for call-site compatibility with page.tsx's beforeunload listener -
  * there's no queue to flush any more, sinks fire immediately. */
 export function flushOnExit() {}
+
+/** "Last known position" beacon - call this on tab-hide/pagehide. For
+ * participants who never reach final_debrief_closed, this is how we find
+ * out where in the game they actually stopped. Uses sendBeacon so it
+ * fires reliably during teardown. */
+export function pingProgress() {
+  if (!latestSemanticEntry) return;
+  if (latestSemanticEntry.event === "session_started") return;
+  const e = latestSemanticEntry;
+  send("/participant", identity(e, {
+    last_event: e.event,
+    last_cycle: e.level_id ?? null,
+    last_attempt_number: e.attempt_number ?? null,
+    last_turn: e.turn ?? null,
+    last_progress_at: e.ts,
+  }), true);
+}
