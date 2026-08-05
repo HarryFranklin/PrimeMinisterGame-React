@@ -130,12 +130,12 @@ function CycleSummaryBlock({ summary }: { summary: CycleSummary }) {
           <SummaryRow label="Total Duration" value={fmtMs(summary.total_cycle_duration_ms)} />
         </div>
         <div>
-          <SummaryRow label="Viewed Voter Quotes" value={summary.player_viewed_voter_quotes ? `Yes (${summary.voter_quotes_clicked})` : "No"} />
+          <SummaryRow label="Voter Quotes Clicked" value={summary.voter_quotes_clicked > 0 ? String(summary.voter_quotes_clicked) : "No"} />
           <SummaryRow label="Viewed Enacted History" value={summary.player_viewed_enacted_history ? "Yes" : "No"} />
           <SummaryRow label="Viewed Academic Reveal" value={summary.player_viewed_animated_histogram ? "Yes" : "No"} />
           <SummaryRow
-            label="Press Conf. Score"
-            value={summary.press_conference_correct_count === null ? "—" : `${summary.press_conference_correct_count}/2 (${summary.press_conference_score_pct}%)`}
+            label="Press Conf."
+            value={summary.press_conf_q1_correct === null ? "—" : `Q1: ${summary.press_conf_q1_correct ? "✓" : "✗"}  Q2: ${summary.press_conf_q2_correct ? "✓" : "✗"}`}
           />
           <SummaryRow label="Q2 Un-enacted Pick" value={summary.press_conf_non_chosen_policy_chosen === null ? "—" : summary.press_conf_non_chosen_policy_chosen ? "Yes" : "No"} />
         </div>

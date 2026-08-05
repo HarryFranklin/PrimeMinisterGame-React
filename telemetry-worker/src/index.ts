@@ -59,12 +59,11 @@ async function insertCycleAttempt(env: Env, participantId: number, body: any, no
       starting_score, final_score, score_delta, turns_played,
       time_on_briefing_ms, time_on_term_summary_ms, time_on_verdict_ms,
       time_on_wellbeing_changes_ms, time_on_electorate_feedback_ms, time_on_academic_debrief_ms,
-      player_viewed_voter_quotes, voter_quotes_clicked, player_viewed_enacted_history, player_viewed_animated_histogram,
+      voter_quotes_clicked, player_viewed_enacted_history, player_viewed_animated_histogram,
       press_conf_q1_correct, press_conf_q2_correct, press_conf_non_chosen_policy_chosen,
-      press_conference_correct_count, press_conference_score_pct,
       pct_policy_options_previewed, pct_policy_options_view_details_opened,
       total_cycle_duration_ms, turns, received_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(attempt_id) DO NOTHING
   `).bind(
     participantId, body.attempt_id, body.cycle ?? null, body.attempt_number ?? null,
@@ -72,12 +71,11 @@ async function insertCycleAttempt(env: Env, participantId: number, body: any, no
     body.starting_score ?? null, body.final_score ?? null, body.score_delta ?? null, body.turns_played ?? null,
     body.time_on_briefing_ms ?? null, body.time_on_term_summary_ms ?? null, body.time_on_verdict_ms ?? null,
     body.time_on_wellbeing_changes_ms ?? null, body.time_on_electorate_feedback_ms ?? null, body.time_on_academic_debrief_ms ?? null,
-    body.player_viewed_voter_quotes ? 1 : 0, body.voter_quotes_clicked ?? 0,
+    body.voter_quotes_clicked ?? 0,
     body.player_viewed_enacted_history ? 1 : 0, body.player_viewed_animated_histogram ? 1 : 0,
     body.press_conf_q1_correct === null || body.press_conf_q1_correct === undefined ? null : (body.press_conf_q1_correct ? 1 : 0),
     body.press_conf_q2_correct === null || body.press_conf_q2_correct === undefined ? null : (body.press_conf_q2_correct ? 1 : 0),
     body.press_conf_non_chosen_policy_chosen === null || body.press_conf_non_chosen_policy_chosen === undefined ? null : (body.press_conf_non_chosen_policy_chosen ? 1 : 0),
-    body.press_conference_correct_count ?? null, body.press_conference_score_pct ?? null,
     body.pct_policy_options_previewed ?? null, body.pct_policy_options_view_details_opened ?? null,
     body.total_cycle_duration_ms ?? null, typeof body.turns !== "undefined" ? JSON.stringify(body.turns) : "[]", now
   ).run();

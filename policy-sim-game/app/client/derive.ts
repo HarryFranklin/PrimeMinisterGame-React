@@ -104,9 +104,14 @@ function detectCycleEnd() {
     if (!attemptId) return;
 
     const outcome = entry.payload?.outcome as "won" | "lost_retry" | "lost_final" | undefined;
-    const summary = buildCycleSummary(attemptId, outcome);
-    if (!summary) return;
 
-    trackDerived("cycle_summary", summary as unknown as Record<string, unknown>);
+    // Defer by one macrotask so any events fired in the same React render
+    // cycle as cycle_ended (e.g. academic_debrief_closed, electorate_feedback_closed)
+    // have time to land in the log before we reduce it into a summary.
+    setTimeout(() => {
+      const summary = buildCycleSummary(attemptId, outcome);
+      if (!summary) return;
+      trackDerived("cycle_summary", summary as unknown as Record<string, unknown>);
+    }, 0);
   });
 }

@@ -60,7 +60,6 @@ export interface CycleSummary {
   time_on_electorate_feedback_ms: number | null;
   time_on_academic_debrief_ms: number | null;
 
-  player_viewed_voter_quotes: boolean;
   voter_quotes_clicked: number;
   player_viewed_enacted_history: boolean;
   player_viewed_animated_histogram: boolean;
@@ -69,8 +68,7 @@ export interface CycleSummary {
   press_conf_q2_correct: boolean | null;
   press_conf_non_chosen_policy_chosen: boolean | null;
   /** out of 2 - null if the press conference never happened this attempt */
-  press_conference_correct_count: number | null;
-  press_conference_score_pct: number | null;
+  
 
   /** full per-turn breakdown - score, timing, and how much of the deck they
    * actually looked at before enacting */
@@ -117,9 +115,15 @@ function buildTurnSummaries(events: LoggedEvent[]): TurnSummary[] {
       : [];
 
     const turnEvents = events.filter((e) => e.turn === turn);
+    // Some events pass turn in their payload rather than via setContext, so
+    // we check both the top-level e.turn and payload.turn to avoid missing them.
+    const eventTurn = (e: LoggedEvent) =>
+      e.turn === turn || (e.payload?.turn as number | undefined) === turn;
+
     const previewed = new Set<string>();
     const viewDetailsOpened = new Set<string>();
-    for (const e of turnEvents) {
+    for (const e of events) {
+      if (!eventTurn(e)) continue;
       if (e.event === "policy_card_selected" && e.payload?.action === "picked" && typeof e.payload?.policy_id === "string") {
         previewed.add(e.payload.policy_id as string);
       }
@@ -183,7 +187,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
   const electorateFeedback = findFirst(events, "electorate_feedback_closed");
   const q1 = findFirst(events, "press_q1_answered");
   const q2 = findFirst(events, "press_q2_answered");
-  const pressCompleted = findFirst(events, "press_conference_completed");
   const academicFirstInteraction = findFirst(events, "academic_debrief_first_interaction");
   const enactedReviewed = findFirst(events, "enacted_policies_reviewed");
 
@@ -193,8 +196,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
   const totalOptions = turns.reduce((sum, t) => sum + t.options_available.length, 0);
   const totalPreviewed = turns.reduce((sum, t) => sum + t.options_previewed.length, 0);
   const totalViewDetails = turns.reduce((sum, t) => sum + t.options_view_details_opened.length, 0);
-
-  const pressCorrectCount = num(pressCompleted?.payload?.correct_count);
 
   return {
     cycle: first.level_id,
@@ -216,7 +217,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
     time_on_electorate_feedback_ms: num(electorateFeedback?.payload?.dwell_ms),
     time_on_academic_debrief_ms: num(findFirst(events, "academic_debrief_closed")?.payload?.dwell_ms),
 
-    player_viewed_voter_quotes: voterQuotesClicked > 0,
     voter_quotes_clicked: voterQuotesClicked,
     player_viewed_enacted_history: !!enactedReviewed,
     player_viewed_animated_histogram: !!academicFirstInteraction,
@@ -224,11 +224,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
     press_conf_q1_correct: q1 ? !!q1.payload?.correct : null,
     press_conf_q2_correct: q2 ? !!q2.payload?.correct : null,
     press_conf_non_chosen_policy_chosen: q2 ? !!q2.payload?.picked_unenacted_policy : null,
-    press_conference_correct_count: pressCorrectCount,
-    // there are always exactly 2 press conference questions (q1 + q2) -
-    // hardcoded rather than counting q1/q2 events so a partially-answered
-    // (abandoned) press conference doesn't inflate the %.
-    press_conference_score_pct: pressCorrectCount !== null ? Math.round((pressCorrectCount / 2) * 100) : null,
 
     turns,
     pct_policy_options_previewed: totalOptions > 0 ? Math.round((totalPreviewed / totalOptions) * 100) : null,
