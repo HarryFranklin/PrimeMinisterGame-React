@@ -28,6 +28,7 @@ interface D3ChartProps {
   yAxisMax?: number;
   faceCols?: number;
   activePolicyRules?: any[] | null;
+  theme?: 'light' | 'dark';
 }
 
 const COLOUR_IMPROVE = IMPACT_COLORS['Will improve'];
@@ -65,7 +66,7 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null,
+  activePolicyRules = null, theme = 'light',
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef       = useRef<SVGSVGElement>(null);
@@ -127,10 +128,13 @@ export default function D3Chart({
 
     chart.select('.axis-x').attr('transform', `translate(0,${H})`);
 
+    const axisFg  = theme === 'dark' ? '#d4d4d8' : '#d4d4d8';
+    const tickFg  = theme === 'dark' ? '#f4f4f5' : '#52525b';
+    const labelFg = theme === 'dark' ? '#e4e4e7' : '#3f3f46';
     const styleAxis = (sel: any) => {
-      sel.select('.domain').attr('stroke', '#d4d4d8').attr('stroke-width', 3);
-      sel.selectAll('.tick line').attr('stroke', '#d4d4d8').attr('stroke-width', 2);
-      sel.selectAll('text').attr('fill', '#52525b').style('font-size', '12px').style('font-weight', '600');
+      sel.select('.domain').attr('stroke', axisFg).attr('stroke-width', 3);
+      sel.selectAll('.tick line').attr('stroke', axisFg).attr('stroke-width', 2);
+      sel.selectAll('text').attr('fill', tickFg).style('font-size', '12px').style('font-weight', '600');
     };
 
     if (plotType === '1D' && histogramData) {
@@ -188,7 +192,7 @@ export default function D3Chart({
             if (net < 0) return 'rgba(245, 158, 11, 0.22)';
             return 'rgba(212,212,216,0.3)';
           }
-          return d % 2 === 0 ? '#f4f4f5' : 'transparent';
+          return d % 2 === 0 ? (theme === 'dark' ? 'rgba(255,255,255,0.04)' : '#f4f4f5') : 'transparent';
         });
 
       dataLayer.selectAll('rect.bar').remove();
@@ -415,13 +419,13 @@ export default function D3Chart({
         .attr('text-anchor','middle')
         .attr('transform','rotate(-90)')
         .attr('y', -15).attr('x', -H / 2)
-        .attr('fill','#3f3f46')
+        .attr('fill', labelFg)
         .style('font-weight','bold').style('font-size','14px')
         .text('Number of People');
 
       chart.select('.label-x')
         .attr('x', W / 2).attr('y', H + 38)
-        .attr('fill','#3f3f46')
+        .attr('fill', labelFg)
         .style('text-anchor','middle').style('font-weight','bold')
         .text(getAxisLabel(xAxisType));
 
@@ -461,7 +465,7 @@ export default function D3Chart({
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
 
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols, theme]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }

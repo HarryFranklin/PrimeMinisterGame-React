@@ -229,7 +229,10 @@ export default function TelemetryDevPanel() {
 
   useEffect(() => {
     if (!enabled) return;
-    return subscribeToEvents((_entry, fullLog) => setLog([...fullLog]));
+    return subscribeToEvents((_entry, fullLog) => {
+      const snapshot = [...fullLog];
+      setTimeout(() => setLog(snapshot), 0);
+    });
   }, [enabled]);
 
   // If not mounted yet (server-side or first client pass), render nothing.

@@ -3,12 +3,35 @@ import { motion } from 'framer-motion';
 import { ElectionCycle, AxisVariable } from '../../utils/types';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
-import { DPMMessage } from './SharedModalComponents';
 import { track } from '../../client/telemetry';
 import { useGame } from '../../context/GameStateContext';
 
 const getDummyHistogram = (distribution: Record<number, number>) =>
   Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
+
+// Small dark-mode note used for the top instruction line and per-section insight
+// callouts. Replaces the repeated white DPMMessage box (icon + "Deputy Prime
+// Minister" kicker) so the payoff text doesn't compete with the header above it.
+const toneClasses: Record<string, string> = {
+  pink: 'border-pink-500/30 bg-pink-500/10 text-pink-300',
+  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  zinc: 'border-zinc-700 bg-zinc-800/50 text-zinc-300',
+};
+
+const Note = ({
+  label,
+  tone = 'pink',
+  children,
+}: {
+  label: string;
+  tone?: 'pink' | 'emerald' | 'zinc';
+  children: React.ReactNode;
+}) => (
+  <div className={`rounded-xl border p-4 text-left ${toneClasses[tone]}`}>
+    <span className="text-xs font-black uppercase tracking-widest block mb-1 opacity-80">{label}</span>
+    <p className="text-base italic leading-relaxed whitespace-pre-wrap text-zinc-200">{children}</p>
+  </div>
+);
 
 export default function AcademicDebriefOverlay() {
   const { currentCycle, population: finalPopulation, yAxisMax, resolveAcademicDebrief } = useGame();
@@ -192,63 +215,63 @@ export default function AcademicDebriefOverlay() {
             Term Concluded
           </h2>
           <h1 className="text-3xl md:text-4xl font-black text-white">
-            Academic Debrief
+            Debrief
           </h1>
         </div>
 
-        <div className="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-2xl">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl">
           <div className="flex flex-col gap-4 animate-in fade-in w-full">
-            <DPMMessage title="Academic Debrief">
+            <Note label="Deputy Prime Minister" tone="pink">
               {getDpmMessage()}
-            </DPMMessage>
+            </Note>
 
             {currentCycle === ElectionCycle.Benthamite && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div
                   onClick={() => { setRevealedBenthamA(true); markInteraction(); }}
-                  className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+                  className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                 >
                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
                   <div className="relative h-[200px]">
                     <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
                     </div>
-                    {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+                    {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
                   </div>
-                  <div className="mt-4 flex justify-center items-center h-8">
+                  <div className="mt-2 flex justify-center items-center h-8">
                     {!revealedBenthamA ? (
-                      <span className="bg-white px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Calculate Average</span>
+                      <span className="bg-zinc-900 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Calculate Average</span>
                     ) : (
-                      <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Calculated</span>
+                      <span className="text-[10px] font-bold text-pink-400/70 uppercase tracking-widest">Calculated</span>
                     )}
                   </div>
                 </div>
 
                 <div
                   onClick={() => { setRevealedBenthamB(true); markInteraction(); }}
-                  className={`p-4 rounded-xl border-2 transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+                  className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                 >
                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
                   <div className="relative h-[200px]">
                     <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
-                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#d4d4d8" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1}/>
+                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
                     </div>
-                    {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-700">5.0</strong></div>}
+                    {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
                   </div>
-                  <div className="mt-4 flex justify-center items-center h-8">
+                  <div className="mt-2 flex justify-center items-center h-8">
                     {!revealedBenthamB ? (
-                      <span className="bg-white px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Calculate Average</span>
+                      <span className="bg-zinc-900 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Calculate Average</span>
                     ) : (
-                      <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Calculated</span>
+                      <span className="text-[10px] font-bold text-pink-400/70 uppercase tracking-widest">Calculated</span>
                     )}
                   </div>
                 </div>
 
                 {revealedBenthamA && revealedBenthamB && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-                    <DPMMessage title="Mathematically Identical" className="border-pink-200 bg-pink-50/30">
+                    <Note label="Mathematically Identical" tone="pink">
                      {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores how it is distributed. If unchecked, this can lead to issues such as equality.'}
-                    </DPMMessage>
+                    </Note>
                   </motion.div>
                 )}
               </div>
@@ -264,37 +287,37 @@ export default function AcademicDebriefOverlay() {
                     <div
                       key={idx}
                       onClick={() => { setReveal(true); markInteraction(); }}
-                      className={`p-4 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-300 bg-pink-50' : 'border-zinc-200 bg-zinc-50 hover:border-pink-300 hover:bg-pink-50/50'}`}
+                      className={`p-4 rounded-xl border transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                     >
                       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
                       <div className="mb-1 flex justify-center items-center gap-2">
-                        <span className="text-xs text-zinc-400">Objective Shift: </span>
+                        <span className="text-xs text-zinc-500">Objective Shift: </span>
                         <span className="text-sm font-bold text-zinc-500">{citizen?.startLS.toFixed(1)}</span>
-                        <span className="text-zinc-300">→</span>
-                        <strong className="text-lg text-zinc-800">{citizen?.endLS.toFixed(1)}</strong>
-                        <span className="text-[10px] font-black bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded ml-1">
+                        <span className="text-zinc-600">→</span>
+                        <strong className="text-lg text-zinc-200">{citizen?.endLS.toFixed(1)}</strong>
+                        <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded ml-1">
                           {citizen && citizen.lsGained > 0 ? '+' : ''}{citizen?.lsGained.toFixed(1)} LS
                         </span>
                       </div>
 
                       <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-                        <div className="w-full h-px bg-zinc-200 my-2" />
-                        <span className="text-[10px] text-pink-500 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
-                        <strong className="text-2xl text-pink-600">
+                        <div className="w-full h-px bg-zinc-800 my-2" />
+                        <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
+                        <strong className="text-2xl text-pink-300">
                           {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
                         </strong>
                       </div>
 
-                      {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-600 border border-pink-200 animate-pulse">Click to Reveal</span></div>}
+                      {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Click to Reveal</span></div>}
                     </div>
                   );
                 })}
 
                 {revealedCitizen1 && revealedCitizen2 && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-                    <DPMMessage title="Unequal Subjective Value" className="border-pink-200 bg-pink-50/30">
+                    <Note label="Unequal Subjective Value" tone="pink">
                       {getRawlsianMessage()}
-                    </DPMMessage>
+                    </Note>
                   </motion.div>
                 )}
               </div>
@@ -304,29 +327,29 @@ export default function AcademicDebriefOverlay() {
               <div className="flex flex-col gap-4">
                 <div
                   onClick={() => { setRevealedEmpathy(true); markInteraction(); }}
-                  className={`p-5 rounded-xl border-2 transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-zinc-50 hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+                  className={`p-5 rounded-xl border transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-emerald-500/40 hover:bg-emerald-500/5'}`}
                 >
                   <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{empathyCitizen.name}</p>
                   <div className="grid grid-cols-2 gap-4 mb-2">
-                    <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-800">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
-                    <div><span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">Societal Utility</span><strong className="text-2xl text-zinc-800">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong></div>
+                    <div><span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Life Satisfaction</span><strong className="text-2xl text-zinc-200">{empathyCitizen.currentLS.toFixed(1)}</strong></div>
+                    <div><span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Societal Utility</span><strong className="text-2xl text-zinc-200">{WelfareMetrics.evaluateDistribution(finalPopulation.map((p: any) => p.currentLS), empathyCitizen.societalUtilities).toFixed(2)}</strong></div>
                   </div>
 
                   <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-                    <div className="w-full h-px bg-zinc-200 my-2" />
-                    <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest block mb-1">Personal Utility (Self-Interest)</span>
-                    <strong className="text-3xl text-emerald-600">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong>
-                    <p className="text-[11px] text-zinc-500 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
+                    <div className="w-full h-px bg-zinc-800 my-2" />
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block mb-1">Personal Utility (Self-Interest)</span>
+                    <strong className="text-3xl text-emerald-300">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong>
+                    <p className="text-[11px] text-zinc-400 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
                   </div>
 
-                  {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Reveal Personal Utility</span></div>}
+                  {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-400 border border-emerald-500/30 animate-pulse">Reveal Personal Utility</span></div>}
                 </div>
 
                 {revealedEmpathy && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
-                    <DPMMessage title="Moving to Self-Interest" className="border-emerald-200 bg-emerald-50/30">
+                    <Note label="Moving to Self-Interest" tone="emerald">
                       {'When citizens evaluate policy strictly based on empathy, consensus is difficult because everyone has a different definition of fairness.\nFor your final term, we will incorporate Personal Utility into their voting logic, modelling pure self-interest.'}
-                    </DPMMessage>
+                    </Note>
                   </motion.div>
                 )}
               </div>
@@ -336,45 +359,45 @@ export default function AcademicDebriefOverlay() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <div
                   onClick={() => { setRevealedSU(true); markInteraction(); }}
-                  className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-300 bg-emerald-50' : 'border-zinc-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'}`}
+                  className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-emerald-500/40 hover:bg-emerald-500/5'}`}
                 >
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-600/70 mb-2 text-center">Term 3: Societal Utility</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400/70 mb-2 text-center">Term 3: Societal Utility</h3>
                   <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                     <div className="text-center mb-4 mt-2">
-                      <span className="text-xs uppercase font-bold text-emerald-600/70 block mb-1">Average Evaluation</span>
-                      <strong className="text-4xl font-black text-emerald-700">{avgSU.toFixed(2)}</strong>
+                      <span className="text-xs uppercase font-bold text-emerald-400/70 block mb-1">Average Evaluation</span>
+                      <strong className="text-4xl font-black text-emerald-300">{avgSU.toFixed(2)}</strong>
                     </div>
-                    <div className="flex-1 text-xs md:text-sm text-emerald-800/80 space-y-3 overflow-y-auto pr-1">
-                      <p><strong>The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
-                      <p><strong>The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
+                    <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
+                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
+                      <p><strong className="text-zinc-300">The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
                     </div>
                   </div>
-                  {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-600 border border-emerald-200 animate-pulse">Click to Reveal</span></div>}
+                  {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-400 border border-emerald-500/30 animate-pulse">Click to Reveal</span></div>}
                 </div>
 
                 <div
                   onClick={() => { setRevealedPU(true); markInteraction(); }}
-                  className={`rounded-xl border-2 transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-300 bg-zinc-50' : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'}`}
+                  className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-600 bg-zinc-800/60' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-600 hover:bg-zinc-800/40'}`}
                 >
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Term 4: Personal Utility</h3>
                   <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                     <div className="text-center mb-4 mt-2">
-                      <span className="text-xs uppercase font-bold text-zinc-400 block mb-1">Average Evaluation</span>
-                      <strong className="text-4xl font-black text-zinc-800">{avgPU.toFixed(2)}</strong>
+                      <span className="text-xs uppercase font-bold text-zinc-500 block mb-1">Average Evaluation</span>
+                      <strong className="text-4xl font-black text-zinc-200">{avgPU.toFixed(2)}</strong>
                     </div>
-                    <div className="flex-1 text-xs md:text-sm text-zinc-600 space-y-3 overflow-y-auto pr-1">
-                      <p><strong>The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
-                      <p><strong>The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+                    <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
+                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
+                      <p><strong className="text-zinc-300">The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
                     </div>
                   </div>
-                  {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-600 border border-zinc-200 animate-pulse">Click to Reveal</span></div>}
+                  {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-300 border border-zinc-700 animate-pulse">Click to Reveal</span></div>}
                 </div>
 
                 {revealedPU && revealedSU && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-                    <DPMMessage title="The Final Mandate" className="border-zinc-200 bg-zinc-50/30">
+                    <Note label="The Final Mandate" tone="zinc">
                       {'"You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies.\nIt is time for your final verdict.'}
-                    </DPMMessage>
+                    </Note>
                   </motion.div>
                 )}
               </div>
