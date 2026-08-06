@@ -42,20 +42,16 @@ export default function StageTermSummary({
 }: StageTermSummaryProps) {
   const rule = FRAMEWORK_RULES[currentCycle];
   
-  // State for animation
   const [activeTurn, setActiveTurn] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // 1. Reconstruct the LS distribution and metric score for every turn
   const timelineData = useMemo(() => {
     if (!finalPopulation || finalPopulation.length === 0) return [];
     
-    // Use the first citizen's ledger to determine the number of turns
     const ledger = finalPopulation[0].historicalLedger.find(l => l.cycle === currentCycle);
     if (!ledger || ledger.turns.length === 0) return [];
 
     return ledger.turns.map((turnInfo, t) => {
-      // Calculate the histogram for this specific turn
       const hist = Array.from({ length: 11 }, (_, i) => ({
         name: i,
         count: finalPopulation.filter(p => {
@@ -64,7 +60,6 @@ export default function StageTermSummary({
         }).length,
       }));
 
-      // Calculate the specific framework metric for this turn
       let score = 0;
       if (currentCycle === ElectionCycle.Benthamite) {
         score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].ls, 0) / finalPopulation.length;
@@ -85,7 +80,6 @@ export default function StageTermSummary({
     });
   }, [finalPopulation, currentCycle]);
 
-  // 2. Ensure Y-Axis remains static across all animation frames so the graph doesn't jump
   const safeYAxisMax = useMemo(() => {
     let maxCount = 0;
     timelineData.forEach(td => {
@@ -101,7 +95,6 @@ export default function StageTermSummary({
 
   const rawMessage = ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, diff) + "\nWatch the timeline below to see how your agenda shifted the population.";
 
-  // Tell the parent modal it can enable the "Next" button
   useEffect(() => {
     const timer = setTimeout(() => {
       track('term_summary_closed', { cycle: ElectionCycle[currentCycle], dwell_ms: dwell.stop() });
@@ -110,7 +103,6 @@ export default function StageTermSummary({
     return () => clearTimeout(timer);
   }, [onReady]);
 
-  // Handle the playback animation interval (1500ms allows the 1200ms D3 transition to complete)
   useEffect(() => {
     if (!isPlaying) return;
     
@@ -141,15 +133,15 @@ export default function StageTermSummary({
   }];
 
   const handlePlayPause = () => {
-  if (activeTurn >= timelineData.length - 1) {
-    setActiveTurn(0);
-    setIsPlaying(true);
-    track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
-  } else {
-    if (!isPlaying) track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
-    setIsPlaying(!isPlaying);
-  }
-};
+    if (activeTurn >= timelineData.length - 1) {
+      setActiveTurn(0);
+      setIsPlaying(true);
+      track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
+    } else {
+      if (!isPlaying) track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   const dwell = useDwellTimer();
   const timelineCompletedRef = useRef(false);
@@ -174,31 +166,30 @@ export default function StageTermSummary({
       </DPMMessage>
 
       <div className="bg-zinc-50 rounded-xl border border-zinc-200 p-5 flex flex-col w-full">
-        {/* Dynamic Header */}
-        <div className="flex justify-between items-start md:items-end gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+        {/* Switched to items-start and added flex-col to keep text pinned cleanly to the top */}
+        <div className="flex justify-between items-start gap-4 min-h-[72px] shrink-0">
+          <div className="min-w-0 flex-1 flex flex-col justify-start">
+            <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1">
               {activeTurn === 0 ? 'Start of Term' : `Turn ${activeTurn}`}
             </p>
             <h3 className="text-xl font-black text-zinc-900 leading-tight">
               {activeData.policyName}
             </h3>
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 flex flex-col justify-start">
             <p 
-              className="text-[12px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 whitespace-nowrap" 
+              className="text-[12px] sm:text-xs font-bold uppercase tracking-widest transition-colors duration-300 whitespace-nowrap mb-1" 
               style={{ color: rule.graphColor }}
             >
               {rule.targetMetricName}
             </p>
-            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tabular-nums leading-none mt-1">
+            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tabular-nums leading-none">
               {activeData.score.toFixed(2)}
             </p>
           </div>
         </div>
 
-        {/* Animated Graph */}
-        <div className="h-[240px] w-full mb-4">
+        <div className="h-[250px] shrink-0 w-full mb-4">
           <D3Chart
             plotType="1D"
             chartData={[]}
@@ -213,11 +204,10 @@ export default function StageTermSummary({
           />
         </div>
 
-        {/* Playback Controls & Timeline */}
         <div className="flex items-center gap-3 pt-3 border-t border-zinc-200 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={handlePlayPause}
-            className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-full transition-colors ${isPlaying ? 'bg-pink-100 text-pink-600' : 'bg-zinc-900 text-white hover:bg-black'}`}
+            className={`ml-1 shrink-0 flex items-center justify-center w-10 h-10 rounded-full transition-colors ${isPlaying ? 'bg-pink-100 text-pink-600' : 'bg-zinc-900 text-white hover:bg-black'}`}
           >
             {isPlaying ? '⏸' : activeTurn >= timelineData.length - 1 ? '↺' : '▶'}
           </button>

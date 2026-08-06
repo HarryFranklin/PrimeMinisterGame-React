@@ -138,7 +138,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
 
   // Cinematic Choreography Timer
   useEffect(() => {
-    const t1 = setTimeout(() => setIntroSequence(1), 1200); // Wait 1.2s in pitch black, then pop the dialogue
+    const t1 = setTimeout(() => setIntroSequence(1), 1200); 
     return () => clearTimeout(t1);
   }, []);
 
@@ -228,8 +228,8 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     if (phase === 'summary' && !readyFiredRef.current) {
       readyFiredRef.current = true;
       const t1 = setTimeout(() => {
-        setIsFullscreen(false); // Fade out the cinematic black overlay
-        onReady(); // Unlock the modal's standard "Continue" button
+        setIsFullscreen(false); 
+        onReady(); 
       }, 4000);
       return () => clearTimeout(t1);
     }
@@ -275,18 +275,16 @@ export default function StagePressConference({ currentCycle, approvalRating, his
 
   return (
     <>
-      {/* 
-        LAYER 1: The Cinematic Fullscreen Overlay 
-        This completely eclipses the standard Modal formatting while active.
-      */}
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
             key="fullscreen-press"
-            initial={{ opacity: 0 }}
+            // CHANGED: instantly snaps to black on load to hide the white modal below
+            initial={{ opacity: 1 }} 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
+            // CHANGED: Speeds up the exit transition so you don't stare at ghosting
+            transition={{ duration: 0.2 }} 
             className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col p-6 md:p-12 overflow-y-auto"
           >
             {/* Live Approval - Explicitly separated from the journalist's box */}
@@ -363,10 +361,10 @@ export default function StagePressConference({ currentCycle, approvalRating, his
         This is what the user is safely returned to once the fullscreen effect ends.
       */}
       {!isFullscreen && (
-        <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 border border-zinc-200 rounded-2xl h-full min-h-[200px] animate-in fade-in zoom-in-95 duration-500 text-center">
+        <div className="flex flex-col items-center justify-center py-10 animate-in fade-in duration-300 text-center">
           <span className="text-4xl mb-4">🎤</span>
           <h3 className="text-xl font-black text-zinc-900 mb-2">Press Conference Concluded</h3>
-          <p className="text-zinc-600 font-medium max-w-md mb-6">The Chief of Staff has concluded your debrief.</p>
+          <p className="text-zinc-500 font-medium max-w-md mb-2">The Chief of Staff has concluded your debrief.</p>
         </div>
       )}
     </>
