@@ -52,7 +52,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.PersonalUtility,
     graphColor: CYCLE_COLORS[ElectionCycle.PersonalUtility],
-    winThresholdScalar: 0.97,
+    winThresholdScalar: 0.92,
     briefingText: "Not every improvement counts the same. Helping someone who is already comfortable barely moves the needle — they are doing fine. But helping someone who is struggling makes a real difference to how they feel. Your job is to find those people and lift them, not to keep adding to the lives of those who need it least.",
   },
   [ElectionCycle.SocietalUtility]: {
@@ -65,7 +65,7 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     plotType: '1D',
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: CYCLE_COLORS[ElectionCycle.SocietalUtility],
-    winThresholdScalar: 0.9675,
+    winThresholdScalar: 0.9775,
     briefingText: "Voters are not just tracking their own lives — they are watching everyone else's too. A rising national average that leaves the bottom behind will cost you votes from citizens who find inequality itself distressing, even if they are personally unaffected. Your task is to grow wellbeing in a way the whole country can see as fair. Visible gaps are politically fatal here.",
   },
 };
