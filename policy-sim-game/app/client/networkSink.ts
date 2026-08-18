@@ -6,8 +6,8 @@
 
 import type { LoggedEvent } from "./telemetry";
 
-// const BASE = "https://telemetry-worker.franklinh.workers.dev";
-const BASE = "http://localhost:8787";
+const BASE = "https://telemetry-worker.franklinh.workers.dev";
+// const BASE = "http://localhost:8787"; // for local dev d1
 
 function send(path: string, body: unknown, useBeacon = false) {
   const json = JSON.stringify(body);
