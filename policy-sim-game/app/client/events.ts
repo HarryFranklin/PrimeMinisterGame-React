@@ -4,6 +4,16 @@
 // picture of what's tracked, and gives you type safety when calling track().
 
 export type TelemetryEvent =
+  // ---- Setup ----
+  | { event: "setup_opened"; payload: {} }
+  | {
+      event: "setup_submitted";
+      payload: {
+        prolific_pid: string;
+        difficulty_seed: number;
+        win_threshold_scalars: Record<string, number>;
+      };
+    }
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }

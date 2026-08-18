@@ -154,7 +154,13 @@ export function formatLine(
   const p = e.payload ?? {};
 
   switch (e.event) {
-    // ---- Intro ----
+    // ---- Setup ----
+    case "setup_opened":
+      return { ts: e.ts, text: "Participant Setup Screen Loaded", minor: false };
+    case "setup_submitted":
+      return { ts: e.ts, text: `Study Initialised (ID: ${p.prolific_pid})`, minor: false };
+      
+    // ---- Intro ----s
     case "intro_opened":
       return { ts: e.ts, text: "Welcome Modal Started", minor };
     case "intro_envelope_opened":

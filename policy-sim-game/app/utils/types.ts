@@ -68,6 +68,7 @@ export interface CompletedRun {
 }
 
 export enum GamePhase {
+  Setup = 'setup',
   Intro = 'intro',
   LevelSelect = 'levelSelect',
   Briefing = 'briefing',

@@ -21,6 +21,7 @@ import FinalDebriefModal from "./components/modals/FinalDebriefModal";
 import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
+import SetupTab from "./components/tabs/SetupTab";
 
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
@@ -70,29 +71,11 @@ export default function Home() {
   }, []);
 
   const game = useGameEngine();
-  const isHub = game.gamePhase === GamePhase.LevelSelect || game.gamePhase === GamePhase.Intro;
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
-       
-      {/* --- CINEMATIC CURTAIN --- */}
-      {!isHub && (
-        <motion.div
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 0, transitionEnd: { display: "none" } }}
-          transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
-          className="fixed inset-0 z-[9999] bg-zinc-950 pointer-events-none flex flex-col items-center justify-center"
-        >
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-12 h-12 border-4 border-zinc-800 border-t-pink-600 rounded-full animate-spin" />
-            <h2 className="text-zinc-400 font-bold uppercase tracking-widest text-sm animate-pulse">
-              Commencing Term
-            </h2>
-          </div>
-        </motion.div>
-      )}
-      {/* ------------------------- */}
-
+      
+      {/* Unsupported Screen Warning */}
       <AnimatePresence>
         {isUnsupportedScreen && (
           <motion.div
@@ -115,8 +98,12 @@ export default function Home() {
         onNavigateToPolicy: game.handleNavigateToPolicy
       }}>
         <GameProvider value={game}>
+          
+          {/* MAIN ROUTING */}
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
-            {game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
+            {game.gamePhase === GamePhase.Setup ? (
+              <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} />
+            ) : game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (
               <DashboardTab />
@@ -124,7 +111,7 @@ export default function Home() {
           </main>
 
           <AnimatePresence mode="wait">
-            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && (
+            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && (
               <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
                   
@@ -192,7 +179,7 @@ export default function Home() {
         optimalPath={game.optimalPath} 
         cycleMAO={game.cycleMAO}
       />
-
+      
       <TelemetryDevPanel />
     </div>
   );

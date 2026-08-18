@@ -30,9 +30,10 @@ async function upsertParticipant(env: Env, body: any, now: number) {
     INSERT INTO participants (
       participant_key, user_id, session_id, prolific_pid, study_id, prolific_session_id,
       app_version, first_seen_at, last_seen_at, completed, final_outcome,
-      last_event, last_cycle, last_attempt_number, last_turn, last_progress_at
+      last_event, last_cycle, last_attempt_number, last_turn, last_progress_at,
+      difficulty_seed, win_threshold_scalars
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(participant_key) DO UPDATE SET
       last_seen_at = excluded.last_seen_at,
       session_id = excluded.session_id,
@@ -43,13 +44,17 @@ async function upsertParticipant(env: Env, body: any, now: number) {
       last_cycle = COALESCE(excluded.last_cycle, participants.last_cycle),
       last_attempt_number = COALESCE(excluded.last_attempt_number, participants.last_attempt_number),
       last_turn = COALESCE(excluded.last_turn, participants.last_turn),
-      last_progress_at = COALESCE(excluded.last_progress_at, participants.last_progress_at)
+      last_progress_at = COALESCE(excluded.last_progress_at, participants.last_progress_at),
+      difficulty_seed = COALESCE(excluded.difficulty_seed, participants.difficulty_seed),
+      win_threshold_scalars = COALESCE(excluded.win_threshold_scalars, participants.win_threshold_scalars)
   `).bind(
     participantKey, body.user_id ?? null, body.session_id ?? null,
     body.prolific_pid ?? null, body.study_id ?? null, body.prolific_session_id ?? null,
     body.app_version ?? null, now, now, body.completed ? 1 : 0, body.final_outcome ?? null,
     body.last_event ?? null, body.last_cycle ?? null, body.last_attempt_number ?? null,
-    body.last_turn ?? null, body.last_progress_at ?? null
+    body.last_turn ?? null, body.last_progress_at ?? null,
+    body.difficulty_seed ?? null, 
+    body.win_threshold_scalars ? JSON.stringify(body.win_threshold_scalars) : null
   ).run();
 
   return { ok: true as const, participantKey };
@@ -110,7 +115,9 @@ export default {
       }
 
       if (url.pathname === "/cycle-attempt") {
+        // Re-declare participantKey here so the endpoint can use it
         const participantKey = body.prolific_pid || body.user_id;
+        
         if (!participantKey || !body.attempt_id) {
           return Response.json({ ok: false, error: "missing participant identity or attempt_id" }, { status: 400, headers: corsHeaders });
         }

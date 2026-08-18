@@ -8,7 +8,8 @@ import { availablePolicies } from '../data/policies';
 import { FRAMEWORK_RULES } from "../utils/frameworkRules";
 import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
-import { track, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
+import { DifficultyEngine } from '../utils/DifficultyEngine'; 
+import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -49,9 +50,13 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [yAxisMax, setYAxisMax] = useState(100);
   const [hasSeenUtilityIntervention, setHasSeenUtilityIntervention] = useState(false);
   const [pendingDebriefAction, setPendingDebriefAction] = useState<{ type: 'restart' | 'complete'; outcome: 'win' | 'lose' } | null>(null);
+
+  const [participantId, setParticipantId] = useState<string>('');
+  const [difficultySeed, setDifficultySeed] = useState<number>(0);
+  const [winScalars, setWinScalars] = useState<Record<ElectionCycle, number>>({} as any);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Setup);
+  const [isCalculating, setIsCalculating] = useState(false);
   
-  // Game starts on Intro phase now
-  const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Intro);
   const isAgendaUnlocked = gamePhase === GamePhase.Playing;
   
   const [currentTurn, setCurrentTurn] = useState(1);
@@ -87,7 +92,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     
     freshPop = recordTurnState(freshPop, cycle, 1, null, 'Took Office');
 
-    const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, TURNS_PER_CYCLE);
+    // Pass difficultySeed here
+    const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, TURNS_PER_CYCLE, difficultySeed);
     setCycleSchedule(schedule);
 
     const maoResult = MAOEngine.calculateMAO(freshPop, schedule, cycle, MetricsEngine.getMetricScore);
@@ -134,8 +140,35 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, []);
 
   const handleSaveError = useCallback(() => {
-    setGamePhase(GamePhase.Intro); 
+    setGamePhase(GamePhase.Setup); 
   }, []);
+
+  const handleSetupComplete = async (id: string) => {
+    setParticipantId(id);
+    setIsCalculating(true);
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const numericSeed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    setDifficultySeed(numericSeed);
+
+    const initialPop = loadPopulation();
+    const scalars = DifficultyEngine.calculateDynamicScalars(numericSeed, initialPop, 500);
+    setWinScalars(scalars);
+
+    // 1. Lock the data into global telemetry state
+    setParticipantData(id, numericSeed, scalars);
+
+    // 2. Track the submission (this instantly fires the networkSink /participant update!)
+    track("setup_submitted", { 
+      prolific_pid: id,
+      difficulty_seed: numericSeed, 
+      win_threshold_scalars: scalars 
+    });
+
+    setIsCalculating(false);
+    setGamePhase(GamePhase.Intro);
+  };
 
   const gameStateSnapshot = useMemo(() => ({
       population, initialPopulation, baselinePopulation,
@@ -177,7 +210,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const currentMetricScore = useMemo(() => MetricsEngine.getMetricScore(previewPopulation, currentCycle), [previewPopulation, currentCycle]);
   
   const turnApprovalRating = useMemo(() => {
-    const base = WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, FRAMEWORK_RULES[currentCycle].winThresholdScalar);
+    const base = WelfareMetrics.calculateApprovalRating(turnMetricScore, cycleMAO, winScalars[currentCycle]);
     return Math.max(0, Math.min(100, base + pressConferenceModifier));
   }, [turnMetricScore, cycleMAO, currentCycle, pressConferenceModifier]);
 
@@ -416,6 +449,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null),
     applyPressConferenceDelta,
     setHasSeenUtilityIntervention, startCycle,
-    requestAcademicDebrief, resolveAcademicDebrief
+    requestAcademicDebrief, resolveAcademicDebrief,
+    isCalculating, 
+    handleSetupComplete, 
+    winScalars, 
+    difficultySeed
   };
 }

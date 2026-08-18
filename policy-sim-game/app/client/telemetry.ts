@@ -130,6 +130,8 @@ export interface LoggedEvent {
   attempt_number?: number;
   turn?: number;
   app_version?: string;
+  difficulty_seed?: number | null;
+  win_threshold_scalars?: Record<string, number> | null;
   payload?: Record<string, unknown>;
   ms_since_last_event: number | null;
   ms_since_last_same_event: number | null;
@@ -143,6 +145,16 @@ let telemetryInitialized = false;
 let appVersion = "dev";
 let currentLevelId: string | undefined;
 let currentTurn: number | undefined;
+
+let customProlificPid: string | null = null;
+let difficultySeed: number | null = null;
+let winThresholdScalars: Record<string, number> | null = null;
+
+export function setParticipantData(pid: string, seed: number, scalars: Record<string, number>) {
+  customProlificPid = pid;
+  difficultySeed = seed;
+  winThresholdScalars = scalars;
+}
 
 let lastEventTs: number | null = null;
 const lastEventTsByType = new Map<string, number>();
@@ -271,6 +283,10 @@ function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<st
     user_id: getUserId(),
     session_id: getSessionId(),
     ...getProlificMeta(),
+    // Manually entered ID wins, falling back to URL parameter
+    prolific_pid: customProlificPid ?? getProlificMeta().prolific_pid,
+    difficulty_seed: difficultySeed,
+    win_threshold_scalars: winThresholdScalars,
     level_id: currentLevelId,
     attempt_id: currentAttemptId,
     attempt_number: currentAttemptNumber,

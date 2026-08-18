@@ -6,7 +6,8 @@
 
 import type { LoggedEvent } from "./telemetry";
 
-const BASE = "https://telemetry-worker.franklinh.workers.dev";
+// const BASE = "https://telemetry-worker.franklinh.workers.dev";
+const BASE = "http://localhost:8787";
 
 function send(path: string, body: unknown, useBeacon = false) {
   const json = JSON.stringify(body);
@@ -32,6 +33,8 @@ function identity(entry: LoggedEvent, extra: Record<string, unknown> = {}) {
     study_id: entry.study_id ?? null,
     prolific_session_id: entry.prolific_session_id ?? null,
     app_version: entry.app_version ?? null,
+    difficulty_seed: entry.difficulty_seed ?? null,
+    win_threshold_scalars: entry.win_threshold_scalars ?? null,
     ...extra,
   };
 }
@@ -45,6 +48,12 @@ let latestSemanticEntry: LoggedEvent | null = null;
 export function networkSink(entry: LoggedEvent) {
   if (entry.layer === "semantic") {
     latestSemanticEntry = entry;
+  }
+
+  // Fire to database when session starts OR when setup is submitted
+  if (entry.event === "session_started" || entry.event === "setup_submitted") {
+    send("/participant", identity(entry));
+    return;
   }
 
   if (entry.event === "session_started") {

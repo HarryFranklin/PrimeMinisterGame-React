@@ -24,29 +24,23 @@ export class MetricsEngine {
     return totalUtility / pop.length;
   }
 
-  static generateCycleSchedule(cycle: ElectionCycle, available: Policy[], turnsPerCycle: number): Policy[][] {
+  static generateCycleSchedule(cycle: ElectionCycle, available: Policy[], turnsPerCycle: number, playerSeed: number): Policy[][] {
     const schedule: Policy[][] = [];
     
-    // The pseudo-random seed is deliberately deterministic per cycle so that players 
-    // encountering failure will always face the exact same sequence of policies upon retrying.
-    // This allows them to systematically deduce and learn the optimal path.
-    let seed = cycle * 12345 + 1;
+    // Seed is now tied to the player's unique ID + the cycle, guaranteeing 
+    // unique but deterministic runs per player.
+    let seed = playerSeed + (cycle * 12345) + 1;
     const pseudoRandom = () => {
       const x = Math.sin(seed++) * 10000;
       return x - Math.floor(x);
     };
 
     let pool = [...available];
-
     for (let t = 0; t < turnsPerCycle; t++) {
       const turnPolicies: Policy[] = [];
       
-      // Generate 8 policies per turn to act as a buffer.
-      // Since enacted policies are removed from future turns, the UI needs 
-      // extra options so that .slice(0, 4) always finds 4 valid policies.
       for (let p = 0; p < 8; p++) {
         if (pool.length === 0) {
-          // Refill pool, but explicitly filter out policies already drawn for THIS turn
           pool = available.filter(a => !turnPolicies.some(tp => tp.id === a.id));
         }
         
