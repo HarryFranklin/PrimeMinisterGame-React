@@ -20,6 +20,9 @@ export class DifficultyEngine {
     
     const scalars: Record<ElectionCycle, number> = {} as any;
 
+    const TARGET_WIN_RATE_MIN = 0.19;
+    const TARGET_WIN_RATE_MAX = 0.24;
+
     for (const cycle of cycles) {
       const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, 5, playerSeed);
       const maoResult = MAOEngine.calculateMAO(initialPopulation, schedule, cycle, MetricsEngine.getMetricScore);
@@ -57,14 +60,11 @@ export class DifficultyEngine {
 
         const winRate = wins / walks;
 
-        if (winRate > 0.26) {
-          // Too easy -> raise the required scalar
+        if (winRate > TARGET_WIN_RATE_MAX) {
           minScalar = midScalar;
-        } else if (winRate < 0.19) {
-          // Too hard -> lower the required scalar
+        } else if (winRate < TARGET_WIN_RATE_MIN) {
           maxScalar = midScalar;
         } else {
-          // Target hit (between 19% and 26%)
           bestScalar = midScalar;
           break;
         }

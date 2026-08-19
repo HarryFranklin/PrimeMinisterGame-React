@@ -4,7 +4,7 @@ import { PolicyEngine } from "./PolicyEngine";
 import { MAOEngine } from "./MAOEngine";
 import { availablePolicies } from "../data/policies";
 import { MetricsEngine } from './MetricsEngine';
-import { DifficultyEngine } from './DifficultyEngine'; // Import the new engine
+import { DifficultyEngine } from './DifficultyEngine';
 
 export class DifficultySimulator {
   static runDeterministicSimulation(iterations: number = 10000, playerSeed: number = 12345) {
