@@ -14,6 +14,7 @@ interface DevPanelProps {
   setShowOptimalPath: (show: boolean) => void;
   optimalPath: Policy[];
   cycleMAO: number;
+  difficultySeed: number;
 }
 
 export default function DevPanel({
@@ -27,6 +28,7 @@ export default function DevPanel({
   setShowOptimalPath,
   optimalPath,
   cycleMAO,
+  difficultySeed,
 }: DevPanelProps) {
   return (
     <>
@@ -114,7 +116,7 @@ export default function DevPanel({
               </button>
               <button
                 onClick={() => {
-                  DifficultySimulator.runDeterministicSimulation(10000);
+                  DifficultySimulator.runDeterministicSimulation(10000, difficultySeed);
                 }}
                 className="bg-indigo-900/50 hover:bg-indigo-800 text-indigo-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors border border-indigo-900"
               >

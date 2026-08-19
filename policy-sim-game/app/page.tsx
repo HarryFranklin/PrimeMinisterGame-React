@@ -178,6 +178,7 @@ export default function Home() {
         setShowOptimalPath={setShowOptimalPath}
         optimalPath={game.optimalPath} 
         cycleMAO={game.cycleMAO}
+        difficultySeed={game.difficultySeed}
       />
       
       <TelemetryDevPanel />

@@ -5,7 +5,6 @@ import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { PolicyEngine } from '../utils/PolicyEngine';
 import { MAOEngine } from '../utils/MAOEngine';
 import { availablePolicies } from '../data/policies';
-import { FRAMEWORK_RULES } from "../utils/frameworkRules";
 import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
 import { DifficultyEngine } from '../utils/DifficultyEngine'; 
@@ -92,7 +91,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     
     freshPop = recordTurnState(freshPop, cycle, 1, null, 'Took Office');
 
-    // Pass difficultySeed here
     const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, TURNS_PER_CYCLE, difficultySeed);
     setCycleSchedule(schedule);
 
@@ -119,7 +117,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setBaselinePopulation(freshPop);
     
     setGamePhase(GamePhase.Briefing);
-  }, [resetDpmConsulted]);
+  }, [resetDpmConsulted, difficultySeed]);
 
   const handleSaveLoad = useCallback((parsed: any) => {
     setPopulation(parsed.population);
@@ -134,10 +132,17 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCurrentDeck(parsed.currentDeck);
     setOptimalPath(parsed.optimalPath);
     setIsParliamentDissolved(parsed.isParliamentDissolved || false);
-    setGamePhase(parsed.gamePhase || GamePhase.Intro);
+    if (!parsed.winScalars || Object.keys(parsed.winScalars).length === 0) {
+      setGamePhase(GamePhase.Setup);
+    } else {
+      setGamePhase(parsed.gamePhase || GamePhase.Intro);
+    }
     setCompletedRuns(parsed.completedRuns || []);
     setHasSeenUtilityIntervention(parsed.hasSeenUtilityIntervention || false);
-  }, []);
+    setParticipantId(parsed.participantId || '');
+    setDifficultySeed(parsed.difficultySeed || 0);
+    setWinScalars(parsed.winScalars || {});
+}, []);
 
   const handleSaveError = useCallback(() => {
     setGamePhase(GamePhase.Setup); 
@@ -171,11 +176,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   };
 
   const gameStateSnapshot = useMemo(() => ({
-      population, initialPopulation, baselinePopulation,
-      currentTurn, currentCycle, cycleAttempts, history,
-      cycleSchedule, cycleMAO, currentDeck, optimalPath,
-      isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention
-  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention]);
+    population, initialPopulation, baselinePopulation,
+    currentTurn, currentCycle, cycleAttempts, history,
+    cycleSchedule, cycleMAO, currentDeck, optimalPath,
+    isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention,
+    participantId, difficultySeed, winScalars
+  }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, 
+    cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, 
+    gamePhase, completedRuns, hasSeenUtilityIntervention, participantId, difficultySeed, winScalars]);
 
   const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
@@ -352,8 +360,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, [startCycle, hasSeenUtilityIntervention]);
 
   const handleCompleteTerm = useCallback(() => {
-    const rule = FRAMEWORK_RULES[currentCycle];
-    const targetScore = cycleMAO * rule.winThresholdScalar;
+    const targetScore = cycleMAO * winScalars[currentCycle];
 
     // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
     track("cycle_ended", { 
@@ -389,7 +396,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
 
     setGamePhase(GamePhase.LevelSelect);
-  }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn]);
+  }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn, winScalars]);
 
   const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
     setPendingDebriefAction({ type, outcome });
