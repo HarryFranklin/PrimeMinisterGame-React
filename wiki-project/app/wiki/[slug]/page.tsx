@@ -6,6 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 import { getAllSlugs, getPageBySlug } from '@/lib/wiki';
 import { mdxComponents } from '@/components/mdx/MDXComponents';
 
+import UtilityCurveDiagram from '@/components/mdx/UtilityCurveDiagram';
+import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidget';
+
 /** Tells Next.js which wiki pages to generate at build time. */
 export function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }));
@@ -47,8 +50,15 @@ export default async function WikiPage({ params }: PageProps) {
         <p className="text-zinc-500 dark:text-zinc-400 mb-8">{page.description}</p>
       )}
 
-      <div>
-        <MDXRemote source={page.content} components={mdxComponents} />
+      <div className="prose dark:prose-invert max-w-none">
+        <MDXRemote 
+          source={page.content} 
+          components={{ 
+            ...mdxComponents, 
+            UtilityCurveDiagram, 
+            UtilityInterventionWidget 
+          }} 
+        />
       </div>
     </article>
   );
