@@ -5,9 +5,9 @@ import type { Metadata } from 'next';
 import { ArrowLeft } from 'lucide-react';
 import { getAllSlugs, getPageBySlug } from '@/lib/wiki';
 import { mdxComponents } from '@/components/mdx/MDXComponents';
-
 import UtilityCurveDiagram from '@/components/mdx/UtilityCurveDiagram';
 import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidget';
+import WikiTelemetryClient from '@/components/WikiTelemetryClient';
 
 /** Tells Next.js which wiki pages to generate at build time. */
 export function generateStaticParams() {
@@ -28,35 +28,46 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function WikiPage({ params }: PageProps) {
   const { slug } = await params;
   const page = getPageBySlug(slug);
-
+  
   if (!page) {
     notFound();
   }
 
+  // Calculate approximate word count for telemetry reading time estimations
+  // Splits by whitespace to get a standard word count from the raw MDX string
+  const wordCount = page.content.trim().split(/\s+/).length;
+
   return (
     <article className="max-w-3xl mx-auto px-6 py-10 md:px-12 md:py-16">
+      {/* Telemetry tracker injected here, purely client-side logic */}
+      <WikiTelemetryClient 
+        slug={slug} 
+        title={page.title} 
+        wordCount={wordCount} 
+      />
+
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-zinc-400 text-sm mb-8 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
       >
         <ArrowLeft size={14} /> Back to index
       </Link>
-
       <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
         {page.category}
       </p>
       <h1 className="text-3xl md:text-4xl font-black mb-2 text-zinc-900 dark:text-zinc-100">{page.title}</h1>
+      
       {page.description && (
         <p className="text-zinc-500 dark:text-zinc-400 mb-8">{page.description}</p>
       )}
-
+      
       <div className="prose dark:prose-invert max-w-none">
         <MDXRemote 
           source={page.content} 
-          components={{ 
-            ...mdxComponents, 
-            UtilityCurveDiagram, 
-            UtilityInterventionWidget 
+          components={{
+            ...mdxComponents,
+            UtilityCurveDiagram,
+            UtilityInterventionWidget
           }} 
         />
       </div>
