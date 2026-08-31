@@ -16,7 +16,6 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
   const [isInitialised, setIsInitialised] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check localStorage on initial mount
     const existing = getStoredSession();
     if (existing) {
       setSession(existing);
@@ -25,7 +24,6 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initialiseSession = async (prolificId: string) => {
-    // Extract optional study/session parameters from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     const studyId = urlParams.get('STUDY_ID');
     const urlSessionId = urlParams.get('SESSION_ID');
@@ -42,7 +40,6 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     setSession(newSession);
     setIsInitialised(true);
 
-    // Sync to Cloudflare D1
     await registerParticipant(newSession);
   };
 
@@ -56,7 +53,12 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
 export function useTelemetrySession() {
   const context = useContext(TelemetryContext);
   if (!context) {
-    throw new Error('useTelemetrySession must be used within a TelemetryProvider');
+    // Return a safe fallback during Next.js static build passes instead of crashing
+    return { 
+      session: null, 
+      isInitialised: false, 
+      initialiseSession: async () => {} 
+    };
   }
   return context;
 }
