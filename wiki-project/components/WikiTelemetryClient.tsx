@@ -1,6 +1,9 @@
+// components/WikiTelemetryClient.tsx
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTelemetrySession } from '@/context/TelemetryContext';
+import { WORKER_URL, getNextViewIndex, trackWikiEvent } from '@/lib/telemetry';
 
 interface TelemetryProps {
   slug: string;
@@ -8,142 +11,122 @@ interface TelemetryProps {
   wordCount: number;
 }
 
-// Ensure you set this in your environment or hardcode the production worker URL
-const WORKER_URL = process.env.NEXT_PUBLIC_TELEMETRY_WORKER_URL || 'https://wiki-telemetry-worker.franklinh.workers.dev';
-const WPM = 238; 
+const WPM = 238; // Standard reading speed baseline
 
 export default function WikiTelemetryClient({ slug, title, wordCount }: TelemetryProps) {
-  const hasInitialised = useRef(false);
+  // Safely handle context during server-side prerendering / static exports
+  const telemetry = useTelemetrySession();
+  const session = telemetry?.session;
+  const isInitialised = telemetry?.isInitialised ?? false;
+
+  const hasMounted = useRef(false);
   const viewId = useRef<string>('');
-  const entryTime = useRef<number>(0);
-  const activeTimeMs = useRef<number>(0);
+  const viewIndex = useRef<number>(0);
+  const enteredAt = useRef<number>(0);
+  const activeDurationMs = useRef<number>(0);
   const lastActiveTimestamp = useRef<number>(0);
-  const maxScroll = useRef<number>(0);
+  const maxScrollPct = useRef<number>(0);
 
   useEffect(() => {
-    if (hasInitialised.current) return;
-    hasInitialised.current = true;
+    // Skip entirely during SSR / static build or before session is initialised by modal
+    if (typeof window === 'undefined' || !isInitialised || !session || hasMounted.current) return;
+    hasMounted.current = true;
 
-    // 1. Participant Tracking (Read from URL or generate anonymous ID)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlPid = urlParams.get('PROLIFIC_PID');
-    const urlSession = urlParams.get('SESSION_ID');
-    const urlStudy = urlParams.get('STUDY_ID');
-
-    let userId = localStorage.getItem('wiki_user_id');
-    if (!userId) {
-      userId = crypto.randomUUID();
-      localStorage.setItem('wiki_user_id', userId);
-    }
-
-    const prolificPid = urlPid || localStorage.getItem('wiki_prolific_pid') || null;
-    if (urlPid) localStorage.setItem('wiki_prolific_pid', urlPid);
-
-    const participantData = {
-      user_id: userId,
-      prolific_pid: prolificPid,
-      session_id: urlSession || null,
-      study_id: urlStudy || null,
-    };
-
-    // 2. Initialise Page View
     viewId.current = crypto.randomUUID();
-    entryTime.current = Date.now();
-    lastActiveTimestamp.current = entryTime.current;
-    
+    viewIndex.current = getNextViewIndex();
+    enteredAt.current = Date.now();
+    lastActiveTimestamp.current = enteredAt.current;
+
     const expectedReadingSeconds = Math.ceil((wordCount / WPM) * 60);
 
-    const initialPayload = {
-      ...participantData,
+    // 1. Initial Page Arrival Ping
+    const arrivalPayload = {
+      user_id: session.userId,
+      prolific_pid: session.prolificPid,
+      session_id: session.sessionId,
+      study_id: session.studyId,
       view_id: viewId.current,
       page_slug: slug,
       page_title: title,
+      view_index: viewIndex.current,
       word_count: wordCount,
       expected_reading_seconds: expectedReadingSeconds,
-      entered_at: entryTime.current,
+      entered_at: enteredAt.current,
     };
 
     fetch(`${WORKER_URL}/wiki-page-view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(initialPayload),
+      body: JSON.stringify(arrivalPayload),
       keepalive: true,
     }).catch(console.error);
 
-    // 3. Track Active Time (Pause timer when tab is hidden)
+    // 2. Tab Visibility Tracking (Dwell Time Calibration)
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        activeTimeMs.current += Date.now() - lastActiveTimestamp.current;
+        activeDurationMs.current += Date.now() - lastActiveTimestamp.current;
       } else {
         lastActiveTimestamp.current = Date.now();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // 4. Track Scroll Depth
+    // 3. Scroll Depth Tracking
     const handleScroll = () => {
       const scrollTop = window.scrollY;
-      const docHeight = document.body.scrollHeight - window.innerHeight;
-      const scrollPct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 100;
-      if (scrollPct > maxScroll.current) {
-        maxScroll.current = scrollPct;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPct = docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 100;
+      if (scrollPct > maxScrollPct.current) {
+        maxScrollPct.current = Math.round(scrollPct);
       }
     };
-    const scrollListener = () => requestAnimationFrame(handleScroll);
-    window.addEventListener('scroll', scrollListener);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // 5. Track Link Clicks
-    const handleGlobalClick = (e: MouseEvent) => {
+    // 4. Link Interaction Tracking
+    const handleLinkClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
       if (anchor && anchor.href) {
-        fetch(`${WORKER_URL}/wiki-event`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...participantData,
-            page_slug: slug,
-            event_type: 'link_click',
-            event_data: { href: anchor.href, text: anchor.innerText },
-            occurred_at: Date.now(),
-          }),
-          keepalive: true,
-        }).catch(console.error);
+        trackWikiEvent(session, slug, 'link_click', {
+          href: anchor.getAttribute('href'),
+          text: anchor.innerText.trim(),
+        });
       }
     };
-    document.addEventListener('click', handleGlobalClick);
+    document.addEventListener('click', handleLinkClick);
 
-    // 6. Finalise Page View on Unmount
+    // 5. Page Departure Logging
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('scroll', scrollListener);
-      document.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('click', handleLinkClick);
 
-      // Add final chunk of active time if tab was visible
       if (!document.hidden) {
-        activeTimeMs.current += Date.now() - lastActiveTimestamp.current;
+        activeDurationMs.current += Date.now() - lastActiveTimestamp.current;
       }
 
       const leftAt = Date.now();
-      const durationMs = leftAt - entryTime.current;
+      const totalDurationMs = leftAt - enteredAt.current;
       const minReadingTimeMs = expectedReadingSeconds * 0.75 * 1000;
-      const metMinimum = activeTimeMs.current >= minReadingTimeMs;
+      const metMinimum = activeDurationMs.current >= minReadingTimeMs;
 
-      const finalPayload = {
-        ...participantData,
+      const departurePayload = {
+        user_id: session.userId,
+        prolific_pid: session.prolificPid,
+        session_id: session.sessionId,
+        study_id: session.studyId,
         view_id: viewId.current,
         left_at: leftAt,
-        duration_ms: durationMs,
-        active_duration_ms: activeTimeMs.current,
-        max_scroll_pct: maxScroll.current,
+        duration_ms: totalDurationMs,
+        active_duration_ms: activeDurationMs.current,
+        max_scroll_pct: maxScrollPct.current,
         met_minimum_reading_time: metMinimum,
       };
 
-      // sendBeacon is more reliable for page unloads/navigation than standard fetch
-      const blob = new Blob([JSON.stringify(finalPayload)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(departurePayload)], { type: 'application/json' });
       navigator.sendBeacon(`${WORKER_URL}/wiki-page-view`, blob);
     };
-  }, [slug, title, wordCount]);
+  }, [slug, title, wordCount, isInitialised, session]);
 
-  return null; // This is a logic-only component
+  return null;
 }

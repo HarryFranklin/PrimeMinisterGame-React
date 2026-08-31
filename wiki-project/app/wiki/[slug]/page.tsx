@@ -1,3 +1,4 @@
+// app/wiki/[slug]/page.tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -9,7 +10,6 @@ import UtilityCurveDiagram from '@/components/mdx/UtilityCurveDiagram';
 import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidget';
 import WikiTelemetryClient from '@/components/WikiTelemetryClient';
 
-/** Tells Next.js which wiki pages to generate at build time. */
 export function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }));
 }
@@ -28,22 +28,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function WikiPage({ params }: PageProps) {
   const { slug } = await params;
   const page = getPageBySlug(slug);
-  
+
   if (!page) {
     notFound();
   }
 
-  // Calculate approximate word count for telemetry reading time estimations
-  // Splits by whitespace to get a standard word count from the raw MDX string
   const wordCount = page.content.trim().split(/\s+/).length;
 
   return (
     <article className="max-w-3xl mx-auto px-6 py-10 md:px-12 md:py-16">
-      {/* Telemetry tracker injected here, purely client-side logic */}
-      <WikiTelemetryClient 
-        slug={slug} 
-        title={page.title} 
-        wordCount={wordCount} 
+      <WikiTelemetryClient
+        slug={slug}
+        title={page.title}
+        wordCount={wordCount}
       />
 
       <Link
@@ -56,19 +53,19 @@ export default async function WikiPage({ params }: PageProps) {
         {page.category}
       </p>
       <h1 className="text-3xl md:text-4xl font-black mb-2 text-zinc-900 dark:text-zinc-100">{page.title}</h1>
-      
+
       {page.description && (
         <p className="text-zinc-500 dark:text-zinc-400 mb-8">{page.description}</p>
       )}
-      
+
       <div className="prose dark:prose-invert max-w-none">
-        <MDXRemote 
-          source={page.content} 
+        <MDXRemote
+          source={page.content}
           components={{
             ...mdxComponents,
             UtilityCurveDiagram,
-            UtilityInterventionWidget
-          }} 
+            UtilityInterventionWidget,
+          }}
         />
       </div>
     </article>
