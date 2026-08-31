@@ -123,8 +123,13 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
         met_minimum_reading_time: metMinimum,
       };
 
-      const blob = new Blob([JSON.stringify(departurePayload)], { type: 'application/json' });
-      navigator.sendBeacon(`${WORKER_URL}/wiki-page-view`, blob);
+      // Replace navigator.sendBeacon with a keepalive fetch
+      fetch(`${WORKER_URL}/wiki-page-view`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(departurePayload),
+        keepalive: true,
+      }).catch(console.error);
     };
   }, [slug, title, wordCount, isInitialised, session]);
 
