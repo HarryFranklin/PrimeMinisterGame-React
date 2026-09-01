@@ -32,6 +32,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
       userId: crypto.randomUUID(),
       prolificPid: prolificId.trim(),
       sessionId: urlSessionId || crypto.randomUUID(),
+      prolificSessionId: urlSessionId || null,
       studyId: studyId || null,
       appVersion: process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? 'dev',
     };

@@ -3,7 +3,7 @@
 
 -- Tags each participant row with which arm of the study they're in.
 -- Existing rows (all game data so far) default to 'game'; the wiki
--- registers new participants as 'control'.
+-- registers new participants as condition='wiki'.
 ALTER TABLE participants ADD COLUMN condition TEXT DEFAULT 'game';
 CREATE INDEX idx_participants_condition ON participants(condition);
 

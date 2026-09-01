@@ -1,11 +1,10 @@
-// lib/telemetry.ts
-
 export const WORKER_URL = process.env.NEXT_PUBLIC_TELEMETRY_WORKER_URL || 'https://wiki-telemetry-worker.franklinh.workers.dev';
 
 export interface ParticipantSession {
   userId: string;
   prolificPid: string;
   sessionId: string;
+  prolificSessionId: string | null;
   studyId: string | null;
   appVersion: string;
 }
@@ -49,6 +48,7 @@ export async function registerParticipant(session: ParticipantSession): Promise<
       body: JSON.stringify({
         user_id: session.userId,
         prolific_pid: session.prolificPid,
+        prolific_session_id: session.prolificSessionId,
         session_id: session.sessionId,
         study_id: session.studyId,
         app_version: session.appVersion,
@@ -75,6 +75,7 @@ export function trackWikiEvent(
     body: JSON.stringify({
       user_id: session.userId,
       prolific_pid: session.prolificPid,
+      prolific_session_id: session.prolificSessionId,
       session_id: session.sessionId,
       study_id: session.studyId,
       page_slug: pageSlug,

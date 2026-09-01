@@ -1,4 +1,3 @@
-// components/WikiTelemetryClient.tsx
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -44,6 +43,7 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
       user_id: session.userId,
       prolific_pid: session.prolificPid,
       session_id: session.sessionId,
+      prolific_session_id: session.prolificSessionId,
       study_id: session.studyId,
       view_id: viewId.current,
       page_slug: slug,
@@ -113,6 +113,7 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
       const departurePayload = {
         user_id: session.userId,
         prolific_pid: session.prolificPid,
+        prolific_session_id: session.prolificSessionId,
         session_id: session.sessionId,
         study_id: session.studyId,
         view_id: viewId.current,
