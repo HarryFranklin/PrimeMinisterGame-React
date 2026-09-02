@@ -19,10 +19,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Control Group Wiki",
-    template: "%s · Control Group Wiki",
+    default: "Utility Framework Wiki",
+    template: "%s · Utility Framework Wiki",
   },
-  description: "In-universe reference wiki for the Control Group.",
+  description: "A reference guide exploring how governments measure and improve human wellbeing, and what utility frameworks offer compared to traditional methods.",
 };
 
 export default function RootLayout({

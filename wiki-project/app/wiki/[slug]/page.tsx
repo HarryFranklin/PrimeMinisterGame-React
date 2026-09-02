@@ -1,4 +1,3 @@
-// app/wiki/[slug]/page.tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MDXRemote } from 'next-mdx-remote/rsc';
@@ -9,6 +8,8 @@ import { mdxComponents } from '@/components/mdx/MDXComponents';
 import UtilityCurveDiagram from '@/components/mdx/UtilityCurveDiagram';
 import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidget';
 import WikiTelemetryClient from '@/components/WikiTelemetryClient';
+import { DistributionMeanDiagram, DistributionFloorDiagram, DistributionDispersionDiagram, } from '@/components/WikiPlaceholders';
+import remarkGfm from 'remark-gfm';
 
 export function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }));
@@ -61,10 +62,18 @@ export default async function WikiPage({ params }: PageProps) {
       <div className="prose dark:prose-invert max-w-none">
         <MDXRemote
           source={page.content}
+          options={{
+            mdxOptions: {
+              remarkPlugins: [remarkGfm],
+            },
+          }}
           components={{
             ...mdxComponents,
             UtilityCurveDiagram,
             UtilityInterventionWidget,
+            DistributionMeanDiagram,
+            DistributionFloorDiagram,
+            DistributionDispersionDiagram,
           }}
         />
       </div>

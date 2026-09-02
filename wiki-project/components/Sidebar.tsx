@@ -78,7 +78,7 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
       <div className="md:hidden flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-20">
         <Link href="/" className="flex items-center gap-2">
           <BookOpen size={18} className="text-indigo-600 dark:text-indigo-400" />
-          <span className="font-black text-zinc-900 dark:text-zinc-100">Control Group Wiki</span>
+          <span className="font-black text-zinc-900 dark:text-zinc-100">Utility Framework Wiki</span>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -111,7 +111,7 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
       <aside className="hidden md:flex md:flex-col w-72 shrink-0 h-screen sticky top-0 p-6 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
         {navContent}
         <div className="mt-auto pt-6 flex justify-between items-center">
-          <span className="text-xs text-zinc-400">Control Group v0.1</span>
+          <span className="font-black text-lg text-zinc-900 dark:text-zinc-100">Utility Framework Wiki</span>
           <ThemeToggle />
         </div>
       </aside>

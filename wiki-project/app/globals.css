@@ -27,3 +27,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+.wiki-placeholder {
+  border: 2px dashed #6b7280;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}

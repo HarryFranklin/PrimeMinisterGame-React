@@ -10,11 +10,11 @@ export default function Home() {
     <main className="max-w-4xl mx-auto px-6 py-10 md:px-12 md:py-16">
       <header className="mb-12">
         <h1 className="text-4xl md:text-5xl font-black mb-4 text-zinc-900 dark:text-zinc-100">
-          Control Group Wiki
+          Utility Framework Wiki
         </h1>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-          The in-universe reference for the Control Group – lore, characters, locations and
-          mechanics, all cross-linked. Use the sidebar or search to find your way around.
+          A reference guide exploring how governments measure and improve human wellbeing, 
+          and what utility frameworks offer compared to traditional methods.
         </p>
       </header>
 
