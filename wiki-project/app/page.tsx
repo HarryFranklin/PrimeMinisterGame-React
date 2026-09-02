@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getNavTree, getAllPages } from '@/lib/wiki';
+import CompleteReadingButton from '@/components/CompleteReadingButton';
 
 export default function Home() {
   const nav = getNavTree();
@@ -13,9 +14,13 @@ export default function Home() {
           Utility Framework Wiki
         </h1>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-          A reference guide exploring how governments measure and improve human wellbeing, 
-          and what utility frameworks offer compared to traditional methods.
+          A reference guide for participants exploring how governments measure 
+          and improve human wellbeing and what utility frameworks offer compared to traditional methods.
         </p>
+
+        <div className="mt-6">
+          <CompleteReadingButton nav={nav} />
+        </div>
       </header>
 
       {pages.length === 0 && (

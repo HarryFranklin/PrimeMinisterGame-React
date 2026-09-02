@@ -10,6 +10,7 @@ import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidge
 import WikiTelemetryClient from '@/components/WikiTelemetryClient';
 import { DistributionMeanDiagram, DistributionFloorDiagram, DistributionDispersionDiagram, } from '@/components/WikiPlaceholders';
 import remarkGfm from 'remark-gfm';
+import MarkCompleteButton from '@/components/MarkCompleteButton';
 
 export function generateStaticParams() {
   return getAllSlugs().map((slug) => ({ slug }));
@@ -76,6 +77,10 @@ export default async function WikiPage({ params }: PageProps) {
             DistributionDispersionDiagram,
           }}
         />
+      </div>
+
+      <div className="mt-10 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+        <MarkCompleteButton slug={slug} />
       </div>
     </article>
   );

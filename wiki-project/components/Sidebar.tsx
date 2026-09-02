@@ -6,11 +6,15 @@ import { usePathname } from 'next/navigation';
 import { Search, Menu, X, BookOpen } from 'lucide-react';
 import type { NavCategory } from '@/lib/wiki';
 import ThemeToggle from './ThemeToggle';
+import { Check, Circle } from 'lucide-react';
+import { useCompletion } from '@/context/CompletionContext';
 
 export default function Sidebar({ nav }: { nav: NavCategory[] }) {
   const [query, setQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+
+  const { visited, completed, isCategoryComplete } = useCompletion();
 
   const filteredNav = useMemo(() => {
     if (!query.trim()) return nav;
@@ -37,8 +41,9 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
         {filteredNav.length === 0 && <p className="text-sm text-zinc-400 px-1">No pages found.</p>}
         {filteredNav.map((cat) => (
           <div key={cat.category}>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2 px-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2 px-1 flex items-center gap-1.5">
               {cat.category}
+              {isCategoryComplete(cat) && <Check size={12} className="text-emerald-500" />}
             </h4>
             <ul className="space-y-0.5">
               {cat.pages.map((page) => {
@@ -55,7 +60,14 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
                           : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                       }`}
                     >
-                      {page.title}
+                      <span className="flex items-center justify-between gap-2">
+                        {page.title}
+                        {completed[page.slug] ? (
+                          <Check size={13} className="text-emerald-500 shrink-0" />
+                        ) : visited[page.slug] ? (
+                          <Circle size={7} className="fill-zinc-400 text-zinc-400 shrink-0" />
+                        ) : null}
+                      </span>
                     </Link>
                   </li>
                 );
@@ -108,7 +120,7 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
         <div className="mt-auto pt-6 border-t border-zinc-200 dark:border-zinc-800">
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3 px-1">Control Centre</p>
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs text-zinc-400">Theme</span>
+            <span className="text-sm text-zinc-400">Theme</span>
             <ThemeToggle />
           </div>
         </div>

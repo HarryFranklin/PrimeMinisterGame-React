@@ -40,6 +40,11 @@ interface ParticipantBody {
   last_progress_at?: number | null;
 }
 
+interface PageCompletionBody {
+  page_slug: string;
+  completed_at?: number;
+}
+
 /** Finds-or-creates the participant row for this browser/Prolific ID and
  * returns its numeric id. Called on every write so "last_seen_at" and
  * "event_count" stay current without a separate heartbeat. Rows are
@@ -100,6 +105,20 @@ async function upsertParticipant(db: D1Database, body: ParticipantBody): Promise
     .run();
 
   return result.meta.last_row_id as number;
+}
+
+async function upsertPageCompletion(db: D1Database, participantId: number, body: PageCompletionBody): Promise<void> {
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO wiki_page_completions (participant_id, page_slug, completed_at, received_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(participant_id, page_slug) DO UPDATE SET
+         completed_at = excluded.completed_at,
+         received_at = excluded.received_at`
+    )
+    .bind(participantId, body.page_slug, body.completed_at ?? now, now)
+    .run();
 }
 
 interface PageViewBody {
@@ -233,6 +252,23 @@ export default {
         const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
         await insertEvent(env.DB, participantId, body as unknown as EventBody);
         return json({ ok: true });
+      }
+
+      if (pathname === "/wiki-page-complete") {
+        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
+        await upsertPageCompletion(env.DB, participantId, body as unknown as PageCompletionBody);
+        return json({ ok: true });
+      }
+
+      if (pathname === "/wiki-study-complete") {
+        const participantId = await upsertParticipant(env.DB, {
+          ...(body as unknown as ParticipantBody),
+          completed: true,
+          final_outcome: "wiki_complete",
+          last_event: "complete_reading",
+          last_progress_at: Date.now(),
+        });
+        return json({ ok: true, participant_id: participantId });
       }
 
       return json({ error: "not found" }, 404);

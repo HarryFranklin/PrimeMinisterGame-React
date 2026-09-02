@@ -86,3 +86,46 @@ export function trackWikiEvent(
     keepalive: true,
   }).catch(console.error);
 }
+
+/** Logs an explicit "mark as complete" action for a wiki page. */
+export async function markPageComplete(session: ParticipantSession, pageSlug: string): Promise<void> {
+  try {
+    await fetch(`${WORKER_URL}/wiki-page-complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: session.userId,
+        prolific_pid: session.prolificPid,
+        prolific_session_id: session.prolificSessionId,
+        session_id: session.sessionId,
+        study_id: session.studyId,
+        page_slug: pageSlug,
+        completed_at: Date.now(),
+      }),
+      keepalive: true,
+    });
+  } catch (err) {
+    console.error('Failed to mark page complete:', err);
+  }
+}
+
+/** Logs the final "Complete Reading" event and marks the participant done. */
+export async function markStudyComplete(session: ParticipantSession): Promise<void> {
+  try {
+    await fetch(`${WORKER_URL}/wiki-study-complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: session.userId,
+        prolific_pid: session.prolificPid,
+        prolific_session_id: session.prolificSessionId,
+        session_id: session.sessionId,
+        study_id: session.studyId,
+        app_version: session.appVersion,
+      }),
+      keepalive: true,
+    });
+  } catch (err) {
+    console.error('Failed to mark study complete:', err);
+  }
+}

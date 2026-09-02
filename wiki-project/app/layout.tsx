@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import { getNavTree } from "@/lib/wiki";
 import { TelemetryProvider } from "@/context/TelemetryContext";
 import ParticipantSetupModal from "@/components/ParticipantSetupModal";
+import { CompletionProvider } from "@/context/CompletionContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,13 +41,15 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
         <TelemetryProvider>
-          <ThemeProvider>
-            <ParticipantSetupModal />
-            <div className="flex md:min-h-screen">
-              <Sidebar nav={nav} />
-              <div className="flex-1 min-w-0">{children}</div>
-            </div>
-          </ThemeProvider>
+          <CompletionProvider>
+            <ThemeProvider>
+              <ParticipantSetupModal />
+              <div className="flex md:min-h-screen">
+                <Sidebar nav={nav} />
+                <div className="flex-1 min-w-0">{children}</div>
+              </div>
+            </ThemeProvider>
+          </CompletionProvider>
         </TelemetryProvider>
       </body>
     </html>

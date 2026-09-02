@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useTelemetrySession } from '@/context/TelemetryContext';
 import { WORKER_URL, getNextViewIndex, trackWikiEvent } from '@/lib/telemetry';
+import { useCompletion } from '@/context/CompletionContext';
 
 interface TelemetryProps {
   slug: string;
@@ -17,6 +18,7 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
   const telemetry = useTelemetrySession();
   const session = telemetry?.session;
   const isInitialised = telemetry?.isInitialised ?? false;
+  const { visitPage } = useCompletion();
 
   const hasMounted = useRef(false);
   const viewId = useRef<string>('');
@@ -30,6 +32,7 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
     // Skip entirely during SSR / static build or before session is initialised by modal
     if (typeof window === 'undefined' || !isInitialised || !session || hasMounted.current) return;
     hasMounted.current = true;
+    visitPage(slug);
 
     viewId.current = crypto.randomUUID();
     viewIndex.current = getNextViewIndex();
