@@ -22,11 +22,6 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
 
   const navContent = (
     <>
-      <Link href="/" className="flex items-center gap-2 mb-6 px-1" onClick={() => setMobileOpen(false)}>
-        <BookOpen size={20} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-        <span className="font-black text-lg text-zinc-900 dark:text-zinc-100">Control Group Wiki</span>
-      </Link>
-
       <div className="relative mb-6">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
         <input
@@ -76,10 +71,6 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
     <>
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-20">
-        <Link href="/" className="flex items-center gap-2">
-          <BookOpen size={18} className="text-indigo-600 dark:text-indigo-400" />
-          <span className="font-black text-zinc-900 dark:text-zinc-100">Utility Framework Wiki</span>
-        </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
@@ -108,11 +99,18 @@ export default function Sidebar({ nav }: { nav: NavCategory[] }) {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col w-72 shrink-0 h-screen sticky top-0 p-6 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-        {navContent}
-        <div className="mt-auto pt-6 flex justify-between items-center">
+      <aside className="hidden md:flex md:flex-col w-80 shrink-0 h-screen sticky top-0 p-6 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+        <Link href="/" className="flex items-center gap-2 mb-6 px-1">
+          <BookOpen size={20} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
           <span className="font-black text-lg text-zinc-900 dark:text-zinc-100">Utility Framework Wiki</span>
-          <ThemeToggle />
+        </Link>
+        {navContent}
+        <div className="mt-auto pt-6 border-t border-zinc-200 dark:border-zinc-800">
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3 px-1">Control Centre</p>
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs text-zinc-400">Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
     </>
