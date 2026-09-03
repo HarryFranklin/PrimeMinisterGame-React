@@ -39,6 +39,16 @@ export function getNextViewIndex(): number {
   return next;
 }
 
+// --- DEV_TOOLS ---------------------------------------------------------
+export function clearAllLocalState(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY_SESSION);
+  localStorage.removeItem(STORAGE_KEY_VIEW_INDEX);
+  localStorage.removeItem('wiki_visited_pages');
+  localStorage.removeItem('wiki_completed_pages');
+}
+// --- END DEV_TOOLS ------------------------------------------------------
+
 /** Sends an upsert request for the participant to the telemetry worker. */
 export async function registerParticipant(session: ParticipantSession): Promise<number | null> {
   try {

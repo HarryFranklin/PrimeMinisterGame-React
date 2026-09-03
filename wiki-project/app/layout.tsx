@@ -7,6 +7,7 @@ import { getNavTree } from "@/lib/wiki";
 import { TelemetryProvider } from "@/context/TelemetryContext";
 import ParticipantSetupModal from "@/components/ParticipantSetupModal";
 import { CompletionProvider } from "@/context/CompletionContext";
+import ClearStateButton from "@/components/ClearStateButton"; // DEV_TOOLS — remove before shipping
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
           <CompletionProvider>
             <ThemeProvider>
               <ParticipantSetupModal />
+              <ClearStateButton /> {/* DEV_TOOLS — remove before shipping */}
               <div className="flex md:min-h-screen">
                 <Sidebar nav={nav} />
                 <div className="flex-1 min-w-0">{children}</div>
