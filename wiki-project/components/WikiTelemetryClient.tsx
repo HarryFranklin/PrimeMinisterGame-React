@@ -27,6 +27,7 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
   const activeDurationMs = useRef<number>(0);
   const lastActiveTimestamp = useRef<number>(0);
   const maxScrollPct = useRef<number>(0);
+  const hasFlushed = useRef<boolean>(false);
 
   useEffect(() => {
     // Skip entirely during SSR / static build or before session is initialised by modal
@@ -98,11 +99,12 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
     };
     document.addEventListener('click', handleLinkClick);
 
-    // 5. Page Departure Logging
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('click', handleLinkClick);
+    // 5. Page Departure Logging — fires on SPA unmount AND on tab close/
+    // refresh/hard navigation via pagehide (sendBeacon survives unload;
+    // fetch keepalive from a cleanup fn does not fire on hard unloads).
+    const sendDeparture = () => {
+      if (hasFlushed.current) return;
+      hasFlushed.current = true;
 
       if (!document.hidden) {
         activeDurationMs.current += Date.now() - lastActiveTimestamp.current;
@@ -127,13 +129,25 @@ export default function WikiTelemetryClient({ slug, title, wordCount }: Telemetr
         met_minimum_reading_time: metMinimum,
       };
 
-      // Replace navigator.sendBeacon with a keepalive fetch
-      fetch(`${WORKER_URL}/wiki-page-view`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(departurePayload),
-        keepalive: true,
-      }).catch(console.error);
+      const blob = new Blob([JSON.stringify(departurePayload)], { type: 'application/json' });
+      if (!navigator.sendBeacon(`${WORKER_URL}/wiki-page-view`, blob)) {
+        fetch(`${WORKER_URL}/wiki-page-view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(departurePayload),
+          keepalive: true,
+        }).catch(console.error);
+      }
+    };
+
+    window.addEventListener('pagehide', sendDeparture);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('click', handleLinkClick);
+      window.removeEventListener('pagehide', sendDeparture);
+      sendDeparture();
     };
   }, [slug, title, wordCount, isInitialised, session]);
 
