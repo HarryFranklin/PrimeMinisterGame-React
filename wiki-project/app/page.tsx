@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { getNavTree, getAllPages } from '@/lib/wiki';
+import { ArrowRight, Clock } from 'lucide-react';
+import { getNavTree, getAllPages, readingMinutes } from '@/lib/wiki';
 import CompleteReadingButton from '@/components/CompleteReadingButton';
 
 export default function Home() {
@@ -31,9 +31,17 @@ export default function Home() {
       )}
 
       <div className="space-y-12">
-        {nav.map((cat) => (
+        {nav.map((cat) => {
+          const totalWords = cat.pages.reduce((sum, p) => sum + p.wordCount, 0);
+          return (
           <section key={cat.category}>
-            <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">{cat.category}</h2>
+            <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              {cat.category}
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded-full px-2.5 py-1">
+                <Clock size={12} />
+                {readingMinutes(totalWords)} min read
+              </span>
+            </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {cat.pages.map((page) => (
                 <Link
@@ -50,7 +58,8 @@ export default function Home() {
               ))}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

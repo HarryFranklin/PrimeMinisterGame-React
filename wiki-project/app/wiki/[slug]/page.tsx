@@ -35,7 +35,7 @@ export default async function WikiPage({ params }: PageProps) {
     notFound();
   }
 
-  const wordCount = page.content.trim().split(/\s+/).length;
+  const wordCount = page.wordCount;
 
   return (
     <article className="max-w-3xl mx-auto px-6 py-10 md:px-12 md:py-16">

@@ -14,12 +14,37 @@ export interface WikiFrontmatter {
 export interface WikiPage extends WikiFrontmatter {
   slug: string;
   content: string;
+  wordCount: number;
 }
 
 export interface NavPage {
   slug: string;
   title: string;
   order: number;
+  wordCount: number;
+}
+
+const WPM = 238; // Standard reading speed baseline — keep in sync with WikiTelemetryClient
+
+/** Counts words in the rendered prose of an MDX source, ignoring import/
+ * export statements, code fences, JSX/component tags, and markdown link
+ * syntax so numbers reflect what a reader actually sees on the page. */
+export function countProseWords(mdxSource: string): number {
+  const stripped = mdxSource
+    .replace(/^import .*$/gm, '')
+    .replace(/^export .*$/gm, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[#>*_`~]/g, ' ');
+
+  return stripped.trim().split(/\s+/).filter(Boolean).length;
+}
+
+/** Rounds a word count to a whole-minute reading estimate (min 1 minute). */
+export function readingMinutes(wordCount: number): number {
+  return Math.max(1, Math.round(wordCount / WPM));
 }
 
 export interface NavCategory {
@@ -50,6 +75,7 @@ export function getPageBySlug(slug: string): WikiPage | null {
     category: (data.category as string) ?? 'Uncategorised',
     order: (data.order as number) ?? 0,
     content,
+    wordCount: countProseWords(content),
   };
 }
 
@@ -74,6 +100,7 @@ export function getNavTree(): NavCategory[] {
       slug: page.slug,
       title: page.title,
       order: page.order ?? 0,
+      wordCount: page.wordCount,
     });
   }
 
