@@ -41,7 +41,13 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     setSession(newSession);
     setIsInitialised(true);
 
-    await registerParticipant(newSession);
+    // Fire-and-forget: this call still matters (it's the only write that
+    // captures a participant who enters their ID and bounces before ever
+    // opening a wiki page), but there's no reason to hold the setup modal
+    // open while it's in flight — every subsequent telemetry call upserts
+    // the participant row again anyway, so nothing downstream depends on
+    // this one finishing first.
+    registerParticipant(newSession);
   };
 
   return (
