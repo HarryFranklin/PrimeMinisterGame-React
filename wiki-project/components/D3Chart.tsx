@@ -467,6 +467,23 @@ export default function D3Chart({
         .call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)) as any).call(styleAxis);
       chart.select('.axis-y').transition().duration(dims.width ? 0 : 500)
         .call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)) as any).call(styleAxis);
+
+      chart.select('.axis-y').selectAll('.custom-y-label').remove();
+      chart.select('.axis-y').append('text')
+        .attr('class', 'custom-y-label')
+        .attr('text-anchor', 'middle')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', -32).attr('x', -H / 2)
+        .attr('fill', labelFg)
+        .style('font-weight', 'bold').style('font-size', '14px')
+        .text(getAxisLabel(yAxisType));
+
+      chart.select('.label-x')
+        .attr('x', W / 2).attr('y', H + 38)
+        .attr('fill', labelFg)
+        .style('text-anchor', 'middle').style('font-weight', 'bold')
+        .text(getAxisLabel(xAxisType));
+
       dataLayer.selectAll<SVGCircleElement, any>('circle.dot')
         .data(chartData, (d: any) => d.id)
         .join('circle').attr('class','dot')

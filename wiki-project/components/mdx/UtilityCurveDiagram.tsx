@@ -18,13 +18,13 @@ export default function UtilityCurveDiagram() {
   ];
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 my-8 shadow-xl h-80 flex flex-col">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 my-8 shadow-xl flex flex-col">
       <div className="mb-2 shrink-0">
         <span className="text-xs font-bold uppercase tracking-widest text-pink-500">
-          Diminishing Marginal Utility
+          Why Each Extra Point of Satisfaction Matters Less
         </span>
       </div>
-      <div className="flex-1 w-full min-h-0 relative">
+      <div className="h-80 w-full min-h-0 relative">
         <D3Chart 
           plotType="2D"
           chartData={curveData}
@@ -34,6 +34,13 @@ export default function UtilityCurveDiagram() {
           theme="dark"
         />
       </div>
+      <p className="mt-3 text-sm text-zinc-400 leading-relaxed shrink-0">
+        As life satisfaction rises from 2 to 10, personal utility climbs quickly at first
+        but flattens out near the top — each additional point of satisfaction buys less
+        utility than the one before it. This is diminishing marginal utility: it's why
+        raising someone from a 2 to a 4 does more good, in utility terms, than raising
+        someone from an 8 to a 10.
+      </p>
     </div>
   );
 }
