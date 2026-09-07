@@ -1,21 +1,24 @@
 ---
 title: "The Mathematics of Utility"
-description: "Why a 1-point gain in satisfaction is not always equal."
+description: "Why a 1-point gain in satisfaction is not always equally valued."
 category: "4. Utility Theory"
 order: 1
 ---
 
-The traditional policy frameworks (Benthamite and Rawlsian) assume that the 0-10 Life Satisfaction scale is linear. However, psychological and economic research demonstrates that human wellbeing follows a curve of **diminishing marginal utility**.
+Benthamite Aggregation and the Rawlsian Approach both, in their usual applied form, treat the 0-10 Life Satisfaction scale as linear. But psychological and economic research points the other way: human wellbeing follows a curve of **diminishing marginal utility** — each additional point of satisfaction is worth less than the one before it.
 
 <UtilityCurveDiagram />
 
-### A Shift In Perspective
-The public no longer cares about raw numbers; they care about **actual happiness**. A £100 boost changes a struggling person's life, but is just pocket change to someone wealthy. 
+The curve above is anchored at zero around a Life Satisfaction score of 2 or below. That's deliberate: scores in that range typically reflect genuine hardship, where a person's most basic needs for security, health, or income aren't being met — there's essentially no cushion left to diminish from. From there, utility climbs steeply at first (going from 2 to 4 is worth roughly 0.55 of the total possible utility) and flattens out later (going from 8 to 10 is worth only about 0.09) — the same four-point range, worth wildly different amounts depending on where it starts.
 
-Use the slider below to see how the exact same **+1 Life Satisfaction** boost affects different citizens in reality.
+### A Shift In Perspective
+Money is a useful way to make this concrete. A £100 windfall might mean the difference between heating a home through winter or not for someone on a low income — a huge shift in circumstances. The same £100, given to someone already financially comfortable, barely registers; it's absorbed into savings or spending they'd have done anyway. The number is identical. What it buys, in terms of actual wellbeing, is not.
+
+Use the slider below to see how the exact same **+1 Life Satisfaction** boost lands very differently depending on where someone starts.
 
 <UtilityInterventionWidget />
 
-To accurately model a population, a simulation must convert raw 0-10 Life Satisfaction scores into non-linear utility values.
+### Decisions for Self versus Decisions on Behalf of Others
+Diminishing marginal utility is the first key idea in utility theory, and it's enough on its own to fix the linearity problem. But it isn't the whole picture. The second key idea is about *whose* outcome is being evaluated: people reason differently about risks to their own life than they do about how wellbeing should be shared out across other people. The next two pages build a curve for each of these separately — one for how people weigh outcomes for **themselves**, and one for how they weigh outcomes **across society**.
 
 Next: [Personal Utility](/wiki/personal-utility)

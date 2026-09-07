@@ -35,11 +35,10 @@ export default function UtilityCurveDiagram() {
         />
       </div>
       <p className="mt-3 text-sm text-zinc-400 leading-relaxed shrink-0">
-        As life satisfaction rises from 2 to 10, personal utility climbs quickly at first
-        but flattens out near the top — each additional point of satisfaction buys less
-        utility than the one before it. This is diminishing marginal utility: it's why
-        raising someone from a 2 to a 4 does more good, in utility terms, than raising
-        someone from an 8 to a 10.
+        Utility climbs quickly at low Life Satisfaction scores and flattens out near the
+        top — each extra point buys less than the one before it. That's diminishing
+        marginal utility: raising someone from 2 to 4 does more good, in utility terms,
+        than raising someone from 8 to 10.
       </p>
     </div>
   );
