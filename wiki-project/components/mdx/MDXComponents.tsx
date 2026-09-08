@@ -7,7 +7,8 @@ import {
   DistributionFloorDiagram, 
   DistributionDispersionDiagram,
   BenthamitePolicyEffects,
-  RawlsianPolicyEffects
+  RawlsianPolicyEffects,
+  SWFWeightingComparison
 } from '../../components/DistributionCharts';
 
 import PolicyImpactExample from './PolicyImpactExample';
@@ -98,5 +99,6 @@ export const mdxComponents: MDXComponents = {
   UtilityComparisonChart,
   UtilityCurveDiagram,
   UtilityExplorer,
-  UtilityInterventionWidget
+  UtilityInterventionWidget,
+  SWFWeightingComparison
 };

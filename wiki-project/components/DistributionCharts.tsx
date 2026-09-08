@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useState } from 'react';
-import D3Chart from './D3Chart'; // Adjust this import path if D3Chart is located elsewhere
+import D3Chart from './D3Chart';
 import { AxisVariable } from '../utils/types'; 
 
 // Shared layout components to keep the MDX file clean and consistent
@@ -347,6 +347,47 @@ export function RawlsianPolicyEffects() {
           theme="dark"
           markers={[{ value: current.floor, label: `Floor: ${current.floor}`, color: '#ef4444', dashed: true }]}
         />
+      </div>
+    </div>
+  );
+}
+
+export function SWFWeightingComparison() {
+  const rows = [
+    { range: '0 to 2 (Deprivation)', benthamite: '1.0×', rawlsian: '1.0× (Targeted)', utility: 'High (Steep curve)' },
+    { range: '3 to 6 (Middle)', benthamite: '1.0×', rawlsian: '0.0× (Ignored)', utility: 'Moderate' },
+    { range: '7 to 10 (Comfortable)', benthamite: '1.0×', rawlsian: '0.0× (Ignored)', utility: 'Low (Flat)' },
+  ];
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl my-8">
+      <h4 className="font-bold uppercase tracking-widest text-indigo-400 mb-1">
+        Social Welfare Function Weights
+      </h4>
+      <p className="text-sm text-zinc-400 mb-4">
+        How each framework weights a +1 Life Satisfaction gain depending on where it lands.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Life Satisfaction Range</th>
+              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Benthamite</th>
+              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Rawlsian</th>
+              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Utility-Weighted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-300 font-semibold">{r.range}</td>
+                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.benthamite}</td>
+                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.rawlsian}</td>
+                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.utility}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
