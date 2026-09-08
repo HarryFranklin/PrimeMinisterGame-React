@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Clock } from 'lucide-react';
 import { getNavTree, getAllPages, readingMinutes } from '@/lib/wiki';
-import CompleteReadingButton from '@/components/CompleteReadingButton';
 
 export default function Home() {
   const nav = getNavTree();
@@ -17,10 +16,6 @@ export default function Home() {
           A reference guide for participants exploring how governments measure 
           and improve human wellbeing and what utility frameworks offer compared to traditional methods.
         </p>
-
-        <div className="mt-6">
-          <CompleteReadingButton nav={nav} />
-        </div>
       </header>
 
       {pages.length === 0 && (
