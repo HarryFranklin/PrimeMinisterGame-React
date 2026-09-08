@@ -7,8 +7,9 @@ import { getAllSlugs, getPageBySlug } from '@/lib/wiki';
 import { mdxComponents } from '@/components/mdx/MDXComponents';
 import UtilityCurveDiagram from '@/components/mdx/UtilityCurveDiagram';
 import UtilityInterventionWidget from '@/components/mdx/UtilityInterventionWidget';
-import UtilityTable from '@/components/mdx/UtilityTable';
+import UtilityExplorer from '@/components/mdx/UtilityExplorer';
 import UtilityComparisonChart from '@/components/mdx/UtilityComparisonChart';
+import PolicyImpactExample from '@/components/mdx/PolicyImpactExample';
 import WikiTelemetryClient from '@/components/WikiTelemetryClient';
 import { DistributionMeanDiagram, DistributionFloorDiagram, DistributionDispersionDiagram, } from '@/components/WikiPlaceholders';
 import remarkGfm from 'remark-gfm';
@@ -74,8 +75,9 @@ export default async function WikiPage({ params }: PageProps) {
             ...mdxComponents,
             UtilityCurveDiagram,
             UtilityInterventionWidget,
-            UtilityTable,
+            UtilityExplorer,
             UtilityComparisonChart,
+            PolicyImpactExample,
             DistributionMeanDiagram,
             DistributionFloorDiagram,
             DistributionDispersionDiagram,

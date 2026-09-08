@@ -31,7 +31,7 @@ const getImpactColor = (ls: number) => {
 };
 
 export default function UtilityInterventionWidget() {
-  const [lsValue, setLsValue] = useState<number>(1.0);
+  const [lsValue, setLsValue] = useState<number>(2.0);
   const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
   const impactPercentage = useMemo(() => {
     // Real marginal utility of a +1 LS boost at this point on the curve,
