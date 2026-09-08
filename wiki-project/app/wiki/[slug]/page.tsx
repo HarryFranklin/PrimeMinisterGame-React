@@ -11,7 +11,7 @@ import UtilityExplorer from '@/components/mdx/UtilityExplorer';
 import UtilityComparisonChart from '@/components/mdx/UtilityComparisonChart';
 import PolicyImpactExample from '@/components/mdx/PolicyImpactExample';
 import WikiTelemetryClient from '@/components/WikiTelemetryClient';
-import { DistributionMeanDiagram, DistributionFloorDiagram, DistributionDispersionDiagram, } from '@/components/WikiPlaceholders';
+import { DistributionMeanDiagram, DistributionFloorDiagram, DistributionDispersionDiagram, } from '@/components/DistributionCharts';
 import remarkGfm from 'remark-gfm';
 import MarkCompleteButton from '@/components/MarkCompleteButton';
 
