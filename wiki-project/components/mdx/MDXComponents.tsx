@@ -2,6 +2,20 @@ import Link from 'next/link';
 import type { MDXComponents } from 'mdx/types';
 import type { AnchorHTMLAttributes } from 'react';
 
+import { 
+  DistributionMeanDiagram, 
+  DistributionFloorDiagram, 
+  DistributionDispersionDiagram,
+  BenthamitePolicyEffects,
+  RawlsianPolicyEffects
+} from '../../components/DistributionCharts';
+
+import PolicyImpactExample from './PolicyImpactExample';
+import UtilityComparisonChart from './UtilityComparisonChart';
+import UtilityCurveDiagram from './UtilityCurveDiagram';
+import UtilityExplorer from './UtilityExplorer';
+import UtilityInterventionWidget from './UtilityInterventionWidget';
+
 function isInternalLink(href: string) {
   return href.startsWith('/') || href.startsWith('#');
 }
@@ -17,7 +31,6 @@ function WikiAnchor({ href = '', children, ...props }: AnchorHTMLAttributes<HTML
       </Link>
     );
   }
-
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass} {...props}>
       {children}
@@ -25,7 +38,6 @@ function WikiAnchor({ href = '', children, ...props }: AnchorHTMLAttributes<HTML
   );
 }
 
-/** Styling for every markdown element rendered inside a wiki page. */
 export const mdxComponents: MDXComponents = {
   h1: (props) => (
     <h1 className="text-3xl font-black mt-10 mb-4 text-zinc-900 dark:text-zinc-100 scroll-mt-24" {...props} />
@@ -76,4 +88,15 @@ export const mdxComponents: MDXComponents = {
     // eslint-disable-next-line @next/next/no-img-element
     <img className="rounded-lg border border-zinc-200 dark:border-zinc-800 my-4" alt={props.alt ?? ''} {...props} />
   ),
+  
+  DistributionMeanDiagram,
+  DistributionFloorDiagram,
+  DistributionDispersionDiagram,
+  BenthamitePolicyEffects,
+  RawlsianPolicyEffects,
+  PolicyImpactExample,
+  UtilityComparisonChart,
+  UtilityCurveDiagram,
+  UtilityExplorer,
+  UtilityInterventionWidget
 };

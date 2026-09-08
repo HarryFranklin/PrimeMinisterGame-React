@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useState } from 'react';
 import D3Chart from './D3Chart'; // Adjust this import path if D3Chart is located elsewhere
 import { AxisVariable } from '../utils/types'; 
 
@@ -20,6 +21,12 @@ const ChartBox = ({ title, children, desc }: { title: string, children: React.Re
     <p className="mt-4 text-xs text-zinc-400 text-center">{desc}</p>
   </div>
 );
+
+// Helper to quickly generate histogram arrays
+const toHisto = (arr: number[]) => arr.map((count, i) => ({ name: String(i), count }));
+
+// A shared baseline population for both interactive charts
+const BASE_POP = toHisto([0, 2, 4, 6, 8, 10, 18, 22, 20, 8, 2]);
 
 export function DistributionMeanDiagram() {
   const townA = [
@@ -180,5 +187,167 @@ export function DistributionDispersionDiagram() {
         />
       </ChartBox>
     </Container>
+  );
+}
+
+export function BenthamitePolicyEffects() {
+  const [active, setActive] = useState<'base' | 'tax' | 'infra' | 'health'>('base');
+
+  const policies = {
+    base: {
+      data: BASE_POP,
+      rules: [],
+      mean: 6.24,
+      desc: "Baseline society before any intervention."
+    },
+    tax: {
+      // Shifts populations from 7, 8, 9 up to 8, 9, 10
+      data: toHisto([0, 2, 4, 6, 8, 10, 18, 16, 22, 10, 4]),
+      rules: [{ minLS: 7, maxLS: 10, impact: 1 }],
+      mean: 6.36,
+      desc: "Broad tax cuts: The comfortable majority gains, the bottom stays exactly where they were."
+    },
+    infra: {
+      // Shifts a few people up across the entire distribution
+      data: toHisto([0, 1, 3, 5, 7, 9, 17, 23, 21, 10, 4]),
+      rules: [{ minLS: 1, maxLS: 10, impact: 1 }],
+      mean: 6.55,
+      desc: "Universal infrastructure: Minor gains spread evenly across the entire population."
+    },
+    health: {
+      // Shifts people in the lower-middle up
+      data: toHisto([0, 2, 4, 6, 6, 12, 20, 22, 20, 8, 2]),
+      rules: [{ minLS: 4, maxLS: 6, impact: 1 }],
+      mean: 6.28,
+      desc: "Public health campaigns: Raises the average by helping the middle, but misses the most vulnerable."
+    }
+  };
+
+  const current = policies[active];
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl my-8">
+      <div className="flex flex-col gap-4 mb-6">
+        <div>
+          <h4 className="text-lg font-bold uppercase tracking-widest text-blue-400">Benthamite Policy Focus</h4>
+          <p className="text-sm text-zinc-400 mt-1">{current.desc}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['base', 'tax', 'infra', 'health'] as const).map((key) => {
+            const labels = { base: 'Baseline', tax: 'Tax Cuts', infra: 'Infrastructure', health: 'Public Health' };
+            return (
+              <button
+                key={key}
+                onClick={() => setActive(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  active === key 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                }`}
+              >
+                {labels[key]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="h-72 w-full relative">
+        <D3Chart
+          plotType="1D"
+          chartData={[]}
+          histogramData={current.data}
+          activePolicyRules={current.rules}
+          xAxisType={AxisVariable.LifeSatisfaction}
+          yAxisType={AxisVariable.LifeSatisfaction}
+          color="#3b82f6"
+          visualStyle="faces"
+          faceCols={1}
+          yAxisMax={25}
+          theme="dark"
+          markers={[{ value: current.mean, label: `Mean: ${current.mean.toFixed(2)}`, color: '#fbbf24', dashed: true }]}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function RawlsianPolicyEffects() {
+  const [active, setActive] = useState<'base' | 'welfare' | 'wage' | 'housing'>('base');
+
+  const policies = {
+    base: {
+      data: BASE_POP,
+      rules: [],
+      floor: 1,
+      desc: "Baseline society before any intervention."
+    },
+    welfare: {
+      // Moves all 1s and 2s up to 3
+      data: toHisto([0, 0, 0, 12, 8, 10, 18, 22, 20, 8, 2]),
+      rules: [{ minLS: 0, maxLS: 3, impact: 1 }],
+      floor: 3,
+      desc: "Means-tested welfare: Lifts the absolute worst-off to a minimum standard of 3."
+    },
+    wage: {
+      // Moves 2s and 3s to 4, but leaves 1s behind (unemployed)
+      data: toHisto([0, 2, 0, 0, 18, 10, 18, 22, 20, 8, 2]),
+      rules: [{ minLS: 2, maxLS: 4, impact: 1 }],
+      floor: 1,
+      desc: "Minimum wage: Helps the struggling working class reach 4, but misses the unemployed at 1."
+    },
+    housing: {
+      // Moves 1s to 4, 2s to 5
+      data: toHisto([0, 0, 0, 6, 10, 14, 18, 22, 20, 8, 2]),
+      rules: [{ minLS: 1, maxLS: 5, impact: 1 }],
+      floor: 3,
+      desc: "Targeted social housing: Radically transforms the bottom, pulling the floor up to 3."
+    }
+  };
+
+  const current = policies[active];
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl my-8">
+      <div className="flex flex-col gap-4 mb-6">
+        <div>
+          <h4 className="text-lg font-bold uppercase tracking-widest text-emerald-400">Rawlsian Policy Focus</h4>
+          <p className="text-sm text-zinc-400 mt-1">{current.desc}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['base', 'welfare', 'wage', 'housing'] as const).map((key) => {
+            const labels = { base: 'Baseline', welfare: 'Welfare', wage: 'Min Wage', housing: 'Housing' };
+            return (
+              <button
+                key={key}
+                onClick={() => setActive(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  active === key 
+                    ? 'bg-emerald-600 text-white' 
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                }`}
+              >
+                {labels[key]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="h-72 w-full relative">
+        <D3Chart
+          plotType="1D"
+          chartData={[]}
+          histogramData={current.data}
+          activePolicyRules={current.rules}
+          xAxisType={AxisVariable.LifeSatisfaction}
+          yAxisType={AxisVariable.LifeSatisfaction}
+          color="#10b981"
+          visualStyle="faces"
+          faceCols={1}
+          yAxisMax={25}
+          theme="dark"
+          markers={[{ value: current.floor, label: `Floor: ${current.floor}`, color: '#ef4444', dashed: true }]}
+        />
+      </div>
+    </div>
   );
 }
