@@ -441,21 +441,32 @@ export default function D3Chart({
         .text(getAxisLabel(xAxisType));
 
       annoLayer.selectAll('*').remove();
-      (markers ?? []).forEach((m, i) => {
-        // Markers now evaluate mathematically directly onto the grid
-        const mx    = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
-        const mc    = m.color ?? '#3f3f46';
-        const yPos  = -8 + i * 16;
+      
+      // Dynamically select the stroke colour based on the theme (matches zinc-900 in dark mode)
+      const textStroke = theme === 'dark' ? '#18181b' : '#ffffff';
+
+      // Loop 1: Draw all lines first so they sit at the back
+      (markers ?? []).forEach((m) => {
+        const mx = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
+        const mc = m.color ?? '#3f3f46';
         
         annoLayer.append('line')
           .attr('x1',mx).attr('x2',mx).attr('y1',0).attr('y2',H)
           .attr('stroke',mc).attr('stroke-width',2)
           .attr('stroke-dasharray', m.dashed ? '6,4' : 'none')
           .style('opacity',0).transition().duration(300).style('opacity',1);
+      });
+
+      // Loop 2: Draw all text on top of the lines
+      (markers ?? []).forEach((m, i) => {
+        const mx = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
+        const mc = m.color ?? '#3f3f46';
+        const yPos = -8 + i * 16;
+        
         annoLayer.append('text')
           .attr('y',yPos).attr('x',mx - 6)
           .attr('fill',mc).attr('font-size','12px').attr('font-weight','900')
-          .attr('stroke','white').attr('stroke-width',4).style('paint-order','stroke')
+          .attr('stroke', textStroke).attr('stroke-width', 3.5).attr('stroke-linejoin', 'round').style('paint-order','stroke')
           .attr('text-anchor','end').text(m.label)
           .style('opacity',0).transition().duration(300).style('opacity',1);
       });
