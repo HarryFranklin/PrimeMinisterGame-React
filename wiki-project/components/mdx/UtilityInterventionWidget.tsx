@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { personalUtility } from '../../lib/utility';
 
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
@@ -32,7 +33,14 @@ const getImpactColor = (ls: number) => {
 export default function UtilityInterventionWidget() {
   const [lsValue, setLsValue] = useState<number>(1.0);
   const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
-  const impactPercentage = 10 + 90 * Math.pow(1 - (lsValue / 10), 2);
+  const impactPercentage = useMemo(() => {
+    // Real marginal utility of a +1 LS boost at this point on the curve,
+    // normalised against the biggest possible +1 step in the table (2 -> 3)
+    // so the meter still reads 0-100%.
+    const marginalGain = personalUtility(lsValue + 1) - personalUtility(lsValue);
+    const maxMarginalGain = personalUtility(3) - personalUtility(2);
+    return Math.max(0, (marginalGain / maxMarginalGain) * 100);
+  }, [lsValue]);
   const faceColor = getFaceColor(lsValue);
   const impactColor = getImpactColor(lsValue);
 
