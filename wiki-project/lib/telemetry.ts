@@ -46,6 +46,7 @@ export function clearAllLocalState(): void {
   localStorage.removeItem(STORAGE_KEY_VIEW_INDEX);
   localStorage.removeItem('wiki_visited_pages');
   localStorage.removeItem('wiki_completed_pages');
+  localStorage.removeItem('wiki_completion_decision');
 }
 // --- END DEV_TOOLS ------------------------------------------------------
 
@@ -117,6 +118,41 @@ export async function markPageComplete(session: ParticipantSession, pageSlug: st
   } catch (err) {
     console.error('Failed to mark page complete:', err);
   }
+}
+
+export type CompletionEventType =
+  | 'modal_shown'
+  | 'chose_finish'
+  | 'chose_extend'
+  | 'finished_during_extension'
+  | 'auto_finished_timeout';
+
+export interface CompletionEventBody {
+  event_type: CompletionEventType;
+  ms_since_modal_shown?: number;
+  extend_deadline?: number;
+  occurred_at?: number;
+}
+
+/** Logs a step in the "you're done reading" modal flow: when it appeared,
+ * which choice the participant made, and (if they took the 5-minute
+ * extension) how that resolved. Reading duration up to this point is
+ * derivable later as occurred_at minus the participant's first_seen_at. */
+export function trackCompletionEvent(session: ParticipantSession, body: CompletionEventBody): void {
+  fetch(`${WORKER_URL}/wiki-completion-event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: session.userId,
+      prolific_pid: session.prolificPid,
+      prolific_session_id: session.prolificSessionId,
+      session_id: session.sessionId,
+      study_id: session.studyId,
+      ...body,
+      occurred_at: body.occurred_at ?? Date.now(),
+    }),
+    keepalive: true,
+  }).catch(console.error);
 }
 
 /** Logs the final "Complete Reading" event and marks the participant done. */

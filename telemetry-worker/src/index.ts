@@ -82,6 +82,7 @@ async function insertCycleAttempt(env: Env, participantId: number, body: any, no
   `).bind(
     participantId, body.attempt_id, body.cycle ?? null, body.attempt_number ?? null,
     body.outcome ?? null, body.player_won === null || body.player_won === undefined ? null : (body.player_won ? 1 : 0),
+    body.app_version ?? null,
     body.starting_score ?? null, body.final_score ?? null, body.score_delta ?? null, body.turns_played ?? null,
     body.time_on_briefing_ms ?? null, body.time_on_term_summary_ms ?? null, body.time_on_verdict_ms ?? null,
     body.time_on_wellbeing_changes_ms ?? null, body.time_on_electorate_feedback_ms ?? null, body.time_on_academic_debrief_ms ?? null,
