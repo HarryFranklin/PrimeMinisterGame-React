@@ -6,9 +6,12 @@
 // plus two wiki-only tables: wiki_page_views and wiki_events.
 //
 // Routes:
-//   POST /participant       - upsert participant identity (idempotent)
-//   POST /wiki-page-view    - upsert a page view by view_id (start, then end)
-//   POST /wiki-event        - insert a generic interaction event
+//   POST /participant           - upsert participant identity (idempotent)
+//   POST /wiki-page-view        - upsert a page view by view_id (start, then end)
+//   POST /wiki-event            - insert a generic interaction event
+//   POST /wiki-page-complete    - upsert an explicit per-page "mark complete"
+//   POST /wiki-completion-event - log a "you're done reading" modal event
+//   POST /wiki-study-complete   - mark the participant as fully done
 
 export interface Env {
   DB: D1Database;
@@ -193,6 +196,32 @@ async function upsertPageView(db: D1Database, participantId: number, body: PageV
     .run();
 }
 
+interface CompletionEventBody {
+  event_type: string;
+  ms_since_modal_shown?: number;
+  extend_deadline?: number;
+  occurred_at?: number;
+}
+
+async function insertCompletionEvent(db: D1Database, participantId: number, body: CompletionEventBody): Promise<void> {
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO wiki_completion_events
+         (participant_id, event_type, ms_since_modal_shown, extend_deadline, occurred_at, received_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      participantId,
+      body.event_type,
+      body.ms_since_modal_shown ?? null,
+      body.extend_deadline ?? null,
+      body.occurred_at ?? now,
+      now
+    )
+    .run();
+}
+
 interface EventBody {
   page_slug?: string;
   event_type: string;
@@ -257,6 +286,12 @@ export default {
       if (pathname === "/wiki-page-complete") {
         const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
         await upsertPageCompletion(env.DB, participantId, body as unknown as PageCompletionBody);
+        return json({ ok: true });
+      }
+
+      if (pathname === "/wiki-completion-event") {
+        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
+        await insertCompletionEvent(env.DB, participantId, body as unknown as CompletionEventBody);
         return json({ ok: true });
       }
 

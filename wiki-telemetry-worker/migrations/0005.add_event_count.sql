@@ -1,0 +1,1 @@
+ALTER TABLE participants ADD COLUMN event_count INTEGER DEFAULT 0;
