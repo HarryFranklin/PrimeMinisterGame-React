@@ -2,43 +2,64 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
+import { WelfareMetrics } from '../../utils/WelfareMetrics';
+import { GamePhase } from '../../utils/types';
 
 // Simple linear interpolation to blend between two numbers
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
+
+// The real curve utility computations use everywhere else floors LS at 2
+// before evaluating it (see WelfareMetrics.getCycleUtility), so a citizen's
+// utility value is flat below that - match that here rather than inventing
+// a different floor just for this widget.
+const FLOOR = 2;
+
+// The biggest possible jump in societal utility from a +1 LS step, found by
+// checking every whole-number step along the real curve. Used to normalise
+// the bar so 100% means "the single most impactful +1 shift possible on
+// this curve", not an arbitrary number.
+const MAX_MARGINAL_GAIN = (() => {
+  let max = 0;
+  for (let ls = FLOOR; ls < 10; ls++) {
+    const gain = WelfareMetrics.getUtility(ls + 1, 'societal') - WelfareMetrics.getUtility(ls, 'societal');
+    if (gain > max) max = gain;
+  }
+  return max;
+})();
 
 const getContinuousDetails = (ls: number) => {
   if (ls <= 2) {
     return {
       emoji: '😭',
       label: 'Massive Impact',
-      desc: 'Heating their home, paying rent, or affording three meals a day.',
+      desc: "For someone at rock bottom, this is the difference between crisis and just about coping.",
     };
   }
   if (ls <= 4) {
     return {
       emoji: '🙁',
       label: 'High Impact',
-      desc: 'Paying off urgent debt or affording new clothes for their family.',
+      desc: "This brings real, noticeable relief to someone whose day-to-day life is still a struggle.",
     };
   }
   if (ls <= 6) {
     return {
       emoji: '😐',
       label: 'Moderate Impact',
-      desc: 'Going on a modest family holiday or eating out occasionally.',
+      desc: "This nudges an already-manageable life a little further in the right direction.",
     };
   }
   if (ls <= 8) {
     return {
       emoji: '🙂',
       label: 'Low Impact',
-      desc: 'Upgrading to a slightly nicer car or adding to their savings.',
+      desc: "Someone doing fairly well notices this, but it doesn't change much for them.",
     };
   }
   return {
     emoji: '😁',
     label: 'Minimal Impact',
-    desc: 'Adding marginally to an already overflowing luxury savings account.',
+    desc: "For someone already thriving, this barely registers - there's little room left to improve.",
   };
 };
 
@@ -70,7 +91,7 @@ const getImpactColor = (ls: number) => {
 };
 
 export default function UtilityInterventionOverlay() {
-  const { currentCycle, setHasSeenUtilityIntervention, startCycle } = useGame();
+  const { setHasSeenUtilityIntervention, setGamePhase } = useGame();
 
   const [lsValue, setLsValue] = useState<number>(1.0);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -97,12 +118,20 @@ export default function UtilityInterventionOverlay() {
       track('utility_resume_clicked', { ts: Date.now() });
     }
     setHasSeenUtilityIntervention(true);
-    startCycle(currentCycle);
+    // The cycle itself was already started (fresh population, turn 1)
+    // before this overlay was shown - see useGameEngine.startLevel - so
+    // all that's left is to move into the Briefing screen.
+    setGamePhase(GamePhase.Briefing);
   };
 
   const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
-  
-  const impactPercentage = 10 + 90 * Math.pow(1 - (lsValue / 10), 2);
+
+  // The real marginal gain in societal utility this citizen gets from a +1
+  // LS shift, straight from the same curve WelfareMetrics uses everywhere
+  // else in the game - not a stand-in formula.
+  const flooredLS = Math.max(FLOOR, lsValue);
+  const marginalGain = WelfareMetrics.getUtility(Math.min(10, flooredLS + 1), 'societal') - WelfareMetrics.getUtility(flooredLS, 'societal');
+  const impactPercentage = 10 + 90 * (marginalGain / MAX_MARGINAL_GAIN);
   const faceColor = getFaceColor(lsValue);
   const impactColor = getImpactColor(lsValue);
 
@@ -130,8 +159,8 @@ export default function UtilityInterventionOverlay() {
           </h1>
           <p className="text-lg text-zinc-400 leading-relaxed">
             The public no longer cares about raw numbers; they care about <strong>actual happiness</strong>. 
-            A £100 boost changes a struggling person's life, but is just pocket change to someone wealthy. 
-            Use the slider below to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> affects different citizens.
+            A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving. 
+            Use the slider below to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> shift affects different citizens.
           </p>
         </motion.div>
 
@@ -168,7 +197,7 @@ export default function UtilityInterventionOverlay() {
             {/* Impact Meter & Metaphor */}
             <div className="flex-1 w-full flex flex-col gap-4">
               <div className="flex justify-between items-end">
-                <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Value of +1 Boost</span>
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Value of +1 Life Satisfaction</span>
                 <span 
                   className="text-sm font-black uppercase tracking-widest transition-colors duration-75"
                   style={{ color: impactColor }}
