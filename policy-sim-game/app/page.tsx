@@ -33,7 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     registerSink(networkSink);
-    initTelemetry({ appVersion: process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? "dev" });
+    initTelemetry({ appVersion: (globalThis as any).process?.env?.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? "dev" });
     startRawCapture();
     startDerivations();
 
