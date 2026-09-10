@@ -102,7 +102,7 @@ export default function Home() {
           {/* MAIN ROUTING */}
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
             {game.gamePhase === GamePhase.Setup ? (
-              <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} />
+              <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} calcProgress={game.calcProgress} />
             ) : game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (

@@ -5,12 +5,17 @@ import { MAOEngine } from "./MAOEngine";
 import { availablePolicies } from "../data/policies";
 import { FRAMEWORK_RULES } from "./frameworkRules";
 
+// Hands control back to the browser for a tick so it can paint (spinner,
+// input, etc.) before we resume the next chunk of number-crunching.
+const yieldToBrowser = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+
 export class DifficultyEngine {
-  static calculateDynamicScalars(
+  static async calculateDynamicScalars(
     playerSeed: number,
     initialPopulation: Respondent[],
-    walks: number = 500
-  ): Record<ElectionCycle, number> {
+    walks: number = 500,
+    onProgress?: (fraction: number) => void
+  ): Promise<Record<ElectionCycle, number>> {
     const cycles = [
       ElectionCycle.Benthamite,
       ElectionCycle.Rawlsian,
@@ -25,6 +30,9 @@ export class DifficultyEngine {
     const TARGET_WIN_RATE_CENTER = (TARGET_WIN_RATE_MIN + TARGET_WIN_RATE_MAX) / 2;
 
     const ITERATIONS = 12;
+
+    const totalSteps = cycles.length * ITERATIONS;
+    let stepsDone = 0;
 
     for (const cycle of cycles) {
       const schedule = MetricsEngine.generateCycleSchedule(cycle, availablePolicies, 5, playerSeed);
@@ -93,6 +101,14 @@ export class DifficultyEngine {
         } else {
           maxScalar = midScalar;
         }
+
+        stepsDone++;
+        onProgress?.(stepsDone / totalSteps);
+        // Yield every iteration so this doesn't lock up the main thread for
+        // its full multi-second runtime in one go - the loading UI stays
+        // responsive and genuinely animates between chunks instead of
+        // freezing.
+        await yieldToBrowser();
       }
 
       scalars[cycle] = bestScalar;

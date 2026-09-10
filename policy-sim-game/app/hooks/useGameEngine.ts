@@ -55,6 +55,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [winScalars, setWinScalars] = useState<Record<ElectionCycle, number>>({} as any);
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.Setup);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [calcProgress, setCalcProgress] = useState(0);
   
   const isAgendaUnlocked = gamePhase === GamePhase.Playing;
   
@@ -151,6 +152,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleSetupComplete = async (id: string) => {
     setParticipantId(id);
     setIsCalculating(true);
+    setCalcProgress(0);
 
     await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -158,7 +160,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setDifficultySeed(numericSeed);
 
     const initialPop = loadPopulation();
-    const scalars = DifficultyEngine.calculateDynamicScalars(numericSeed, initialPop, 500);
+    const scalars = await DifficultyEngine.calculateDynamicScalars(numericSeed, initialPop, 500, setCalcProgress);
     setWinScalars(scalars);
 
     // 1. Lock the data into global telemetry state
@@ -457,7 +459,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     applyPressConferenceDelta,
     setHasSeenUtilityIntervention, startCycle,
     requestAcademicDebrief, resolveAcademicDebrief,
-    isCalculating, 
+    isCalculating, calcProgress,
     handleSetupComplete, 
     winScalars, 
     difficultySeed

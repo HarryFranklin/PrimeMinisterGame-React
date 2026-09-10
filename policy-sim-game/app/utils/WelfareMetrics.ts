@@ -86,17 +86,37 @@ export class WelfareMetrics {
     return flooredLS;
   }
 
-  static getSocietalUtility(respondent: Respondent, allLS: number[]): number {
-    if (allLS.length === 0) return 0;
+  // Caches the bucket map keyed by the allLS array reference. Within one
+  // scoring pass (MetricsEngine.getMetricScore, getColumnStats, etc.) the
+  // SAME allLS array is passed in for every citizen - previously we rebuilt
+  // the bucket map from scratch on every single call, which turned an O(N)
+  // scoring pass into O(N^2) and was the source of the multi-second
+  // stutter on "Initialise Study" (DifficultyEngine's calibration calls
+  // this tens of thousands of times). Building it once per array and
+  // reusing it fixes that. WeakMap means the cache entry is GC'd as soon
+  // as the allLS array itself goes out of scope, so nothing leaks.
+  private static bucketCache = new WeakMap<number[], Map<number, number>>();
+
+  private static getLSBuckets(allLS: number[]): Map<number, number> {
+    let buckets = WelfareMetrics.bucketCache.get(allLS);
+    if (buckets) return buckets;
 
     // Bucket to 0.1 resolution so this is O(buckets) not O(population) per
     // citizen - it otherwise costs population² inside MAO search and
     // DifficultyEngine's random-walk calibration.
-    const buckets = new Map<number, number>();
+    buckets = new Map<number, number>();
     for (const ls of allLS) {
       const key = Math.round(Math.max(2.0, ls) * 10) / 10;
       buckets.set(key, (buckets.get(key) ?? 0) + 1);
     }
+    WelfareMetrics.bucketCache.set(allLS, buckets);
+    return buckets;
+  }
+
+  static getSocietalUtility(respondent: Respondent, allLS: number[]): number {
+    if (allLS.length === 0) return 0;
+
+    const buckets = WelfareMetrics.getLSBuckets(allLS);
 
     let total = 0;
     for (const [ls, count] of buckets) {

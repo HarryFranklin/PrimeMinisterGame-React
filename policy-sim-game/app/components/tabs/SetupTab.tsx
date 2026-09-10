@@ -6,9 +6,10 @@ import { track } from '../../client/telemetry';
 interface SetupTabProps {
   onSubmit: (participantId: string) => void;
   isCalculating: boolean;
+  calcProgress?: number;
 }
 
-export default function SetupTab({ onSubmit, isCalculating }: SetupTabProps) {
+export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: SetupTabProps) {
   const [prolificId, setProlificId] = useState('');
   
   useEffect(() => {
@@ -68,7 +69,9 @@ export default function SetupTab({ onSubmit, isCalculating }: SetupTabProps) {
               <h2 className="text-zinc-300 font-bold uppercase tracking-widest text-sm animate-pulse mb-1">
                 Commencing Term
               </h2>
-              <p className="text-xs text-zinc-500 font-mono">Calculating societal baselines...</p>
+              <p className="text-xs text-zinc-500 font-mono">
+                Calculating societal baselines... {Math.round(calcProgress * 100)}%
+              </p>
             </div>
           </motion.div>
         )}

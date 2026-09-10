@@ -7,7 +7,7 @@ import { MetricsEngine } from './MetricsEngine';
 import { DifficultyEngine } from './DifficultyEngine';
 
 export class DifficultySimulator {
-  static runDeterministicSimulation(iterations: number = 10000, playerSeed: number = 12345) {
+  static async runDeterministicSimulation(iterations: number = 10000, playerSeed: number = 12345) {
     console.log(`Running seed-accurate simulation (${iterations} random walks for seed ${playerSeed})...`);
     
     const population = loadPopulation();
@@ -20,7 +20,7 @@ export class DifficultySimulator {
     
     // Step 1: Calculate the dynamic scalars for this specific seed (simulating the Setup phase)
     console.log("Calculating dynamic win thresholds...");
-    const dynamicScalars = DifficultyEngine.calculateDynamicScalars(playerSeed, population, 500);
+    const dynamicScalars = await DifficultyEngine.calculateDynamicScalars(playerSeed, population, 500);
     console.log("Dynamic Scalars applied:", dynamicScalars);
     
     const results: Record<string, any> = {};
