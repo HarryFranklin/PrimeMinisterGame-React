@@ -320,9 +320,16 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, [currentCycle, population, currentDeck]);
 
   const handleFaceElectorate = useCallback(() => {
+    // This must only ever fire once the 5-turn cycle is genuinely finished.
+    // Without this guard, if anything calls it early - a stray click on a
+    // dashboard element behind a modal, a stale/delayed call firing at the
+    // wrong moment - the game drops straight into the Election screen for
+    // a cycle that's barely been played, with a near-empty term summary
+    // that can't be continued (exactly the "hard locked" symptom).
+    if (!isParliamentDissolved) return;
     setLastTurnSummary(null);
     setGamePhase(GamePhase.Election);
-  }, []);
+  }, [isParliamentDissolved]);
 
   const handleResetCycle = useCallback((outcome: "win" | "lose" = "lose") => {
     // Determine the exact outcome. If they ran out of retries (>=3), it's a final loss.
@@ -353,7 +360,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const startLevel = useCallback((cycle: ElectionCycle) => {
     if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
-      setCurrentCycle(cycle); 
+      setCurrentCycle(cycle);
       setGamePhase(GamePhase.UtilityIntervention);
       return;
     }

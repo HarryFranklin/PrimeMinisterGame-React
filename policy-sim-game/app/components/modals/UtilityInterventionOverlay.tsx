@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
-import { GamePhase } from '../../utils/types';
 
 // Simple linear interpolation to blend between two numbers
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
@@ -91,7 +90,7 @@ const getImpactColor = (ls: number) => {
 };
 
 export default function UtilityInterventionOverlay() {
-  const { setHasSeenUtilityIntervention, setGamePhase } = useGame();
+  const { currentCycle, setHasSeenUtilityIntervention, startCycle } = useGame();
 
   const [lsValue, setLsValue] = useState<number>(1.0);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -118,10 +117,7 @@ export default function UtilityInterventionOverlay() {
       track('utility_resume_clicked', { ts: Date.now() });
     }
     setHasSeenUtilityIntervention(true);
-    // The cycle itself was already started (fresh population, turn 1)
-    // before this overlay was shown - see useGameEngine.startLevel - so
-    // all that's left is to move into the Briefing screen.
-    setGamePhase(GamePhase.Briefing);
+    startCycle(currentCycle);
   };
 
   const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
