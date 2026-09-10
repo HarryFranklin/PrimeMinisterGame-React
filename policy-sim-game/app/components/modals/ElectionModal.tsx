@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
@@ -30,7 +30,14 @@ export default function ElectionModal(props: ElectionModalProps) {
   const { currentCycle, approvalRating, cycleAttempts, onReset, onRequestDebrief, onAnswerPressQuestion } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
-  
+
+  // Stable across every ElectionModal re-render (unlike an inline arrow
+  // function would be) - several stage components use onReady inside a
+  // ref-guarded auto-advance timer's dependency array, and a fresh
+  // function identity on every render cancels that timer via the effect's
+  // cleanup without rescheduling it, silently hard-locking the stage.
+  const handlePageReady = useCallback(() => setPageReady(true), []);
+
   const [definitions, setDefinitions] = useState<{title: string, desc: string}[]>([]);
   
   const won = approvalRating >= 51.0;
@@ -118,11 +125,11 @@ export default function ElectionModal(props: ElectionModalProps) {
       <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={() => setPageReady(true)} />}
-        {page === 1 && <StageTermSummary {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={() => setPageReady(true)} />}
-        {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
-        {page === 4 && <StageElectorateFeedback {...props} onReady={() => setPageReady(true)} onDefinitionToggle={handleToggle} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} />}
+        {page === 1 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
+        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={handlePageReady} />}
+        {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
+        {page === 4 && <StageElectorateFeedback {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
       </motion.div>
 
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
