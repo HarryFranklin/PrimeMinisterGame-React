@@ -55,6 +55,14 @@ export interface TurnHistory {
   enactedPolicyId: string | null;
   enactedPolicyName: string | null;
   lsAverage: number;
+  /** The cycle's ACTUAL governing metric score at this point (Benthamite
+   * average, Rawlsian floor, Societal/Personal utility - whichever the
+   * player is being judged on this term). Kept separate from lsAverage
+   * because outside the Benthamite cycle they're not the same number, and
+   * anything grading "which policy had the biggest impact" needs to use
+   * this, not the raw average, or it's silently grading against the wrong
+   * framework. Optional for backwards compatibility with old saves. */
+  metricScore?: number;
 }
 
 // Stores the complete outcome of a specific cycle

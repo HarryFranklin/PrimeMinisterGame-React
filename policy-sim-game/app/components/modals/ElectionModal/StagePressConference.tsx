@@ -41,9 +41,15 @@ function buildPolicyQuestion(history: TurnHistory[]): PolicyQuestion | null {
   const enacted = history.filter(h => h.turn > 1 && h.enactedPolicyId && h.enactedPolicyName);
   if (enacted.length < 2) return null;
 
+  // "Impact" has to be measured by whatever the player was actually being
+  // judged on that term (worst-off citizen for Rawlsian, utility for the
+  // utility cycles, etc) - falling back to lsAverage only covers old saves
+  // made before metricScore was recorded.
+  const metricOf = (h: TurnHistory) => h.metricScore ?? h.lsAverage;
+
   const withDelta = enacted.map(h => {
     const prevEntry = history.find(x => x.turn === h.turn - 1);
-    const delta = prevEntry ? h.lsAverage - prevEntry.lsAverage : 0;
+    const delta = prevEntry ? metricOf(h) - metricOf(prevEntry) : 0;
     return { id: h.enactedPolicyId as string, name: h.enactedPolicyName as string, delta };
   });
 
@@ -86,8 +92,8 @@ const Q1_OPENERS: Record<ApprovalTier, string> = {
 };
 
 const Q2_OPENERS = {
-  afterCorrect: "Good—glad we've cleared that up. Now, of everything you enacted this term, which policy do you think was most impactful?",
-  afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful?",
+  afterCorrect: "Good—glad we've cleared that up. Now, of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
+  afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
 };
 
 const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {

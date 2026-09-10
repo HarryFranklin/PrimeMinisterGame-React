@@ -106,7 +106,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCurrentTurn(1);
     setCurrentCycle(cycle);
     setIsParliamentDissolved(false);
-    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(freshPop) }]);
+    setHistory([{ turn: 1, enactedPolicyId: null, enactedPolicyName: 'Took Office', lsAverage: calculateAverage(freshPop), metricScore: MetricsEngine.getMetricScore(freshPop, cycle) }]);
     setSelectedPolicy(null);
     setYAxisMax(100);
     setLastTurnSummary(null);
@@ -276,7 +276,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         turn: enactedTurn + 1,
         enactedPolicyId: enactedPolicy.id,
         enactedPolicyName: enactedPolicy.policyName,
-        lsAverage: calculateAverage(previewPopulation)
+        lsAverage: calculateAverage(previewPopulation),
+        metricScore: scoreAfter
       }]);
 
       const updatedSchedule = cycleSchedule.map((deck, idx) =>
