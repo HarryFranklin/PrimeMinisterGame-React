@@ -64,13 +64,20 @@ export default function UtilityTable({
   }, [previewPopulation, previewCtx, cycle]);
 
   const theoreticalAvgUtility = useMemo(() => {
-    return ALL_COLUMNS.map(col => {
-      return population.reduce((sum, r) => {
-        const tempR = { ...r, currentLS: col };
-        return sum + WelfareMetrics.getCycleUtility(tempR, cycle, population.length, currentCtx.allLS, currentCtx.multipliers);
-      }, 0) / population.length;
-    });
-  }, [population, cycle, currentCtx]);
+  return ALL_COLUMNS.map(col => {
+    // For SocietalUtility, "what if everyone were at column X" means a
+    // hypothetical fully-equal population at that column, not the real
+    // (unequal) population's actual distribution.
+    const hypotheticalAllLS = cycle === ElectionCycle.SocietalUtility
+      ? new Array(population.length).fill(col)
+      : currentCtx.allLS;
+
+    return population.reduce((sum, r) => {
+      const tempR = { ...r, currentLS: col };
+      return sum + WelfareMetrics.getCycleUtility(tempR, cycle, population.length, hypotheticalAllLS, currentCtx.multipliers);
+    }, 0) / population.length;
+  });
+}, [population, cycle, currentCtx]);
 
   // We now only need to calculate the magnitude of the change once
   const marginalGains = useMemo(() => {

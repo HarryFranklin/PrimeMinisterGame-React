@@ -81,9 +81,28 @@ export class WelfareMetrics {
       return WelfareMetrics.getUtilityForPerson(flooredLS, respondent.personalUtilities);
     } else if (cycle === ElectionCycle.SocietalUtility) {
       // Return the individual's own SU curve value so the table can calculate column contributions accurately
-      return WelfareMetrics.getUtilityForPerson(flooredLS, respondent.societalUtilities);
+      return WelfareMetrics.getSocietalUtility(respondent, allLS);
     }
     return flooredLS;
+  }
+
+  static getSocietalUtility(respondent: Respondent, allLS: number[]): number {
+    if (allLS.length === 0) return 0;
+
+    // Bucket to 0.1 resolution so this is O(buckets) not O(population) per
+    // citizen - it otherwise costs population² inside MAO search and
+    // DifficultyEngine's random-walk calibration.
+    const buckets = new Map<number, number>();
+    for (const ls of allLS) {
+      const key = Math.round(Math.max(2.0, ls) * 10) / 10;
+      buckets.set(key, (buckets.get(key) ?? 0) + 1);
+    }
+
+    let total = 0;
+    for (const [ls, count] of buckets) {
+      total += this.getUtilityForPerson(ls, respondent.societalUtilities) * count;
+    }
+    return total / allLS.length;
   }
 
   static getColumnStats(
