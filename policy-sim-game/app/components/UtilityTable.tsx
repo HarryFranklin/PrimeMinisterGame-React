@@ -6,12 +6,9 @@ type ForecastState = 'idle' | 'policy-selected' | 'previewing';
 
 interface UtilityTableProps {
   population: Respondent[];
-  previewPopulation: Respondent[] | null;
   cycle: ElectionCycle;
   metricName: string;
   forecastState: ForecastState;
-  forecastsRemaining: number;
-  onRunForecast: () => void;
   detailsOpen: boolean;
   selectedPolicy: Policy | null;
 }
@@ -30,12 +27,9 @@ function buildCycleContext(population: Respondent[], cycle: ElectionCycle) {
 
 export default function UtilityTable({
   population,
-  previewPopulation,
   cycle,
   metricName,
   forecastState,
-  forecastsRemaining,
-  onRunForecast,
   detailsOpen,
   selectedPolicy,
 }: UtilityTableProps) {
@@ -44,24 +38,16 @@ export default function UtilityTable({
     [population, cycle]
   );
 
+  // Always the CURRENT (already-enacted) population's stats - selecting a
+  // policy must never reveal what its outcome would be, only which columns
+  // it targets (see isPolicySelected below, which is rules-based, not
+  // outcome-based).
   const baseStats = useMemo(
     () => ALL_COLUMNS.map(col =>
       WelfareMetrics.getColumnStats(col, population, cycle, currentCtx.allLS, currentCtx.multipliers)
     ),
     [population, cycle, currentCtx]
   );
-
-  const previewCtx = useMemo(
-    () => (previewPopulation ? buildCycleContext(previewPopulation, cycle) : null),
-    [previewPopulation, cycle]
-  );
-
-  const previewStats = useMemo(() => {
-    if (!previewPopulation || !previewCtx) return null;
-    return ALL_COLUMNS.map(col =>
-      WelfareMetrics.getColumnStats(col, previewPopulation, cycle, previewCtx.allLS, previewCtx.multipliers)
-    );
-  }, [previewPopulation, previewCtx, cycle]);
 
   const theoreticalAvgUtility = useMemo(() => {
   return ALL_COLUMNS.map(col => {
@@ -100,24 +86,19 @@ export default function UtilityTable({
     });
   }, [cycle]);
 
-  const displayedCounts = previewStats ? previewStats.map(s => s.count) : baseStats.map(s => s.count);
-  const displayedYield  = previewStats ? previewStats.map(s => s.totalYield) : baseStats.map(s => s.totalYield);
+  const displayedCounts = baseStats.map(s => s.count);
+  const displayedYield  = baseStats.map(s => s.totalYield);
 
-  const baseYield   = baseStats.map(s => s.totalYield).reduce((a, b) => a + b, 0);
   const totalYield  = displayedYield.reduce((a, b) => a + b, 0);
   const totalPeople = displayedCounts.reduce((a, b) => a + b, 0) || 1;
 
-  const score       = totalYield / totalPeople;
-  const baseScore   = baseYield / totalPeople;
-
+  const baseScore   = totalYield / totalPeople;
   const strBaseScore = baseScore.toFixed(2);
-  const strScore = score.toFixed(2);
-  const isNeutral = strBaseScore === strScore;
-  const isPositive = Number(strScore) > Number(strBaseScore);
-  
-  const scoreColor = isNeutral ? 'text-zinc-800' : isPositive ? 'text-blue-500' : 'text-amber-500';
 
-  const isPreviewing = forecastState === 'previewing';
+  // Only gates the qualitative "which columns does this policy touch"
+  // highlighting below (derived straight from the policy's own rules) -
+  // never an outcome number, so selecting a policy can't leak its result.
+  const isPolicySelected = forecastState === 'policy-selected' || forecastState === 'previewing';
 
   return (
     <div className="w-full flex flex-col gap-3 h-full flex-1">
@@ -163,11 +144,11 @@ export default function UtilityTable({
                 const pctDelta = pctAfter - pctBefore;
                 
                 const isPositiveDelta = pctDelta > 0;
-                const hasChanged = isPreviewing && pctDelta !== 0;
+                const hasChanged = isPolicySelected && pctDelta !== 0;
                 
                 // Color matches histogram intent, NOT demographic shifting
                 let netImpact = 0;
-                if (isPreviewing && selectedPolicy) {
+                if (isPolicySelected && selectedPolicy) {
                   const affecting = selectedPolicy.specificRules.filter(r => {
                       const min = r.minLS !== undefined ? r.minLS : 0;
                       const max = r.maxLS !== undefined ? r.maxLS : 10;
@@ -236,10 +217,10 @@ export default function UtilityTable({
                 const valNeutral = strBeforeVal === strAfterVal;
                 const valPositive = Number(strAfterVal) > Number(strBeforeVal);
 
-                const hasChanged = isPreviewing && !valNeutral;
+                const hasChanged = isPolicySelected && !valNeutral;
 
                 let netImpact = 0;
-                if (isPreviewing && selectedPolicy) {
+                if (isPolicySelected && selectedPolicy) {
                   const affecting = selectedPolicy.specificRules.filter(r => {
                       const min = r.minLS !== undefined ? r.minLS : 0;
                       const max = r.maxLS !== undefined ? r.maxLS : 10;
@@ -272,21 +253,15 @@ export default function UtilityTable({
         </table>
       </div>
 
-      {/* Score Output Box */}
+      {/* Score Output Box - always the current, already-enacted score */}
       <div className="rounded-xl border border-zinc-200 bg-white p-4 lg:p-5 flex items-center justify-between shadow-sm shrink-0 mt-auto">
         <span className="text-xs lg:text-sm font-black uppercase tracking-widest text-zinc-800">
           {metricName}
         </span>
         <div className="flex items-center gap-3">
-          {forecastState === 'previewing' && !isNeutral ? (
-            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
-              {strBaseScore} <span className="text-zinc-400 font-bold mx-2">→</span> <span className={scoreColor}>{strScore}</span>
-            </span>
-          ) : (
-            <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
-              {strScore}
-            </span>
-          )}
+          <span className="text-xl lg:text-2xl font-black tabular-nums text-zinc-800">
+            {strBaseScore}
+          </span>
         </div>
       </div>
     </div>

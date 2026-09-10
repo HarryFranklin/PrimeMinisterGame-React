@@ -89,12 +89,9 @@ export default function PopulationPanel({
           <div className="flex-1 p-2 min-h-0 overflow-y-auto relative">
             <UtilityTable
               population={population}
-              previewPopulation={previewPopulation}
               cycle={currentCycle}
               metricName={metricName}
-              forecastState={isParliamentDissolved ? 'idle' : !selectedPolicy ? 'idle' : 'previewing'}
-              forecastsRemaining={1}
-              onRunForecast={() => {}}
+              forecastState={isParliamentDissolved ? 'idle' : !selectedPolicy ? 'idle' : 'policy-selected'}
               detailsOpen={detailsOpen}
               selectedPolicy={selectedPolicy}
             />
