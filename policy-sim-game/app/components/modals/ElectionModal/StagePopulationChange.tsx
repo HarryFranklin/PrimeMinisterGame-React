@@ -217,9 +217,14 @@ export default function StagePopulationChange({
   }, []);
 
   useEffect(() => {
-    track('wellbeing_changes_closed', { cycle: ElectionCycle[currentCycle], dwell_ms: dwell.stop() });
     onReady();
   }, [onReady]);
+
+  useEffect(() => {
+    return () => {
+      track('wellbeing_changes_closed', { cycle: ElectionCycle[currentCycle], dwell_ms: dwell.stop() });
+    };
+  }, [currentCycle]);
 
   const thresholdNote =
     `WHAT COUNTS AS A CHANGE?\n` +
