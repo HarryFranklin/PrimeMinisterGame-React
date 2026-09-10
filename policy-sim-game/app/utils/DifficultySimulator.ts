@@ -40,7 +40,7 @@ export class DifficultySimulator {
         let currentPath: Policy[] = [];
         
         for (let t = 0; t < 5; t++) {
-          const options = staticSchedule[t].filter(opt => !currentPath.some(p => p.id === opt.id));
+          const options = staticSchedule[t].filter(opt => !currentPath.some(p => p.id === opt.id)).slice(0, 4);
           const validOptions = options.length > 0 ? options : staticSchedule[t];
           
           // Use a different pseudo-random sequence for the actual gameplay walks
