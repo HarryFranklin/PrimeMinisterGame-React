@@ -234,7 +234,7 @@ export default function StagePopulationChange({
     `• Struggling: 0 to 3 LS\n` +
     `• Just Getting By: 3 to 5 LS\n` +
     `• Comfortable: 5 to 8 LS\n` +
-    `• Wealthy: 8 to 10 LS`;
+    `• Thriving: 8 to 10 LS`;
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in w-full h-full min-h-0">
