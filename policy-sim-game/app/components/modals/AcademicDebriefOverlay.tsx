@@ -5,6 +5,7 @@ import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
 import { track } from '../../client/telemetry';
 import { useGame } from '../../context/GameStateContext';
+import { getLifeSituationLabel } from '../../utils/lifeSituationLabels';
 
 const getDummyHistogram = (distribution: Record<number, number>) =>
   Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
@@ -118,63 +119,47 @@ export default function AcademicDebriefOverlay() {
       return { ...p, startLS, endLS, lsGained, puGained };
     });
 
-    // Group citizens by their EXACT (rounded) LS change. "Same change"
-    // should mean genuinely the same number - a +0.6 shift and a +0.2 shift
-    // are not the same story no matter how generous the tolerance, so we
-    // don't use a tolerance at all here.
-    const byChange = new Map<number, typeof enriched>();
-    for (const p of enriched) {
-      if (p.lsGained === 0) continue; // nothing to contrast if LS didn't move
-      const bucket = byChange.get(p.lsGained);
-      if (bucket) bucket.push(p);
-      else byChange.set(p.lsGained, [p]);
-    }
+    // Every same-direction, non-zero-change pair is a candidate. We rank
+    // them, not filter-then-hope: "closest LS-change match" always wins
+    // first, and starting-LS spread only breaks ties within that - so we
+    // never end up "explaining" a utility gap that's actually just a gap in
+    // how much each person's LS moved.
+    const candidates: { pair: typeof enriched; lsDiff: number; startGap: number; puDiff: number }[] = [];
+    for (let i = 0; i < enriched.length; i++) {
+      for (let j = i + 1; j < enriched.length; j++) {
+        const p1 = enriched[i];
+        const p2 = enriched[j];
 
-    // The two citizens shown here also need to have started at least this
-    // far apart on LS (one "struggling"/"just getting by", the other
-    // "comfortable"/"thriving") - otherwise the copy claiming "one was
-    // comfortable, the other was struggling" isn't actually true of the
-    // pair we picked.
-    const MIN_START_GAP = 4;
+        const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
+        if (!sameDirection) continue;
 
-    let bestPair: typeof enriched | null = null;
-    let bestMeetsGap = false;
-    let bestStartGap = -Infinity;
-    let bestPuDiff = -Infinity;
-
-    // Within a bucket every citizen shares the exact same LS change, so
-    // there's nothing left to rank pairs on except: widest starting-point
-    // gap (the actual point of the illustration), then biggest utility gap
-    // as a final tiebreak.
-    for (const group of byChange.values()) {
-      if (group.length < 2) continue;
-
-      for (let i = 0; i < group.length; i++) {
-        for (let j = i + 1; j < group.length; j++) {
-          const p1 = group[i];
-          const p2 = group[j];
-
-          const startGap = Math.abs(p1.startLS - p2.startLS);
-          const meetsGap = startGap >= MIN_START_GAP;
-          const puDiff = Math.abs(p1.puGained - p2.puGained);
-
-          const isBetter =
-            !bestPair ||
-            (meetsGap && !bestMeetsGap) ||
-            (meetsGap === bestMeetsGap && startGap > bestStartGap) ||
-            (meetsGap === bestMeetsGap && startGap === bestStartGap && puDiff > bestPuDiff);
-
-          if (isBetter) {
-            bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
-            bestMeetsGap = meetsGap;
-            bestStartGap = startGap;
-            bestPuDiff = puDiff;
-          }
-        }
+        candidates.push({
+          pair: p1.startLS < p2.startLS ? [p1, p2] : [p2, p1],
+          lsDiff: Math.abs(p1.lsGained - p2.lsGained),
+          startGap: Math.abs(p1.startLS - p2.startLS),
+          puDiff: Math.abs(p1.puGained - p2.puGained),
+        });
       }
     }
 
-    return bestPair ?? [enriched[0], enriched[1]];
+    if (candidates.length === 0) return [enriched[0], enriched[1]];
+
+    // Find the tightest "counts as the same change" tolerance that still
+    // gives us at least one candidate. With a few hundred citizens this
+    // resolves at 0.05 (an exact match to 1dp) almost every time; wider
+    // tiers only kick in if a run's data genuinely has nothing closer.
+    const TOLERANCES = [0.05, 0.15, 0.3, 0.5, Infinity];
+    let pool: typeof candidates = [];
+    for (const tol of TOLERANCES) {
+      pool = candidates.filter(c => c.lsDiff <= tol);
+      if (pool.length > 0) break;
+    }
+
+    // Within that closest-matching tier, prefer the widest starting-LS
+    // gap (the actual point of the illustration), then the biggest
+    // utility gap as a final tiebreak.
+    pool.sort((a, b) => b.startGap - a.startGap || b.puDiff - a.puDiff);
+    return pool[0].pair;
   }, [finalPopulation, currentCycle]);
 
   const empathyCitizen = useMemo(() => {
@@ -213,15 +198,29 @@ export default function AcademicDebriefOverlay() {
   const getRawlsianMessage = () => {
     if (contrastingCitizens.length < 2) return "";
 
-    const p1 = contrastingCitizens[0];
-    const p2 = contrastingCitizens[1];
+    const p1 = contrastingCitizens[0]; // lower startLS
+    const p2 = contrastingCitizens[1]; // higher startLS
     const isGain = p1.lsGained > 0;
+    const changeWord = isGain ? 'rise' : 'drop';
+    const feltPhrase = isGain ? 'value that gain' : 'felt the pain of that loss';
 
-    if (isGain) {
-      return "Both citizens experienced the same rise in their life satisfaction. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
-    } else {
-      return "Both citizens experienced the same drop in their life satisfaction. However, because one was already comfortable and the other was struggling, they felt the pain of that loss completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
-    }
+    // Describe the match honestly - only claim "the same" if it actually
+    // is (to 1dp); otherwise say "a similar" rather than overstate it.
+    const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
+    const changeDescriptor = lsDiff <= 0.05 ? 'the same' : 'a similar';
+
+    const label1 = getLifeSituationLabel(p1.startLS);
+    const label2 = getLifeSituationLabel(p2.startLS);
+
+    // Only contrast by category name if the two citizens actually landed in
+    // different categories - otherwise (e.g. both "Comfortable") fall back
+    // to the real numbers so we're never claiming a difference that isn't
+    // there.
+    const contrastClause = label1 !== label2
+      ? `because one was ${label1.toLowerCase()} and the other was ${label2.toLowerCase()}`
+      : `even starting from a similar place (${p1.startLS.toFixed(1)} vs ${p2.startLS.toFixed(1)} LS)`;
+
+    return `Both citizens experienced ${changeDescriptor} ${changeWord} in their life satisfaction. However, ${contrastClause}, they ${feltPhrase} completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.`;
   };
 
   return (
