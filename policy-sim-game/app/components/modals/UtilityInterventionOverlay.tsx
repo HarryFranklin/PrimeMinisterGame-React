@@ -204,7 +204,7 @@ export default function UtilityInterventionOverlay() {
           <div className="w-full flex flex-col gap-3 pt-4 border-t border-zinc-800">
             <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
               <span>Struggling (0)</span>
-              <span>Wealthy (10)</span>
+              <span>Thriving (10)</span>
             </div>
             
             <input 
