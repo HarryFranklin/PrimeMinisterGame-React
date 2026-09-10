@@ -38,7 +38,7 @@ function getLifeSituationLabel(ls: number): string {
   if (ls <= 3) return "Struggling";
   if (ls <= 5) return "Just Getting By";
   if (ls <= 8) return "Comfortable";
-  return "Wealthy";
+  return "Thriving";
 }
 
 function computeCohortBreakdown(finalPopulation: Respondent[], currentCycle: ElectionCycle): CohortBreakdown {
