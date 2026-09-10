@@ -118,33 +118,63 @@ export default function AcademicDebriefOverlay() {
       return { ...p, startLS, endLS, lsGained, puGained };
     });
 
-    let bestPair = [enriched[0], enriched[1]];
-    let maxScore = -Infinity;
+    // Group citizens by their EXACT (rounded) LS change. "Same change"
+    // should mean genuinely the same number - a +0.6 shift and a +0.2 shift
+    // are not the same story no matter how generous the tolerance, so we
+    // don't use a tolerance at all here.
+    const byChange = new Map<number, typeof enriched>();
+    for (const p of enriched) {
+      if (p.lsGained === 0) continue; // nothing to contrast if LS didn't move
+      const bucket = byChange.get(p.lsGained);
+      if (bucket) bucket.push(p);
+      else byChange.set(p.lsGained, [p]);
+    }
 
-    for (let i = 0; i < enriched.length; i++) {
-      for (let j = i + 1; j < enriched.length; j++) {
-        const p1 = enriched[i];
-        const p2 = enriched[j];
+    // The two citizens shown here also need to have started at least this
+    // far apart on LS (one "struggling"/"just getting by", the other
+    // "comfortable"/"thriving") - otherwise the copy claiming "one was
+    // comfortable, the other was struggling" isn't actually true of the
+    // pair we picked.
+    const MIN_START_GAP = 4;
 
-        const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
-        const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
-        const startDiff = Math.abs(p1.startLS - p2.startLS);
-        const puDiff = Math.abs(p1.puGained - p2.puGained);
+    let bestPair: typeof enriched | null = null;
+    let bestMeetsGap = false;
+    let bestStartGap = -Infinity;
+    let bestPuDiff = -Infinity;
 
-        let score = 0;
-        if (sameDirection) score += 100;
-        score -= (lsDiff * 20);
-        score += (startDiff * 2);
-        score += (puDiff * 5);
+    // Within a bucket every citizen shares the exact same LS change, so
+    // there's nothing left to rank pairs on except: widest starting-point
+    // gap (the actual point of the illustration), then biggest utility gap
+    // as a final tiebreak.
+    for (const group of byChange.values()) {
+      if (group.length < 2) continue;
 
-        if (score > maxScore) {
-          maxScore = score;
-          bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const p1 = group[i];
+          const p2 = group[j];
+
+          const startGap = Math.abs(p1.startLS - p2.startLS);
+          const meetsGap = startGap >= MIN_START_GAP;
+          const puDiff = Math.abs(p1.puGained - p2.puGained);
+
+          const isBetter =
+            !bestPair ||
+            (meetsGap && !bestMeetsGap) ||
+            (meetsGap === bestMeetsGap && startGap > bestStartGap) ||
+            (meetsGap === bestMeetsGap && startGap === bestStartGap && puDiff > bestPuDiff);
+
+          if (isBetter) {
+            bestPair = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
+            bestMeetsGap = meetsGap;
+            bestStartGap = startGap;
+            bestPuDiff = puDiff;
+          }
         }
       }
     }
 
-    return bestPair;
+    return bestPair ?? [enriched[0], enriched[1]];
   }, [finalPopulation, currentCycle]);
 
   const empathyCitizen = useMemo(() => {
@@ -173,7 +203,7 @@ export default function AcademicDebriefOverlay() {
   const getDpmMessage = () => {
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nClick each society below to reveal its average — see if you can guess before you click.";
-      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but objective living standards aren't the whole picture.\nClick on these citizens to see how their subjective wellbeing shifted in response to their physical gains.";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but living standards aren't the whole picture.\nClick on these citizens to see how their subjective wellbeing shifted in response to their physical gains.";
       case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard.\nLet's see what happens when we shift their focus to pure self-interest.";
       case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success.\nLet's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
       default: return "";
@@ -185,20 +215,13 @@ export default function AcademicDebriefOverlay() {
 
     const p1 = contrastingCitizens[0];
     const p2 = contrastingCitizens[1];
-
-    const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
     const isGain = p1.lsGained > 0;
-    const similarObjective = Math.abs(p1.lsGained - p2.lsGained) <= 0.5;
 
-    if (sameDirection && similarObjective) {
-      if (isGain) {
-        return "Both citizens experienced a similar objective increase in their living standards. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
-      } else {
-        return "Both citizens experienced a similar objective decrease in their living standards. However, because one was already comfortable and the other was struggling, they felt the pain of that loss completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
-      }
+    if (isGain) {
+      return "Both citizens experienced the same rise in their life satisfaction. However, because one was already comfortable and the other was struggling, they value that gain completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
+    } else {
+      return "Both citizens experienced the same drop in their life satisfaction. However, because one was already comfortable and the other was struggling, they felt the pain of that loss completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.";
     }
-
-    return "These citizens experienced varying objective shifts in their living standards. Notice how their subjective value (utility) does not always scale linearly with their objective gains or losses, depending on where they started on the curve.\n\nNext term, citizens will vote using their unique Societal Utility.";
   };
 
   return (
@@ -291,7 +314,7 @@ export default function AcademicDebriefOverlay() {
                     >
                       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
                       <div className="mb-1 flex justify-center items-center gap-2">
-                        <span className="text-xs text-zinc-500">Objective Shift: </span>
+                        <span className="text-xs text-zinc-500">Life Satisfaction Shift: </span>
                         <span className="text-sm font-bold text-zinc-500">{citizen?.startLS.toFixed(1)}</span>
                         <span className="text-zinc-600">→</span>
                         <strong className="text-lg text-zinc-200">{citizen?.endLS.toFixed(1)}</strong>
