@@ -56,11 +56,6 @@ export function networkSink(entry: LoggedEvent) {
     return;
   }
 
-  if (entry.event === "session_started") {
-    send("/participant", identity(entry));
-    return;
-  }
-
   if (entry.event === "cycle_summary") {
     send("/cycle-attempt", { ...identity(entry), ...entry.payload });
     return;

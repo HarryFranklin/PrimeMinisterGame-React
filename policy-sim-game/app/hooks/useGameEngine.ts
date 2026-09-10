@@ -250,17 +250,17 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       turn: enactedTurn,
       level_id: levelId,
       policy_id: enactedPolicy.id,
-      options_available: currentDeck.map(p => p.id),
+      options_available: currentDeck.slice(0, 4).map(p => p.id),
       score_before: scoreBefore,
       score_after: scoreAfter,
-      population_before: populationBefore,
-      population_after: populationAfter,
+      avg_ls_before: populationBefore,
+      avg_ls_after: populationAfter,
     });
     track("turn_completed", {
       turn: enactedTurn,
       level_id: levelId,
       score: scoreAfter,
-      population: populationAfter,
+      avg_ls: populationAfter,
       time_on_turn_ms: timeOnTurnMs,
     });
 
@@ -287,8 +287,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         setCurrentDeck(updatedSchedule[enactedTurn]);
         setCurrentTurn(nextTurn);
         setContext({ turn: nextTurn });
-        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, population: populationAfter });
-        track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[enactedTurn].map(p => p.id) });
+        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, avg_ls: populationAfter });
+        track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[enactedTurn].slice(0, 4).map(p => p.id) });
         startTimer('turn_active');
       } else {
         setIsParliamentDissolved(true);
@@ -306,12 +306,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       turn: 1,
       level_id: levelId,
       score: MetricsEngine.getMetricScore(population, currentCycle),
-      population: calculateAverage(population),
+      avg_ls: calculateAverage(population),
     });
     track("policy_options_presented", {
       turn: 1,
       level_id: levelId,
-      options: currentDeck.map(p => p.id),
+      options: currentDeck.slice(0, 4).map(p => p.id),
     });
     startTimer('turn_active');
     setGamePhase(GamePhase.Playing);

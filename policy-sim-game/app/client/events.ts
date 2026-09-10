@@ -159,7 +159,7 @@ export type TelemetryEvent =
     }
 
   // ---- Main play: turn lifecycle ----
-  | { event: "turn_started"; payload: { turn: number; level_id: string; score: number; population: number } }
+  | { event: "turn_started"; payload: { turn: number; level_id: string; score: number; avg_ls: number } }
   | {
       event: "policy_options_presented";
       payload: { turn: number; level_id: string; options: string[] };
@@ -173,8 +173,8 @@ export type TelemetryEvent =
         options_available: string[];
         score_before: number;
         score_after: number;
-        population_before: number;
-        population_after: number;
+        avg_ls_before: number;
+        avg_ls_after: number;
       };
     }
   | {
@@ -183,7 +183,7 @@ export type TelemetryEvent =
         turn: number;
         level_id: string;
         score: number;
-        population: number;
+        avg_ls: number;
         wellbeing?: number;
         /** ms from turn_started to policy confirm */
         time_on_turn_ms: number;

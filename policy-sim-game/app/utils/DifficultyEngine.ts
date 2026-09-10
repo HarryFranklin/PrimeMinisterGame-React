@@ -42,7 +42,7 @@ export class DifficultyEngine {
           let currentPath: Policy[] = [];
           
           for (let t = 0; t < 5; t++) {
-            const options = schedule[t].filter(opt => !currentPath.some(p => p.id === opt.id));
+            const options = schedule[t].slice(0, 4).filter(opt => !currentPath.some(p => p.id === opt.id));
             const validOptions = options.length > 0 ? options : schedule[t];
             
             // Pseudo-random selection for the walk

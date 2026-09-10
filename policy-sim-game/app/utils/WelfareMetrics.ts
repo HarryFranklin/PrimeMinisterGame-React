@@ -29,18 +29,39 @@ export class WelfareMetrics {
     return null;
   }
 
-  /** Alias for getUtility(ls, 'personal') — kept for call sites that
-   * still use the old method name. The second arg (_personalUtilities) was
-   * from an older per-person utility table; it's ignored now that we use
-   * the universal table. */
-  static getUtilityForPerson(lsScore: number, _personalUtilities?: unknown): number {
-    return this.getUtility(lsScore, 'personal');
+  /** Anchor LS points the per-person PU/SU curves are sampled at in the
+   * source JSON: [U_Death, U_2, U_4, U_6, U_8, U_10]. */
+  private static readonly CURVE_ANCHORS = [0, 2, 4, 6, 8, 10];
+
+  /** Interpolates ONE respondent's own PU or SU curve (loaded from
+   * personalUtilities.json / societalUtilities.json onto Respondent.personalUtilities
+   * / .societalUtilities) at a given LS score. Falls back to the universal
+   * reference curve if a respondent is missing curve data. */
+  static getUtilityForPerson(lsScore: number, curve?: number[]): number {
+    if (!curve || curve.length !== WelfareMetrics.CURVE_ANCHORS.length) {
+      return this.getUtility(lsScore, 'personal');
+    }
+
+    const anchors = WelfareMetrics.CURVE_ANCHORS;
+    const score = Math.max(anchors[0], Math.min(anchors[anchors.length - 1], lsScore));
+
+    let i = 0;
+    while (i < anchors.length - 2 && score > anchors[i + 1]) i++;
+
+    const lower = anchors[i];
+    const upper = anchors[i + 1];
+    const t = upper === lower ? 0 : (score - lower) / (upper - lower);
+
+    return lerp(curve[i], curve[i + 1], t) * 10;
   }
 
-  static evaluateDistribution(populationLS: number[], _societalUtilities?: unknown): number {
+  /** Average utility a population's LS values would score when run through
+   * ONE respondent's own curve (used for the "empathy citizen" comparison -
+   * how would this specific person rate everyone else's welfare). */
+  static evaluateDistribution(populationLS: number[], curve?: number[]): number {
     let totalUtility = 0;
     for (let i = 0; i < populationLS.length; i++) {
-      totalUtility += this.getUtility(populationLS[i], 'societal');
+      totalUtility += this.getUtilityForPerson(populationLS[i], curve);
     }
     return populationLS.length > 0 ? totalUtility / populationLS.length : 0;
   }
@@ -57,10 +78,10 @@ export class WelfareMetrics {
     if (cycle === ElectionCycle.Benthamite || cycle === ElectionCycle.Rawlsian) {
       return flooredLS;
     } else if (cycle === ElectionCycle.PersonalUtility) {
-      return WelfareMetrics.getUtility(flooredLS, 'personal');
+      return WelfareMetrics.getUtilityForPerson(flooredLS, respondent.personalUtilities);
     } else if (cycle === ElectionCycle.SocietalUtility) {
-      // Return the individual's utility value so the table can calculate column contributions accurately
-      return WelfareMetrics.getUtility(flooredLS, 'societal'); 
+      // Return the individual's own SU curve value so the table can calculate column contributions accurately
+      return WelfareMetrics.getUtilityForPerson(flooredLS, respondent.societalUtilities);
     }
     return flooredLS;
   }
