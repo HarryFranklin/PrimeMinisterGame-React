@@ -70,7 +70,7 @@ export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: 
                 Commencing Term
               </h2>
               <p className="text-xs text-zinc-500 font-mono">
-                Calculating societal baselines... {Math.round(calcProgress * 100)}%
+                ... {Math.round(calcProgress * 100)}%
               </p>
             </div>
           </motion.div>
