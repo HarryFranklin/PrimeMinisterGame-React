@@ -49,7 +49,6 @@ const SEG_TYPES = [
 
 const getAxisDomain = (a: AxisVariable): [number, number] => [0, 10];
 const getTicks = (a: AxisVariable) => [0, 2.5, 5, 7.5, 10];
-
 const getAxisLabel = (a: AxisVariable): string => {
   switch (a) {
     case AxisVariable.LifeSatisfaction: return 'Life Satisfaction';
@@ -73,6 +72,11 @@ export default function D3Chart({
   const prevPlot     = useRef<string | null>(null);
   const prevX        = useRef<AxisVariable | null>(null);
   const prevY        = useRef<AxisVariable | null>(null);
+  
+  const prevHistData = useRef<string>('');
+  const prevChartData = useRef<string>('');
+  const prevMarkerData = useRef<string>('');
+  
   const chartId      = useId().replace(/:/g, '');
   const [dims, setDims] = useState({ width: 0, height: 0 });
 
@@ -97,15 +101,38 @@ export default function D3Chart({
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
-
+    
     const margin = { top: 25, right: 15, bottom: 40, left: 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
+
+    // Guard line for inspect/changing window size
+    if (W <= 0 || H <= 0) return;
+
     const baseColor = color || '#ec4899';
 
     const svg = d3.select(svgRef.current)
       .attr('width',  W + margin.left + margin.right)
       .attr('height', H + margin.top  + margin.bottom);
+
+    // --- Detect Data vs Resize Updates ---
+    const histDataStr = JSON.stringify(histogramData || []);
+    const isHistUpdate = prevHistData.current !== histDataStr;
+    prevHistData.current = histDataStr;
+
+    const chartDataStr = JSON.stringify(chartData || []);
+    const isChartUpdate = prevChartData.current !== chartDataStr;
+    prevChartData.current = chartDataStr;
+
+    const markerDataStr = JSON.stringify(markers || []);
+    const isMarkerUpdate = prevMarkerData.current !== markerDataStr;
+    prevMarkerData.current = markerDataStr;
+
+    const faceAnimSpeed = isHistUpdate ? 1000 : 0;
+    const solidAnimSpeed = isHistUpdate ? 1200 : 0;
+    const dotAnimSpeed = isChartUpdate ? 500 : 0;
+    const markerAnimSpeed = isMarkerUpdate ? 300 : 0;
+    // -------------------------------------
 
     if (prevPlot.current !== plotType || prevX.current !== xAxisType || prevY.current !== yAxisType) {
       svg.selectAll('*').remove();
@@ -117,6 +144,7 @@ export default function D3Chart({
       g.append('text').attr('class', 'label-x');
       g.append('g').attr('class', 'data-layer');
       g.append('g').attr('class', 'annotation-layer');
+
       prevPlot.current = plotType;
       prevX.current = xAxisType;
       prevY.current = yAxisType;
@@ -131,6 +159,7 @@ export default function D3Chart({
     const axisFg  = theme === 'dark' ? '#d4d4d8' : '#d4d4d8';
     const tickFg  = theme === 'dark' ? '#f4f4f5' : '#52525b';
     const labelFg = theme === 'dark' ? '#e4e4e7' : '#3f3f46';
+
     const styleAxis = (sel: any) => {
       sel.select('.domain').attr('stroke', axisFg).attr('stroke-width', 3);
       sel.selectAll('.tick line').attr('stroke', axisFg).attr('stroke-width', 2);
@@ -143,7 +172,6 @@ export default function D3Chart({
       const rawBw  = W / 11;
       const bw     = rawBw * 0.65;
       const getX   = (name: string | number) => xScale(Number(name)) - bw / 2;
-
       const yScale = d3.scaleLinear().domain([0, yAxisMax]).range([H, 0]);
       const defs   = svg.selectAll<SVGDefsElement, unknown>('defs').data([0]).join('defs');
 
@@ -196,6 +224,7 @@ export default function D3Chart({
         });
 
       dataLayer.selectAll('rect.bar').remove();
+
       const cols = dataLayer
         .selectAll<SVGGElement, HistogramEntry>('g.col')
         .data(histogramData, (d: any) => d.name)
@@ -264,11 +293,10 @@ export default function D3Chart({
           .attr('x', (d: any) => getX(d.name) + xOff)
           .attr('width', Math.max(0, rectW - 0.5))
           .attr('fill', (d: any) => `url(#face-${d.name}-${chartId})`)
-          .transition().duration(1000).ease(d3.easeCubicOut)
+          .transition().duration(faceAnimSpeed).ease(d3.easeCubicOut)
           .attr('y', (d: any) => {
             const clampedCount = Math.min(d.count, yAxisMax);
             const raw = H - yScale(clampedCount);
-            // Snap to the nearest 0.5 of a face
             let n = Math.round((raw / faceSize) * 2) / 2;
             if (clampedCount > 0 && n === 0) n = 0.5;
             return H - n * faceSize;
@@ -276,7 +304,6 @@ export default function D3Chart({
           .attr('height', (d: any) => {
             const clampedCount = Math.min(d.count, yAxisMax);
             const raw = H - yScale(clampedCount);
-            // Snap to the nearest 0.5 of a face
             let n = Math.round((raw / faceSize) * 2) / 2;
             if (clampedCount > 0 && n === 0) n = 0.5;
             return n * faceSize;
@@ -351,12 +378,13 @@ export default function D3Chart({
           .attr('x', (d: any) => getX(d.name) + xOff)
           .attr('width', Math.max(0, rectW - 0.5))
           .attr('fill', (d: any) => `url(#face-seg-${d.name}-${getSegmentId(d.key)}-${chartId})`)
-          .transition().duration(1000).ease(d3.easeCubicOut)
+          .transition().duration(faceAnimSpeed).ease(d3.easeCubicOut)
           .attr('y', (d: any) => d.yPos)
           .attr('height', (d: any) => d.h);
 
       } else {
         cols.selectAll('rect.face-bar').remove();
+
         cols.selectAll<SVGRectElement, any>('rect.segment')
           .data((d: any) => {
             if (d.segments) {
@@ -380,7 +408,7 @@ export default function D3Chart({
           .attr('x', (d: any) => getX(d.name))
           .attr('width', bw)
           .attr('fill',(d: any) => d.color)
-          .transition().duration(1200).ease(d3.easeCubicOut)
+          .transition().duration(solidAnimSpeed).ease(d3.easeCubicOut)
           .attr('y', (d: any) => d.yPos)
           .attr('height', (d: any) => d.h);
       }
@@ -440,31 +468,35 @@ export default function D3Chart({
           .attr('x1',mx).attr('x2',mx).attr('y1',0).attr('y2',H)
           .attr('stroke',mc).attr('stroke-width',2)
           .attr('stroke-dasharray', m.dashed ? '6,4' : 'none')
-          .style('opacity',0).transition().duration(300).style('opacity',1);
+          .style('opacity',0).transition().duration(markerAnimSpeed).style('opacity',1);
+
         annoLayer.append('text')
           .attr('y',yPos).attr('x',mx - 6)
           .attr('fill',mc).attr('font-size','12px').attr('font-weight','900')
           .attr('stroke','white').attr('stroke-width',4).style('paint-order','stroke')
           .attr('text-anchor','end').text(m.label)
-          .style('opacity',0).transition().duration(300).style('opacity',1);
+          .style('opacity',0).transition().duration(markerAnimSpeed).style('opacity',1);
       });
+
     } else if (plotType === '2D') {
       annoLayer.selectAll('*').remove();
       const xScale = d3.scaleLinear().domain(getAxisDomain(xAxisType)).range([0, W]);
       const yScale = d3.scaleLinear().domain(getAxisDomain(yAxisType)).range([H, 0]);
+
       chart.select('.axis-x').transition().duration(dims.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues(getTicks(xAxisType)) as any).call(styleAxis);
+
       chart.select('.axis-y').transition().duration(dims.width ? 0 : 500)
         .call(d3.axisLeft(yScale).tickValues(getTicks(yAxisType)) as any).call(styleAxis);
+
       dataLayer.selectAll<SVGCircleElement, any>('circle.dot')
         .data(chartData, (d: any) => d.id)
         .join('circle').attr('class','dot')
-        .transition().duration(500)
+        .transition().duration(dotAnimSpeed)
         .attr('cx', (d: any) => xScale(d.x))
         .attr('cy', (d: any) => yScale(d.y))
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
-
   }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols, theme]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
