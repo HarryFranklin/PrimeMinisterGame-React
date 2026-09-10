@@ -119,11 +119,12 @@ export default function AcademicDebriefOverlay() {
       return { ...p, startLS, endLS, lsGained, puGained };
     });
 
-    // Every same-direction, non-zero-change pair is a candidate. We rank
-    // them, not filter-then-hope: "closest LS-change match" always wins
-    // first, and starting-LS spread only breaks ties within that - so we
-    // never end up "explaining" a utility gap that's actually just a gap in
-    // how much each person's LS moved.
+    // Every same-direction, non-zero-change pair is a candidate - but only
+    // if it actually illustrates diminishing returns. Individual curves
+    // vary, so it's entirely possible for a specific higher-starting
+    // citizen to gain (or lose) MORE utility than a lower-starting one on
+    // the same LS shift - that pair contradicts the point being made, so it
+    // must be excluded outright rather than just ranked lower.
     const candidates: { pair: typeof enriched; lsDiff: number; startGap: number; puDiff: number }[] = [];
     for (let i = 0; i < enriched.length; i++) {
       for (let j = i + 1; j < enriched.length; j++) {
@@ -133,8 +134,22 @@ export default function AcademicDebriefOverlay() {
         const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
         if (!sameDirection) continue;
 
+        const pair: typeof enriched = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
+        const [lower, higher] = pair;
+        const isGain = lower.lsGained > 0;
+
+        // Diminishing returns: on a gain, the lower-starting citizen must
+        // gain MORE utility than the higher-starting one; on a loss, the
+        // lower-starting citizen must lose MORE utility (a more negative
+        // puGained). If the higher-starting citizen comes out ahead
+        // either way, this pair doesn't show what we want - skip it.
+        const illustratesDiminishingReturns = isGain
+          ? lower.puGained > higher.puGained
+          : lower.puGained < higher.puGained;
+        if (!illustratesDiminishingReturns) continue;
+
         candidates.push({
-          pair: p1.startLS < p2.startLS ? [p1, p2] : [p2, p1],
+          pair,
           lsDiff: Math.abs(p1.lsGained - p2.lsGained),
           startGap: Math.abs(p1.startLS - p2.startLS),
           puDiff: Math.abs(p1.puGained - p2.puGained),
