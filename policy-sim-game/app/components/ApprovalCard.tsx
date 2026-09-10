@@ -11,7 +11,7 @@ interface ApprovalCardProps {
 export default function ApprovalCard({ approvalRating, isParliamentDissolved, accentColor }: ApprovalCardProps) {
   const displayApproval = useAnimatedNumber(approvalRating);
   const { currentTurn } = useGame();
-  const turnsRemaining = 5 - currentTurn;
+  const turnsRemaining = 6 - currentTurn;
 
   return (
     <div className="bg-zinc-900 rounded-xl shadow-lg p-5 flex flex-col items-center justify-center shrink-0 h-36 lg:h-40 relative overflow-hidden transition-all">
