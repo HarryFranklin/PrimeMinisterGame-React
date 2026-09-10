@@ -86,8 +86,8 @@ const Q1_OPENERS: Record<ApprovalTier, string> = {
 };
 
 const Q2_OPENERS = {
-  afterCorrect: "Good—glad we've cleared that up. Now, of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
-  afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
+  afterCorrect: "Good—glad we've cleared that up. Now, of everything you enacted this term, which policy do you think was most impactful?",
+  afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful?",
 };
 
 const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {
