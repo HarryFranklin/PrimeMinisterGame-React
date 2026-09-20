@@ -4,6 +4,7 @@ import React from 'react';
 import { useState } from 'react';
 import D3Chart from './D3Chart';
 import { personalUtility, societalUtility } from '../lib/utility';
+import { interpolateRdYlGn, rgb } from 'd3';
 import { AxisVariable } from '../utils/types'; 
 
 // Shared layout components to keep the MDX file clean and consistent
@@ -412,6 +413,27 @@ export function RawlsianPolicyEffects() {
   );
 }
 
+// Picks white or near-black text, whichever is easier to read on the given background colour.
+const luminance = (colour: string) => {
+  const { r, g, b } = rgb(colour);
+  const lin = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+};
+const contrastRatio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const readableText = (bg: string) => {
+  const L = luminance(bg);
+  return contrastRatio(L, luminance('#ffffff')) >= contrastRatio(L, luminance('#18181b')) ? '#ffffff' : '#18181b';
+};
+
+// 0 = red, 1 = green (the same RdYlGn scale used in the simulation heatmap).
+const heat = (value: number): React.CSSProperties => {
+  const bg = interpolateRdYlGn(value);
+  return { backgroundColor: bg, color: readableText(bg) };
+};
+
 export function SWFWeightingComparison() {
   // Weight of a +1 Life Satisfaction gain, scaled so that a gain from 2 to 3 counts as 1.00.
   // The utility columns come straight from lib/utility.ts, so they always match the curves.
@@ -425,16 +447,16 @@ export function SWFWeightingComparison() {
     { start: 9, band: 'Thriving' },
   ].map((r) => ({
     label: `${r.start} (${r.band})`,
-    benthamite: '1.00',
-    // Assumes the worst-off person in society scores 2.
-    rawlsian: r.start === 2 ? '1.00' : '0.00',
-    personal: ((personalUtility(r.start + 1) - personalUtility(r.start)) / refPersonal).toFixed(2),
-    societal: ((societalUtility(r.start + 1) - societalUtility(r.start)) / refSocietal).toFixed(2),
+    benthamite: 1,
+    // Assumes the lowest score in society is 2.
+    rawlsian: r.start === 2 ? 1 : 0,
+    personal: (personalUtility(r.start + 1) - personalUtility(r.start)) / refPersonal,
+    societal: (societalUtility(r.start + 1) - societalUtility(r.start)) / refSocietal,
   }));
 
   const th = "border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100";
   const tdLabel = "border-b border-zinc-800 px-3 py-2 text-zinc-300 font-semibold";
-  const td = "border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono";
+  const cell = "border-2 border-zinc-900 px-3 py-2 text-center font-bold font-mono tabular-nums";
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl my-8">
@@ -449,27 +471,35 @@ export function SWFWeightingComparison() {
           <thead>
             <tr>
               <th className={th}>Person starts at</th>
-              <th className={th}>Benthamite</th>
-              <th className={th}>Rawlsian</th>
-              <th className={th}>Personal Utility</th>
-              <th className={th}>Societal Utility</th>
+              <th className={`${th} text-center`}>Benthamite</th>
+              <th className={`${th} text-center`}>Rawlsian</th>
+              <th className={`${th} text-center`}>Personal Utility</th>
+              <th className={`${th} text-center`}>Societal Utility</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.label}>
                 <td className={tdLabel}>{r.label}</td>
-                <td className={td}>{r.benthamite}</td>
-                <td className={td}>{r.rawlsian}</td>
-                <td className={td}>{r.personal}</td>
-                <td className={td}>{r.societal}</td>
+                <td className={cell} style={heat(r.benthamite)}>{r.benthamite.toFixed(2)}</td>
+                <td className={cell} style={heat(r.rawlsian)}>{r.rawlsian.toFixed(2)}</td>
+                <td className={cell} style={heat(r.personal)}>{r.personal.toFixed(2)}</td>
+                <td className={cell} style={heat(r.societal)}>{r.societal.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <div className="mt-3 flex items-center gap-3 text-xs text-zinc-400">
+        <span>Counts for nothing</span>
+        <div
+          className="h-2 flex-1 max-w-[12rem] rounded-full"
+          style={{ background: `linear-gradient(to right, ${[0, 0.25, 0.5, 0.75, 1].map((v) => interpolateRdYlGn(v)).join(', ')})` }}
+        />
+        <span>Counts fully</span>
+      </div>
       <p className="mt-3 text-xs text-zinc-500 leading-snug">
-        Weights are scaled so that a +1 gain for someone starting at 2 counts as 1.00. The Rawlsian column assumes the worst-off person in society scores 2, so a gain for anyone else counts as 0.
+        Weights are scaled so that a +1 gain for someone starting at 2 counts as 1.00. The Rawlsian column assumes the lowest score in society is 2. A gain counts only if it raises that lowest score, so a gain for anyone else counts as 0.
       </p>
     </div>
   );
