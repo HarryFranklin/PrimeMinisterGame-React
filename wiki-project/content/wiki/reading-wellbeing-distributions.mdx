@@ -4,32 +4,44 @@ description: "How to interpret population wellbeing data: averages, floors, and 
 category: "1. Introduction & Context"
 order: 2
 ---
+A country's GDP per person is an average. It is the total amount the country produces, divided by the number of people. Like any average, it can look healthy while hiding how things are spread out. Two countries can have the same GDP per person and very different lives inside them.
 
-Before we can talk about aggregating Life Satisfaction, it helps to know how it's actually collected. Every citizen answers the same 0-10 survey question — *"Overall, how satisfied are you with your life nowadays?"* — and a government ends up with millions of individual responses, not one number.
+Life Satisfaction has the same weakness if we only look at its average. Every citizen answers the survey question with a score from 0 to 10, so a government ends up with millions of individual scores, not just one number. Looking at the whole spread of scores shows what a single average cannot.
 
-Once you have those scores for a whole population, a single average only tells part of the story. Look at the full spread of responses and very different pictures start to emerge — pictures that matter enormously for policy. Here's what that data can actually tell you.
+We sometimes group people by their score:
+
+- **Struggling:** 0 to 3
+- **Just getting by:** 4 to 5
+- **Comfortable:** 6 to 8
+- **Thriving:** 9 to 10
+
+Three features of that spread matter most for policy: the mean (average), the floor (minimum) and the dispersion (spread).
 
 ### The Mean (Average)
-The mean is the sum of all Life Satisfaction scores divided by the population size. It answers: *"How happy is the typical citizen, overall?"* But a high mean can hide serious problems — a small wealthy group scoring very high can offset a large struggling group scoring very low. A high mean, therefore, does not necessarily mean prosperity.
+The mean is found by adding up all the scores and dividing by the number of people. It answers the question: *"How happy is the typical citizen?"*
 
-Two towns can share an identical mean of 5.5 and still look nothing alike. In Town A, almost everyone scores between 4 and 7 — a broad, stable middle. In Town B, the population is sharply divided, with large groups scoring either a 3 or an 8. Same average, two very different societies.
+A high mean can hide serious problems, because a group with very high scores can pull the average up and cover for a large group with very low scores. So a high mean does not always mean that a country is doing well.
+
+Take two towns that both have a mean of 5.5. In Town A, nearly everyone scores between 4 and 7, which is a broad and steady middle. In Town B, the population is sharply divided, with large groups scoring either 3 or 8. The average is the same, but the two towns are very different places to live.
 
 <DistributionMeanDiagram />
 
 ### The Floor (Minimum)
-The floor is the lowest Life Satisfaction score present in the population — the worst-off citizens. It answers: *"How badly off are the most vulnerable members of society?"* 
+The floor is the lowest score in the population, so it shows how the worst-off people are doing. It answers the question: *"How badly off are the most vulnerable people?"*
 
-Two societies can share the same mean while having very different floors. For example, two societies might both average 5.0, but Society A leaves its most vulnerable citizens at a score of 2, while Society B secures a floor of 4.
+Two societies can have the same mean but very different floors. For example, both might average 5.0, but in Society A the most vulnerable citizens score 2, while in Society B the floor is 4.
 
 <DistributionFloorDiagram />
 
 ### Dispersion (Inequality)
-Consider two societies both averaging 5.0 out of 10. In one, almost everyone clusters tightly between 4 and 6 — low dispersion. In the other, scores are spread completely evenly from 0 to 10 — high dispersion, even though the mean is identical.
+Dispersion is how spread out the scores are, and a wide spread means high inequality. A simple way to describe it is the range: the gap between the lowest and highest scores.
+
+Picture two societies that both average 5.0. In the first, almost everyone scores between 4 and 6, so the range is about 2 points. That is low dispersion. In the second, scores are spread evenly from 0 to 10, so the range is 10 points. That is high dispersion. The mean is identical, but the second society is far more unequal.
 
 <DistributionDispersionDiagram />
 
-### Why This Matters
-As you'll see over the next few pages, different policy frameworks care about different properties of a distribution. Some frameworks fixate on the mean. Others fixate on the floor. Understanding what you're looking at is the first step to evaluating whether a policy is actually working.
+### What Policies Can Change
+Different policies, and different ways of choosing between policies, affect these three measures in different ways. One policy might raise the mean and leave the floor where it was. Another might lift the floor and barely move the mean. A third might narrow the spread. Knowing which measure a policy moves is the first step in judging whether it is working.
 
 {/*
     QUIZ_PLACEHOLDER: compare-two-societies --
@@ -38,6 +50,6 @@ As you'll see over the next few pages, different policy frameworks care about di
     (3) which has greater inequality. Maps to LO1.1–LO1.3. --
 */}
 
-Now that you can read what a distribution of wellbeing scores is telling you, the next question is how to turn those properties — mean, floor, and dispersion — into an actual target for policy.
+Now that you can read what a set of scores is telling you, the next question is how a government turns the mean, the floor or the spread into a target for policy.
 
 Next: [Social Welfare Functions](/wiki/social-welfare-functions)
