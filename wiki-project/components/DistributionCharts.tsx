@@ -3,6 +3,7 @@
 import React from 'react';
 import { useState } from 'react';
 import D3Chart from './D3Chart';
+import { personalUtility, societalUtility } from '../lib/utility';
 import { AxisVariable } from '../utils/types'; 
 
 // Shared layout components to keep the MDX file clean and consistent
@@ -60,7 +61,7 @@ export function DistributionMeanDiagram() {
           markers={[{ value: 5.5, label: 'Mean: 5.5', color: '#fbbf24', dashed: true }]}
         />
       </ChartBox>
-      <ChartBox title="Town B (Divided Society)" desc="Mean: 5.5 | A high mean driven by one wealthy half.">
+      <ChartBox title="Town B (Divided Society)" desc="Mean: 5.5 | The population is split into two groups.">
         <D3Chart
           plotType="1D"
           chartData={[]}
@@ -154,7 +155,7 @@ export function DistributionDispersionDiagram() {
 
   return (
     <Container>
-            <ChartBox title="Low Dispersion" desc="Mean: 5.0 | Range: 3 to 7 (4 points) | High equality, minimal spread.">
+      <ChartBox title="Low Dispersion" desc="Mean: 5.0 | Range: 3 to 7 (4 points) | High equality, minimal spread.">
         <D3Chart
           plotType="1D"
           chartData={[]}
@@ -173,7 +174,7 @@ export function DistributionDispersionDiagram() {
           ]}
         />
       </ChartBox>
-            <ChartBox title="High Dispersion" desc="Mean: 5.0 | Range: 0 to 10 (10 points) | Extreme inequality, maximum spread.">
+      <ChartBox title="High Dispersion" desc="Mean: 5.0 | Range: 0 to 10 (10 points) | Extreme inequality, maximum spread.">
         <D3Chart
           plotType="1D"
           chartData={[]}
@@ -189,6 +190,59 @@ export function DistributionDispersionDiagram() {
             { value: 0, label: 'Floor: 0', color: '#ef4444', dashed: true },
             { value: 10, label: 'Ceiling: 10', color: '#10b981', dashed: true },
             { value: 5, label: 'Mean: 5.0', color: '#fbbf24', dashed: true }
+          ]}
+        />
+      </ChartBox>
+    </Container>
+  );
+}
+
+export function BenthamiteMeanShift() {
+  // Half the society is "just getting by" (4 to 5) and half is "comfortable" (6 to 8).
+  const before = toHisto([0, 0, 0, 0, 25, 25, 17, 16, 17, 0, 0]);
+  // The policy lifts everyone in the comfortable half by 1 point. The bottom half is unchanged.
+  const after = toHisto([0, 0, 0, 0, 25, 25, 0, 17, 16, 17, 0]);
+
+  // Means are calculated from the data so the captions can never disagree with the charts.
+  const meanOf = (h: { name: string; count: number }[]) =>
+    h.reduce((s, d) => s + Number(d.name) * d.count, 0) / h.reduce((s, d) => s + d.count, 0);
+  const meanBefore = meanOf(before);
+  const meanAfter = meanOf(after);
+
+  return (
+    <Container>
+      <ChartBox title="Before the policy" desc={`Mean: ${meanBefore.toFixed(2)} | Blue columns show who will gain from the policy.`}>
+        <D3Chart
+          plotType="1D"
+          chartData={[]}
+          histogramData={before}
+          activePolicyRules={[{ minLS: 6, maxLS: 8, impact: 1 }]}
+          xAxisType={AxisVariable.LifeSatisfaction}
+          yAxisType={AxisVariable.LifeSatisfaction}
+          color="#3b82f6"
+          visualStyle="faces"
+          faceCols={1}
+          yAxisMax={30}
+          theme="dark"
+          markers={[{ value: meanBefore, label: `Mean: ${meanBefore.toFixed(2)}`, color: '#fbbf24', dashed: true }]}
+        />
+      </ChartBox>
+      <ChartBox title="After the policy" desc={`Mean: ${meanAfter.toFixed(2)} | The comfortable half gained 1 point each. The other half did not change.`}>
+        <D3Chart
+          plotType="1D"
+          chartData={[]}
+          histogramData={after}
+          activePolicyRules={[{ minLS: 7, maxLS: 9, impact: 1 }]}
+          xAxisType={AxisVariable.LifeSatisfaction}
+          yAxisType={AxisVariable.LifeSatisfaction}
+          color="#3b82f6"
+          visualStyle="faces"
+          faceCols={1}
+          yAxisMax={30}
+          theme="dark"
+          markers={[
+            { value: meanAfter, label: `Mean: ${meanAfter.toFixed(2)}`, color: '#fbbf24', dashed: true },
+            { value: meanBefore, label: `Before: ${meanBefore.toFixed(2)}`, color: '#a1a1aa', dashed: true }
           ]}
         />
       </ChartBox>
@@ -359,42 +413,64 @@ export function RawlsianPolicyEffects() {
 }
 
 export function SWFWeightingComparison() {
+  // Weight of a +1 Life Satisfaction gain, scaled so that a gain from 2 to 3 counts as 1.00.
+  // The utility columns come straight from lib/utility.ts, so they always match the curves.
+  const refPersonal = personalUtility(3) - personalUtility(2);
+  const refSocietal = societalUtility(3) - societalUtility(2);
+
   const rows = [
-    { range: '0 to 2 (Deprivation)', benthamite: '1.0×', rawlsian: '1.0× (Targeted)', utility: 'High (Steep curve)' },
-    { range: '3 to 6 (Middle)', benthamite: '1.0×', rawlsian: '0.0× (Ignored)', utility: 'Moderate' },
-    { range: '7 to 10 (Comfortable)', benthamite: '1.0×', rawlsian: '0.0× (Ignored)', utility: 'Low (Flat)' },
-  ];
+    { start: 2, band: 'Struggling' },
+    { start: 4, band: 'Just getting by' },
+    { start: 6, band: 'Comfortable' },
+    { start: 9, band: 'Thriving' },
+  ].map((r) => ({
+    label: `${r.start} (${r.band})`,
+    benthamite: '1.00',
+    // Assumes the worst-off person in society scores 2.
+    rawlsian: r.start === 2 ? '1.00' : '0.00',
+    personal: ((personalUtility(r.start + 1) - personalUtility(r.start)) / refPersonal).toFixed(2),
+    societal: ((societalUtility(r.start + 1) - societalUtility(r.start)) / refSocietal).toFixed(2),
+  }));
+
+  const th = "border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100";
+  const tdLabel = "border-b border-zinc-800 px-3 py-2 text-zinc-300 font-semibold";
+  const td = "border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono";
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl my-8">
       <h4 className="font-bold uppercase tracking-widest text-indigo-400 mb-1">
-        Social Welfare Function Weights
+        Weight Given to a +1 Gain
       </h4>
       <p className="text-sm text-zinc-400 mb-4">
-        How each framework weights a +1 Life Satisfaction gain depending on where it lands.
+        How much each approach counts the same +1 Life Satisfaction gain, depending on where the person starts.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-sm">
           <thead>
             <tr>
-              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Life Satisfaction Range</th>
-              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Benthamite</th>
-              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Rawlsian</th>
-              <th className="border-b-2 border-zinc-700 px-3 py-2 font-bold text-zinc-100">Utility-Weighted</th>
+              <th className={th}>Person starts at</th>
+              <th className={th}>Benthamite</th>
+              <th className={th}>Rawlsian</th>
+              <th className={th}>Personal Utility</th>
+              <th className={th}>Societal Utility</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-300 font-semibold">{r.range}</td>
-                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.benthamite}</td>
-                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.rawlsian}</td>
-                <td className="border-b border-zinc-800 px-3 py-2 text-zinc-400 font-mono">{r.utility}</td>
+            {rows.map((r) => (
+              <tr key={r.label}>
+                <td className={tdLabel}>{r.label}</td>
+                <td className={td}>{r.benthamite}</td>
+                <td className={td}>{r.rawlsian}</td>
+                <td className={td}>{r.personal}</td>
+                <td className={td}>{r.societal}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <p className="mt-3 text-xs text-zinc-500 leading-snug">
+        Weights are scaled so that a +1 gain for someone starting at 2 counts as 1.00. The Rawlsian column assumes the worst-off person in society scores 2, so a gain for anyone else counts as 0.
+      </p>
     </div>
   );
 }

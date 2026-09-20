@@ -8,7 +8,8 @@ import {
   DistributionDispersionDiagram,
   BenthamitePolicyEffects,
   RawlsianPolicyEffects,
-  SWFWeightingComparison
+  SWFWeightingComparison,
+  BenthamiteMeanShift,
 } from '../../components/DistributionCharts';
 
 import PolicyImpactExample from './PolicyImpactExample';
@@ -100,5 +101,6 @@ export const mdxComponents: MDXComponents = {
   UtilityCurveDiagram,
   UtilityExplorer,
   UtilityInterventionWidget,
-  SWFWeightingComparison
+  SWFWeightingComparison,
+  BenthamiteMeanShift
 };

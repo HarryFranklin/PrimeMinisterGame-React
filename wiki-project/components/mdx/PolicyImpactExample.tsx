@@ -9,9 +9,9 @@ interface Group {
 }
 
 const GROUPS: Group[] = [
-  { name: 'Struggling', share: 0.10, before: 4, after: 3 },
-  { name: 'Moderate', share: 0.45, before: 6, after: 7 },
-  { name: 'Comfortable', share: 0.45, before: 8, after: 9 },
+  { name: 'Lower group', share: 0.10, before: 4, after: 3 },
+  { name: 'Middle group', share: 0.45, before: 6, after: 7 },
+  { name: 'Upper group', share: 0.45, before: 8, after: 9 },
 ];
 
 function DeltaCell({ delta }: { delta: number }) {
