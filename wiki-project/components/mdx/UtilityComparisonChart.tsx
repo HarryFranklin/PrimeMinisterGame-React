@@ -21,7 +21,7 @@ const seriesPath = (table: Readonly<Record<number, number>>) =>
     .map(([ls, u], i) => `${i === 0 ? 'M' : 'L'} ${scaleX(Number(ls))} ${scaleY(u)}`)
     .join(' ');
 
-const X_TICKS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+const X_TICKS = [2, 4, 6, 8, 10];
 const Y_TICKS = [0, 0.25, 0.5, 0.75, 1.0];
 
 /** Plots the real Personal Utility and Societal Utility curves from

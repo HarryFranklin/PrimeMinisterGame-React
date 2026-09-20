@@ -3,11 +3,12 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { personalUtility } from '../../lib/utility';
+import UtilityCurveChart from './UtilityCurveChart';
 
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
 const getContinuousDetails = (ls: number) => {
-  if (ls <= 2) return { emoji: '😭', label: 'Massive Impact', desc: 'Heating their home, paying rent, or affording three meals a day.' };
+  if (ls <= 3) return { emoji: '😭', label: 'Massive Impact', desc: 'Heating their home, paying rent, or affording three meals a day.' };
   if (ls <= 4) return { emoji: '🙁', label: 'High Impact', desc: 'Paying off urgent debt or affording new clothes for their family.' };
   if (ls <= 6) return { emoji: '😐', label: 'Moderate Impact', desc: 'Going on a modest family holiday or eating out occasionally.' };
   if (ls <= 8) return { emoji: '🙂', label: 'Low Impact', desc: 'Upgrading to a slightly nicer car or adding to their savings.' };
@@ -43,6 +44,8 @@ export default function UtilityInterventionWidget() {
   }, [lsValue]);
   const faceColor = getFaceColor(lsValue);
   const impactColor = getImpactColor(lsValue);
+  const stepTo = Math.min(lsValue + 1, 10);
+  const gain = personalUtility(stepTo) - personalUtility(lsValue);
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-6 md:p-8 flex flex-col gap-8 my-8 text-zinc-200 font-sans">
@@ -85,14 +88,27 @@ export default function UtilityInterventionWidget() {
         </div>
       </div>
 
+      {/* Curve linked to the slider */}
+      <div className="w-full max-w-2xl mx-auto flex flex-col gap-2">
+        <UtilityCurveChart
+          marker={lsValue}
+          markerColor={faceColor}
+          steps={[{ from: lsValue, to: stepTo, color: impactColor, riseLabel: `+${gain.toFixed(2)}` }]}
+          ariaLabel="The Personal Utility curve, with a marker at the citizen's Life Satisfaction and the +1 step highlighted"
+        />
+        <p className="text-xs text-zinc-500 text-center leading-snug">
+          The same curve as the diagram above. The marker is where this citizen is now, and the highlighted step shows what a +1 boost adds from there.
+        </p>
+      </div>
+
       {/* Slider Control */}
       <div className="w-full flex flex-col gap-3 pt-4 border-t border-zinc-800">
         <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
-          <span>Struggling (0)</span>
-          <span>Wealthy (10)</span>
+          <span>Struggling (2)</span>
+          <span>Thriving (9)</span>
         </div>
         <input 
-          type="range" min="0" max="10" step="0.1"
+          type="range" min="2" max="9" step="0.1" aria-label="Starting Life Satisfaction"
           value={lsValue}
           onChange={(e) => setLsValue(parseFloat(e.target.value))}
           className="w-full accent-pink-500 cursor-pointer h-3 bg-zinc-800 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500"

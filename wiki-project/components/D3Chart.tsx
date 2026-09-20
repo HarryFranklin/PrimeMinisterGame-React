@@ -58,7 +58,7 @@ const getTicks = (a: AxisVariable) => {
   if (a === AxisVariable.PersonalUtility || a === AxisVariable.SocietalFairness) {
     return [0, 0.25, 0.5, 0.75, 1.0];
   }
-  return [0, 2.5, 5, 7.5, 10];
+  return [0, 2, 4, 6, 8, 10];
 };
 
 const getAxisLabel = (a: AxisVariable): string => {
