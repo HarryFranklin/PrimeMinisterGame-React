@@ -109,7 +109,10 @@ export function DistributionFloorDiagram() {
           faceCols={1}
           yAxisMax={40}
           theme="dark"
-          markers={[{ value: 2, label: 'Floor: 2', color: '#ef4444', dashed: true }]}
+          markers={[
+            { value: 2, label: 'Floor: 2', color: '#ef4444', dashed: true },
+            { value: 5, label: 'Mean: 5.0', color: '#fbbf24', dashed: true }
+          ]}
         />
       </ChartBox>
       <ChartBox title="Society B (High Floor)" desc="Mean: 5.0 | The most vulnerable score 4 out of 10.">
@@ -124,7 +127,10 @@ export function DistributionFloorDiagram() {
           faceCols={1}
           yAxisMax={40}
           theme="dark"
-          markers={[{ value: 4, label: 'Floor: 4', color: '#ef4444', dashed: true }]}
+          markers={[
+            { value: 4, label: 'Floor: 4', color: '#ef4444', dashed: true },
+            { value: 5, label: 'Mean: 5.0', color: '#fbbf24', dashed: true }
+          ]}
         />
       </ChartBox>
     </Container>
@@ -148,7 +154,7 @@ export function DistributionDispersionDiagram() {
 
   return (
     <Container>
-      <ChartBox title="Low Dispersion" desc="Mean: 5.0 | High equality, minimal spread.">
+            <ChartBox title="Low Dispersion" desc="Mean: 5.0 | Range: 3 to 7 (4 points) | High equality, minimal spread.">
         <D3Chart
           plotType="1D"
           chartData={[]}
@@ -163,11 +169,11 @@ export function DistributionDispersionDiagram() {
           markers={[
             { value: 3, label: 'Floor: 3', color: '#ef4444', dashed: true },
             { value: 7, label: 'Ceiling: 7', color: '#10b981', dashed: true },
-            { value: 5, label: 'Range: 3 to 7', color: '#fbbf24', dashed: true }
+            { value: 5, label: 'Mean: 5.0', color: '#fbbf24', dashed: true }
           ]}
         />
       </ChartBox>
-      <ChartBox title="High Dispersion" desc="Mean: 5.0 | Extreme inequality, maximum spread.">
+            <ChartBox title="High Dispersion" desc="Mean: 5.0 | Range: 0 to 10 (10 points) | Extreme inequality, maximum spread.">
         <D3Chart
           plotType="1D"
           chartData={[]}
@@ -182,7 +188,7 @@ export function DistributionDispersionDiagram() {
           markers={[
             { value: 0, label: 'Floor: 0', color: '#ef4444', dashed: true },
             { value: 10, label: 'Ceiling: 10', color: '#10b981', dashed: true },
-            { value: 5, label: 'Range: 0 to 10', color: '#fbbf24', dashed: true }
+            { value: 5, label: 'Mean: 5.0', color: '#fbbf24', dashed: true }
           ]}
         />
       </ChartBox>
