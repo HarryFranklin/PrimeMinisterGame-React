@@ -65,3 +65,26 @@ export function personalUtility(lifeSatisfaction: number): number {
 export function societalUtility(lifeSatisfaction: number): number {
   return lookupUtility(SOCIETAL_UTILITY_TABLE, lifeSatisfaction);
 }
+
+/** Societal Utility measured by asking directly (Layard & Oparina, 2026).
+ * Built from their mean step values (Appendix F, Table 11) for 2→3 … 9→10,
+ * added up and rescaled so 2 = 0 and 10 = 1. Means are used to match the
+ * gamble-based tables above, which are averages. Societal only: the direct
+ * method did not measure Personal Utility. */
+const DIRECT_STEP_VALUES = [100, 76, 74, 70, 65, 58, 51, 46];
+
+export const DIRECT_SOCIETAL_UTILITY_TABLE: Readonly<Record<number, number>> = (() => {
+  const total = DIRECT_STEP_VALUES.reduce((a, b) => a + b, 0);
+  const table: Record<number, number> = { 2: 0 };
+  let running = 0;
+  DIRECT_STEP_VALUES.forEach((v, i) => {
+    running += v;
+    table[3 + i] = running / total;
+  });
+  return table;
+})();
+
+/** Converts a raw 0-10 Life Satisfaction score into direct-asking Societal Utility (0-1). */
+export function directSocietalUtility(lifeSatisfaction: number): number {
+  return lookupUtility(DIRECT_SOCIETAL_UTILITY_TABLE, lifeSatisfaction);
+}
