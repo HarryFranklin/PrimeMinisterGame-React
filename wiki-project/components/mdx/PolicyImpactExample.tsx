@@ -8,7 +8,7 @@ interface Group {
   after: number;
 }
 
-const GROUPS: Group[] = [
+export const GROUPS: Group[] = [
   { name: 'Lower group', share: 0.10, before: 4, after: 3 },
   { name: 'Middle group', share: 0.45, before: 6, after: 7 },
   { name: 'Upper group', share: 0.45, before: 8, after: 9 },

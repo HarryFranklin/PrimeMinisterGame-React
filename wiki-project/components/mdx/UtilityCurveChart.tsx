@@ -161,7 +161,7 @@ export default function UtilityCurveChart({
       )}
 
       {/* Invisible hit areas so hovering or tapping the chart itself selects a zone */}
-      {zones.map((z) => (
+      {(onZoneEnter || onZoneClick) && zones.map((z) => (
         <rect
           key={`hit-${z.id}`}
           x={scaleX(z.from)} y={PAD.top} width={scaleX(z.to) - scaleX(z.from)} height={innerH}

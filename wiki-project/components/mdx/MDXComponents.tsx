@@ -18,6 +18,8 @@ import UtilityCurveDiagram from './UtilityCurveDiagram';
 import UtilityExplorer from './UtilityExplorer';
 import UtilityInterventionWidget from './UtilityInterventionWidget';
 
+import { MethodComparisonChart, MethodStepTable, MethodPolicyExample } from './MethodComparison';
+
 function isInternalLink(href: string) {
   return href.startsWith('/') || href.startsWith('#');
 }
@@ -102,5 +104,8 @@ export const mdxComponents: MDXComponents = {
   UtilityExplorer,
   UtilityInterventionWidget,
   SWFWeightingComparison,
-  BenthamiteMeanShift
+  BenthamiteMeanShift,
+  MethodComparisonChart,
+  MethodStepTable,
+  MethodPolicyExample,
 };

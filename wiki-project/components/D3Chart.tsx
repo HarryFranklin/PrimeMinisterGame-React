@@ -3,6 +3,8 @@ import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
 import { IMPACT_COLORS } from '../utils/uiHelpers';
 
+const ENABLE_TOOLTIPS = false; // Control group: no interaction. Set true to restore hover tooltips.
+
 export interface ChartMarker {
   value: number;
   label: string;
@@ -232,6 +234,7 @@ export default function D3Chart({
         .on('mouseleave', () => {
             tooltip.style('opacity', 0);
         });
+        if (!ENABLE_TOOLTIPS) cols.style('cursor', null).on('mouseenter', null).on('mouseleave', null);
 
       if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);

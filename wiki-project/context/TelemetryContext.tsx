@@ -1,7 +1,19 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ParticipantSession, getStoredSession, storeSession, registerParticipant } from '@/lib/telemetry';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import {
+  ParticipantSession,
+  getStoredSession,
+  storeSession,
+  resetPayload,
+  syncPayload,
+  syncIfNeeded,
+  syncIfDirty,
+  setVisible,
+  recordScroll,
+  noteNavigation,
+  HEARTBEAT_MS,
+} from '@/lib/telemetry';
 
 interface TelemetryContextType {
   session: ParticipantSession | null;
@@ -14,6 +26,8 @@ const TelemetryContext = createContext<TelemetryContextType | undefined>(undefin
 export function TelemetryProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<ParticipantSession | null>(null);
   const [isInitialised, setIsInitialised] = useState<boolean>(false);
+  const sessionRef = useRef<ParticipantSession | null>(null);
+  sessionRef.current = session;
 
   useEffect(() => {
     const existing = getStoredSession();
@@ -22,6 +36,59 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
       setIsInitialised(true);
     }
   }, []);
+
+  // Page-wide listeners, attached once a session exists. None of these write
+  // to the database except the hide/close and heartbeat syncs.
+  useEffect(() => {
+    if (!session) return;
+
+    // How the participant reached the next page: sidebar link, or a link in
+    // the page content (e.g. "Next: ..."). Capture phase, so this runs
+    // before Next.js handles the navigation.
+    const onClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement | null)?.closest('a');
+      if (!anchor?.getAttribute('href')?.startsWith('/wiki/')) return;
+      noteNavigation(anchor.closest('aside') ? 'sidebar' : 'content');
+    };
+
+    // Browser back/forward buttons.
+    const onPopState = () => noteNavigation('history');
+
+    const onVisibility = () => {
+      const hidden = document.hidden;
+      setVisible(!hidden);
+      if (hidden && sessionRef.current) syncIfNeeded(sessionRef.current, { beacon: true });
+    };
+
+    // Backup for browsers that close the tab without a visibility change.
+    const onPageHide = () => {
+      if (sessionRef.current) syncIfNeeded(sessionRef.current, { beacon: true });
+    };
+
+    const onScroll = () => {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      recordScroll(docHeight > 0 ? Math.min(100, (window.scrollY / docHeight) * 100) : 100);
+    };
+
+    const heartbeat = setInterval(() => {
+      if (sessionRef.current && !document.hidden) syncIfDirty(sessionRef.current);
+    }, HEARTBEAT_MS);
+
+    document.addEventListener('click', onClick, true);
+    window.addEventListener('popstate', onPopState);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('popstate', onPopState);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('scroll', onScroll);
+      clearInterval(heartbeat);
+    };
+  }, [session]);
 
   const initialiseSession = async (prolificId: string) => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -38,16 +105,13 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     };
 
     storeSession(newSession);
+    resetPayload();
     setSession(newSession);
     setIsInitialised(true);
 
-    // Fire-and-forget: this call still matters (it's the only write that
-    // captures a participant who enters their ID and bounces before ever
-    // opening a wiki page), but there's no reason to hold the setup modal
-    // open while it's in flight — every subsequent telemetry call upserts
-    // the participant row again anyway, so nothing downstream depends on
-    // this one finishing first.
-    registerParticipant(newSession);
+    // Creates the participant's row straight away, so someone who enters
+    // their ID and leaves before opening a page is still recorded.
+    syncPayload(newSession);
   };
 
   return (
@@ -61,10 +125,10 @@ export function useTelemetrySession() {
   const context = useContext(TelemetryContext);
   if (!context) {
     // Return a safe fallback during Next.js static build passes instead of crashing
-    return { 
-      session: null, 
-      isInitialised: false, 
-      initialiseSession: async () => {} 
+    return {
+      session: null,
+      isInitialised: false,
+      initialiseSession: async () => {},
     };
   }
   return context;

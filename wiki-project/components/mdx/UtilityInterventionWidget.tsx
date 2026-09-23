@@ -1,13 +1,10 @@
-'use client';
-
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import { personalUtility } from '../../lib/utility';
-import UtilityCurveChart from './UtilityCurveChart';
+import UtilityCurveChart, { CurveStep } from './UtilityCurveChart';
 
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
-const getContinuousDetails = (ls: number) => {
+const getDetails = (ls: number) => {
   if (ls <= 3) return { emoji: '😭', label: 'Massive Impact', desc: 'Heating their home, paying rent, or affording three meals a day.' };
   if (ls <= 4) return { emoji: '🙁', label: 'High Impact', desc: 'Paying off urgent debt or affording new clothes for their family.' };
   if (ls <= 6) return { emoji: '😐', label: 'Moderate Impact', desc: 'Going on a modest family holiday or eating out occasionally.' };
@@ -20,10 +17,9 @@ const getFaceColor = (ls: number) => {
   if (t < 0.5) {
     const f = t * 2;
     return `rgb(${Math.round(lerp(244, 234, f))}, ${Math.round(lerp(63, 179, f))}, ${Math.round(lerp(94, 8, f))})`;
-  } else {
-    const f = (t - 0.5) * 2;
-    return `rgb(${Math.round(lerp(234, 34, f))}, ${Math.round(lerp(179, 197, f))}, ${Math.round(lerp(8, 94, f))})`;
   }
+  const f = (t - 0.5) * 2;
+  return `rgb(${Math.round(lerp(234, 34, f))}, ${Math.round(lerp(179, 197, f))}, ${Math.round(lerp(8, 94, f))})`;
 };
 
 const getImpactColor = (ls: number) => {
@@ -31,88 +27,78 @@ const getImpactColor = (ls: number) => {
   return `rgb(${Math.round(lerp(236, 113, t))}, ${Math.round(lerp(72, 113, t))}, ${Math.round(lerp(153, 122, t))})`;
 };
 
+// Fixed starting points replace the old slider (control group: no interaction).
+const STARTS = [2, 4, 6, 8];
+const MAX_GAIN = personalUtility(3) - personalUtility(2);
+
 export default function UtilityInterventionWidget() {
-  const [lsValue, setLsValue] = useState<number>(2.0);
-  const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
-  const impactPercentage = useMemo(() => {
-    // Real marginal utility of a +1 LS boost at this point on the curve,
-    // normalised against the biggest possible +1 step in the table (2 -> 3)
-    // so the meter still reads 0-100%.
-    const marginalGain = personalUtility(lsValue + 1) - personalUtility(lsValue);
-    const maxMarginalGain = personalUtility(3) - personalUtility(2);
-    return Math.max(0, (marginalGain / maxMarginalGain) * 100);
-  }, [lsValue]);
-  const faceColor = getFaceColor(lsValue);
-  const impactColor = getImpactColor(lsValue);
-  const stepTo = Math.min(lsValue + 1, 10);
-  const gain = personalUtility(stepTo) - personalUtility(lsValue);
+  const rows = STARTS.map((ls) => {
+    const gain = personalUtility(ls + 1) - personalUtility(ls);
+    return {
+      ls,
+      gain,
+      pctOfMax: Math.max(0, (gain / MAX_GAIN) * 100),
+      details: getDetails(ls),
+      faceColor: getFaceColor(ls),
+      impactColor: getImpactColor(ls),
+    };
+  });
+
+  const steps: CurveStep[] = rows.map((r) => ({
+    from: r.ls,
+    to: r.ls + 1,
+    color: r.impactColor,
+    riseLabel: `+${r.gain.toFixed(2)}`,
+  }));
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-6 md:p-8 flex flex-col gap-8 my-8 text-zinc-200 font-sans">
-      <div className="flex flex-col md:flex-row items-center gap-8 w-full">
-        {/* Face Box */}
-        <div className="flex flex-col items-center gap-3 shrink-0">
-          <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Citizen Status</span>
-          <div
-            className="w-24 h-24 rounded-full flex items-center justify-center text-6xl shadow-inner border-4 transition-colors duration-75 bg-zinc-950"
-            style={{ borderColor: faceColor, backgroundColor: `${faceColor.replace('rgb', 'rgba').replace(')', ', 0.15)')}` }}
-          >
-            {details.emoji}
-          </div>
-          <span className="text-xl font-black text-white mt-1 tabular-nums text-center whitespace-nowrap min-w-[110px]">
-            LS: {lsValue.toFixed(1)}
-          </span>
-        </div>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl p-6 md:p-8 flex flex-col gap-6 my-8 text-zinc-200 font-sans">
+      <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Value of a +1 Boost, by Starting Point</span>
 
-        {/* Impact Meter */}
-        <div className="flex-1 w-full flex flex-col gap-4">
-          <div className="flex justify-between items-end">
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Value of a +1 Boost</span>
-            <span className="text-sm font-black uppercase tracking-widest transition-colors duration-75" style={{ color: impactColor }}>
-              {details.label}
-            </span>
+      <div className="flex flex-col gap-4">
+        {rows.map((r) => (
+          <div key={r.ls} className="flex flex-col md:flex-row md:items-center gap-4 border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+            <div className="flex items-center gap-3 shrink-0 md:w-40">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-3xl border-4"
+                style={{ borderColor: r.faceColor, backgroundColor: r.faceColor.replace('rgb', 'rgba').replace(')', ', 0.15)') }}
+              >
+                {r.details.emoji}
+              </div>
+              <span className="text-lg font-black text-white tabular-nums whitespace-nowrap">
+                {r.ls} → {r.ls + 1}
+              </span>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="flex justify-between items-end">
+                <span className="text-sm font-black uppercase tracking-widest" style={{ color: r.impactColor }}>
+                  {r.details.label}
+                </span>
+                <span className="text-sm font-bold tabular-nums text-zinc-300">+{r.gain.toFixed(2)} utility</span>
+              </div>
+              <div className="w-full h-4 bg-zinc-950 rounded-full overflow-hidden relative border border-zinc-800">
+                <div
+                  className="absolute top-0 left-0 bottom-0 rounded-full"
+                  style={{ width: `${r.pctOfMax}%`, backgroundColor: r.impactColor }}
+                />
+              </div>
+              <p className="text-sm text-zinc-400 leading-snug">
+                <span className="font-bold text-zinc-300">Meaning: </span>{r.details.desc}
+              </p>
+            </div>
           </div>
-          
-          <div className="w-full h-6 bg-zinc-950 rounded-full overflow-hidden shadow-inner relative border border-zinc-800">
-            <motion.div 
-              className="absolute top-0 left-0 bottom-0 rounded-full"
-              animate={{ width: `${impactPercentage}%`, backgroundColor: impactColor }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
-          </div>
-          
-          <div className="bg-zinc-950/50 border border-zinc-800 rounded-xl p-3 min-h-[4.5rem] flex flex-col justify-center">
-            <span className="font-bold text-zinc-300 text-sm mb-1">Meaning:</span>
-            <p className="text-sm text-zinc-400 leading-snug">{details.desc}</p>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Curve linked to the slider */}
-      <div className="w-full max-w-2xl mx-auto flex flex-col gap-2">
+      <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 pt-4 border-t border-zinc-800">
         <UtilityCurveChart
-          marker={lsValue}
-          markerColor={faceColor}
-          steps={[{ from: lsValue, to: stepTo, color: impactColor, riseLabel: `+${gain.toFixed(2)}` }]}
-          ariaLabel="The Personal Utility curve, with a marker at the citizen's Life Satisfaction and the +1 step highlighted"
+          steps={steps}
+          ariaLabel="The Personal Utility curve, with the +1 step highlighted from starting points of 2, 4, 6 and 8"
         />
         <p className="text-xs text-zinc-500 text-center leading-snug">
-          The same curve as the diagram above. The marker is where this citizen is now, and the highlighted step shows what a +1 boost adds from there.
+          The same curve as the diagram above. Each highlighted step shows what a +1 boost adds from that starting point.
         </p>
-      </div>
-
-      {/* Slider Control */}
-      <div className="w-full flex flex-col gap-3 pt-4 border-t border-zinc-800">
-        <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
-          <span>Struggling (2)</span>
-          <span>Thriving (9)</span>
-        </div>
-        <input 
-          type="range" min="2" max="9" step="0.1" aria-label="Starting Life Satisfaction"
-          value={lsValue}
-          onChange={(e) => setLsValue(parseFloat(e.target.value))}
-          className="w-full accent-pink-500 cursor-pointer h-3 bg-zinc-800 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500"
-        />
       </div>
     </div>
   );

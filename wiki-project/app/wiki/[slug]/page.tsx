@@ -52,7 +52,7 @@ export default async function WikiPage({ params }: PageProps) {
         href="/"
         className="inline-flex items-center gap-1.5 text-zinc-400 text-sm mb-8 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
       >
-        <ArrowLeft size={14} /> Back to index
+        <ArrowLeft size={14} /> Back to home
       </Link>
       <p className="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-2">
         {page.category}
