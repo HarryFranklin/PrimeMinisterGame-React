@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { useTelemetrySession } from '@/context/TelemetryContext';
 import { useCompletion } from '@/context/CompletionContext';
-import { markStudyComplete, trackCompletionEvent, CompletionEventType } from '@/lib/telemetry';
+import { recordModalShown, recordExtend, recordFinish, syncPayload, CompletionOutcome } from '@/lib/telemetry';
 import { getCompletionDecisionState, setCompletionDecisionState, CompletionDecisionState } from '@/lib/completion';
 import type { NavCategory } from '@/lib/wiki';
 
@@ -57,7 +57,7 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
     };
     setCompletionDecisionState(fresh);
     setState(fresh);
-    trackCompletionEvent(session, { event_type: 'modal_shown' });
+    recordModalShown();
   }, [ready, session]);
 
   // Tick every second while an extension is running, to drive the countdown
@@ -69,17 +69,14 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
     return () => clearInterval(id);
   }, [state?.decision]);
 
-  const finish = async (eventType: CompletionEventType) => {
+  const finish = async (outcome: CompletionOutcome) => {
     if (!session || finishingRef.current || !state) return;
     finishingRef.current = true;
     const updated: CompletionDecisionState = { ...state, decision: 'finished' };
     setCompletionDecisionState(updated);
     setState(updated);
-    trackCompletionEvent(session, {
-      event_type: eventType,
-      ms_since_modal_shown: Date.now() - state.modalShownAt,
-    });
-    await markStudyComplete(session);
+    recordFinish(outcome);
+    await syncPayload(session, { finalOutcome: outcome})
     window.location.href = PROLIFIC_COMPLETION_URL;
   };
 
@@ -89,11 +86,8 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
     const updated: CompletionDecisionState = { ...state, decision: 'extended', extendDeadline: deadline };
     setCompletionDecisionState(updated);
     setState(updated);
-    trackCompletionEvent(session, {
-      event_type: 'chose_extend',
-      ms_since_modal_shown: Date.now() - state.modalShownAt,
-      extend_deadline: deadline,
-    });
+    recordExtend(deadline);
+    syncPayload(session);
   };
 
   // Auto-finish the instant the extension deadline passes — no click needed.

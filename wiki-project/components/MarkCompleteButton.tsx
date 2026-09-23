@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 import { useTelemetrySession } from '@/context/TelemetryContext';
 import { useCompletion } from '@/context/CompletionContext';
-import { markPageComplete } from '@/lib/telemetry';
+import { recordPageComplete } from '@/lib/telemetry';
 
 export default function MarkCompleteButton({ slug }: { slug: string }) {
   const telemetry = useTelemetrySession();
@@ -14,7 +14,7 @@ export default function MarkCompleteButton({ slug }: { slug: string }) {
   const handleClick = () => {
     if (isDone || !session) return;
     completePage(slug);
-    markPageComplete(session, slug);
+    recordPageComplete(slug);
   };
 
   return (

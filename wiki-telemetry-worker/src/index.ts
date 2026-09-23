@@ -1,17 +1,10 @@
 // Wiki telemetry worker.
 //
-// Mirrors the game's telemetry-worker: a small standalone Worker with a D1
-// binding, hit directly from the client via fetch()/sendBeacon(). It writes
-// into the SAME participants table the game uses (tagged condition='wiki'),
-// plus two wiki-only tables: wiki_page_views and wiki_events.
+// One route. The wiki client sends its whole session payload; this worker
+// upserts it into the participant's single row in the shared participants
+// table (condition = 'wiki'). One sync = one row written.
 //
-// Routes:
-//   POST /participant           - upsert participant identity (idempotent)
-//   POST /wiki-page-view        - upsert a page view by view_id (start, then end)
-//   POST /wiki-event            - insert a generic interaction event
-//   POST /wiki-page-complete    - upsert an explicit per-page "mark complete"
-//   POST /wiki-completion-event - log a "you're done reading" modal event
-//   POST /wiki-study-complete   - mark the participant as fully done
+//   POST /wiki-sync   body: identity fields + { payload, completed?, final_outcome? }
 
 export interface Env {
   DB: D1Database;
@@ -23,6 +16,8 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+const MAX_BODY_BYTES = 256 * 1024;
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -30,68 +25,47 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-interface ParticipantBody {
+interface SyncBody {
   user_id: string;
-  session_id?: string;
   prolific_pid?: string | null;
-  study_id?: string | null;
+  session_id?: string | null;
   prolific_session_id?: string | null;
+  study_id?: string | null;
   app_version?: string | null;
+  payload: { seq: number } & Record<string, unknown>;
   completed?: boolean;
   final_outcome?: string | null;
-  last_event?: string | null;
-  last_progress_at?: number | null;
 }
 
-interface PageCompletionBody {
-  page_slug: string;
-  completed_at?: number;
-}
-
-/** Finds-or-creates the participant row for this browser/Prolific ID and
- * returns its numeric id. Called on every write so "last_seen_at" and
- * "event_count" stay current without a separate heartbeat. Rows are
- * namespaced with a "wiki:" prefix on participant_key so they can never
- * collide with the game's own key scheme in the same shared table. */
-async function upsertParticipant(db: D1Database, body: ParticipantBody): Promise<number> {
-  const participantKey = `wiki:${body.prolific_pid ?? body.user_id}`;
+/** Inserts the participant on their first sync, and on every later sync
+ * replaces wiki_payload — unless the stored copy is newer (higher seq),
+ * which can happen if two requests arrive out of order.
+ *
+ * Row keys are namespaced "wiki:" so they can never collide with the
+ * game's own participant_key scheme in the same table. Once a participant
+ * is marked completed, it stays completed and keeps its first final_outcome. */
+async function syncParticipant(db: D1Database, body: SyncBody): Promise<void> {
+  const participantKey = `wiki:${body.prolific_pid || body.user_id}`;
   const now = Date.now();
 
-  const existing = await db
-    .prepare("SELECT id FROM participants WHERE participant_key = ?")
-    .bind(participantKey)
-    .first<{ id: number }>();
-
-  if (existing) {
-    await db
-      .prepare(
-        `UPDATE participants SET
-           last_seen_at = ?,
-           event_count = event_count + 1,
-           completed = COALESCE(?, completed),
-           final_outcome = COALESCE(?, final_outcome),
-           last_event = COALESCE(?, last_event),
-           last_progress_at = COALESCE(?, last_progress_at)
-         WHERE id = ?`
-      )
-      .bind(
-        now,
-        body.completed === undefined ? null : body.completed ? 1 : 0,
-        body.final_outcome ?? null,
-        body.last_event ?? null,
-        body.last_progress_at ?? null,
-        existing.id
-      )
-      .run();
-    return existing.id;
-  }
-
-  const result = await db
+  await db
     .prepare(
       `INSERT INTO participants
          (participant_key, user_id, session_id, prolific_pid, study_id, prolific_session_id,
-          app_version, first_seen_at, last_seen_at, completed, event_count, condition)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'wiki')`
+          app_version, first_seen_at, last_seen_at, completed, final_outcome, event_count,
+          condition, wiki_payload)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'wiki', ?)
+       ON CONFLICT(participant_key) DO UPDATE SET
+         last_seen_at  = excluded.last_seen_at,
+         event_count   = participants.event_count + 1,
+         completed     = MAX(participants.completed, excluded.completed),
+         final_outcome = COALESCE(participants.final_outcome, excluded.final_outcome),
+         wiki_payload  = CASE
+           WHEN participants.wiki_payload IS NULL
+             OR json_extract(excluded.wiki_payload, '$.seq') >= json_extract(participants.wiki_payload, '$.seq')
+           THEN excluded.wiki_payload
+           ELSE participants.wiki_payload
+         END`
     )
     .bind(
       participantKey,
@@ -103,146 +77,9 @@ async function upsertParticipant(db: D1Database, body: ParticipantBody): Promise
       body.app_version ?? null,
       now,
       now,
-      body.completed ? 1 : 0
-    )
-    .run();
-
-  return result.meta.last_row_id as number;
-}
-
-async function upsertPageCompletion(db: D1Database, participantId: number, body: PageCompletionBody): Promise<void> {
-  const now = Date.now();
-  await db
-    .prepare(
-      `INSERT INTO wiki_page_completions (participant_id, page_slug, completed_at, received_at)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(participant_id, page_slug) DO UPDATE SET
-         completed_at = excluded.completed_at,
-         received_at = excluded.received_at`
-    )
-    .bind(participantId, body.page_slug, body.completed_at ?? now, now)
-    .run();
-}
-
-interface PageViewBody {
-  view_id: string;
-  page_slug: string;
-  page_title?: string;
-  view_index?: number;
-  entered_at?: number;
-  word_count?: number;
-  expected_reading_seconds?: number;
-  left_at?: number;
-  duration_ms?: number;
-  active_duration_ms?: number;
-  max_scroll_pct?: number;
-  met_minimum_reading_time?: boolean;
-}
-
-/** The client calls this endpoint twice per visit: once on arrival (has
- * page_slug/view_index/word_count, no left_at yet) and once on
- * leave/unmount (has left_at/duration_ms/max_scroll_pct). Both calls carry
- * the same view_id, so the second call is an UPDATE, not a second row. */
-async function upsertPageView(db: D1Database, participantId: number, body: PageViewBody): Promise<void> {
-  const now = Date.now();
-  const existing = await db
-    .prepare("SELECT id FROM wiki_page_views WHERE view_id = ?")
-    .bind(body.view_id)
-    .first<{ id: number }>();
-
-  if (existing) {
-    await db
-      .prepare(
-        `UPDATE wiki_page_views SET
-           left_at = COALESCE(?, left_at),
-           duration_ms = COALESCE(?, duration_ms),
-           active_duration_ms = COALESCE(?, active_duration_ms),
-           max_scroll_pct = COALESCE(?, max_scroll_pct),
-           met_minimum_reading_time = COALESCE(?, met_minimum_reading_time),
-           received_at = ?
-         WHERE id = ?`
-      )
-      .bind(
-        body.left_at ?? null,
-        body.duration_ms ?? null,
-        body.active_duration_ms ?? null,
-        body.max_scroll_pct ?? null,
-        body.met_minimum_reading_time === undefined ? null : body.met_minimum_reading_time ? 1 : 0,
-        now,
-        existing.id
-      )
-      .run();
-    return;
-  }
-
-  await db
-    .prepare(
-      `INSERT INTO wiki_page_views
-         (participant_id, view_id, page_slug, page_title, view_index, entered_at,
-          word_count, expected_reading_seconds, received_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      participantId,
-      body.view_id,
-      body.page_slug,
-      body.page_title ?? null,
-      body.view_index ?? 0,
-      body.entered_at ?? now,
-      body.word_count ?? null,
-      body.expected_reading_seconds ?? null,
-      now
-    )
-    .run();
-}
-
-interface CompletionEventBody {
-  event_type: string;
-  ms_since_modal_shown?: number;
-  extend_deadline?: number;
-  occurred_at?: number;
-}
-
-async function insertCompletionEvent(db: D1Database, participantId: number, body: CompletionEventBody): Promise<void> {
-  const now = Date.now();
-  await db
-    .prepare(
-      `INSERT INTO wiki_completion_events
-         (participant_id, event_type, ms_since_modal_shown, extend_deadline, occurred_at, received_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      participantId,
-      body.event_type,
-      body.ms_since_modal_shown ?? null,
-      body.extend_deadline ?? null,
-      body.occurred_at ?? now,
-      now
-    )
-    .run();
-}
-
-interface EventBody {
-  page_slug?: string;
-  event_type: string;
-  event_data?: unknown;
-  occurred_at?: number;
-}
-
-async function insertEvent(db: D1Database, participantId: number, body: EventBody): Promise<void> {
-  const now = Date.now();
-  await db
-    .prepare(
-      `INSERT INTO wiki_events (participant_id, page_slug, event_type, event_data, occurred_at, received_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      participantId,
-      body.page_slug ?? null,
-      body.event_type,
-      body.event_data ? JSON.stringify(body.event_data) : null,
-      body.occurred_at ?? now,
-      now
+      body.completed ? 1 : 0,
+      body.final_outcome ?? null,
+      JSON.stringify(body.payload)
     )
     .run();
 }
@@ -257,56 +94,35 @@ export default {
     }
 
     const { pathname } = new URL(request.url);
+    if (pathname !== "/wiki-sync") {
+      return json({ error: "not found" }, 404);
+    }
 
-    let body: Record<string, unknown>;
+    // Read as text: the client sends text/plain (sendBeacon + no preflight).
+    const text = await request.text();
+    if (text.length > MAX_BODY_BYTES) {
+      return json({ error: "payload too large" }, 413);
+    }
+
+    let body: SyncBody;
     try {
-      body = await request.json();
+      body = JSON.parse(text);
     } catch {
       return json({ error: "invalid json" }, 400);
     }
 
+    if (
+      typeof body?.user_id !== "string" ||
+      typeof body.payload !== "object" ||
+      body.payload === null ||
+      typeof body.payload.seq !== "number"
+    ) {
+      return json({ error: "missing user_id or payload" }, 400);
+    }
+
     try {
-      if (pathname === "/participant") {
-        const id = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
-        return json({ ok: true, participant_id: id });
-      }
-
-      if (pathname === "/wiki-page-view") {
-        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
-        await upsertPageView(env.DB, participantId, body as unknown as PageViewBody);
-        return json({ ok: true });
-      }
-
-      if (pathname === "/wiki-event") {
-        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
-        await insertEvent(env.DB, participantId, body as unknown as EventBody);
-        return json({ ok: true });
-      }
-
-      if (pathname === "/wiki-page-complete") {
-        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
-        await upsertPageCompletion(env.DB, participantId, body as unknown as PageCompletionBody);
-        return json({ ok: true });
-      }
-
-      if (pathname === "/wiki-completion-event") {
-        const participantId = await upsertParticipant(env.DB, body as unknown as ParticipantBody);
-        await insertCompletionEvent(env.DB, participantId, body as unknown as CompletionEventBody);
-        return json({ ok: true });
-      }
-
-      if (pathname === "/wiki-study-complete") {
-        const participantId = await upsertParticipant(env.DB, {
-          ...(body as unknown as ParticipantBody),
-          completed: true,
-          final_outcome: "wiki_complete",
-          last_event: "complete_reading",
-          last_progress_at: Date.now(),
-        });
-        return json({ ok: true, participant_id: participantId });
-      }
-
-      return json({ error: "not found" }, 404);
+      await syncParticipant(env.DB, body);
+      return json({ ok: true });
     } catch (err) {
       return json({ error: "server error", detail: String(err) }, 500);
     }
