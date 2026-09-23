@@ -10,18 +10,26 @@ export interface Env {
   DB: D1Database;
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+/** sendBeacon always sends credentials, and browsers reject a
+ * credentialed response whose Allow-Origin is "*" (DevTools then shows the
+ * beacon in red as a CORS error). Echoing the caller's origin avoids that.
+ * The worker uses no cookies or auth, so this exposes nothing. */
+function corsHeaders(request: Request): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": request.headers.get("Origin") ?? "*",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
 
 const MAX_BODY_BYTES = 256 * 1024;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", ...CORS_HEADERS },
+    headers: { "content-type": "application/json" },
   });
 }
 
@@ -84,10 +92,9 @@ async function syncParticipant(db: D1Database, body: SyncBody): Promise<void> {
     .run();
 }
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+async function handle(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
+      return new Response(null, { status: 204 });
     }
     if (request.method !== "POST") {
       return json({ error: "method not allowed" }, 405);
@@ -126,5 +133,13 @@ export default {
     } catch (err) {
       return json({ error: "server error", detail: String(err) }, 500);
     }
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const response = await handle(request, env);
+    const headers = new Headers(response.headers);
+    for (const [k, v] of Object.entries(corsHeaders(request))) headers.set(k, v);
+    return new Response(response.body, { status: response.status, headers });
   },
 } satisfies ExportedHandler<Env>;
