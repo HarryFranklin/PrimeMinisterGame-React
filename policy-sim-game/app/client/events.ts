@@ -501,6 +501,14 @@ export type TelemetryEvent =
       payload: { best_metric: string; best_society: string };
     }
   | {
+      event: "final_debrief_lens_changed";
+      payload: { lens: string };
+    }
+  | {
+      event: "final_debrief_definition_toggled";
+      payload: { cycle: string; open: boolean };
+    }
+  | {
       event: "final_debrief_celebrate_clicked";
       payload: {};
     }

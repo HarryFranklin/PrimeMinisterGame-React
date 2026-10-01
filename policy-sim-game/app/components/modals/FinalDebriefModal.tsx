@@ -1,8 +1,11 @@
-  import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AxisVariable, ElectionCycle, Respondent } from '../../utils/types';
 import { CYCLE_COLORS } from '../../utils/uiHelpers';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
+import { getPMProfile } from '../../utils/pmProfiles';
+import { MetricsEngine } from '../../utils/MetricsEngine';
+import { loadPopulation } from '../../utils/dataLoader';
 import D3Chart from '../D3Chart';
 import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
@@ -55,309 +58,263 @@ const OmniConfetti = ({ triggerKey }: { triggerKey: number }) => {
   );
 };
 
-// Custom Dropdown Component
-interface SelectOption {
-  value: string;
-  label: string;
-}
+// ---------------------------------------------------------------------------
+// Where "Finish" sends the player. Paste the Prolific completion link or the
+// post-test questionnaire link here. Leave empty to show TEXT.finishedNoLink.
+// ---------------------------------------------------------------------------
+const STUDY_COMPLETION_URL = 'https://www.prolific.com/e';
 
-const CustomSelect = ({ 
-  value, 
-  onChange, 
-  options, 
-  disabled, 
-  placeholder 
-}: { 
-  value: string; 
-  onChange: (v: string) => void; 
-  options: SelectOption[]; 
-  disabled: boolean; 
-  placeholder: string;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const selectedOption = options.find(o => o.value === value);
-
-  return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between bg-zinc-50 border ${
-          isOpen ? 'border-pink-500 ring-1 ring-pink-500' : 'border-zinc-300'
-        } text-zinc-900 text-sm rounded-xl p-3.5 font-medium transition-all ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-zinc-400'
-        }`}
-      >
-        <span className={`block truncate ${!selectedOption ? 'text-zinc-500 font-normal' : 'text-zinc-900'}`}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <span className="text-zinc-400 ml-3 shrink-0">
-          <svg className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180 text-pink-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </span>
-      </button>
-      
-      <AnimatePresence>
-        {isOpen && !disabled && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-[100] w-full bottom-[calc(100%+8px)] bg-white border border-zinc-200 shadow-2xl rounded-xl overflow-hidden origin-bottom"
-          >
-            <ul className="max-h-64 overflow-y-auto py-1.5 custom-scrollbar">
-              {options.map((opt) => (
-                <li
-                  key={opt.value}
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`px-4 py-3 text-sm font-medium cursor-pointer transition-colors ${
-                    value === opt.value 
-                      ? 'bg-pink-50 text-pink-700' 
-                      : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900'
-                  }`}
-                >
-                  {opt.label}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+const TEXT = {
+  header: 'Final Debrief: Your Four Terms',
+  dpmTitle: 'Four terms, four ideas of a good society',
+  dpmBody:
+    'You have governed under four different ideas of what makes a society succeed. Every term started from the same society. Here is what each one left behind, and how it was judged.',
+  lensLabel: 'Score every society on:',
+  ownLens: 'Each term’s own measure',
+  lensHint: 'Switch the measure to see how the same four societies are judged by a different idea of success.',
+  term: (n: number) => `Term ${n}`,
+  start: 'Start',
+  end: 'End',
+  target: 'Target',
+  approval: 'Approval',
+  reElected: 'Re-elected',
+  notReElected: 'Not re-elected',
+  highest: 'Highest of the four',
+  showMeasured: 'What this measured',
+  hideMeasured: 'Hide',
+  principle: 'Governing principle',
+  finish: 'Finish',
+  finishing: 'Opening the next part of the study…',
+  finishedTitle: 'Thank you for playing',
+  finishedNoLink: 'You have finished the game. Please return to the study to continue.',
+  celebrate: 'Celebrate',
 };
 
+const histogram = (pop: Respondent[]) =>
+  Array.from({ length: 11 }, (_, i) => ({ name: i, count: pop.filter((r) => Math.round(r.currentLS) === i).length }));
+
+const fmt = (n: number) => n.toFixed(2);
+const fmtPct = (n: number) => (n.toFixed(1) === '100.0' ? '100' : n.toFixed(1));
+
 export default function FinalDebriefModal() {
-  const { initialPopulation, completedRuns } = useGame();
-  
+  const { completedRuns } = useGame();
   const [confettiKey, setConfettiKey] = useState(0);
-  const [showReplay, setShowReplay] = useState(false);
-  
-  // Questionnaire State
-  const [bestMetric, setBestMetric] = useState<string>("");
-  const [bestSociety, setBestSociety] = useState<string>("");
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    setShowReplay(false);
-    const timer = setTimeout(() => setShowReplay(true), 5000); 
-    return () => clearTimeout(timer);
-  }, [confettiKey]);
-
+  const [lens, setLens] = useState<ElectionCycle | null>(null);
+  const [openDefs, setOpenDefs] = useState<Record<number, boolean>>({});
+  const [finished, setFinished] = useState(false);
   const dwell = useDwellTimer();
 
   useEffect(() => {
     track('final_debrief_opened', {});
     dwell.start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const generateHistogramData = (targetPopulation: Respondent[]) => {
-    if (!targetPopulation || targetPopulation.length === 0) return [];
-    return Array.from({ length: 11 }, (_, i) => {
-      const peopleInBar = targetPopulation.filter(r => Math.round(r.currentLS) === i);
-      return {
-        name: i,
-        count: peopleInBar.length
-      };
-    });
-  };
+  // Every term starts from the same baseline society.
+  const baseline = useMemo(() => loadPopulation(), []);
+  const baselineHist = useMemo(() => histogram(baseline), [baseline]);
+  const runs = useMemo(() => [...completedRuns].sort((a, b) => a.cycle - b.cycle), [completedRuns]);
 
-  const baselineHistogram = useMemo(() => generateHistogramData(initialPopulation), [initialPopulation]);
-
-  // Ensure scales are identical across all 5 charts
-  const debriefYAxisMax = useMemo(() => {
-    let max = Math.max(...baselineHistogram.map(d => d.count), 0);
-    completedRuns.forEach(run => {
-      const hist = generateHistogramData(run.finalPopulation);
-      const localMax = Math.max(...hist.map(d => d.count), 0);
-      if (localMax > max) max = localMax;
-    });
+  // Same y-axis on every chart so the societies can be compared by eye.
+  const yAxisMax = useMemo(() => {
+    let max = Math.max(...baselineHist.map((d) => d.count), 0);
+    runs.forEach((r) => { max = Math.max(max, ...histogram(r.finalPopulation).map((d) => d.count)); });
     return Math.max(100, Math.ceil(max / 20) * 20);
-  }, [baselineHistogram, completedRuns]);
+  }, [baselineHist, runs]);
 
-  const sortedRuns = useMemo(() => {
-    return [...completedRuns].sort((a, b) => a.cycle - b.cycle);
-  }, [completedRuns]);
+  // Scores under the selected lens, and which society comes out highest.
+  const lensScores = useMemo(() => {
+    if (lens === null) return null;
+    const scores = runs.map((r) => MetricsEngine.getMetricScore(r.finalPopulation, lens));
+    const best = Math.max(...scores);
+    return {
+      start: MetricsEngine.getMetricScore(baseline, lens),
+      scores,
+      isBest: scores.map((s) => fmt(s) === fmt(best)),
+    };
+  }, [lens, runs, baseline]);
 
-  const handleSubmit = () => {
-    if (!bestMetric || !bestSociety) return;
-    track('final_debrief_closed', { dwell_ms: dwell.stop() });
-  track("final_debrief_submitted", { best_metric: bestMetric, best_society: bestSociety });
-    setSubmitted(true);
+  const handleLens = (next: ElectionCycle | null) => {
+    setLens(next);
+    track('final_debrief_lens_changed', { lens: next === null ? 'own' : ElectionCycle[next] });
   };
 
-  const q1Options = [
-    { value: "Benthamite", label: "National Average (Benthamite)" },
-    { value: "Rawlsian", label: "Minimum Baseline (Rawlsian)" },
-    { value: "SocietalUtility", label: "National Fairness Index (Societal Utility)" },
-    { value: "PersonalUtility", label: "Average Satisfaction (Personal Utility)" },
-    { value: "Other", label: "None / A combination / Other" }
-  ];
+  const toggleDef = (cycle: ElectionCycle) => {
+    const open = !openDefs[cycle];
+    setOpenDefs((prev) => ({ ...prev, [cycle]: open }));
+    track('final_debrief_definition_toggled', { cycle: ElectionCycle[cycle], open });
+  };
 
-  const q2Options = [
-    { value: "Benthamite", label: "Society 1 (Benthamite Outcome)" },
-    { value: "Rawlsian", label: "Society 2 (Rawlsian Outcome)" },
-    { value: "SocietalUtility", label: "Society 3 (Societal Utility Outcome)" },
-    { value: "PersonalUtility", label: "Society 4 (Personal Utility Outcome)" }
-  ];
+  const handleFinish = () => {
+    if (finished) return;
+    // This event is what marks the participant as completed on the server.
+    track('final_debrief_closed', { dwell_ms: dwell.stop() });
+    setFinished(true);
+    if (STUDY_COMPLETION_URL) {
+      // Short pause so the completion ping is sent before the page changes.
+      setTimeout(() => { window.location.href = STUDY_COMPLETION_URL; }, 1500);
+    }
+  };
+
+  const lensRule = lens !== null ? FRAMEWORK_RULES[lens] : null;
 
   return (
-    <ModalContent maxWidth="max-w-5xl">
+    <ModalContent maxWidth="max-w-6xl">
       <OmniConfetti triggerKey={confettiKey} />
-      <ModalHeader title="Final Debrief: Your Verdict" />
-      
-      <DPMMessage title="Simulation Concluded" kicker="Study Concluded">
-        "You have now played as four different Prime Ministers, successfully navigating four distinct mathematical frameworks for measuring societal success. Below is the starting society you inherited, followed by the four different societies you created. It is time for you to decide which approach is best."
-      </DPMMessage>
-      
-      {/* Baseline Society */}
-      <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 flex flex-col shrink-0 w-full md:w-1/2 mx-auto">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Starting Society (Baseline)</h3>
-        <div className="h-[200px] min-h-[200px]">
-          <D3Chart 
-            plotType="1D"
-            chartData={[]}
-            histogramData={baselineHistogram}
-            xAxisType={AxisVariable.LifeSatisfaction}
-            yAxisType={AxisVariable.LifeSatisfaction}
-            color="#d4d4d8"
-            visualStyle="solid"
-            yAxisMax={debriefYAxisMax}
-          />
+      <ModalHeader title={TEXT.header} />
+      <DPMMessage title={TEXT.dpmTitle}>{TEXT.dpmBody}</DPMMessage>
+
+      {/* Lens switch */}
+      <div className="flex flex-col gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-bold text-zinc-700 mr-1">{TEXT.lensLabel}</span>
+          <button
+            type="button"
+            onClick={() => handleLens(null)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+              lens === null ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+            }`}
+          >
+            {TEXT.ownLens}
+          </button>
+          {runs.map((r) => {
+            const rule = FRAMEWORK_RULES[r.cycle];
+            const on = lens === r.cycle;
+            return (
+              <button
+                key={r.cycle}
+                type="button"
+                onClick={() => handleLens(r.cycle)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                  on ? 'text-white' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+                }`}
+                style={on ? { backgroundColor: rule.graphColor, borderColor: rule.graphColor } : undefined}
+              >
+                {!on && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: rule.graphColor }} />}
+                {rule.targetMetricName}
+              </button>
+            );
+          })}
         </div>
+        <p className="text-xs text-zinc-500">{TEXT.lensHint}</p>
       </div>
 
-      {/* The 4 Outcomes (Now forced to a 2x2 grid on desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-        {sortedRuns.map((run, index) => {
+      {/* One card per term */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
+        {runs.map((run, i) => {
+          const profile = getPMProfile(run.cycle);
           const rule = FRAMEWORK_RULES[run.cycle];
-          const hist = generateHistogramData(run.finalPopulation);
-          
+          const won = run.approvalRating >= 51;
+          const startOwn = MetricsEngine.getMetricScore(baseline, run.cycle);
+          const shownRule = lensRule ?? rule;
+          const shownStart = lensScores ? lensScores.start : startOwn;
+          const shownEnd = lensScores ? lensScores.scores[i] : run.finalScore;
+          const defOpen = !!openDefs[run.cycle];
           return (
-            <div key={run.cycle} className="bg-white rounded-2xl border border-zinc-200 p-4 flex flex-col shadow-sm">
-              <h4 className="text-sm font-black uppercase tracking-widest text-zinc-800 text-center">{index + 1}. {rule.frameworkTitle}</h4>
-              <span className="text-[12px] font-bold text-center block mb-3" style={{ color: rule.graphColor }}>
-                {rule.targetMetricName}
-              </span>
-              <div className="h-[200px] min-h-[200px] mb-3">
-                <D3Chart 
-                  plotType="1D"
-                  chartData={[]}
-                  histogramData={hist}
-                  xAxisType={AxisVariable.LifeSatisfaction}
-                  yAxisType={AxisVariable.LifeSatisfaction}
-                  color={rule.graphColor}
-                  visualStyle="solid"
-                  yAxisMax={debriefYAxisMax}
-                />
+            <div key={run.cycle} className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-4 flex flex-col gap-3">
+              {/* Who */}
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl shrink-0"
+                  style={{ backgroundColor: `${profile.color}22` }}>{profile.emoji}</div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-bold text-zinc-400">{TEXT.term(i + 1)}</span>
+                  <h3 className="font-black text-zinc-900 leading-tight truncate">{profile.name}</h3>
+                  <span className={`text-xs font-bold ${profile.colorClass}`}>{profile.philosophy}</span>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${won ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  {won ? TEXT.reElected : TEXT.notReElected}
+                </span>
               </div>
-              <div className="mt-auto bg-zinc-50 border border-zinc-100 p-2 rounded-lg text-center flex justify-between items-center">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Final Score</span>
-                <strong className="text-sm font-black text-zinc-900">{run.finalScore.toFixed(2)}</strong>
+
+              {/* Before and after */}
+              <div className="grid grid-cols-2 gap-2">
+                {[{ label: TEXT.start, hist: baselineHist, color: '#a1a1aa' },
+                  { label: TEXT.end, hist: histogram(run.finalPopulation), color: rule.graphColor }].map((c) => (
+                  <div key={c.label} className="bg-zinc-50 rounded-lg border border-zinc-200 p-1.5 pt-5 relative h-[150px]">
+                    <span className="absolute top-1 left-2 text-[11px] font-bold text-zinc-500 z-10">{c.label}</span>
+                    <D3Chart plotType="1D" chartData={[]} histogramData={c.hist}
+                      xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction}
+                      color={c.color} visualStyle="solid" yAxisMax={yAxisMax} />
+                  </div>
+                ))}
               </div>
+
+              {/* Score */}
+              <div className="rounded-lg border p-3 flex flex-wrap items-center gap-x-5 gap-y-1"
+                style={{ borderColor: `${shownRule.graphColor}55`, backgroundColor: `${shownRule.graphColor}0d` }}>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold" style={{ color: shownRule.graphColor }}>
+                    {shownRule.targetMetricName} ({shownRule.targetMetricAbbreviation})
+                  </span>
+                  <span className="text-lg font-black text-zinc-900 tabular-nums">
+                    {fmt(shownStart)} <span className="text-zinc-400 font-bold">→</span> {fmt(shownEnd)}
+                  </span>
+                </div>
+                {lensScores ? (
+                  lensScores.isBest[i] && (
+                    <span className="text-xs font-bold px-2 py-1 rounded-full text-white" style={{ backgroundColor: shownRule.graphColor }}>
+                      {TEXT.highest}
+                    </span>
+                  )
+                ) : (
+                  <>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-zinc-400">{TEXT.target}</span>
+                      <span className="text-sm font-black text-zinc-700 tabular-nums">{fmt(run.targetScore)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-zinc-400">{TEXT.approval}</span>
+                      <span className={`text-sm font-black tabular-nums ${won ? 'text-emerald-600' : 'text-rose-600'}`}>{fmtPct(run.approvalRating)}%</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Reminder of what this term measured */}
+              <button type="button" onClick={() => toggleDef(run.cycle)}
+                className="self-start text-xs font-bold text-zinc-500 hover:text-zinc-800 underline underline-offset-2 cursor-pointer">
+                {defOpen ? TEXT.hideMeasured : TEXT.showMeasured}
+              </button>
+              <AnimatePresence>
+                {defOpen && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden">
+                    <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 flex flex-col gap-2 text-sm text-zinc-700 leading-relaxed">
+                      <p><strong className="text-zinc-900">{rule.targetMetricName}:</strong> {rule.targetMetricDescription}</p>
+                      <p><strong className="text-zinc-900">{TEXT.principle}:</strong> <span className="italic">“{profile.governance}”</span></p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}
       </div>
 
-      {/* Questionnaire */}
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-lg p-5 lg:p-6 shrink-0 mt-2 relative">
-        <h3 className="text-lg font-black text-zinc-900 tracking-tight mb-5 border-b border-zinc-100 pb-3">Final Evaluation</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-bold text-zinc-800 leading-relaxed">
-              1. Which metric of success do you believe is the most appropriate guide for real-world policymaking?
-            </label>
-            <CustomSelect 
-              value={bestMetric}
-              onChange={setBestMetric}
-              options={q1Options}
-              disabled={submitted}
-              placeholder="Select an option..."
-            />
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-bold text-zinc-800 leading-relaxed">
-              2. Looking purely at the distributions above, which resulting society would you most want to live in?
-            </label>
-            <CustomSelect 
-              value={bestSociety}
-              onChange={setBestSociety}
-              options={q2Options}
-              disabled={submitted}
-              placeholder="Select an option..."
-            />
-          </div>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {!submitted ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-8 flex justify-end">
-              <button 
-                onClick={handleSubmit}
-                disabled={!bestMetric || !bestSociety}
-                className="px-8 py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Submit Verdict
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 p-5 bg-zinc-900 rounded-xl flex items-center justify-between text-white shadow-xl">
-              <div>
-                <h3 className="text-base font-bold mb-1 text-emerald-400 flex items-center gap-2">
-                  <span className="text-lg">✓</span> Verdict Recorded
-                </h3>
-                <p className="text-zinc-400 text-xs">
-                  Your decisions and policy pathways have been logged. Please leave this screen open and notify the researcher.
-                </p>
-              </div>
-              <div className="flex gap-4 items-center">
-                <AnimatePresence>
-                  {showReplay && (
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      onClick={() => {
-                        track('final_debrief_celebrate_clicked', {});
-                        setConfettiKey(k => k + 1);
-                      }}
-                      className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
-                    >
-                      <span className="text-base">🎉</span> Celebrate
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-                <button className="px-6 py-2.5 bg-white text-zinc-900 font-bold rounded-xl transition-all opacity-50 cursor-not-allowed text-xs" disabled>
-                  Awaiting Researcher
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
+      {/* Finish */}
+      <AnimatePresence mode="wait">
+        {!finished ? (
+          <motion.div key="finish" exit={{ opacity: 0 }} className="flex justify-end shrink-0">
+            <button type="button" onClick={handleFinish}
+              className="px-10 py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 transition-colors shadow-md cursor-pointer">
+              {TEXT.finish}
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="p-5 bg-zinc-900 rounded-xl flex items-center justify-between gap-4 text-white shadow-xl shrink-0">
+            <div>
+              <h3 className="text-base font-bold mb-1 text-emerald-400">✓ {TEXT.finishedTitle}</h3>
+              <p className="text-zinc-300 text-sm">{STUDY_COMPLETION_URL ? TEXT.finishing : TEXT.finishedNoLink}</p>
+            </div>
+            <button type="button"
+              onClick={() => { track('final_debrief_celebrate_clicked', {}); setConfettiKey((k) => k + 1); }}
+              className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0">
+              <span className="text-base">🎉</span> {TEXT.celebrate}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ModalContent>
   );
 }
