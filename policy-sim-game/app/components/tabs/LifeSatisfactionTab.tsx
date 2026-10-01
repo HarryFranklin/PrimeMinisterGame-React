@@ -12,14 +12,18 @@ import { track } from '../../client/telemetry';
 // with a low score isn't told they are "in misery").
 // ---------------------------------------------------------------------------
 const TEXT = {
-  title: 'Before we begin',
+  title: 'One question before you take office',
+  intro:
+    'Life satisfaction (LS) is how a person rates their life as a whole, on a scale from 0 to 10. Let’s start with yours.',
   question: 'Overall, how satisfied are you with your life nowadays?',
   scaleHint: "0 means 'not at all' and 10 means 'completely'.",
   lowLabel: 'Not at all',
   highLabel: 'Completely',
   explainTitle: (ls: number) => `You answered ${ls}. That is your life satisfaction.`,
-  explainBody:
-    'Life satisfaction (LS) is how people rate their life overall, from 0 to 10. Governments use this exact question: the Office for National Statistics asks it in the UK’s largest household survey, and it is the score your citizens will report throughout this game.',
+  policy:
+    'Governments increasingly use this same question to judge whether their policies work. The Office for National Statistics asks it in the UK’s largest household survey, the Treasury’s guidance for appraising new policies draws on it, and almost 90% of OECD governments now ask it.',
+  game:
+    'In this game, every citizen has an LS score. Each policy you enact moves those scores up or down, and as Prime Minister you will be judged on what happens to them.',
   chartTitle: 'Where you would sit among your citizens',
   context:
     'Over half of people in the UK score 7 or 8. Scores of 4 or below are less common, about 1 in 20 people. Around a quarter score 9 or 10.',
@@ -74,6 +78,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
       >
         <div>
           <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.title}</h2>
+          <p className="text-sm text-zinc-400 leading-relaxed mb-4">{TEXT.intro}</p>
           <p className="text-lg text-zinc-200 font-semibold leading-snug">{TEXT.question}</p>
           <p className="text-sm text-zinc-400 mt-1">{TEXT.scaleHint}</p>
         </div>
@@ -117,7 +122,8 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
             >
               <div className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4">
                 <p className="text-base font-bold text-white mb-1">{TEXT.explainTitle(ls)}</p>
-                <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.explainBody}</p>
+                <p className="text-sm text-zinc-300 leading-relaxed mb-2">{TEXT.policy}</p>
+                <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.game}</p>
               </div>
 
               <div className="h-56 bg-zinc-950 rounded-lg border border-zinc-800 p-2 pt-7 relative overflow-hidden">

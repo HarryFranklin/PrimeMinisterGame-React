@@ -181,13 +181,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
 
     setIsCalculating(false);
-    setGamePhase(GamePhase.LifeSatisfaction);
-  };
-
-  const handleLifeSatisfactionSubmit = useCallback((ls: number) => {
-    setPlayerLS(ls);
     setGamePhase(GamePhase.Intro);
-  }, []);
+  };
 
   const gameStateSnapshot = useMemo(() => ({
     population, initialPopulation, baselinePopulation,
@@ -373,6 +368,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   };
 
   const startLevel = useCallback((cycle: ElectionCycle) => {
+
+    // Ask the player's own LS once, after their first "Begin Term".
+    if (playerLS === null) {
+      setCurrentCycle(cycle);
+      setGamePhase(GamePhase.LifeSatisfaction);
+      return;
+    }
+
     if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
       setCurrentCycle(cycle);
       // First time into Level 3: utility elicitation block, then the
@@ -388,6 +391,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     startCycle(cycle);
     setCycleAttempts(1);
   }, [startCycle, hasSeenUtilityIntervention, elicitation, playerLS, difficultySeed]);
+
+  const handleLifeSatisfactionSubmit = useCallback((ls: number) => {
+       setPlayerLS(ls);
+       startCycle(currentCycle);
+       setCycleAttempts(1);
+     }, [startCycle, currentCycle]);
 
   const updateElicitation = useCallback((updater: (prev: ElicitationState) => ElicitationState) => {
     setElicitation(prev => (prev ? updater(prev) : prev));
