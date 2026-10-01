@@ -4,12 +4,22 @@ import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
 import { InteractiveDPMEmail } from './SharedModalComponents';
 import GambleScreen from '../elicitation/GambleScreen';
-import { INTRO_EMAIL, PAUSE_CARD, TRANSITION_CARD } from '../elicitation/elicitationText';
+import DirectWeightsForm from '../elicitation/DirectWeightsForm';
+import ComparisonScreen from '../elicitation/ComparisonScreen';
+import { INTRO_EMAIL, PAUSE_CARD, TRANSITION_CARD, QUESTIONS } from '../elicitation/elicitationText';
 import {
-  ElicitationState, GambleBlock, GambleChoice, LADDER, applyChoice, nextRiskIndex,
+  ElicitationState, GambleBlock, GambleChoice, LADDER, applyChoice, nextRiskIndex, summariseElicitation,
 } from '../../utils/ElicitationEngine';
 
-type Stage = 'intro' | 'pause' | 'personal' | 'transition' | 'social';
+type Stage =
+  | 'intro' | 'pause' | 'personal' | 'transition' | 'social'
+  | 'direct' | 'compare' | 'question' | 'reflection';
+type QuestionKey = 'why_personal_social' | 'why_method' | 'reflection';
+const QUESTION_FIELD: Record<QuestionKey, 'whyPersonalSocial' | 'whyMethod' | 'reflection'> = {
+  why_personal_social: 'whyPersonalSocial',
+  why_method: 'whyMethod',
+  reflection: 'reflection',
+};
 
 const blockDone = (e: ElicitationState, b: GambleBlock) =>
   e[`${b}Order`].every((p) => e[b][p].done);
@@ -21,7 +31,51 @@ function resumeStage(e: ElicitationState): Stage {
   if (!blockStarted(e, 'personal')) return 'intro';
   if (!blockDone(e, 'personal')) return 'personal';
   if (!blockStarted(e, 'social')) return 'transition';
-  return 'social';
+  if (!blockDone(e, 'social')) return 'social';
+  if (!e.directWeights) return 'direct';
+  return 'compare';
+}
+
+/** The "why" questions still to ask: only for pairs of curves that differ. */
+function pendingWhyQuestions(e: ElicitationState): QuestionKey[] {
+  const sum = summariseElicitation(e);
+  const out: QuestionKey[] = [];
+  if (sum.personalVsSocial.different && e.whyPersonalSocial === null) out.push('why_personal_social');
+  if (sum.socialVsDirect?.different && e.whyMethod === null) out.push('why_method');
+  return out;
+}
+
+function TextQuestion({ questionKey, onSubmit }: {
+  questionKey: QuestionKey; onSubmit: (text: string, dwellMs: number) => void;
+}) {
+  const q = QUESTIONS[questionKey];
+  const [text, setText] = useState('');
+  const openedAt = useRef(Date.now());
+  const ready = text.trim().length >= QUESTIONS.minChars;
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 flex flex-col gap-4 max-w-xl mx-auto">
+      <span className="text-sm font-bold text-pink-500">{QUESTIONS.kicker}</span>
+      <h1 className="text-2xl md:text-3xl font-black text-white">{q.title}</h1>
+      <p className="text-base text-zinc-300 leading-relaxed">{q.prompt}</p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={5}
+        placeholder={QUESTIONS.placeholder}
+        className="w-full bg-zinc-950 border border-zinc-700 text-zinc-100 rounded-xl p-4 text-base focus:outline-none focus:border-pink-500 transition-colors resize-y"
+      />
+      <button
+        type="button"
+        disabled={!ready}
+        onClick={() => onSubmit(text.trim(), Date.now() - openedAt.current)}
+        className={`self-end px-8 py-3 rounded-xl font-black transition-colors ${
+          ready ? 'bg-pink-600 hover:bg-pink-500 text-white cursor-pointer' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+        }`}
+      >
+        {ready ? QUESTIONS.button : QUESTIONS.tooShort}
+      </button>
+    </div>
+  );
 }
 
 function InfoCard({ kicker, title, body, button, onNext }: {
@@ -53,17 +107,52 @@ export default function UtilityElicitationOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pass 2a: once both gamble blocks are done, carry on to the existing
-  // intervention. Pass 2b inserts the sliders, comparison and questions here.
-  useEffect(() => {
-    if (!elicitation || finished.current) return;
-    if (blockDone(elicitation, 'personal') && blockDone(elicitation, 'social')) {
-      finished.current = true;
-      completeElicitation();
-    }
-  }, [elicitation, completeElicitation]);
-
   if (!elicitation) return null;
+  const summary = summariseElicitation(elicitation);
+  const pendingWhy = pendingWhyQuestions(elicitation);
+
+  const handleDirectSubmit = (weights: number[], dwellMs: number) => {
+    track('elicitation_direct_submitted', { weights, dwell_ms: dwellMs });
+    updateElicitation((prev) => ({ ...prev, directWeights: weights }));
+    setStage('compare');
+  };
+
+  const handleTextAnswer = (key: QuestionKey, text: string, dwellMs: number) => {
+    track('elicitation_text_answered', { question: key, text, dwell_ms: dwellMs });
+    const field = QUESTION_FIELD[key];
+    const next: ElicitationState = { ...elicitation, [field]: text };
+    updateElicitation((prev) => ({ ...prev, [field]: text }));
+    if (key === 'reflection') {
+      finish(next);
+    } else if (pendingWhyQuestions(next).length === 0) {
+      setStage('reflection');
+    }
+  };
+
+  /** Sends the one rollup the server stores, then moves on to the intervention. */
+  const finish = (e: ElicitationState) => {
+    if (finished.current) return;
+    finished.current = true;
+    const s = summariseElicitation(e);
+    const utilities = (block: GambleBlock) =>
+      Object.fromEntries(e[`${block}Order`].map((p) => [String(p), e[block][p].utility]));
+    track('elicitation_completed', {
+      player_ls: playerLS,
+      own_point: e.ownPoint,
+      personal_utilities: utilities('personal'),
+      social_utilities: utilities('social'),
+      direct_weights: e.directWeights,
+      pu_su_mean_gap: s.personalVsSocial.meanGap,
+      pu_su_different: s.personalVsSocial.different,
+      su_direct_mean_gap: s.socialVsDirect?.meanGap ?? null,
+      su_direct_different: s.socialVsDirect?.different ?? null,
+      why_personal_social: e.whyPersonalSocial,
+      why_method: e.whyMethod,
+      reflection: e.reflection,
+      dwell_ms: Date.now() - e.startedAt,
+    });
+    completeElicitation();
+  };
 
   const block: GambleBlock | null = stage === 'personal' ? 'personal' : stage === 'social' ? 'social' : null;
   const order = block ? elicitation[`${block}Order`] : [];
@@ -88,7 +177,7 @@ export default function UtilityElicitationOverlay() {
         block, point, order_index: orderIndex,
         indifference_risk: updated.indifferenceRisk ?? 0, utility: updated.utility ?? 0,
       });
-      if (block === 'personal' && orderIndex === order.length - 1) setStage('transition');
+      if (orderIndex === order.length - 1) setStage(block === 'personal' ? 'transition' : 'direct');
     }
   };
 
@@ -106,7 +195,7 @@ export default function UtilityElicitationOverlay() {
       <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col justify-center gap-6 my-4">
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${stage}-${point ?? ''}`}
+            key={`${stage}-${point ?? ''}-${stage === 'question' ? pendingWhy[0] : ''}`}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
@@ -127,6 +216,31 @@ export default function UtilityElicitationOverlay() {
             {stage === 'pause' && <InfoCard {...PAUSE_CARD} onNext={() => setStage('personal')} />}
 
             {stage === 'transition' && <InfoCard {...TRANSITION_CARD} onNext={() => setStage('social')} />}
+
+            {stage === 'direct' && <DirectWeightsForm onSubmit={handleDirectSubmit} />}
+
+            {stage === 'compare' && summary.direct && summary.socialVsDirect && (
+              <ComparisonScreen
+                curves={{ personal: summary.personal, social: summary.social, direct: summary.direct }}
+                personalVsSocial={summary.personalVsSocial}
+                socialVsDirect={summary.socialVsDirect}
+                playerLS={playerLS}
+                onView={(view, dwellMs) => track('elicitation_comparison_viewed', { view, dwell_ms: dwellMs })}
+                onContinue={() => setStage(pendingWhy.length > 0 ? 'question' : 'reflection')}
+              />
+            )}
+
+            {stage === 'question' && pendingWhy.length > 0 && (
+              <TextQuestion
+                key={pendingWhy[0]}
+                questionKey={pendingWhy[0]}
+                onSubmit={(text, ms) => handleTextAnswer(pendingWhy[0], text, ms)}
+              />
+            )}
+
+            {stage === 'reflection' && (
+              <TextQuestion questionKey="reflection" onSubmit={(text, ms) => handleTextAnswer('reflection', text, ms)} />
+            )}
 
             {block && point !== null && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 md:p-8">

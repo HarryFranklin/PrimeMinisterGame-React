@@ -239,6 +239,9 @@ export default function UtilityInterventionOverlay() {
             A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving.
             Explore the curve below, then use the slider to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
           </p>
+          <p className="text-base text-zinc-500 leading-relaxed">
+            You have just built curves like this from your own answers. Here is how one works in practice.
+          </p>
         </motion.div>
 
         {/* Zone diagram: equal-width steps, very different rises */}

@@ -113,3 +113,81 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
 
 /** Shown on the gamble that uses the player's own LS. */
 export const OWN_POINT_NOTE = 'This is the score you gave for your own life.';
+
+// ---------------------------------------------------------------------------
+// Pass 2b: asking directly (Layard & Oparina), comparison, questions
+// ---------------------------------------------------------------------------
+
+export const DIRECT_FORM = {
+  kicker: 'HM Treasury',
+  title: 'Wellbeing priority weights',
+  intro:
+    'Public spending can help people who are struggling and people who are already doing well, but budgets are limited. So the Treasury has to decide: how important is it to improve life satisfaction at different levels?',
+  guide:
+    'As a guide, suppose it is worth 100 units to help someone move from 2 to 4. On a scale from 0 to 100, where 0 means not at all important and 100 means very important, how important is it to help someone move from each level below to the next?',
+  fixedNote: 'Fixed at 100',
+  untouched: 'Move the slider',
+  lowLabel: 'Not at all important',
+  highLabel: 'Very important',
+  button: 'Submit to the Treasury',
+  waiting: 'Set all three sliders to continue',
+};
+
+export const COMPARISON = {
+  kicker: 'Civil Service analysis',
+  title: 'Three scoring systems, one person',
+  intro:
+    'The Civil Service has turned your answers into three scoring systems. Each one shows how much a rise in life satisfaction is worth, depending on where someone starts.',
+  howToRead:
+    'A curve that rises steeply and then flattens means gains at the bottom matter most. The straight line counts every point the same, as in your first term. Hollow dots show your fourth answer, at your own LS where possible.',
+  chartTab: 'Chart',
+  tableTab: 'Table',
+  tableIntro: 'Value of each 2-point rise, with 2→4 set to 100.',
+  legend: {
+    personal: 'Your personal choices',
+    social: 'Your policy choices',
+    direct: 'Your Treasury weights',
+    linear: 'Every point counts the same',
+    you: 'Your LS',
+  },
+  axisX: 'Life satisfaction',
+  axisY: 'Value',
+  /** Caption comparing personal and policy gambles. sign > 0: personal curve higher. */
+  personalVsSocial: (different: boolean, personalHigher: boolean) =>
+    !different
+      ? 'Your personal and policy choices were similar. In one UK study, 73% of people were more cautious when deciding for others than for themselves (Cooper et al., 2026).'
+      : personalHigher
+        ? 'You were more cautious with your own life than with other people’s. That is unusual: in one UK study, 73% of people were more cautious when deciding for others (Cooper et al., 2026).'
+        : 'You were more cautious when deciding for others than for yourself. So were 73% of people in one UK study (Cooper et al., 2026).',
+  /** Caption comparing policy gambles with Treasury weights. */
+  socialVsDirect: (different: boolean, gamblesHigher: boolean) =>
+    !different
+      ? 'Your gambles and your Treasury weights gave similar curves. Researchers usually find gambles give steeper curves than asking people directly (Layard & Oparina, 2026).'
+      : gamblesHigher
+        ? 'Your gambles gave a steeper curve than your Treasury weights. Researchers find the same gap: gambles usually give steeper curves than asking people directly (Layard & Oparina, 2026).'
+        : 'Your Treasury weights gave a steeper curve than your gambles. Researchers usually find the opposite (Layard & Oparina, 2026).',
+  citizens:
+    'The citizens you are about to govern answered questions like these. Their answers will score your next two terms.',
+  button: 'Continue',
+};
+
+export const QUESTIONS = {
+  kicker: 'Deputy Prime Minister',
+  why_personal_social: {
+    title: 'A quick question',
+    prompt: 'Your answers changed when the decision was about other people rather than yourself. Why do you think that was?',
+  },
+  why_method: {
+    title: 'A quick question',
+    prompt: 'Your gamble answers and your Treasury weights don’t match. Why do you think the two methods gave different answers?',
+  },
+  reflection: {
+    title: 'Off the record',
+    prompt:
+      'Different methods and different perspectives can give different scoring systems, even from the same person. If the government could only use one to score policies, how should it decide which?',
+  },
+  placeholder: 'Type your answer…',
+  minChars: 10,
+  tooShort: 'Please write a little more to continue',
+  button: 'Continue',
+};
