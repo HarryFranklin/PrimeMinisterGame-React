@@ -61,6 +61,12 @@ export function networkSink(entry: LoggedEvent) {
     return;
   }
 
+  // Player's own LS and the elicitation rollup. NOTE: the worker needs a
+  // matching /elicitation endpoint (and table) before these are stored.
+  if (entry.event === "life_satisfaction_submitted" || entry.event === "elicitation_completed") {
+    send("/elicitation", { ...identity(entry), kind: entry.event, ...entry.payload });
+    return;
+  }
   if (entry.event === "final_debrief_closed") {
     send("/participant", identity(entry, { completed: true, final_outcome: entry.payload?.outcome ?? null }), true);
     return;

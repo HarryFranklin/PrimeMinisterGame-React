@@ -22,6 +22,7 @@ import { ModalOverlay } from "./components/modals/SharedModalComponents";
 import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
 import SetupTab from "./components/tabs/SetupTab";
+import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
 
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
@@ -103,6 +104,8 @@ export default function Home() {
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
             {game.gamePhase === GamePhase.Setup ? (
               <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} calcProgress={game.calcProgress} />
+            ) : game.gamePhase === GamePhase.LifeSatisfaction ? (
+              <LifeSatisfactionTab onSubmit={game.handleLifeSatisfactionSubmit} />
             ) : game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
               <LevelSelectTab />
             ) : (
@@ -111,7 +114,7 @@ export default function Home() {
           </main>
 
           <AnimatePresence mode="wait">
-            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && (
+            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.LifeSatisfaction && (
               <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
                   

@@ -406,6 +406,62 @@ export type TelemetryEvent =
       payload: { ts: number };
     }
 
+  // ---- Life satisfaction question (start of game) ----
+  | {
+      event: "life_satisfaction_submitted";
+      payload: { ls: number; changed_answer_count: number; dwell_ms: number };
+    }
+
+  // ---- Utility elicitation block (before Level 3) ----
+  | { event: "elicitation_opened"; payload: { resumed: boolean } }
+  | {
+      event: "elicitation_gamble_choice";
+      payload: {
+        block: "personal" | "social";
+        point: number;
+        /** Risk of the worse outcome shown at this step, e.g. 0.1 */
+        risk: number;
+        choice: "A" | "B" | "unsure";
+        step_index: number;
+        time_to_choose_ms: number;
+      };
+    }
+  | {
+      event: "elicitation_gamble_completed";
+      payload: { block: "personal" | "social"; point: number; order_index: number; indifference_risk: number; utility: number };
+    }
+  | {
+      event: "elicitation_direct_submitted";
+      payload: { weights: number[]; dwell_ms: number };
+    }
+  | {
+      event: "elicitation_comparison_viewed";
+      payload: { view: "chart" | "table"; dwell_ms: number };
+    }
+  | {
+      event: "elicitation_text_answered";
+      payload: { question: "why_personal_social" | "why_method" | "reflection"; text: string; dwell_ms: number };
+    }
+  | {
+      /** Rollup of the whole block - this is the one sent to the server. */
+      event: "elicitation_completed";
+      payload: {
+        player_ls: number | null;
+        own_point: number;
+        personal_utilities: Record<string, number | null>;
+        social_utilities: Record<string, number | null>;
+        direct_weights: number[] | null;
+        pu_su_mean_gap: number;
+        pu_su_different: boolean;
+        su_direct_mean_gap: number | null;
+        su_direct_different: boolean | null;
+        why_personal_social: string | null;
+        why_method: string | null;
+        reflection: string | null;
+        dwell_ms: number;
+      };
+    }
+
   // ---- Cycles 3 & 4: utility table "?" button ----
   | {
       event: "utility_table_help_clicked";

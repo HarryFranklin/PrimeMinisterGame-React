@@ -77,6 +77,7 @@ export interface CompletedRun {
 
 export enum GamePhase {
   Setup = 'setup',
+  LifeSatisfaction = 'lifeSatisfaction',
   Intro = 'intro',
   LevelSelect = 'levelSelect',
   Briefing = 'briefing',
@@ -84,5 +85,6 @@ export enum GamePhase {
   Election = 'election',
   Debrief = 'debrief',
   UtilityIntervention = 'utilityIntervention',
+  UtilityElicitation = 'utilityElicitation',
   AcademicDebrief = 'academicDebrief'
 }

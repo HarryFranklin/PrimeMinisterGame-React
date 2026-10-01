@@ -9,6 +9,7 @@ import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
 import { DifficultyEngine } from '../utils/DifficultyEngine'; 
 import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
+import { ElicitationState, createElicitationState, ELICITATION_ENABLED } from '../utils/ElicitationEngine';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -49,6 +50,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [yAxisMax, setYAxisMax] = useState(100);
   const [hasSeenUtilityIntervention, setHasSeenUtilityIntervention] = useState(false);
   const [pendingDebriefAction, setPendingDebriefAction] = useState<{ type: 'restart' | 'complete'; outcome: 'win' | 'lose' } | null>(null);
+  // Player's own life satisfaction (asked at the start) and their answers to
+  // the utility elicitation block (before Level 3).
+  const [playerLS, setPlayerLS] = useState<number | null>(null);
+  const [elicitation, setElicitation] = useState<ElicitationState | null>(null);
 
   const [participantId, setParticipantId] = useState<string>('');
   const [difficultySeed, setDifficultySeed] = useState<number>(0);
@@ -143,6 +148,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setParticipantId(parsed.participantId || '');
     setDifficultySeed(parsed.difficultySeed || 0);
     setWinScalars(parsed.winScalars || {});
+    setPlayerLS(parsed.playerLS ?? null);
+    setElicitation(parsed.elicitation ?? null);
 }, []);
 
   const handleSaveError = useCallback(() => {
@@ -174,18 +181,24 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
 
     setIsCalculating(false);
-    setGamePhase(GamePhase.Intro);
+    setGamePhase(GamePhase.LifeSatisfaction);
   };
+
+  const handleLifeSatisfactionSubmit = useCallback((ls: number) => {
+    setPlayerLS(ls);
+    setGamePhase(GamePhase.Intro);
+  }, []);
 
   const gameStateSnapshot = useMemo(() => ({
     population, initialPopulation, baselinePopulation,
     currentTurn, currentCycle, cycleAttempts, history,
     cycleSchedule, cycleMAO, currentDeck, optimalPath,
     isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention,
-    participantId, difficultySeed, winScalars
+    participantId, difficultySeed, winScalars, playerLS, elicitation
   }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, 
     cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, 
-    gamePhase, completedRuns, hasSeenUtilityIntervention, participantId, difficultySeed, winScalars]);
+    gamePhase, completedRuns, hasSeenUtilityIntervention, participantId, difficultySeed, winScalars,
+    playerLS, elicitation]);
 
   const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
@@ -362,12 +375,35 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const startLevel = useCallback((cycle: ElectionCycle) => {
     if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
       setCurrentCycle(cycle);
+      // First time into Level 3: utility elicitation block, then the
+      // existing intervention (completeElicitation moves on to it).
+      if (ELICITATION_ENABLED && !elicitation?.completed) {
+        if (!elicitation) setElicitation(createElicitationState(playerLS, difficultySeed));
+        setGamePhase(GamePhase.UtilityElicitation);
+        return;
+      }
       setGamePhase(GamePhase.UtilityIntervention);
       return;
     }
     startCycle(cycle);
     setCycleAttempts(1);
-  }, [startCycle, hasSeenUtilityIntervention]);
+  }, [startCycle, hasSeenUtilityIntervention, elicitation, playerLS, difficultySeed]);
+
+  const updateElicitation = useCallback((updater: (prev: ElicitationState) => ElicitationState) => {
+    setElicitation(prev => (prev ? updater(prev) : prev));
+  }, []);
+
+  const completeElicitation = useCallback(() => {
+    setElicitation(prev => (prev ? { ...prev, completed: true } : prev));
+    setGamePhase(GamePhase.UtilityIntervention);
+  }, []);
+
+  /** Dev panel: open the elicitation block directly (fresh answers). */
+  const jumpToElicitation = useCallback(() => {
+    setCurrentCycle(ElectionCycle.SocietalUtility);
+    setElicitation(createElicitationState(playerLS, difficultySeed));
+    setGamePhase(GamePhase.UtilityElicitation);
+  }, [playerLS, difficultySeed]);
 
   const handleCompleteTerm = useCallback(() => {
     const targetScore = cycleMAO * winScalars[currentCycle];
@@ -470,6 +506,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     isCalculating, calcProgress,
     handleSetupComplete, 
     winScalars, 
-    difficultySeed
+    difficultySeed,
+    playerLS, handleLifeSatisfactionSubmit,
+    elicitation, updateElicitation, completeElicitation, jumpToElicitation
   };
 }
