@@ -189,11 +189,12 @@ export default function ComparisonScreen({
 
       <div className="flex flex-col gap-3">
         <p className="text-base text-zinc-200 leading-relaxed border-l-4 pl-4" style={{ borderColor: COLORS.social }}>
-          {T.personalVsSocial(personalVsSocial.different, personalVsSocial.meanSignedGap > 0)}
+            {T.personalVsSocial(personalVsSocial.different, personalVsSocial.direction)}
         </p>
         <p className="text-base text-zinc-200 leading-relaxed border-l-4 pl-4" style={{ borderColor: COLORS.direct }}>
-          {T.socialVsDirect(socialVsDirect.different, socialVsDirect.meanSignedGap > 0)}
+            {T.socialVsDirect(socialVsDirect.different, socialVsDirect.direction)}
         </p>
+        <p className="text-base font-bold text-white leading-relaxed">{T.takeaway}</p>
         <p className="text-sm text-zinc-400 leading-relaxed">{T.citizens}</p>
       </div>
 

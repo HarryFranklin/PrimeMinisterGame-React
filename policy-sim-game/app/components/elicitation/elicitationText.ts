@@ -4,14 +4,14 @@
  * Gamble wording follows Cooper et al. (2026)'s supplementary material,
  * adapted to a sure LS X vs an LS 10 / LS 2 lottery (no death).
  */
-import { GambleBlock } from '../../utils/ElicitationEngine';
+import { CurveDirection, GambleBlock } from '../../utils/ElicitationEngine';
 
 export const INTRO_EMAIL = {
   title: 'A request from the Treasury',
   message:
     'Prime Minister,\n\n' +
     'Before your next term, the Treasury needs to settle a question every wellbeing government faces: is every point of life satisfaction worth the same, wherever it falls?\n\n' +
-    'Researchers answer this in two ways. One is to ask people to choose between gambles. The other is to ask them directly. We would like you to do both.\n\n' +
+    'Researchers answer this in several ways. Two of the main ones are to ask people to choose between gambles, and to ask them directly. We would like you to try both.\n\n' +
     'The first few questions are personal. The rest are about policy.',
   button: 'Begin',
 };
@@ -152,42 +152,36 @@ export const COMPARISON = {
   },
   axisX: 'Life satisfaction',
   axisY: 'Value',
-  /** Caption comparing personal and policy gambles. sign > 0: personal curve higher. */
-  personalVsSocial: (different: boolean, personalHigher: boolean) =>
-    !different
-      ? 'Your personal and policy choices were similar. In one UK study, 73% of people were more cautious when deciding for others than for themselves (Cooper et al., 2026).'
-      : personalHigher
-        ? 'You were more cautious with your own life than with other people’s. That is unusual: in one UK study, 73% of people were more cautious when deciding for others (Cooper et al., 2026).'
-        : 'You were more cautious when deciding for others than for yourself. So were 73% of people in one UK study (Cooper et al., 2026).',
-  /** Caption comparing policy gambles with Treasury weights. */
-  socialVsDirect: (different: boolean, gamblesHigher: boolean) =>
-    !different
-      ? 'Your gambles and your Treasury weights gave similar curves. Researchers usually find gambles give steeper curves than asking people directly (Layard & Oparina, 2026).'
-      : gamblesHigher
-        ? 'Your gambles gave a steeper curve than your Treasury weights. Researchers find the same gap: gambles usually give steeper curves than asking people directly (Layard & Oparina, 2026).'
-        : 'Your Treasury weights gave a steeper curve than your gambles. Researchers usually find the opposite (Layard & Oparina, 2026).',
+  /** Caption comparing personal and policy gambles. 'higher' = the
+   * personal curve sits above the policy curve (more cautious for yourself).
+   * Cooper et al. (2026): median aversion 4.0 for others vs 2.2 for self
+   * (no-death gambles); "the latter being even more strongly avoided". */
+  personalVsSocial: (different: boolean, direction: CurveDirection) => {
+    if (!different || direction === 'none')
+      return 'Your personal and policy choices were broadly similar, though in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
+    if (direction === 'lower')
+      return 'You were more cautious when deciding for others than for yourself. That matches research: in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
+    if (direction === 'higher')
+      return 'You were more cautious when deciding for yourself than for others. That is less common: in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
+    return 'Your personal and policy choices differed, but not in one direction: at some starting levels you were more cautious for yourself, at others for other people. For comparison, in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
+  },
+  /** Caption comparing policy gambles with Treasury weights. 'higher' = the
+   * policy-gamble curve sits above the Treasury curve. Layard & Oparina
+   * (2026, p.9) compared their direct method with Cooper's societal
+   * gambles, and note the same gap in the income literature. */
+  socialVsDirect: (different: boolean, direction: CurveDirection) => {
+    if (!different || direction === 'none')
+      return 'Your policy choices and your Treasury weights gave broadly similar curves. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
+    if (direction === 'higher')
+      return 'Your policy choices put more weight on gains at the bottom than your Treasury weights did. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
+    if (direction === 'lower')
+      return 'Your Treasury weights put more weight on gains at the bottom than your policy choices did. That is the opposite of what researchers found. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
+    return 'Your policy choices and your Treasury weights disagreed, but not in one direction: each put more weight on a different part of the scale. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
+  },
+  /** The learning objective, shown to every player. */
+  takeaway:
+    'Scoring systems can differ depending on the method used and on whose life is at stake, even for the same person.',
   citizens:
     'The citizens you are about to govern answered questions like these. Their answers will score your next two terms.',
-  button: 'Continue',
-};
-
-export const QUESTIONS = {
-  kicker: 'Deputy Prime Minister',
-  why_personal_social: {
-    title: 'A quick question',
-    prompt: 'Your answers changed when the decision was about other people rather than yourself. Why do you think that was?',
-  },
-  why_method: {
-    title: 'A quick question',
-    prompt: 'Your gamble answers and your Treasury weights don’t match. Why do you think the two methods gave different answers?',
-  },
-  reflection: {
-    title: 'Off the record',
-    prompt:
-      'Different methods and different perspectives can give different scoring systems, even from the same person. If the government could only use one to score policies, how should it decide which?',
-  },
-  placeholder: 'Type your answer…',
-  minChars: 10,
-  tooShort: 'Please write a little more to continue',
   button: 'Continue',
 };

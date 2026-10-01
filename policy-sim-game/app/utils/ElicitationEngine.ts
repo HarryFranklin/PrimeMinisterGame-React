@@ -11,6 +11,7 @@
  * steps: 2->4 is fixed at 100 and the player rates 4->6, 6->8 and 8->10.
  */
 
+/** Turns the elicitation block on before Level 3. */
 export const ELICITATION_ENABLED = true;
 
 // ---------------------------------------------------------------------------
@@ -199,6 +200,13 @@ export function stepValues(curve: CurvePoint[]): { step: string; value: number }
 export const COMPARE_POINTS = [4, 6, 8];
 export const MEAN_GAP_THRESHOLD = 0.1;
 export const MAX_GAP_THRESHOLD = 0.2;
+/** Gaps smaller than this are ignored when working out the direction. */
+export const DIRECTION_TOLERANCE = 0.05;
+
+/** 'higher': curve a sits above curve b (a puts more weight on gains at the
+ * bottom / is more cautious). 'lower': the reverse. 'mixed': the curves
+ * cross, so neither direction is true overall. 'none': no real gap. */
+export type CurveDirection = 'higher' | 'lower' | 'mixed' | 'none';
 
 export interface CurveComparison {
   meanGap: number;
@@ -206,6 +214,7 @@ export interface CurveComparison {
   /** Average of (a - b). Positive means curve a sits higher, i.e. it is the
    * more cautious / more strongly bent of the two. */
   meanSignedGap: number;
+  direction: CurveDirection;
   different: boolean;
 }
 
@@ -215,8 +224,11 @@ export function compareCurves(a: CurvePoint[], b: CurvePoint[]): CurveComparison
   const meanGap = abs.reduce((s, g) => s + g, 0) / abs.length;
   const maxGap = Math.max(...abs);
   const meanSignedGap = gaps.reduce((s, g) => s + g, 0) / gaps.length;
+  const above = gaps.some((g) => g >= DIRECTION_TOLERANCE);
+  const below = gaps.some((g) => g <= -DIRECTION_TOLERANCE);
+  const direction: CurveDirection = above && below ? 'mixed' : above ? 'higher' : below ? 'lower' : 'none';
   return {
-    meanGap, maxGap, meanSignedGap,
+    meanGap, maxGap, meanSignedGap, direction,
     different: meanGap >= MEAN_GAP_THRESHOLD || maxGap >= MAX_GAP_THRESHOLD,
   };
 }
