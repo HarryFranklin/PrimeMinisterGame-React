@@ -23,6 +23,7 @@ import DashboardTab from "./components/tabs/DashboardTab";
 import LevelSelectTab from "./components/tabs/LevelSelectTab";
 import SetupTab from "./components/tabs/SetupTab";
 import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
+import UtilityElicitationOverlay from "./components/modals/UtilityElicitationOverlay";
 
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase } from "./utils/types";
@@ -151,6 +152,10 @@ export default function Home() {
                     />
                   )}
 
+                  {game.gamePhase === GamePhase.UtilityElicitation && (
+                    <UtilityElicitationOverlay key="utility-elicitation" />
+                  )}
+
                   {game.gamePhase === GamePhase.UtilityIntervention && (
                     <UtilityInterventionOverlay key="utility-intervention" />
                   )}
@@ -182,6 +187,7 @@ export default function Home() {
         optimalPath={game.optimalPath} 
         cycleMAO={game.cycleMAO}
         difficultySeed={game.difficultySeed}
+        jumpToElicitation={game.jumpToElicitation}
       />
       
       <TelemetryDevPanel />

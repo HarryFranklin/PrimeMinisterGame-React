@@ -11,8 +11,7 @@
  * steps: 2->4 is fixed at 100 and the player rates 4->6, 6->8 and 8->10.
  */
 
-/** Set to true in Pass 2, once the elicitation screens exist. */
-export const ELICITATION_ENABLED = false;
+export const ELICITATION_ENABLED = true;
 
 // ---------------------------------------------------------------------------
 // Gamble set-up

@@ -7,6 +7,7 @@ interface DevPanelProps {
   devMode: boolean;
   setDevMode: (active: boolean) => void;
   jumpToCycle: (cycle: ElectionCycle) => void;
+  jumpToElicitation?: () => void;
   setCurrentTurn: React.Dispatch<React.SetStateAction<number>>;
   currentTurn: number;
   turnsPerCycle: number;
@@ -21,6 +22,7 @@ export default function DevPanel({
   devMode,
   setDevMode,
   jumpToCycle,
+  jumpToElicitation,
   setCurrentTurn,
   currentTurn,
   turnsPerCycle,
@@ -74,6 +76,16 @@ export default function DevPanel({
               >
                 4. Personal
               </button>
+
+              {jumpToElicitation && (
+              <button
+                onClick={jumpToElicitation}
+                className="bg-zinc-800 hover:bg-zinc-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                Utility Elicitation
+              </button>
+            )}
+
             </div>
           </div>
 
