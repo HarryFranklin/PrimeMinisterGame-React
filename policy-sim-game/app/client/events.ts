@@ -509,6 +509,15 @@ export type TelemetryEvent =
       payload: { cycle: string; turn: number };
     }
 
+    // ---- Reveal (end of the personal block) ----
+  | {
+      event: "elicitation_reveal_opened";
+      payload: { social_attitude: string | null; personal_attitude: string | null; direction: string | null };
+    }
+    
+  | { event: "elicitation_reveal_step_selected"; payload: { from: number; to: number } }
+  | { event: "elicitation_reveal_closed"; payload: { dwell_ms: number; steps_viewed: number } }
+
   // ---- Post-game ----
   | {
       event: "postgame_finish_clicked";

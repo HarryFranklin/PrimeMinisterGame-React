@@ -9,8 +9,9 @@ import {
   applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
 } from '../../utils/ElicitationEngine';
 import { ElectionCycle } from '../../utils/types';
+import RevealScreen from '../elicitation/RevealScreen';
 
-type Stage = 'intro' | 'gambles';
+type Stage = 'intro' | 'gambles' | 'reveal';
 
 function InfoCard({ kicker, title, body, button, onNext }: {
   kicker: string; title: string; body: string; button: string; onNext: () => void;
@@ -72,7 +73,10 @@ export default function UtilityElicitationOverlay() {
 
   // Refreshed after the last answer but before the block was marked done.
   useEffect(() => {
-    if (state && stage === 'gambles' && orderIndex === -1 && !state.completed) finish(state);
+    if (state && stage === 'gambles' && orderIndex === -1 && !state.completed) {
+      if (block === 'personal') setStage('reveal');
+      else finish(state);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, stage, orderIndex]);
 
@@ -97,7 +101,11 @@ export default function UtilityElicitationOverlay() {
       track('elicitation_gamble_completed', {
         block, point, order_index: orderIndex, loss_risk: updated.lossRisk ?? 0,
       });
-      if (orderIndex === state.order.length - 1) finish(next);
+      // The personal block ends on the reveal; the social block goes straight to Level 3.
+      if (orderIndex === state.order.length - 1) {
+        if (block === 'personal') setStage('reveal');
+        else finish(next);
+      }
     }
   };
 
@@ -148,6 +156,15 @@ export default function UtilityElicitationOverlay() {
                 />
               </div>
             )}
+
+            {stage === 'reveal' && (
+                <RevealScreen
+                  social={chainedCurve(elicitation.social.records)}
+                  personal={chainedCurve(state.records)}
+                  onContinue={() => finish(state)}
+                />
+              )}
+
           </motion.div>
         </AnimatePresence>
       </div>

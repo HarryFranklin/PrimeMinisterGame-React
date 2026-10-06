@@ -222,6 +222,17 @@ export function compareCurves(a: CurvePoint[], b: CurvePoint[]): CurveComparison
   };
 }
 
+/** 'averse': a fall counts for more than an equal rise (the curve sits above
+ * the straight line), so the worse-off get extra weight. 'seeking': the
+ * reverse. 'neutral': rises and falls count about the same. */
+export type RiskAttitude = 'averse' | 'neutral' | 'seeking';
+
+export function riskAttitude(curve: CurvePoint[]): RiskAttitude {
+  const line = linearCurve();
+  const gap = GAMBLE_POINTS.reduce((s, ls) => s + curveAt(curve, ls) - curveAt(line, ls), 0) / GAMBLE_POINTS.length;
+  return gap >= DIRECTION_TOLERANCE ? 'averse' : gap <= -DIRECTION_TOLERANCE ? 'seeking' : 'neutral';
+}
+
 // ---------------------------------------------------------------------------
 // Block state (saved with the game)
 // ---------------------------------------------------------------------------
