@@ -350,7 +350,68 @@ export type TelemetryEvent =
       payload: { level_id: string; outcome: "win" | "lose"; turns_taken: number; final_score: number };
     }
 
-    // ---- Utility elicitation (social block before Level 3, personal before Level 4) ----
+    // ---- Utility Intervention (post-Rawls) ----
+  | {
+      event: "utility_intervention_opened";
+      payload: { after_cycle: string };
+    }
+  | {
+      event: "utility_scenario_answered";
+      payload: {
+        scenario_index: number;
+        answer_given: string;
+        time_to_answer_ms: number;
+      };
+    }
+  | {
+      event: "utility_maths_seen";
+      payload: {
+        scenario_index: number;
+        /** ms between answer and seeing the maths explanation */
+        time_to_maths_ms: number;
+      };
+    }
+  | {
+      event: "utility_graph_animation_awaited";
+      payload: {
+        scenario_index: number;
+        /** ms on the graph screen; did they wait for the animation to finish? */
+        dwell_ms: number;
+        animation_finished: boolean;
+      };
+    }
+  | {
+      event: "utility_demo_replayed";
+      payload: {
+        scenario_index: number;
+        ts: number;
+      };
+    }
+  | {
+      event: "utility_objective_subjective_proceeded";
+      payload: {
+        scenario_index: number;
+        /** ms on the objective/subjective comparison screen */
+        dwell_ms: number;
+      };
+    }
+  | {
+      event: "utility_intervention_completed";
+      payload: { total_scenarios: number; dwell_ms: number };
+    }
+  | {
+      /** The "Resume Simulation" button at start of Level 3 */
+      event: "utility_resume_clicked";
+      payload: { ts: number };
+    }
+
+  // ---- Life satisfaction question (start of game) ----
+  | {
+      event: "life_satisfaction_submitted";
+      payload: { ls: number; changed_answer_count: number; dwell_ms: number };
+    }
+
+  // ---- Utility elicitation (social block before Level 3, personal before Level 4) ----
   | { event: "elicitation_opened"; payload: { block: "social" | "personal"; resumed: boolean } }
   | {
       event: "elicitation_gamble_choice";

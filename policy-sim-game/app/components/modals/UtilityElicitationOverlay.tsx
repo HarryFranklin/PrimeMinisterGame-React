@@ -9,6 +9,7 @@ import {
   BlockState, GambleBlock, GambleChoice, LADDER,
   applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
 } from '../../utils/ElicitationEngine';
+import { ElectionCycle } from '../../utils/types';
 
 type Stage = 'intro' | 'gambles';
 
@@ -32,10 +33,11 @@ function InfoCard({ kicker, title, body, button, onNext }: {
 }
 
 export default function UtilityElicitationOverlay() {
-  const { elicitation, updateElicitation, completeElicitation, playerLS } = useGame();
+  const { elicitation, updateElicitation, completeElicitation, playerLS, currentCycle } = useGame();
   // Social block runs before Level 3, personal before Level 4. Fixed on mount
-  // so the overlay doesn't flip blocks while it animates out.
-  const [block] = useState<GambleBlock>(() => (elicitation?.social.completed ? 'personal' : 'social'));
+  // so the overlay doesn't change block while it animates out.
+  const [block] = useState<GambleBlock>(() =>
+    (currentCycle === ElectionCycle.PersonalUtility ? 'personal' : 'social'));
   const [stage, setStage] = useState<Stage>(() =>
     elicitation && blockStarted(elicitation[block]) ? 'gambles' : 'intro');
   const finished = useRef(false);

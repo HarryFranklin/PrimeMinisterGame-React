@@ -171,7 +171,7 @@ function CurveZoneDiagram() {
 // ---------------------------------------------------------------------------
 
 export default function UtilityInterventionOverlay() {
-  const { currentCycle, setHasSeenUtilityIntervention, startCycle } = useGame();
+    const { completeUtilityIntro } = useGame();
 
   const [lsValue, setLsValue] = useState<number>(2.0);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -197,8 +197,7 @@ export default function UtilityInterventionOverlay() {
       });
       track('utility_resume_clicked', { ts: Date.now() });
     }
-    setHasSeenUtilityIntervention(true);
-    startCycle(currentCycle);
+    completeUtilityIntro();
   };
 
   const details = useMemo(() => getContinuousDetails(lsValue), [lsValue]);
@@ -238,9 +237,6 @@ export default function UtilityInterventionOverlay() {
             The public no longer cares about raw numbers; they care about <strong>actual happiness</strong>.
             A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving.
             Explore the curve below, then use the slider to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
-          </p>
-          <p className="text-base text-zinc-500 leading-relaxed">
-            You have just built curves like this from your own answers. Here is how one works in practice.
           </p>
         </motion.div>
 
@@ -365,7 +361,7 @@ export default function UtilityInterventionOverlay() {
                 : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
             }`}
           >
-            {hasInteracted ? "I Understand, Resume Simulation \u2192" : "Drag the slider to continue"}
+            {hasInteracted ? "I Understand, Continue \u2192" : "Drag the slider to continue"}
           </button>
         </motion.div>
 

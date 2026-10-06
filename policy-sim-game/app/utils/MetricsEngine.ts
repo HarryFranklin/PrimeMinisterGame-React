@@ -29,7 +29,8 @@ export class MetricsEngine {
     
     // Seed is now tied to the player's unique ID + the cycle, guaranteeing 
     // unique but deterministic runs per player.
-    let seed = playerSeed + (cycle * 12345) + 1;
+    // Level 4 replays Level 3's policies, so the two lenses can be compared.
+    let seed = playerSeed + ((cycle === ElectionCycle.PersonalUtility ? ElectionCycle.SocietalUtility : cycle) * 12345) + 1;
     const pseudoRandom = () => {
       const x = Math.sin(seed++) * 10000;
       return x - Math.floor(x);

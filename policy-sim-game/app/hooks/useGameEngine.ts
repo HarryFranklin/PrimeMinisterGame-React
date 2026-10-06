@@ -367,7 +367,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCycleAttempts(1);
   };
 
-  const startLevel = useCallback((cycle: ElectionCycle) => {
+    const startLevel = useCallback((cycle: ElectionCycle) => {
 
     // Ask the player's own LS once, after their first "Begin Term".
     if (playerLS === null) {
@@ -376,18 +376,26 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       return;
     }
 
+    // First time into Level 3: the utility intro, then the social gamble
+    // block (completeUtilityIntro moves on to it).
     if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) {
       setCurrentCycle(cycle);
-      // First time into Level 3: utility elicitation block, then the
-      // existing intervention (completeElicitation moves on to it).
-      if (ELICITATION_ENABLED && !elicitation?.social.completed) {
-        if (!elicitation) setElicitation(createElicitationState(difficultySeed));
-        setGamePhase(GamePhase.UtilityElicitation);
-        return;
-      }
       setGamePhase(GamePhase.UtilityIntervention);
       return;
     }
+
+    // Social block before Level 3, personal block before Level 4
+    // (completeElicitation starts the level).
+    const block: GambleBlock | null =
+      cycle === ElectionCycle.SocietalUtility ? 'social'
+        : cycle === ElectionCycle.PersonalUtility ? 'personal' : null;
+    if (ELICITATION_ENABLED && block && !elicitation?.[block].completed) {
+      setCurrentCycle(cycle);
+      if (!elicitation) setElicitation(createElicitationState(difficultySeed));
+      setGamePhase(GamePhase.UtilityElicitation);
+      return;
+    }
+
     startCycle(cycle);
     setCycleAttempts(1);
   }, [startCycle, hasSeenUtilityIntervention, elicitation, playerLS, difficultySeed]);
@@ -402,15 +410,31 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setElicitation(prev => (prev ? updater(prev) : prev));
   }, []);
 
-  const completeElicitation = useCallback((block: GambleBlock) => {
+    const completeElicitation = useCallback((block: GambleBlock) => {
     setElicitation(prev => (prev ? { ...prev, [block]: { ...prev[block], completed: true } } : prev));
-    setGamePhase(GamePhase.UtilityIntervention);
-  }, []);
+    startCycle(block === 'social' ? ElectionCycle.SocietalUtility : ElectionCycle.PersonalUtility);
+    setCycleAttempts(1);
+  }, [startCycle]);
+
+  /** End of the utility intro: on to the social gamble block, or straight
+   * into Level 3 if it's already done (or switched off). */
+  const completeUtilityIntro = useCallback(() => {
+    setHasSeenUtilityIntervention(true);
+    if (ELICITATION_ENABLED && !elicitation?.social.completed) {
+      if (!elicitation) setElicitation(createElicitationState(difficultySeed));
+      setGamePhase(GamePhase.UtilityElicitation);
+      return;
+    }
+    startCycle(ElectionCycle.SocietalUtility);
+    setCycleAttempts(1);
+  }, [elicitation, difficultySeed, startCycle]);
 
   /** Dev panel: open the elicitation block directly (fresh answers). */
-  const jumpToElicitation = useCallback(() => {
-    setCurrentCycle(ElectionCycle.SocietalUtility);
-    setElicitation(createElicitationState(difficultySeed));
+  const jumpToElicitation = useCallback((block: GambleBlock = 'social') => {
+    const fresh = createElicitationState(difficultySeed);
+    setCurrentCycle(block === 'social' ? ElectionCycle.SocietalUtility : ElectionCycle.PersonalUtility);
+    // Jumping to the personal block keeps any social answers, for the reveal.
+    setElicitation(prev => (block === 'personal' && prev ? { ...prev, personal: fresh.personal } : fresh));
     setGamePhase(GamePhase.UtilityElicitation);
   }, [difficultySeed]);
 
@@ -517,6 +541,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     winScalars, 
     difficultySeed,
     playerLS, handleLifeSatisfactionSubmit,
-    elicitation, updateElicitation, completeElicitation, jumpToElicitation
+    elicitation, updateElicitation, completeElicitation, jumpToElicitation, completeUtilityIntro
   };
 }
