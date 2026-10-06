@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
-import { InteractiveDPMEmail } from './SharedModalComponents';
-import GambleScreen from '../elicitation/GambleScreen';
-import { INTRO_EMAIL, PAUSE_CARD } from '../elicitation/elicitationText';
+import GambleScreen, { SLIDE } from '../elicitation/GambleScreen';
+import { PERSONAL_INTRO_CARD, SOCIAL_INTRO_CARD } from '../elicitation/elicitationText';
 import {
   BlockState, GambleBlock, GambleChoice, LADDER,
   applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
@@ -41,6 +40,8 @@ export default function UtilityElicitationOverlay() {
   const [stage, setStage] = useState<Stage>(() =>
     elicitation && blockStarted(elicitation[block]) ? 'gambles' : 'intro');
   const finished = useRef(false);
+  // 1 = forwards (new gamble slides in from the right), -1 = back.
+  const direction = useRef(1);
 
   useEffect(() => {
     track('elicitation_opened', { block, resumed: stage !== 'intro' });
@@ -78,6 +79,7 @@ export default function UtilityElicitationOverlay() {
   if (!elicitation || !state) return null;
 
   const handleChoice = (choice: GambleChoice, ms: number) => {
+    direction.current = 1;
     if (point === null) return;
     const record = state.records[point];
     const riskIndex = nextRiskIndex(record);
@@ -100,6 +102,7 @@ export default function UtilityElicitationOverlay() {
   };
 
   const handleBack = () => {
+    direction.current = -1;
     const undone = undoLastChoice(state);
     if (!undone) return;
     track('elicitation_gamble_undone', { block, point: undone.point, step_index: undone.stepIndex });
@@ -112,31 +115,24 @@ export default function UtilityElicitationOverlay() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.8 }}
-      className="fixed inset-0 z-[9999] bg-zinc-950 text-zinc-200 flex flex-col p-6 md:p-12 overflow-y-auto"
+      className="fixed inset-0 z-[9999] bg-zinc-950 text-zinc-200 flex flex-col p-6 md:p-12 overflow-y-auto overflow-x-hidden"
     >
       <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col justify-center gap-6 my-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={direction.current}>
           <motion.div
             key={`${block}-${stage}-${point ?? ''}`}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.35 }}
+            custom={direction.current}
+            variants={SLIDE}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
-            {stage === 'intro' && block === 'social' && (
-              <div className="bg-white rounded-2xl shadow-2xl border-t-[6px] border-t-pink-600 p-5 md:p-6 max-w-xl mx-auto">
-                <InteractiveDPMEmail
-                  title={INTRO_EMAIL.title}
-                  message={INTRO_EMAIL.message}
-                  typeSpeed={25}
-                  buttonText={INTRO_EMAIL.button}
-                  onAcknowledge={() => setStage('gambles')}
-                />
-              </div>
-            )}
-
-            {stage === 'intro' && block === 'personal' && (
-              <InfoCard {...PAUSE_CARD} onNext={() => setStage('gambles')} />
+            {stage === 'intro' && (
+              <InfoCard
+                {...(block === 'social' ? SOCIAL_INTRO_CARD : PERSONAL_INTRO_CARD)}
+                onNext={() => setStage('gambles')}
+              />
             )}
 
             {stage === 'gambles' && point !== null && (
