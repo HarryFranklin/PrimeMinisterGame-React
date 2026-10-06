@@ -4,31 +4,13 @@ import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
 import { InteractiveDPMEmail } from './SharedModalComponents';
 import GambleScreen from '../elicitation/GambleScreen';
-import DirectWeightsForm from '../elicitation/DirectWeightsForm';
-import ComparisonScreen from '../elicitation/ComparisonScreen';
-import { INTRO_EMAIL, PAUSE_CARD, TRANSITION_CARD } from '../elicitation/elicitationText';
+import { INTRO_EMAIL, PAUSE_CARD } from '../elicitation/elicitationText';
 import {
-  ElicitationState, GambleBlock, GambleChoice, LADDER, applyChoice, nextRiskIndex, summariseElicitation,
+  BlockState, GambleBlock, GambleChoice, LADDER,
+  applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
 } from '../../utils/ElicitationEngine';
 
-type Stage =
-  | 'intro' | 'pause' | 'personal' | 'transition' | 'social'
-  | 'direct' | 'compare';
-
-const blockDone = (e: ElicitationState, b: GambleBlock) =>
-  e[`${b}Order`].every((p) => e[b][p].done);
-const blockStarted = (e: ElicitationState, b: GambleBlock) =>
-  e[`${b}Order`].some((p) => e[b][p].steps.length > 0);
-
-/** Where to pick up if the player refreshes part-way through. */
-function resumeStage(e: ElicitationState): Stage {
-  if (!blockStarted(e, 'personal')) return 'intro';
-  if (!blockDone(e, 'personal')) return 'personal';
-  if (!blockStarted(e, 'social')) return 'transition';
-  if (!blockDone(e, 'social')) return 'social';
-  if (!e.directWeights) return 'direct';
-  return 'compare';
-}
+type Stage = 'intro' | 'gambles';
 
 function InfoCard({ kicker, title, body, button, onNext }: {
   kicker: string; title: string; body: string; button: string; onNext: () => void;
@@ -51,56 +33,51 @@ function InfoCard({ kicker, title, body, button, onNext }: {
 
 export default function UtilityElicitationOverlay() {
   const { elicitation, updateElicitation, completeElicitation, playerLS } = useGame();
-  const [stage, setStage] = useState<Stage>(() => (elicitation ? resumeStage(elicitation) : 'intro'));
+  // Social block runs before Level 3, personal before Level 4. Fixed on mount
+  // so the overlay doesn't flip blocks while it animates out.
+  const [block] = useState<GambleBlock>(() => (elicitation?.social.completed ? 'personal' : 'social'));
+  const [stage, setStage] = useState<Stage>(() =>
+    elicitation && blockStarted(elicitation[block]) ? 'gambles' : 'intro');
   const finished = useRef(false);
 
   useEffect(() => {
-    track('elicitation_opened', { resumed: stage !== 'intro' });
+    track('elicitation_opened', { block, resumed: stage !== 'intro' });
+    updateElicitation((prev) => (prev[block].startedAt !== null ? prev
+      : { ...prev, [block]: { ...prev[block], startedAt: Date.now() } }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!elicitation) return null;
-  const summary = summariseElicitation(elicitation);
+  const state = elicitation?.[block];
+  const orderIndex = state ? currentGambleIndex(state) : -1;
+  const point = state && orderIndex >= 0 ? state.order[orderIndex] : null;
 
-  const handleDirectSubmit = (weights: number[], dwellMs: number) => {
-    track('elicitation_direct_submitted', { weights, dwell_ms: dwellMs });
-    updateElicitation((prev) => ({ ...prev, directWeights: weights }));
-    setStage('compare');
-  };
-
-  /** Sends the one rollup the server stores, then moves on to the intervention. */
-  const finish = (e: ElicitationState) => {
+  /** Sends the block's rollup (the one the server stores), then moves on. */
+  const finish = (s: BlockState) => {
     if (finished.current) return;
     finished.current = true;
-    const s = summariseElicitation(e);
-    const utilities = (block: GambleBlock) =>
-      Object.fromEntries(e[`${block}Order`].map((p) => [String(p), e[block][p].utility]));
+    const curve = chainedCurve(s.records);
     track('elicitation_completed', {
+      block,
       player_ls: playerLS,
-      own_point: e.ownPoint,
-      personal_utilities: utilities('personal'),
-      social_utilities: utilities('social'),
-      direct_weights: e.directWeights,
-      pu_su_mean_gap: s.personalVsSocial.meanGap,
-      pu_su_different: s.personalVsSocial.different,
-      su_direct_mean_gap: s.socialVsDirect?.meanGap ?? null,
-      su_direct_different: s.socialVsDirect?.different ?? null,
-      why_personal_social: e.whyPersonalSocial,
-      why_method: e.whyMethod,
-      reflection: e.reflection,
-      dwell_ms: Date.now() - e.startedAt,
+      loss_risks: Object.fromEntries(s.order.map((p) => [String(p), s.records[p].lossRisk])),
+      utilities: curve ? Object.fromEntries(curve.map((c) => [String(c.ls), c.u])) : null,
+      undo_count: s.undoCount,
+      dwell_ms: s.startedAt !== null ? Date.now() - s.startedAt : 0,
     });
-    completeElicitation();
+    completeElicitation(block);
   };
 
-  const block: GambleBlock | null = stage === 'personal' ? 'personal' : stage === 'social' ? 'social' : null;
-  const order = block ? elicitation[`${block}Order`] : [];
-  const orderIndex = block ? order.findIndex((p) => !elicitation[block][p].done) : -1;
-  const point = orderIndex >= 0 ? order[orderIndex] : null;
+  // Refreshed after the last answer but before the block was marked done.
+  useEffect(() => {
+    if (state && stage === 'gambles' && orderIndex === -1 && !state.completed) finish(state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, stage, orderIndex]);
+
+  if (!elicitation || !state) return null;
 
   const handleChoice = (choice: GambleChoice, ms: number) => {
-    if (!block || point === null) return;
-    const record = elicitation[block][point];
+    if (point === null) return;
+    const record = state.records[point];
     const riskIndex = nextRiskIndex(record);
     if (riskIndex === null) return;
 
@@ -109,19 +86,23 @@ export default function UtilityElicitationOverlay() {
     });
 
     const updated = applyChoice(record, choice, ms);
-    updateElicitation((prev) => ({ ...prev, [block]: { ...prev[block], [point]: updated } }));
+    const next: BlockState = { ...state, records: { ...state.records, [point]: updated } };
+    updateElicitation((prev) => ({ ...prev, [block]: next }));
 
     if (updated.done) {
       track('elicitation_gamble_completed', {
-        block, point, order_index: orderIndex,
-        indifference_risk: updated.indifferenceRisk ?? 0, utility: updated.utility ?? 0,
+        block, point, order_index: orderIndex, loss_risk: updated.lossRisk ?? 0,
       });
-      if (orderIndex === order.length - 1) setStage(block === 'personal' ? 'transition' : 'direct');
+      if (orderIndex === state.order.length - 1) finish(next);
     }
   };
 
-  const isOwnPoint = point !== null && point === elicitation.ownPoint
-    && playerLS !== null && Math.round(playerLS) === point;
+  const handleBack = () => {
+    const undone = undoLastChoice(state);
+    if (!undone) return;
+    track('elicitation_gamble_undone', { block, point: undone.point, step_index: undone.stepIndex });
+    updateElicitation((prev) => ({ ...prev, [block]: undone.state }));
+  };
 
   return (
     <motion.div
@@ -134,51 +115,38 @@ export default function UtilityElicitationOverlay() {
       <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col justify-center gap-6 my-4">
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${stage}-${point ?? ''}`}
+            key={`${block}-${stage}-${point ?? ''}`}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.35 }}
           >
-            {stage === 'intro' && (
+            {stage === 'intro' && block === 'social' && (
               <div className="bg-white rounded-2xl shadow-2xl border-t-[6px] border-t-pink-600 p-5 md:p-6 max-w-xl mx-auto">
                 <InteractiveDPMEmail
                   title={INTRO_EMAIL.title}
                   message={INTRO_EMAIL.message}
                   typeSpeed={25}
                   buttonText={INTRO_EMAIL.button}
-                  onAcknowledge={() => setStage('pause')}
+                  onAcknowledge={() => setStage('gambles')}
                 />
               </div>
             )}
 
-            {stage === 'pause' && <InfoCard {...PAUSE_CARD} onNext={() => setStage('personal')} />}
-
-            {stage === 'transition' && <InfoCard {...TRANSITION_CARD} onNext={() => setStage('social')} />}
-
-            {stage === 'direct' && <DirectWeightsForm onSubmit={handleDirectSubmit} />}
-
-            {stage === 'compare' && summary.direct && summary.socialVsDirect && (
-              <ComparisonScreen
-                curves={{ personal: summary.personal, social: summary.social, direct: summary.direct }}
-                personalVsSocial={summary.personalVsSocial}
-                socialVsDirect={summary.socialVsDirect}
-                playerLS={playerLS}
-                onView={(view, dwellMs) => track('elicitation_comparison_viewed', { view, dwell_ms: dwellMs })}
-                onContinue={() => finish(elicitation)}
-              />
+            {stage === 'intro' && block === 'personal' && (
+              <InfoCard {...PAUSE_CARD} onNext={() => setStage('gambles')} />
             )}
 
-            {block && point !== null && (
+            {stage === 'gambles' && point !== null && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 md:p-8">
                 <GambleScreen
                   block={block}
-                  record={elicitation[block][point]}
+                  record={state.records[point]}
                   orderIndex={orderIndex}
-                  total={order.length}
+                  total={state.order.length}
                   fullByDefault={orderIndex === 0}
-                  isOwnPoint={isOwnPoint}
                   onChoice={handleChoice}
+                  onBack={canUndo(state) ? handleBack : undefined}
                 />
               </div>
             )}

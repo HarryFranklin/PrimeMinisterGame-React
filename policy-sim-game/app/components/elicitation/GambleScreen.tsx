@@ -4,7 +4,7 @@ import { IMPACT_COLORS } from '../../utils/uiHelpers';
 import {
   GambleBlock, GambleChoice, GambleRecord, LADDER, LADDER_LABELS, nextRiskIndex,
 } from '../../utils/ElicitationEngine';
-import { BLOCK_TEXT, OWN_POINT_NOTE } from './elicitationText';
+import { BLOCK_TEXT } from './elicitationText';
 
 const SUCCESS = IMPACT_COLORS['Will improve'];
 const FAILURE = IMPACT_COLORS['Will worsen'];
@@ -33,12 +33,13 @@ interface GambleScreenProps {
   total: number;
   /** Show the full scenario text by default (first gamble of the block). */
   fullByDefault: boolean;
-  isOwnPoint: boolean;
+  /** Steps back one choice; undefined when there's nothing to undo. */
+  onBack?: () => void;
   onChoice: (choice: GambleChoice, ms: number) => void;
 }
 
 export default function GambleScreen({
-  block, record, orderIndex, total, fullByDefault, isOwnPoint, onChoice,
+  block, record, orderIndex, total, fullByDefault, onChoice,
 }: GambleScreenProps) {
   const t = BLOCK_TEXT[block];
   const x = record.point;
@@ -98,12 +99,11 @@ export default function GambleScreen({
             {showFull ? t.hideFull : t.showFull}
           </button>
         )}
-        {isOwnPoint && <p className="text-sm text-pink-300">{OWN_POINT_NOTE}</p>}
       </div>
 
       {/* Follow-up line after the first choice */}
       <AnimatePresence mode="wait">
-        {lastChoice && lastChoice !== 'unsure' && (
+        {lastChoice === 'A' && (
           <motion.p
             key={`${record.steps.length}`}
             initial={{ opacity: 0, y: -6 }}
@@ -111,7 +111,7 @@ export default function GambleScreen({
             exit={{ opacity: 0 }}
             className="text-sm font-semibold text-amber-300"
           >
-            {lastChoice === 'A' ? t.followUp.afterA : t.followUp.afterB}
+            {t.followUp}
           </motion.p>
         )}
       </AnimatePresence>
@@ -174,11 +174,11 @@ export default function GambleScreen({
           </button>
           <button
             type="button"
-            onClick={() => choose('unsure')}
+            onClick={() => choose('equal')}
             className="px-4 py-3 rounded-xl font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-60"
             disabled={locked}
           >
-            {t.buttons.unsure}
+            {t.buttons.equal}
           </button>
         </div>
       </div>

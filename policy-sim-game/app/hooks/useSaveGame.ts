@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 
-export const SAVE_KEY = 'policy-sim-save-v1';
+export const SAVE_KEY = 'policy-sim-save-v2';
 
 export function useSaveGame(
   snapshot: any,

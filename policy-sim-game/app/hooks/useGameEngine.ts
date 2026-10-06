@@ -9,7 +9,7 @@ import { MetricsEngine } from '../utils/MetricsEngine';
 import { useSaveGame } from './useSaveGame';
 import { DifficultyEngine } from '../utils/DifficultyEngine'; 
 import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
-import { ElicitationState, createElicitationState, ELICITATION_ENABLED } from '../utils/ElicitationEngine';
+import { ElicitationState, GambleBlock, createElicitationState, ELICITATION_ENABLED } from '../utils/ElicitationEngine';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -380,8 +380,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       setCurrentCycle(cycle);
       // First time into Level 3: utility elicitation block, then the
       // existing intervention (completeElicitation moves on to it).
-      if (ELICITATION_ENABLED && !elicitation?.completed) {
-        if (!elicitation) setElicitation(createElicitationState(playerLS, difficultySeed));
+      if (ELICITATION_ENABLED && !elicitation?.social.completed) {
+        if (!elicitation) setElicitation(createElicitationState(difficultySeed));
         setGamePhase(GamePhase.UtilityElicitation);
         return;
       }
@@ -402,17 +402,17 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setElicitation(prev => (prev ? updater(prev) : prev));
   }, []);
 
-  const completeElicitation = useCallback(() => {
-    setElicitation(prev => (prev ? { ...prev, completed: true } : prev));
+  const completeElicitation = useCallback((block: GambleBlock) => {
+    setElicitation(prev => (prev ? { ...prev, [block]: { ...prev[block], completed: true } } : prev));
     setGamePhase(GamePhase.UtilityIntervention);
   }, []);
 
   /** Dev panel: open the elicitation block directly (fresh answers). */
   const jumpToElicitation = useCallback(() => {
     setCurrentCycle(ElectionCycle.SocietalUtility);
-    setElicitation(createElicitationState(playerLS, difficultySeed));
+    setElicitation(createElicitationState(difficultySeed));
     setGamePhase(GamePhase.UtilityElicitation);
-  }, [playerLS, difficultySeed]);
+  }, [difficultySeed]);
 
   const handleCompleteTerm = useCallback(() => {
     const targetScore = cycleMAO * winScalars[currentCycle];

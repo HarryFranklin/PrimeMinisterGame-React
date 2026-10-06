@@ -1,17 +1,24 @@
 /**
  * Utility elicitation logic (no UI).
  *
- * Gambles follow Cooper et al. (2026)'s framing, simplified: each gamble is a
- * sure LS X versus a lottery between LS 10 (success) and LS 2 (failure), with
- * no death outcome. On a scale where U(2) = 0 and U(10) = 1, the expected
- * utility rule gives U(X) = 1 - p, where p is the risk of failure at which
- * the player is indifferent.
+ * Chained standard gambles between adjacent LS levels. Each gamble offers a
+ * sure LS X (option A) against a lottery (option B) that moves the person up
+ * to X+2 or down to X-2. Gambles are only ever offered between adjacent
+ * levels: 2/4/6, 4/6/8 and 6/8/10.
  *
- * The direct method follows Layard & Oparina (2026), condensed to 2-point
- * steps: 2->4 is fixed at 100 and the player rates 4->6, 6->8 and 8->10.
+ * Risk of the worse outcome is offered worst first (1 in 2), then lowered
+ * step by step until the player accepts the gamble. Their threshold lies
+ * between the last risk they refused and the first they accepted, taken as
+ * the midpoint on a log scale. "Both options seem equally good" pins the
+ * threshold at the risk on screen.
+ *
+ * At the threshold, U(X) = p·U(X-2) + (1-p)·U(X+2), so
+ *   U(X+2) = (U(X) - p·U(X-2)) / (1 - p).
+ * Starting from U(2) = 0 and U(4) = 1, the gambles at 4, 6 and 8 give U(6),
+ * U(8) and U(10) in turn. Everything is then rescaled so U(10) = 1.
  */
 
-/** Turns the elicitation block on before Level 3. */
+/** Turns the elicitation blocks on (social before Level 3, personal before Level 4). */
 export const ELICITATION_ENABLED = true;
 
 // ---------------------------------------------------------------------------
@@ -20,29 +27,29 @@ export const ELICITATION_ENABLED = true;
 
 export const LOW_OUTCOME = 2;
 export const HIGH_OUTCOME = 10;
-export const FIXED_POINTS = [4, 6, 8];
-const OWN_POINT_OPTIONS = [3, 5, 7, 9];
-const OWN_POINT_FALLBACK = 3;
+/** Distance between adjacent levels. */
+export const LS_STEP = 2;
+/** Sure outcome of each gamble, lowest first (the chain relies on this order). */
+export const GAMBLE_POINTS = [4, 6, 8];
 
-/** Risk of the worse outcome at each step, highest risk first. */
-export const LADDER = [1 / 2, 1 / 3, 1 / 5, 1 / 10, 1 / 20, 1 / 50, 1 / 100];
-export const LADDER_LABELS = ['1 in 2', '1 in 3', '1 in 5', '1 in 10', '1 in 20', '1 in 50', '1 in 100'];
+export const lossOutcome = (x: number) => x - LS_STEP;
+export const winOutcome = (x: number) => x + LS_STEP;
 
-/** Sentinel risks either side of the ladder. Refusing every step is scored
- * against 1 in 1,000 (the next step on Cooper's ladder); accepting at the
- * very first step is scored against a risk of 1 (Cooper's convention). */
+/** Risk of the worse outcome at each step, worst first (Crispin's ladder). */
+export const LADDER = [1 / 2, 1 / 5, 1 / 10, 1 / 100, 1 / 1000, 1 / 10000];
+export const LADDER_LABELS = ['1 in 2', '1 in 5', '1 in 10', '1 in 100', '1 in 1,000', '1 in 10,000'];
+
+/** Sentinel risks either side of the ladder. Accepting at the very first
+ * step is scored against a risk of 1; refusing every step is scored against
+ * 1 in 100,000 (the next step below the ladder). */
 const RISK_ABOVE_LADDER = 1;
-const RISK_BELOW_LADDER = 1 / 1000;
+const RISK_BELOW_LADDER = 1 / 100000;
 
 const riskAt = (index: number): number =>
   index < 0 ? RISK_ABOVE_LADDER : index >= LADDER.length ? RISK_BELOW_LADDER : LADDER[index];
 
-/** The fourth gamble point: the player's own LS if it adds a new point. */
-export function pickOwnPoint(playerLS: number | null): number {
-  if (playerLS === null) return OWN_POINT_FALLBACK;
-  const rounded = Math.round(playerLS);
-  return OWN_POINT_OPTIONS.includes(rounded) ? rounded : OWN_POINT_FALLBACK;
-}
+/** Midpoint of two risks on a log scale. */
+const logMidpoint = (a: number, b: number) => Math.exp((Math.log(a) + Math.log(b)) / 2);
 
 /** Seeded shuffle (mulberry32) so each participant's order is reproducible. */
 export function seededShuffle<T>(items: T[], seed: number): T[] {
@@ -63,12 +70,13 @@ export function seededShuffle<T>(items: T[], seed: number): T[] {
 }
 
 // ---------------------------------------------------------------------------
-// One gamble: three choices, starting at 1 in 10 and jumping up or down
+// One gamble: risk lowered step by step until the player takes option B
 // ---------------------------------------------------------------------------
 
-/** 'A' = take the guaranteed outcome, 'B' = take the gamble. */
-export type GambleChoice = 'A' | 'B' | 'unsure';
-export type GambleBlock = 'personal' | 'social';
+/** 'A' = take the sure outcome, 'B' = take the gamble,
+ * 'equal' = both options seem equally good. */
+export type GambleChoice = 'A' | 'B' | 'equal';
+export type GambleBlock = 'social' | 'personal';
 
 export interface GambleStep {
   riskIndex: number;
@@ -77,61 +85,53 @@ export interface GambleStep {
 }
 
 export interface GambleRecord {
+  /** The sure LS (X). The gamble is between X+2 and X-2. */
   point: number;
   steps: GambleStep[];
   done: boolean;
-  /** Estimated risk at which the player is indifferent. */
-  indifferenceRisk: number | null;
-  /** U(point) on the 2-10 scale (U(2) = 0, U(10) = 1). */
-  utility: number | null;
+  /** Risk of the worse outcome at which the player is indifferent. */
+  lossRisk: number | null;
 }
 
 export const createGambleRecord = (point: number): GambleRecord => ({
-  point, steps: [], done: false, indifferenceRisk: null, utility: null,
+  point, steps: [], done: false, lossRisk: null,
 });
 
-/** Bounds implied by the choices so far: the lowest-risk step refused and
- * the highest-risk step accepted. Accepting a risk implies accepting any
- * smaller one, so the answer lies strictly between the two. */
-function bounds(steps: GambleStep[]) {
-  let refused = -1;
-  let accepted = LADDER.length;
-  for (const s of steps) {
-    if (s.choice === 'A') refused = Math.max(refused, s.riskIndex);
-    if (s.choice === 'B') accepted = Math.min(accepted, s.riskIndex);
-  }
-  return { refused, accepted };
-}
-
-/** Which step to show next, or null if the gamble is finished. */
+/** Which step to show next, or null if the gamble is finished. Steps run
+ * down the ladder in order, so the next one is simply the step count. */
 export function nextRiskIndex(record: GambleRecord): number | null {
-  if (record.done) return null;
-  const { refused, accepted } = bounds(record.steps);
-  if (accepted - refused <= 1) return null;
-  return Math.floor((refused + accepted) / 2);
+  if (record.done || record.steps.length >= LADDER.length) return null;
+  return record.steps.length;
 }
 
-/** Records a choice at the current step and finishes the gamble when the
- * answer is pinned down (always within three choices). */
+/** Records a choice at the current step and finishes the gamble once the
+ * threshold is known. */
 export function applyChoice(record: GambleRecord, choice: GambleChoice, ms: number): GambleRecord {
   const riskIndex = nextRiskIndex(record);
   if (riskIndex === null) return record;
   const steps = [...record.steps, { riskIndex, choice, ms }];
 
-  // "Can't choose" means indifferent at this exact risk.
-  if (choice === 'unsure') {
-    const p = riskAt(riskIndex);
-    return { ...record, steps, done: true, indifferenceRisk: p, utility: 1 - p };
+  // Equally good: indifferent at exactly this risk.
+  if (choice === 'equal') {
+    return { ...record, steps, done: true, lossRisk: riskAt(riskIndex) };
   }
 
-  const next = { ...record, steps };
-  if (nextRiskIndex(next) !== null) return next;
+  // Took the gamble: threshold is between the step above (refused) and this one.
+  if (choice === 'B') {
+    return { ...record, steps, done: true, lossRisk: logMidpoint(riskAt(riskIndex - 1), riskAt(riskIndex)) };
+  }
 
-  // Finished: indifference is the midpoint of the two bounds on a log scale.
-  const { refused, accepted } = bounds(steps);
-  const p = Math.sqrt(riskAt(refused) * riskAt(accepted));
-  return { ...next, done: true, indifferenceRisk: p, utility: 1 - p };
+  // Refused the gamble: offer a safer one, unless the ladder has run out.
+  if (riskIndex === LADDER.length - 1) {
+    return { ...record, steps, done: true, lossRisk: logMidpoint(riskAt(riskIndex), riskAt(riskIndex + 1)) };
+  }
+  return { ...record, steps };
 }
+
+/** Removes the last choice, reopening the gamble. */
+export const undoChoice = (record: GambleRecord): GambleRecord => ({
+  ...record, steps: record.steps.slice(0, -1), done: false, lossRisk: null,
+});
 
 // ---------------------------------------------------------------------------
 // Curves
@@ -142,28 +142,17 @@ export interface CurvePoint {
   u: number;
 }
 
-/** Utility curve from a set of finished gambles, with the fixed ends added. */
-export function gambleCurve(records: Record<number, GambleRecord>): CurvePoint[] {
-  const pts: CurvePoint[] = [{ ls: LOW_OUTCOME, u: 0 }, { ls: HIGH_OUTCOME, u: 1 }];
-  for (const r of Object.values(records)) {
-    if (r.utility !== null) pts.push({ ls: r.point, u: r.utility });
+/** Utility curve from the chained gambles (U(2) = 0, U(10) = 1), or null
+ * until every gamble in the chain is finished. */
+export function chainedCurve(records: Record<number, GambleRecord>): CurvePoint[] | null {
+  const u: Record<number, number> = { [LOW_OUTCOME]: 0, [LOW_OUTCOME + LS_STEP]: 1 };
+  for (const x of GAMBLE_POINTS) {
+    const p = records[x]?.lossRisk;
+    if (p === null || p === undefined) return null;
+    u[winOutcome(x)] = (u[x] - p * u[lossOutcome(x)]) / (1 - p);
   }
-  return pts.sort((a, b) => a.ls - b.ls);
-}
-
-/** L&O-style curve from the three slider answers (4->6, 6->8, 8->10), with
- * 2->4 fixed at 100. The running total is scaled so U(10) = 1. */
-export const DIRECT_ANCHOR = 100;
-export function directCurve(weights: number[]): CurvePoint[] {
-  const steps = [DIRECT_ANCHOR, ...weights];
-  const total = steps.reduce((s, w) => s + w, 0);
-  const pts: CurvePoint[] = [{ ls: LOW_OUTCOME, u: 0 }];
-  let running = 0;
-  steps.forEach((w, i) => {
-    running += w;
-    pts.push({ ls: LOW_OUTCOME + 2 * (i + 1), u: total > 0 ? running / total : 0 });
-  });
-  return pts;
+  const top = u[HIGH_OUTCOME];
+  return [LOW_OUTCOME, ...GAMBLE_POINTS, HIGH_OUTCOME].map((ls) => ({ ls, u: u[ls] / top }));
 }
 
 /** Straight line: every point of LS counts the same (the Level 1 rule). */
@@ -197,7 +186,7 @@ export function stepValues(curve: CurvePoint[]): { step: string; value: number }
 // Comparing two curves
 // ---------------------------------------------------------------------------
 
-export const COMPARE_POINTS = [4, 6, 8];
+export const COMPARE_POINTS = GAMBLE_POINTS;
 export const MEAN_GAP_THRESHOLD = 0.1;
 export const MAX_GAP_THRESHOLD = 0.2;
 /** Gaps smaller than this are ignored when working out the direction. */
@@ -234,54 +223,68 @@ export function compareCurves(a: CurvePoint[], b: CurvePoint[]): CurveComparison
 }
 
 // ---------------------------------------------------------------------------
-// Whole-block state (saved with the game)
+// Block state (saved with the game)
 // ---------------------------------------------------------------------------
 
-export interface ElicitationState {
-  ownPoint: number;
-  personalOrder: number[];
-  socialOrder: number[];
-  personal: Record<number, GambleRecord>;
-  social: Record<number, GambleRecord>;
-  /** Slider answers for 4->6, 6->8, 8->10 (2->4 is fixed at 100). */
-  directWeights: number[] | null;
-  whyPersonalSocial: string | null;
-  whyMethod: string | null;
-  reflection: string | null;
-  startedAt: number;
+export interface BlockState {
+  order: number[];
+  records: Record<number, GambleRecord>;
+  /** Set when the block first opens, so dwell time survives a refresh. */
+  startedAt: number | null;
+  undoCount: number;
   completed: boolean;
 }
 
-export function createElicitationState(playerLS: number | null, seed: number): ElicitationState {
-  const ownPoint = pickOwnPoint(playerLS);
-  const points = [...FIXED_POINTS, ownPoint];
-  const blank = () =>
-    Object.fromEntries(points.map((p) => [p, createGambleRecord(p)])) as Record<number, GambleRecord>;
+export interface ElicitationState {
+  /** Before Level 3: deciding for citizens. */
+  social: BlockState;
+  /** Before Level 4: deciding for your own life. */
+  personal: BlockState;
+}
+
+function createBlock(seed: number): BlockState {
   return {
-    ownPoint,
-    personalOrder: seededShuffle(points, seed),
-    socialOrder: seededShuffle(points, seed + 1),
-    personal: blank(),
-    social: blank(),
-    directWeights: null,
-    whyPersonalSocial: null,
-    whyMethod: null,
-    reflection: null,
-    startedAt: Date.now(),
+    order: seededShuffle(GAMBLE_POINTS, seed),
+    records: Object.fromEntries(GAMBLE_POINTS.map((p) => [p, createGambleRecord(p)])),
+    startedAt: null,
+    undoCount: 0,
     completed: false,
   };
 }
 
-/** All three curves plus the two comparisons the "why" questions depend on. */
-export function summariseElicitation(state: ElicitationState) {
-  const personal = gambleCurve(state.personal);
-  const social = gambleCurve(state.social);
-  const direct = state.directWeights ? directCurve(state.directWeights) : null;
+export function createElicitationState(seed: number): ElicitationState {
+  return { social: createBlock(seed + 1), personal: createBlock(seed) };
+}
+
+/** Index (in play order) of the gamble in progress, or -1 if all are done. */
+export const currentGambleIndex = (b: BlockState) => b.order.findIndex((p) => !b.records[p].done);
+export const blockStarted = (b: BlockState) => b.order.some((p) => b.records[p].steps.length > 0);
+export const canUndo = (b: BlockState) => blockStarted(b) && !b.completed;
+
+/** Steps back one choice: within the current gamble if it has any, otherwise
+ * into the previous gamble. Returns null if there is nothing to undo. */
+export function undoLastChoice(b: BlockState): { state: BlockState; point: number; stepIndex: number } | null {
+  if (!canUndo(b)) return null;
+  const current = currentGambleIndex(b);
+  const idx = current === -1 ? b.order.length - 1
+    : b.records[b.order[current]].steps.length > 0 ? current : current - 1;
+  if (idx < 0) return null;
+  const point = b.order[idx];
+  const record = b.records[point];
   return {
-    personal,
+    state: { ...b, records: { ...b.records, [point]: undoChoice(record) }, undoCount: b.undoCount + 1 },
+    point,
+    stepIndex: record.steps.length - 1,
+  };
+}
+
+/** Both curves (null until that block is finished) and how they compare. */
+export function summariseElicitation(state: ElicitationState) {
+  const social = chainedCurve(state.social.records);
+  const personal = chainedCurve(state.personal.records);
+  return {
     social,
-    direct,
-    personalVsSocial: compareCurves(personal, social),
-    socialVsDirect: direct ? compareCurves(social, direct) : null,
+    personal,
+    personalVsSocial: social && personal ? compareCurves(personal, social) : null,
   };
 }

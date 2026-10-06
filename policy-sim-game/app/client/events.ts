@@ -350,60 +350,40 @@ export type TelemetryEvent =
       payload: { level_id: string; outcome: "win" | "lose"; turns_taken: number; final_score: number };
     }
 
-  // ---- Utility Intervention (post-Rawls) ----
+    // ---- Utility elicitation (social block before Level 3, personal before Level 4) ----
+  | { event: "elicitation_opened"; payload: { block: "social" | "personal"; resumed: boolean } }
   | {
-      event: "utility_intervention_opened";
-      payload: { after_cycle: string };
-    }
-  | {
-      event: "utility_scenario_answered";
+      event: "elicitation_gamble_choice";
       payload: {
-        scenario_index: number;
-        answer_given: string;
-        time_to_answer_ms: number;
+        block: "social" | "personal";
+        /** Sure LS; the gamble is between point+2 and point-2. */
+        point: number;
+        /** Risk of the worse outcome shown at this step, e.g. 0.1 */
+        risk: number;
+        choice: "A" | "B" | "equal";
+        step_index: number;
+        time_to_choose_ms: number;
       };
     }
   | {
-      event: "utility_maths_seen";
-      payload: {
-        scenario_index: number;
-        /** ms between answer and seeing the maths explanation */
-        time_to_maths_ms: number;
-      };
-    }
-    
-  | {
-      event: "utility_graph_animation_awaited";
-      payload: {
-        scenario_index: number;
-        /** ms on the graph screen; did they wait for the animation to finish? */
-        dwell_ms: number;
-        animation_finished: boolean;
-      };
-    }
-    | {
-      event: "utility_demo_replayed";
-      payload: { 
-        scenario_index: number;
-        ts: number;
-      };
+      event: "elicitation_gamble_undone";
+      payload: { block: "social" | "personal"; point: number; step_index: number };
     }
   | {
-      event: "utility_objective_subjective_proceeded";
+      event: "elicitation_gamble_completed";
+      payload: { block: "social" | "personal"; point: number; order_index: number; loss_risk: number };
+    }
+  | {
+      /** Rollup of one block - this is the one sent to the server. */
+      event: "elicitation_completed";
       payload: {
-        scenario_index: number;
-        /** ms on the objective/subjective comparison screen */
+        block: "social" | "personal";
+        player_ls: number | null;
+        loss_risks: Record<string, number | null>;
+        utilities: Record<string, number> | null;
+        undo_count: number;
         dwell_ms: number;
       };
-    }
-  | {
-      event: "utility_intervention_completed";
-      payload: { total_scenarios: number; dwell_ms: number };
-    }
-  | {
-      /** The "Resume Simulation" button at start of Level 3 */
-      event: "utility_resume_clicked";
-      payload: { ts: number };
     }
 
   // ---- Life satisfaction question (start of game) ----

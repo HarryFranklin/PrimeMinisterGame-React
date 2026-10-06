@@ -4,15 +4,14 @@
  * Gamble wording follows Cooper et al. (2026)'s supplementary material,
  * adapted to a sure LS X vs an LS 10 / LS 2 lottery (no death).
  */
-import { CurveDirection, GambleBlock } from '../../utils/ElicitationEngine';
+import { GambleBlock } from '../../utils/ElicitationEngine';  
 
 export const INTRO_EMAIL = {
   title: 'A request from the Treasury',
-  message:
+    message:
     'Prime Minister,\n\n' +
     'Before your next term, the Treasury needs to settle a question every wellbeing government faces: is every point of life satisfaction worth the same, wherever it falls?\n\n' +
-    'Researchers answer this in several ways. Two of the main ones are to ask people to choose between gambles, and to ask them directly. We would like you to try both.\n\n' +
-    'The first few questions are personal. The rest are about policy.',
+    'One way researchers answer this is to ask people to choose between a sure outcome and a gamble. The next three decisions are about the citizens you govern.',
   button: 'Begin',
 };
 
@@ -20,16 +19,8 @@ export const PAUSE_CARD = {
   kicker: 'Simulation paused',
   title: 'Step out of the PM role',
   body:
-    'These four questions are about you and your own life, not the country. There are no right or wrong answers: choose what you would genuinely do.',
+    'These three questions are about you and your own life, not the country. There are no right or wrong answers: choose what you would genuinely do.',
   button: 'Start',
-};
-
-export const TRANSITION_CARD = {
-  kicker: 'Back in office',
-  title: 'The context of these decisions is different',
-  body:
-    'You are Prime Minister again. The next four decisions are about policies that affect a large group of people, including you. Please read carefully.',
-  button: 'Continue',
 };
 
 interface BlockText {
@@ -48,9 +39,9 @@ interface BlockText {
   failureLegend: string;
   veil?: string;
   question: string;
-  /** Line shown above the options after the first choice in a gamble. */
-  followUp: { afterA: string; afterB: string };
-  buttons: { a: string; b: string; unsure: string };
+  /** Line shown above the options after the player turns the gamble down. */
+  followUp: string;
+  buttons: { a: string; b: string; equal: string };
 }
 
 export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
@@ -75,11 +66,8 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
     successLegend: 'Succeeds: LS 10',
     failureLegend: 'Fails: LS 2',
     question: 'Which treatment would you choose?',
-    followUp: {
-      afterA: 'You chose Treatment A. Now suppose Treatment B were safer:',
-      afterB: 'You chose Treatment B. Now suppose Treatment B were riskier:',
-    },
-    buttons: { a: 'Choose Treatment A', b: 'Choose Treatment B', unsure: 'Can’t choose' },
+    followUp: 'You chose Treatment A. Now suppose Treatment B were safer:',
+    buttons: { a: 'Choose Treatment A', b: 'Choose Treatment B', equal: 'Both options seemed equally good' },
   },
   social: {
     progress: (n, total) => `Policy decision ${n} of ${total}`,
@@ -103,16 +91,10 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
     failureLegend: 'Worse off: LS 2',
     veil: 'The policy will affect you as well, though you don’t yet know whether you will benefit or be negatively affected.',
     question: 'Which policy would you choose?',
-    followUp: {
-      afterA: 'You chose Policy A. Now suppose Policy B harmed fewer people:',
-      afterB: 'You chose Policy B. Now suppose Policy B harmed more people:',
-    },
-    buttons: { a: 'Choose Policy A', b: 'Choose Policy B', unsure: 'Can’t choose' },
+    followUp: 'You chose Policy A. Now suppose Policy B harmed fewer people:',
+    buttons: { a: 'Choose Treatment A', b: 'Choose Treatment B', equal: 'Both options seemed equally good' },
   },
 };
-
-/** Shown on the gamble that uses the player's own LS. */
-export const OWN_POINT_NOTE = 'This is the score you gave for your own life.';
 
 // ---------------------------------------------------------------------------
 // Pass 2b: asking directly (Layard & Oparina), comparison, questions
@@ -152,32 +134,6 @@ export const COMPARISON = {
   },
   axisX: 'Life satisfaction',
   axisY: 'Value',
-  /** Caption comparing personal and policy gambles. 'higher' = the
-   * personal curve sits above the policy curve (more cautious for yourself).
-   * Cooper et al. (2026): median aversion 4.0 for others vs 2.2 for self
-   * (no-death gambles); "the latter being even more strongly avoided". */
-  personalVsSocial: (different: boolean, direction: CurveDirection) => {
-    if (!different || direction === 'none')
-      return 'Your personal and policy choices were broadly similar, though in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
-    if (direction === 'lower')
-      return 'You were more cautious when deciding for others than for yourself. That matches research: in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
-    if (direction === 'higher')
-      return 'You were more cautious when deciding for yourself than for others. That is less common: in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
-    return 'Your personal and policy choices differed, but not in one direction: at some starting levels you were more cautious for yourself, at others for other people. For comparison, in one UK study, people were typically more cautious when deciding for others than for themselves (Cooper et al., 2026).';
-  },
-  /** Caption comparing policy gambles with Treasury weights. 'higher' = the
-   * policy-gamble curve sits above the Treasury curve. Layard & Oparina
-   * (2026, p.9) compared their direct method with Cooper's societal
-   * gambles, and note the same gap in the income literature. */
-  socialVsDirect: (different: boolean, direction: CurveDirection) => {
-    if (!different || direction === 'none')
-      return 'Your policy choices and your Treasury weights gave broadly similar curves. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
-    if (direction === 'higher')
-      return 'Your policy choices put more weight on gains at the bottom than your Treasury weights did. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
-    if (direction === 'lower')
-      return 'Your Treasury weights put more weight on gains at the bottom than your policy choices did. That is the opposite of what researchers found. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
-    return 'Your policy choices and your Treasury weights disagreed, but not in one direction: each put more weight on a different part of the scale. When researchers compared the two methods, gambles put substantially more weight on gains at the bottom than asking people directly did, a gap also seen in research on income (Layard & Oparina, 2026).';
-  },
   /** The learning objective, shown to every player. */
   takeaway:
     'Scoring systems can differ depending on the method used and on whose life is at stake, even for the same person.',
