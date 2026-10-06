@@ -126,12 +126,12 @@ export const REVEAL_TEXT = {
   // (7.2 vs 5.5 points at LS 4), i.e. direction 'lower'.
   publicMatch: {
     title: 'You’re not alone.',
-    body: 'Most people are more protective of others than of themselves, and the public’s answers show the same pattern.',
+    body: 'Most people are more cautious with other people’s lives than with their own.',
   },
   publicOther: {
     title: 'How this compares:',
-    body: 'most people are more protective of others than of themselves. The public’s answers give the worst-off more weight when deciding for others.',
-    opposite: 'that’s less common. Most people are more protective of others than of themselves, and the public’s answers show that pattern.',
+    body: 'most people are more cautious with other people’s lives than with their own.',
+    opposite: 'that’s less common. Most people are more cautious with other people’s lives than with their own.',
   },
   bridge: {
     title: 'What this means for Level 4:',
