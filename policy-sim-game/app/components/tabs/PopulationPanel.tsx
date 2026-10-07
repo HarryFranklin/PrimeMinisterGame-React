@@ -6,6 +6,7 @@ import D3Chart, { ChartMarker } from '../D3Chart';
 import UtilityTable from '../UtilityTable';
 import { Card, CardHeader, EmptyState, Legend } from '../ui';
 import type { HistogramBin } from '../../hooks/useDashboardHistograms';
+import PointsStrip from '../PointsStrip';
 
 interface PopulationPanelProps {
   isUtilityCycle: boolean;
@@ -77,6 +78,7 @@ export default function PopulationPanel({
           activePolicyRules={activePolicyRules}
         />
       </div>
+      <PointsStrip cycle={currentCycle} histogramData={topHistogramData} color={rule.graphColor} />
     </Card>
   );
 
