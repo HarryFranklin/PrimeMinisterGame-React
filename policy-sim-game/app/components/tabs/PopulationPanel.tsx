@@ -78,7 +78,7 @@ export default function PopulationPanel({
           activePolicyRules={activePolicyRules}
         />
       </div>
-      <PointsStrip cycle={currentCycle} histogramData={topHistogramData} color={rule.graphColor} />
+        <PointsStrip cycle={currentCycle} histogramData={topHistogramData} population={population} color={rule.graphColor} />
     </Card>
   );
 

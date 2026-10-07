@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ElectionCycle } from '../utils/types';
+import { ElectionCycle, Respondent } from '../utils/types';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
 
 /**
@@ -9,9 +9,9 @@ import { WelfareMetrics } from '../utils/WelfareMetrics';
  * the current level's rule:
  *   Level 1: every point of LS counts the same (points = LS).
  *   Level 2: only the lowest occupied column counts.
- *   Levels 3/4: the public's curve (deciding for others / for themselves).
- *     Scoring uses each respondent's own curve; this is the public's
- *     representative curve, on the same 0-10 scale.
+ *   Levels 3/4: the average across respondents' own curves (deciding for
+ *     others / for themselves). This is what the score uses, and matches
+ *     the utility table's "Utility per person" row.
  */
 
 /** Must match the 1D histogram in D3Chart (margin.left / margin.right). */
@@ -28,16 +28,28 @@ const CAPTIONS: Record<ElectionCycle, string> = {
   [ElectionCycle.PersonalUtility]: 'The public’s curve, deciding for themselves.',
 };
 
-function pointsPerPerson(cycle: ElectionCycle, ls: number, lowestOccupied: number | null): number {
+/** Average utility of one person at this LS across respondents' own curves,
+ * worked out the same way as UtilityTable's "Utility per person" row. */
+function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Respondent[]): number {
+  if (population.length === 0) return 0;
+  const allLS = new Array(population.length).fill(ls);
+  return population.reduce(
+    (sum, r) => sum + WelfareMetrics.getCycleUtility({ ...r, currentLS: ls }, cycle, population.length, allLS),
+    0,
+  ) / population.length;
+}
+
+function pointsPerPerson(
+  cycle: ElectionCycle, ls: number, lowestOccupied: number | null, utilityByLevel: number[] | null,
+): number {
   switch (cycle) {
     case ElectionCycle.Benthamite:
       return ls;
     case ElectionCycle.Rawlsian:
       return ls === lowestOccupied ? ls : 0;
     case ElectionCycle.SocietalUtility:
-      return WelfareMetrics.getUtility(ls, 'societal');
     case ElectionCycle.PersonalUtility:
-      return WelfareMetrics.getUtility(ls, 'personal');
+      return utilityByLevel?.[ls] ?? 0;
     default:
       return 0;
   }
@@ -47,10 +59,22 @@ interface PointsStripProps {
   cycle: ElectionCycle;
   /** The population histogram's bins (name = LS column, count = people). */
   histogramData: { name: number | string; count: number }[];
+  /** Needed for Levels 3/4, where each respondent has their own curve. */
+  population: Respondent[];
   color: string;
 }
 
-export default function PointsStrip({ cycle, histogramData, color }: PointsStripProps) {
+export default function PointsStrip({ cycle, histogramData, population, color }: PointsStripProps) {
+  // Each respondent's curve is fixed, so this only changes with the level
+  // (the population prop changes every turn, but the averages don't).
+  const utilityByLevel = useMemo(
+    () => (cycle === ElectionCycle.SocietalUtility || cycle === ElectionCycle.PersonalUtility
+      ? LEVELS.map((ls) => averageUtilityAt(cycle, ls, population))
+      : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cycle, population.length],
+  );
+
   const counts = new Map(histogramData.map((b) => [Number(b.name), b.count]));
   const occupied = LEVELS.filter((ls) => (counts.get(ls) ?? 0) > 0);
   const lowestOccupied = occupied.length ? occupied[0] : null;
@@ -65,8 +89,8 @@ export default function PointsStrip({ cycle, histogramData, color }: PointsStrip
         className="flex justify-between items-baseline gap-2"
         style={{ paddingLeft: CARD_PADDING_PX + 4, paddingRight: CARD_PADDING_PX + CHART_MARGIN.right }}
       >
-        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Points per person</span>
-        <span className="text-[10px] text-zinc-500 truncate">{CAPTIONS[cycle]}</span>
+        <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500">Points per person</span>
+        <span className="text-[12px] text-zinc-500 truncate">{CAPTIONS[cycle]}</span>
       </div>
 
       <div
@@ -77,7 +101,7 @@ export default function PointsStrip({ cycle, histogramData, color }: PointsStrip
         }}
       >
         {LEVELS.map((ls) => {
-          const pts = pointsPerPerson(cycle, ls, lowestOccupied);
+          const pts = pointsPerPerson(cycle, ls, lowestOccupied, utilityByLevel);
           const people = counts.get(ls) ?? 0;
           return (
             <div
@@ -105,9 +129,9 @@ export default function PointsStrip({ cycle, histogramData, color }: PointsStrip
         }}
       >
         {LEVELS.map((ls) => {
-          const pts = pointsPerPerson(cycle, ls, lowestOccupied);
+          const pts = pointsPerPerson(cycle, ls, lowestOccupied, utilityByLevel);
           return (
-            <span key={ls} className="flex-1 text-center text-[9px] font-bold text-zinc-500 tabular-nums">
+            <span key={ls} className="flex-1 text-center text-[10px] font-bold text-zinc-500 tabular-nums">
               {Number.isInteger(pts) ? pts : pts >= 9.95 ? '10' : pts.toFixed(1)}
             </span>
           );

@@ -177,6 +177,18 @@ export default function UtilityTable({
                 );
               })}
             </tr>
+
+            {/* Row 1b: Raw utility - what one person at this LS is worth */}
+            <tr className="border-b border-zinc-200">
+              <td className="bg-white text-left px-2 py-3 font-bold text-zinc-500 text-[10px] uppercase tracking-wide leading-tight">
+                Utility <br/> Per Person
+              </td>
+              {DISPLAY_COLUMNS.map(col => (
+                <td key={col} className="bg-white px-1 py-3 border-x border-zinc-100 font-bold text-zinc-700 tabular-nums">
+                  {theoreticalAvgUtility[col].toFixed(1)}
+                </td>
+              ))}
+            </tr>
             
             {/* Row 2: Value of +/- 1 LS (Straddling Columns) */}
             <tr className="border-b border-zinc-200">
