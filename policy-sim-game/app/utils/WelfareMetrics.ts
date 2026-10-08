@@ -33,26 +33,32 @@ export class WelfareMetrics {
    * source JSON: [U_Death, U_2, U_4, U_6, U_8, U_10]. */
   private static readonly CURVE_ANCHORS = [0, 2, 4, 6, 8, 10];
 
-  /** Interpolates ONE respondent's own PU or SU curve (loaded from
-   * personalUtilities.json / societalUtilities.json onto Respondent.personalUtilities
-   * / .societalUtilities) at a given LS score. Falls back to the universal
-   * reference curve if a respondent is missing curve data. */
-  static getUtilityForPerson(lsScore: number, curve?: number[]): number {
-    if (!curve || curve.length !== WelfareMetrics.CURVE_ANCHORS.length) {
-      return this.getUtility(lsScore, 'personal');
-    }
-
+  /** Interpolates ONE respondent's own PU or SU curve at a given LS score,
+   * on the game's 0-10 points scale with LS 2 = 0 and LS 10 = 10 (the same
+   * scale as the reveal and the utility intro). The source curves are
+   * anchored on death = 0, which squashed LS 2-10 into the top quarter of
+   * the scale and made Level 3 barely reward lifting the worst-off; the game
+   * never includes death, so each curve is rescaled between its own LS 2 and
+   * LS 10 values. Missing, flat or inverted curves fall back to the
+   * universal reference curve of the same type. */
+  static getUtilityForPerson(lsScore: number, curve?: number[], fallback: 'personal' | 'societal' = 'personal'): number {
     const anchors = WelfareMetrics.CURVE_ANCHORS;
-    const score = Math.max(anchors[0], Math.min(anchors[anchors.length - 1], lsScore));
+    if (!curve || curve.length !== anchors.length) return this.getUtility(lsScore, fallback);
 
-    let i = 0;
+    const u2 = curve[1];
+    const u10 = curve[anchors.length - 1];
+    if (!(u10 - u2 > 1e-6)) return this.getUtility(lsScore, fallback);
+
+    const score = Math.max(2, Math.min(anchors[anchors.length - 1], lsScore));
+
+    let i = 1;
     while (i < anchors.length - 2 && score > anchors[i + 1]) i++;
 
     const lower = anchors[i];
     const upper = anchors[i + 1];
     const t = upper === lower ? 0 : (score - lower) / (upper - lower);
 
-    return lerp(curve[i], curve[i + 1], t) * 10;
+    return ((lerp(curve[i], curve[i + 1], t) - u2) / (u10 - u2)) * 10;
   }
 
   /** Average utility a population's LS values would score when run through
@@ -61,7 +67,7 @@ export class WelfareMetrics {
   static evaluateDistribution(populationLS: number[], curve?: number[]): number {
     let totalUtility = 0;
     for (let i = 0; i < populationLS.length; i++) {
-      totalUtility += this.getUtilityForPerson(populationLS[i], curve);
+      this.getUtilityForPerson(populationLS[i], curve, 'societal')
     }
     return populationLS.length > 0 ? totalUtility / populationLS.length : 0;
   }
@@ -120,7 +126,7 @@ export class WelfareMetrics {
 
     let total = 0;
     for (const [ls, count] of buckets) {
-      total += this.getUtilityForPerson(ls, respondent.societalUtilities) * count;
+      total += this.getUtilityForPerson(ls, respondent.societalUtilities, 'societal') * count;
     }
     return total / allLS.length;
   }

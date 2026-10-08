@@ -1,17 +1,21 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ElectionCycle, Respondent } from '../utils/types';
+import { ElectionCycle, PolicyRule, Respondent } from '../utils/types';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
+import { IMPACT_COLORS } from '../utils/uiHelpers';
 
 /**
- * "Points per person" strip, drawn under the population chart with one bar
- * per LS column. Shows how much one person in each column is worth under
- * the current level's rule:
- *   Level 1: every point of LS counts the same (points = LS).
- *   Level 2: only the lowest occupied column counts.
- *   Levels 3/4: the average across respondents' own curves (deciding for
- *     others / for themselves). This is what the score uses, and matches
- *     the utility table's "Utility per person" row.
+ * "What a +1 is worth here": one bar per LS column, drawn under the
+ * population chart, showing how much lifting one person in that column by
+ * one point adds to the score. Bars are scaled to the level's most valuable
+ * +1, so the shape is the message:
+ *   Level 1: all bars equal (every point counts the same).
+ *   Level 2: one bar, at the lowest occupied column.
+ *   Levels 3/4: tall on the left, shrinking to the right (Level 4 less steep).
+ *
+ * With "View details" open, bars take the same blue/amber as the population
+ * chart's highlight: blue where the policy lifts people, amber where it
+ * pushes them down, faded where it does nothing.
  */
 
 /** Must match the 1D histogram in D3Chart (margin.left / margin.right). */
@@ -19,17 +23,20 @@ const CHART_MARGIN = { left: 45, right: 15 };
 /** Matches the chart wrapper's p-2. */
 const CARD_PADDING_PX = 8;
 const LEVELS = Array.from({ length: 11 }, (_, i) => i);
-const MAX_POINTS = 10;
+/** Scoring floors LS at 2, so a +1 below 2 is shown as a +1 from 2. */
+const SCORE_FLOOR = 2;
 
 const CAPTIONS: Record<ElectionCycle, string> = {
-  [ElectionCycle.Benthamite]: 'Every point of LS counts the same.',
-  [ElectionCycle.Rawlsian]: 'Only the worst-off column counts.',
-  [ElectionCycle.SocietalUtility]: 'The public’s curve, deciding for others.',
-  [ElectionCycle.PersonalUtility]: 'The public’s curve, deciding for themselves.',
+  [ElectionCycle.Benthamite]: 'Every +1 counts the same.',
+  [ElectionCycle.Rawlsian]: 'Only a +1 for the worst-off counts.',
+  [ElectionCycle.SocietalUtility]: 'A +1 counts most at the bottom.',
+  [ElectionCycle.PersonalUtility]: 'A +1 counts more at the bottom.',
 };
 
-/** Average utility of one person at this LS across respondents' own curves,
- * worked out the same way as UtilityTable's "Utility per person" row. */
+const DETAILS_CAPTION = 'Blue: this policy lifts people here. Amber: it pushes people down.';
+
+/** Average utility of one person at this LS, across respondents' own curves
+ * (the same calculation the score uses). */
 function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Respondent[]): number {
   if (population.length === 0) return 0;
   const allLS = new Array(population.length).fill(ls);
@@ -39,20 +46,11 @@ function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Responde
   ) / population.length;
 }
 
-function pointsPerPerson(
-  cycle: ElectionCycle, ls: number, lowestOccupied: number | null, utilityByLevel: number[] | null,
-): number {
-  switch (cycle) {
-    case ElectionCycle.Benthamite:
-      return ls;
-    case ElectionCycle.Rawlsian:
-      return ls === lowestOccupied ? ls : 0;
-    case ElectionCycle.SocietalUtility:
-    case ElectionCycle.PersonalUtility:
-      return utilityByLevel?.[ls] ?? 0;
-    default:
-      return 0;
-  }
+/** Same rule as the population chart's highlight: net impact of the
+ * policy's rules covering this column. */
+function netImpactAt(ls: number, rules: PolicyRule[]): number | null {
+  const affecting = rules.filter((r) => ls >= (r.minLS ?? 0) && ls <= (r.maxLS ?? 10));
+  return affecting.length === 0 ? null : affecting.reduce((s, r) => s + r.impact, 0);
 }
 
 interface PointsStripProps {
@@ -62,35 +60,63 @@ interface PointsStripProps {
   /** Needed for Levels 3/4, where each respondent has their own curve. */
   population: Respondent[];
   color: string;
+  /** The selected policy's rules while "View details" is open. */
+  activePolicyRules?: PolicyRule[] | null;
 }
 
-export default function PointsStrip({ cycle, histogramData, population, color }: PointsStripProps) {
-  // Each respondent's curve is fixed, so this only changes with the level
-  // (the population prop changes every turn, but the averages don't).
+export default function PointsStrip({ cycle, histogramData, population, color, activePolicyRules }: PointsStripProps) {
+  const counts = new Map(histogramData.map((b) => [Number(b.name), b.count]));
+  const occupied = LEVELS.filter((ls) => (counts.get(ls) ?? 0) > 0);
+  const lowestOccupied = occupied.length ? occupied[0] : null;
+  const isUtility = cycle === ElectionCycle.SocietalUtility || cycle === ElectionCycle.PersonalUtility;
+
+  // Each respondent's curve is fixed, so the averages only change with the
+  // level (population changes every turn, but its size doesn't).
   const utilityByLevel = useMemo(
-    () => (cycle === ElectionCycle.SocietalUtility || cycle === ElectionCycle.PersonalUtility
-      ? LEVELS.map((ls) => averageUtilityAt(cycle, ls, population))
-      : null),
+    () => (isUtility ? LEVELS.map((ls) => averageUtilityAt(cycle, ls, population)) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [cycle, population.length],
   );
 
-  const counts = new Map(histogramData.map((b) => [Number(b.name), b.count]));
-  const occupied = LEVELS.filter((ls) => (counts.get(ls) ?? 0) > 0);
-  const lowestOccupied = occupied.length ? occupied[0] : null;
+  /** Score added by lifting one person in this column by one point. */
+  const plusOneValue = (ls: number): number => {
+    if (ls >= 10) return 0;
+    const from = Math.max(ls, SCORE_FLOOR);
+    switch (cycle) {
+      case ElectionCycle.Benthamite:
+        return 1;
+      case ElectionCycle.Rawlsian:
+        return ls === lowestOccupied ? 1 : 0;
+      default:
+        return utilityByLevel ? utilityByLevel[Math.min(from + 1, 10)] - utilityByLevel[from] : 0;
+    }
+  };
+
+  const values = LEVELS.map(plusOneValue);
+  const maxValue = Math.max(...values, 1e-9);
+  const showingPolicy = !!activePolicyRules && activePolicyRules.length > 0;
+
+  const barColor = (ls: number): { fill: string; opacity: number } => {
+    if (!showingPolicy) return { fill: color, opacity: (counts.get(ls) ?? 0) > 0 ? 1 : 0.3 };
+    const net = netImpactAt(ls, activePolicyRules!);
+    if (net === null) return { fill: '#d4d4d8', opacity: 0.35 };
+    if (net > 0) return { fill: IMPACT_COLORS['Will improve'], opacity: 1 };
+    if (net < 0) return { fill: IMPACT_COLORS['Will worsen'], opacity: 1 };
+    return { fill: IMPACT_COLORS['Will be stable'], opacity: 1 };
+  };
 
   return (
     <div
       className="shrink-0 pb-2 flex flex-col gap-1"
-      data-telemetry-id="points_per_person_strip"
+      data-telemetry-id="plus_one_value_strip"
       data-telemetry-type="graph"
     >
       <div
         className="flex justify-between items-baseline gap-2"
         style={{ paddingLeft: CARD_PADDING_PX + 4, paddingRight: CARD_PADDING_PX + CHART_MARGIN.right }}
       >
-        <span className="text-[12px] font-black uppercase tracking-widest text-zinc-500">Points per person</span>
-        <span className="text-[12px] text-zinc-500 truncate">{CAPTIONS[cycle]}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">What a +1 is worth here</span>
+        <span className="text-[10px] text-zinc-500 truncate">{showingPolicy ? DETAILS_CAPTION : CAPTIONS[cycle]}</span>
       </div>
 
       <div
@@ -101,39 +127,25 @@ export default function PointsStrip({ cycle, histogramData, population, color }:
         }}
       >
         {LEVELS.map((ls) => {
-          const pts = pointsPerPerson(cycle, ls, lowestOccupied, utilityByLevel);
+          const v = values[ls];
+          const { fill, opacity } = barColor(ls);
+          const pct = Math.round((v / maxValue) * 100);
           const people = counts.get(ls) ?? 0;
           return (
             <div
               key={ls}
               className="flex-1 h-full flex flex-col justify-end items-center px-[2px]"
-              title={`LS ${ls}: ${pts.toFixed(1)} points per person${people ? ` × ${people} ${people === 1 ? 'person' : 'people'}` : ''}`}
+              title={ls >= 10
+                ? 'LS 10 is the top of the scale.'
+                : `A +1 from LS ${ls} is worth ${pct}% of the most valuable +1${people ? ` (${people} ${people === 1 ? 'person' : 'people'} here)` : ''}.`}
             >
               <motion.div
                 className="w-full rounded-t-sm"
-                style={{ backgroundColor: color, opacity: people > 0 ? 1 : 0.25 }}
                 initial={false}
-                animate={{ height: `${(pts / MAX_POINTS) * 100}%` }}
+                animate={{ height: `${Math.max(v > 0 ? 6 : 0, pct)}%`, backgroundColor: fill, opacity }}
                 transition={{ type: 'spring', stiffness: 220, damping: 28 }}
               />
             </div>
-          );
-        })}
-      </div>
-
-      <div
-        className="flex"
-        style={{
-          paddingLeft: CARD_PADDING_PX + CHART_MARGIN.left,
-          paddingRight: CARD_PADDING_PX + CHART_MARGIN.right,
-        }}
-      >
-        {LEVELS.map((ls) => {
-          const pts = pointsPerPerson(cycle, ls, lowestOccupied, utilityByLevel);
-          return (
-            <span key={ls} className="flex-1 text-center text-[10px] font-bold text-zinc-500 tabular-nums">
-              {Number.isInteger(pts) ? pts : pts >= 9.95 ? '10' : pts.toFixed(1)}
-            </span>
           );
         })}
       </div>

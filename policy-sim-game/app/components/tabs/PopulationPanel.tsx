@@ -3,7 +3,6 @@ import { AxisVariable, ElectionCycle, Policy, PolicyRule, Respondent } from '../
 import { FrameworkRule } from '../../utils/frameworkRules';
 import { IMPACT_COLORS } from '../../utils/uiHelpers';
 import D3Chart, { ChartMarker } from '../D3Chart';
-import UtilityTable from '../UtilityTable';
 import { Card, CardHeader, EmptyState, Legend } from '../ui';
 import type { HistogramBin } from '../../hooks/useDashboardHistograms';
 import PointsStrip from '../PointsStrip';
@@ -61,7 +60,7 @@ export default function PopulationPanel({
     detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null;
 
   const topChart = (
-    <Card className={isUtilityCycle ? 'flex-[0.8] min-h-[200px]' : ''}>
+    <Card className="">
       <CardHeader title={populationTitle} />
       <div className="flex-1 p-2 min-h-0 relative" data-telemetry-id="population_graph_current" data-telemetry-type="graph">
         <D3Chart
@@ -78,37 +77,15 @@ export default function PopulationPanel({
           activePolicyRules={activePolicyRules}
         />
       </div>
-        <PointsStrip cycle={currentCycle} histogramData={topHistogramData} population={population} color={rule.graphColor} />
+      <PointsStrip
+        cycle={currentCycle}
+        histogramData={topHistogramData}
+        population={population}
+        color={rule.graphColor}
+        activePolicyRules={activePolicyRules}
+      />
     </Card>
   );
-
-  if (isUtilityCycle) {
-    return (
-      <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
-        {topChart}
-        <Card className="flex-[1.2] min-h-[250px] relative">
-          <CardHeader title="Utility Analysis" />
-          <div className="flex-1 p-2 min-h-0 overflow-y-auto relative">
-            <UtilityTable
-              population={population}
-              cycle={currentCycle}
-              metricName={metricName}
-              forecastState={isParliamentDissolved ? 'idle' : !selectedPolicy ? 'idle' : 'policy-selected'}
-              detailsOpen={detailsOpen}
-              selectedPolicy={selectedPolicy}
-            />
-            {isParliamentDissolved && (
-              <EmptyState
-                icon="📊"
-                title="Select Legislation"
-                description="Hover over a policy in your Enacted Legislation to review its historical impact on the population."
-              />
-            )}
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
   const showLegend = hoveredHistoryTurn !== null || (!!selectedPolicy && !isParliamentDissolved);
 
