@@ -9,11 +9,11 @@ export const availablePolicies: Policy[] = [
     policyName: "Universal Credit Uplift",
     description: "A financial boost directly targeting the most deprived citizens. Funded by a baseline taxation increase that ripples through the economy.",
     specificRules: [
-      { note: "Primary welfare payment increase", maxLS: 4.5, affectEveryone: false, proportion: 0.85, impact: 1.5 },
+      { note: "Primary welfare payment increase", maxLS: 4.5, affectEveryone: false, proportion: 1.0, impact: 1.5 },
       { note: "Secondary boost to lower-middle", minLS: 4.5, maxLS: 6.0, affectEveryone: false, proportion: 0.40, impact: 0.5 },
       { note: "Taxation burden on high earners", minLS: 7.5, affectEveryone: false, proportion: 0.70, impact: -0.4 },
       { note: "Taxation burden on middle earners", minLS: 5.5, maxLS: 7.5, affectEveryone: false, proportion: 0.50, impact: -0.2 },
-      { note: "Minor inflationary drag on poorest", maxLS: 5.5, affectEveryone: false, proportion: 0.10, impact: -0.1 }
+      { note: "Minor inflationary drag on lower-middle", minLS: 3.0, maxLS: 5.5, affectEveryone: false, proportion: 0.10, impact: -0.1 }
     ]
   },
   {
@@ -45,7 +45,8 @@ export const availablePolicies: Policy[] = [
     policyName: "Social Housing Expansion",
     description: "A state-funded building programme for affordable housing units. Provides immense stability to the societal floor, funded by broad economic friction.",
     specificRules: [
-      { note: "Housing security for lowest earners", maxLS: 4.0, affectEveryone: false, proportion: 0.40, impact: 1.9 },
+      { note: "Priority housing for the most deprived", maxLS: 3.0, affectEveryone: false, proportion: 1.0, impact: 1.2 },
+      { note: "Housing security for low earners", minLS: 3.0, maxLS: 4.0, affectEveryone: false, proportion: 0.40, impact: 1.9 },
       { note: "Reduced rent pressure on lower-middle", minLS: 4.0, maxLS: 6.0, affectEveryone: false, proportion: 0.20, impact: 0.8 },
       { note: "Tax and interest drag on upper earners", minLS: 8.0, affectEveryone: false, proportion: 0.80, impact: -0.3 },
       { note: "Tax and interest drag on middle earners", minLS: 5.0, maxLS: 8.0, affectEveryone: false, proportion: 0.60, impact: -0.15 }
