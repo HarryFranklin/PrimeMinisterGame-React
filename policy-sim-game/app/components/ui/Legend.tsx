@@ -5,12 +5,6 @@ export interface LegendItem {
   color: string;
 }
 
-/**
- * A row of "swatch + label" legend entries (e.g. Improved/Stable/Worsened
- * under the projected-population chart). Extracted so the legend markup
- * lives in one place and can later grow a non-color indicator (icon/pattern)
- * for accessibility without editing it in multiple spots.
- */
 export const Legend = ({ items, visible = true }: { items: LegendItem[]; visible?: boolean }) => (
   <div
     className={`px-4 pb-3 flex flex-wrap gap-4 justify-center border-t border-zinc-50 pt-2 shrink-0 transition-all duration-300 ${

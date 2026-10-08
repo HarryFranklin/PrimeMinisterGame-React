@@ -33,8 +33,6 @@ const CAPTIONS: Record<ElectionCycle, string> = {
   [ElectionCycle.PersonalUtility]: 'A +1 counts more at the bottom.',
 };
 
-const DETAILS_CAPTION = 'Blue: this policy lifts people here. Amber: it pushes people down.';
-
 /** Average utility of one person at this LS, across respondents' own curves
  * (the same calculation the score uses). */
 function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Respondent[]): number {
@@ -112,15 +110,15 @@ export default function PointsStrip({ cycle, histogramData, population, color, a
       data-telemetry-type="graph"
     >
       <div
-        className="flex justify-between items-baseline gap-2"
+        className="flex flex-wrap items-baseline gap-x-2"
         style={{ paddingLeft: CARD_PADDING_PX + 4, paddingRight: CARD_PADDING_PX + CHART_MARGIN.right }}
       >
-        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">What a +1 is worth here</span>
-        <span className="text-[10px] text-zinc-500 truncate">{showingPolicy ? DETAILS_CAPTION : CAPTIONS[cycle]}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">What a +1 is worth here</span>
+        <span className="text-[10px] text-zinc-500">{CAPTIONS[cycle]}</span>
       </div>
 
       <div
-        className="flex h-10 items-end"
+        className="flex h-12 items-end"
         style={{
           paddingLeft: CARD_PADDING_PX + CHART_MARGIN.left,
           paddingRight: CARD_PADDING_PX + CHART_MARGIN.right,
