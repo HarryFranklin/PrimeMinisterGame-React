@@ -84,7 +84,7 @@ export default function PopulationPanel({
     detailsOpen && selectedPolicy && !isParliamentDissolved ? selectedPolicy.specificRules : null;
 
   const topChart = (
-    <Card className="basis-[76px]">
+    <Card className={isUtilityCycle ? 'basis-[76px]' : ''}>
       <CardHeader
         title={populationTitle}
         action={<HeaderKey items={DETAILS_LEGEND_ITEMS} visible={!!activePolicyRules} />}
@@ -104,13 +104,15 @@ export default function PopulationPanel({
           activePolicyRules={activePolicyRules}
         />
       </div>
-      <PointsStrip
-        cycle={currentCycle}
-        histogramData={topHistogramData}
-        population={population}
-        color={rule.graphColor}
-        activePolicyRules={activePolicyRules}
-      />
+      {isUtilityCycle && (
+        <PointsStrip
+          cycle={currentCycle}
+          histogramData={topHistogramData}
+          population={population}
+          color={rule.graphColor}
+          activePolicyRules={activePolicyRules}
+        />
+      )}
     </Card>
   );
 

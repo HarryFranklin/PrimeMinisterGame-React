@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ElectionCycle, PolicyRule, Respondent } from '../utils/types';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { IMPACT_COLORS } from '../utils/uiHelpers';
@@ -94,6 +95,28 @@ export default function PointsStrip({ cycle, histogramData, population, color, a
   const maxValue = Math.max(...values, 1e-9);
   const showingPolicy = !!activePolicyRules && activePolicyRules.length > 0;
 
+  // Hover tooltip, styled like the population chart's: portalled to <body>
+  // so the card's overflow can't clip it, and glides between columns.
+  const [hovered, setHovered] = useState<{ ls: number; x: number; y: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const showTip = (ls: number, el: HTMLElement) => {
+    // Anchor on the top of the bar, like the population chart does.
+    const r = el.getBoundingClientRect();
+    const barTop = r.bottom - (r.height * Math.max(values[ls] > 0 ? 6 : 0, (values[ls] / maxValue) * 100)) / 100;
+    setHovered({ ls, x: r.left + window.scrollX + r.width / 2, y: barTop + window.scrollY });
+  };
+
+  const tipText = (ls: number) => {
+    if (ls >= 10) return { label: 'LS 10:', body: 'top of the scale, no +1 possible' };
+    const people = counts.get(ls) ?? 0;
+    return {
+      label: `LS ${ls} → ${ls + 1}:`,
+      body: `+${values[ls].toFixed(1)} points per person${people ? ` · ~${people} million people` : ''}`,
+    };
+  };
+
   const barColor = (ls: number): { fill: string; opacity: number } => {
     if (!showingPolicy) return { fill: color, opacity: (counts.get(ls) ?? 0) > 0 ? 1 : 0.3 };
     const net = netImpactAt(ls, activePolicyRules!);
@@ -128,25 +151,54 @@ export default function PointsStrip({ cycle, histogramData, population, color, a
           const v = values[ls];
           const { fill, opacity } = barColor(ls);
           const pct = Math.round((v / maxValue) * 100);
-          const people = counts.get(ls) ?? 0;
+          const isHovered = hovered?.ls === ls;
+          const dimmed = hovered !== null && !isHovered;
           return (
             <div
               key={ls}
-              className="flex-1 h-full flex flex-col justify-end items-center px-[2px]"
-              title={ls >= 10
-                ? 'LS 10 is the top of the scale.'
-                : `A +1 from LS ${ls} is worth ${pct}% of the most valuable +1${people ? ` (${people} ${people === 1 ? 'person' : 'people'} here)` : ''}.`}
+              className="flex-1 h-full flex flex-col justify-end items-center px-[2px] cursor-crosshair"
+              onMouseEnter={(e) => showTip(ls, e.currentTarget)}
+              onMouseLeave={() => setHovered(null)}
             >
               <motion.div
-                className="w-full rounded-t-sm"
+                className="w-full rounded-t-sm origin-bottom"
                 initial={false}
-                animate={{ height: `${Math.max(v > 0 ? 6 : 0, pct)}%`, backgroundColor: fill, opacity }}
-                transition={{ type: 'spring', stiffness: 220, damping: 28 }}
+                animate={{
+                  height: `${Math.max(v > 0 ? 6 : 0, pct)}%`,
+                  backgroundColor: fill,
+                  opacity: dimmed ? opacity * 0.45 : opacity,
+                  scaleX: isHovered ? 1.08 : 1,
+                  filter: isHovered ? 'brightness(1.12)' : 'brightness(1)',
+                }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
               />
             </div>
           );
         })}
       </div>
+
+      {mounted && createPortal(
+        <AnimatePresence>
+          {hovered && (
+            <motion.div
+              key="plus-one-tip"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0, left: hovered.x, top: hovered.y }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15, ease: 'easeOut', left: { duration: 0.1 }, top: { duration: 0.1 } }}
+              style={{
+                position: 'absolute', left: hovered.x, top: hovered.y, translateX: '-50%', translateY: '-120%',
+                pointerEvents: 'none', zIndex: 999999, whiteSpace: 'nowrap',
+                background: 'rgba(24, 24, 27, 0.95)', color: 'white', padding: '6px 10px', borderRadius: 6,
+                fontSize: 12, fontWeight: 600, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              }}
+            >
+              <span style={{ color }}>{tipText(hovered.ls).label}</span> {tipText(hovered.ls).body}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }
