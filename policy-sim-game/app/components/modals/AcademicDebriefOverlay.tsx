@@ -203,15 +203,15 @@ export default function AcademicDebriefOverlay() {
   const getDpmMessage = () => {
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nClick each society below to reveal its average — see if you can guess before you click.";
-      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but living standards aren't the whole picture.\nClick on these citizens to see how their subjective wellbeing shifted in response to their physical gains.";
-      case ElectionCycle.SocietalUtility: return "Our voters are behaving based on their empathy, but consensus is hard.\nLet's see what happens when we shift their focus to pure self-interest.";
-      case ElectionCycle.PersonalUtility: return "We've experimented with different ways of measuring success.\nLet's compare how your performance is judged under a 'Fairness' lens versus a 'Self-Interest' lens.";
-      default: return "";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but at a cost: only the worst-off counted, so even large gains for everyone else were worth nothing to our score.\nClick on these citizens to see how much their changes were worth to them.";
+      case ElectionCycle.SocietalUtility: return "This term, citizens judged the country as they would when responsible for others.\nNext, each citizen will judge only by how they value their own life.";
+      case ElectionCycle.PersonalUtility: return "You governed the same policies under two lenses.\nLet's compare how your performance is judged when citizens decide for others versus for themselves.";
     }
   };
 
   const getRawlsianMessage = () => {
-    if (contrastingCitizens.length < 2) return "";
+    const ending = "Level 1 counted every point the same. Level 2 counted only the worst-off. Most people's intuitions sit somewhere between these two.";
+    if (contrastingCitizens.length < 2) return ending;
 
     const p1 = contrastingCitizens[0]; // lower startLS
     const p2 = contrastingCitizens[1]; // higher startLS
@@ -235,7 +235,7 @@ export default function AcademicDebriefOverlay() {
       ? `because one was ${label1.toLowerCase()} and the other was ${label2.toLowerCase()}`
       : `even starting from a similar place (${p1.startLS.toFixed(1)} vs ${p2.startLS.toFixed(1)} LS)`;
 
-    return `Both citizens experienced ${changeDescriptor} ${changeWord} in their life satisfaction. However, ${contrastClause}, they ${feltPhrase} completely differently.\n\nNext term, citizens will vote using their unique Societal Utility.`;
+    return `Both citizens experienced ${changeDescriptor} ${changeWord} in their life satisfaction. However, ${contrastClause}, they ${feltPhrase} completely differently.\n\n${ending}`;
   };
 
   return (
@@ -307,7 +307,7 @@ export default function AcademicDebriefOverlay() {
                 {revealedBenthamA && revealedBenthamB && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
                     <Note label="Mathematically Identical" tone="pink">
-                     {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it completely ignores how it is distributed. If unchecked, this can lead to issues such as equality.'}
+                                          {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it ignores how that wellbeing is shared. The cost: a policy that makes the worst-off worse off can still win, as long as the better-off gain enough.'}
                     </Note>
                   </motion.div>
                 )}
@@ -374,9 +374,9 @@ export default function AcademicDebriefOverlay() {
 
                   <div className={`transition-all duration-500 ${revealedEmpathy ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                     <div className="w-full h-px bg-zinc-800 my-2" />
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block mb-1">Personal Utility (Self-Interest)</span>
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest block mb-1">Personal Utility (Own Life)</span>
                     <strong className="text-3xl text-emerald-300">{WelfareMetrics.getUtilityForPerson(empathyCitizen.currentLS, empathyCitizen.personalUtilities).toFixed(2)}</strong>
-                    <p className="text-[11px] text-zinc-400 mt-2 max-w-sm mx-auto italic leading-relaxed">"While my evaluation of society drops due to inequality, my personal score is significantly higher when evaluating strictly for myself."</p>
+                    <p className="text-[11px] text-zinc-400 mt-2 max-w-sm mx-auto italic leading-relaxed">"Deciding for everyone, I weigh the worst-off heavily. Deciding only for my own life, I value things differently."</p>
                   </div>
 
                   {!revealedEmpathy && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-5 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-400 border border-emerald-500/30 animate-pulse">Reveal Personal Utility</span></div>}
@@ -384,8 +384,8 @@ export default function AcademicDebriefOverlay() {
 
                 {revealedEmpathy && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
-                    <Note label="Moving to Self-Interest" tone="emerald">
-                      {'When citizens evaluate policy strictly based on empathy, consensus is difficult because everyone has a different definition of fairness.\nFor your final term, we will incorporate Personal Utility into their voting logic, modelling pure self-interest.'}
+                    <Note label="Moving to Personal Utility" tone="emerald">
+                                            {'Social utility reflects what people endorse when they are responsible for others: it gives the worst-off a lot of extra weight.\nFor your final term, citizens will judge by personal utility instead. It respects the choices people make for their own lives.'}
                     </Note>
                   </motion.div>
                 )}
@@ -405,8 +405,8 @@ export default function AcademicDebriefOverlay() {
                       <strong className="text-4xl font-black text-emerald-300">{avgSU.toFixed(2)}</strong>
                     </div>
                     <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
-                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens evaluate policy based on empathy and their ideal vision of a fair society.</p>
-                      <p><strong className="text-zinc-300">The Challenge:</strong> Empathy raises the floor, but consensus is harder to reach when voters prioritise equality over aggregate wealth.</p>
+                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens judge the country as they would when responsible for others.</p>
+                      <p><strong className="text-zinc-300">The Case For It:</strong> It reflects what people endorse for others, so the worst-off get a lot of extra weight.</p>
                     </div>
                   </div>
                   {!revealedSU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-emerald-400 border border-emerald-500/30 animate-pulse">Click to Reveal</span></div>}
@@ -423,8 +423,8 @@ export default function AcademicDebriefOverlay() {
                       <strong className="text-4xl font-black text-zinc-200">{avgPU.toFixed(2)}</strong>
                     </div>
                     <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
-                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens evaluate policy strictly based on their own risk and reward.</p>
-                      <p><strong className="text-zinc-300">The Challenge:</strong> Due to loss aversion, citizens will systematically block redistribution to protect their own wealth.</p>
+                      <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens judge only by how they value their own life.</p>
+                      <p><strong className="text-zinc-300">The Case For It:</strong> It respects the choices people make for their own lives, so the worst-off get less extra weight.</p>
                     </div>
                   </div>
                   {!revealedPU && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-zinc-300 border border-zinc-700 animate-pulse">Click to Reveal</span></div>}
