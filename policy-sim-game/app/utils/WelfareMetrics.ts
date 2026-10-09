@@ -67,7 +67,7 @@ export class WelfareMetrics {
   static evaluateDistribution(populationLS: number[], curve?: number[]): number {
     let totalUtility = 0;
     for (let i = 0; i < populationLS.length; i++) {
-      this.getUtilityForPerson(populationLS[i], curve, 'societal')
+      totalUtility += this.getUtilityForPerson(populationLS[i], curve, 'societal');
     }
     return populationLS.length > 0 ? totalUtility / populationLS.length : 0;
   }

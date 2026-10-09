@@ -75,7 +75,7 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
     oddsLine: (label, x) => `${label} people fall to ${lossOutcome(x)}.`,
     successLegend: (x) => `Benefit: LS ${winOutcome(x)}`,
     failureLegend: (x) => `Worse off: LS ${lossOutcome(x)}`,
-    veil: 'You belong to this group too, but you don’t know whether you would be one of those who benefit or one of those who fall.',
+    veil: 'You belong to this group too, but you don’t know whether you would be one of those who benefit or one of those who fall. Philosophers call this choosing behind a “veil of ignorance”.',
     question: 'Which policy do you fund?',
     followUp: 'You chose Policy A. Now suppose Policy B harmed fewer people:',
   },
@@ -144,7 +144,7 @@ export const REVEAL_TEXT = {
     public: 'Public',
     you: 'You',
     equalLine: 'If every point counted the same (Level 1)',
-    note: 'Taller bar: that rise counts for more. Try the other steps to see how the value of a rise changes further up the scale.',
+    note: 'These values come from the risks accepted in the gambles. Taller bar: that rise counts for more. Try the other steps to see how the value of a rise changes further up the scale.',
   },
   button: 'Begin Level 4',
 };

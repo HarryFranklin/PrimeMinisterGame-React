@@ -74,10 +74,10 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
         return "We are on track. But beware of complacency — any policy that concentrates gains at the top can undo progress quickly. The societal score is sensitive to visible inequality.";
       }
       case ElectionCycle.PersonalUtility: {
-        if (currentTurn <= 2) return "Personal utility is not linear. A citizen already at LS 8 gains almost nothing from another point upward — their curve has flattened. The real score gains come from lifting those in the LS 3-6 range, where the curve is steepest. Look at the Avg Utility row.";
-        if (isBehind && !isLate) return "We are behind target. Focus on the columns with the highest Avg Utility in the table — those are the high-yield zones. Moving citizens into those columns is worth more than spreading gains evenly.";
+        if (currentTurn <= 2) return "Personal utility is not linear. A citizen already at LS 8 gains almost nothing from another point upward — their curve has flattened. The real score gains come from lifting those in the LS 2-4 range, where the curve is steepest. Look at the \"What a +1 is worth here\" bars.";
+        if (isBehind && !isLate) return "We are behind target. Focus on the columns with the tallest \"What a +1 is worth here\" bars — those are the high-yield zones. Moving citizens into those columns is worth more than spreading gains evenly.";
         if (isBehind && isLate) return "Time is short and we are behind. Every remaining policy must target citizens in the steepest part of the utility curve. Gains at the top end are almost worthless — gains in the middle are not.";
-        return "We are on track. Stay disciplined — avoid policies that look good for LS averages but push people into flat parts of the utility curve. The table tells you what actually counts.";
+        return "We are on track. Stay disciplined — avoid policies that look good for LS averages but push people into flat parts of the utility curve. The bars under the chart tell you what actually counts.";
       }
       default:
         return "";

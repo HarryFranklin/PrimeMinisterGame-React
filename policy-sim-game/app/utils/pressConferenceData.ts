@@ -40,8 +40,8 @@ interface MetricQuestionOption {
 const METRIC_REPHRASINGS: Record<ElectionCycle, string> = {
   [ElectionCycle.Benthamite]: "The average happiness score across the whole population, with every citizen's situation considered equally.",
   [ElectionCycle.Rawlsian]: "The wellbeing of whichever single citizen is currently faring the worst in the country.",
-  [ElectionCycle.SocietalUtility]: "How fair the overall spread of happiness looks to citizens observing everyone else's lives, not just their own.",
-  [ElectionCycle.PersonalUtility]: "How much a change is actually worth to someone, once you account for the fact that comfortable people gain less from help than struggling people do.",
+  [ElectionCycle.SocietalUtility]: "How citizens would judge the whole country if they were choosing on behalf of everyone else, with extra weight on the worst-off.",
+  [ElectionCycle.PersonalUtility]: "How each citizen values changes to their own life, based on the risks they would be willing to take for themselves.",
 };
 
 /**
