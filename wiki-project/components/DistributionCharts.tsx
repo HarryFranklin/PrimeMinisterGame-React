@@ -388,8 +388,8 @@ export function SWFWeightingComparison() {
               <th className={th}>Person starts at</th>
               <th className={`${th} text-center`}>Benthamite</th>
               <th className={`${th} text-center`}>Rawlsian</th>
-              <th className={`${th} text-center`}>Personal Utility</th>
               <th className={`${th} text-center`}>Societal Utility</th>
+              <th className={`${th} text-center`}>Personal Utility</th>
             </tr>
           </thead>
           <tbody>
@@ -398,8 +398,8 @@ export function SWFWeightingComparison() {
                 <td className={tdLabel}>{r.label}</td>
                 <td className={cell} style={heat(r.benthamite)}>{r.benthamite.toFixed(2)}</td>
                 <td className={cell} style={heat(r.rawlsian)}>{r.rawlsian.toFixed(2)}</td>
-                <td className={cell} style={heat(r.personal)}>{r.personal.toFixed(2)}</td>
                 <td className={cell} style={heat(r.societal)}>{r.societal.toFixed(2)}</td>
+                <td className={cell} style={heat(r.personal)}>{r.personal.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
