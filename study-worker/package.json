@@ -1,0 +1,17 @@
+{
+  "name": "study-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply policy-sim-telemetry --local",
+    "migrate:remote": "wrangler d1 migrations apply policy-sim-telemetry --remote",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "typescript": "^5",
+    "wrangler": "^4.118.0"
+  }
+}

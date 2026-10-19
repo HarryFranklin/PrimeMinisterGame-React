@@ -1,0 +1,18 @@
+# Single worker for the whole study (replaces telemetry-worker and
+# wiki-telemetry-worker). Same D1 database as before; fresh tables.
+name = "study-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+[vars]
+# Where /start sends people. Change these if the Pages URLs change.
+GAME_URL = "https://prime-minister-game.pages.dev/"
+WIKI_URL = "https://wiki-project.pages.dev/"
+# Target share of LIVE participants sent to the game (0.5 = 50/50).
+GAME_SHARE = "0.5"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "policy-sim-telemetry"
+database_id = "dc3c30fd-b93f-44b6-9f72-460e51265384"
+migrations_dir = "migrations"
