@@ -11,7 +11,7 @@
 //   elicitation: { social: …, personal: … }   elicitation_completed payloads
 //   attempts:    [cycle_summary, …]            one per term attempt, incl. turns
 //   last:        last semantic event (where people stopped)
-//   final:       { outcome, dwell_ms, ts }     final debrief closed
+//   final:       { dwell_ms, ts }              final debrief closed
 // }
 
 import type { LoggedEvent } from "./telemetry";
@@ -53,17 +53,22 @@ function save(sync: boolean, beacon = false) {
 
 /** Pass this to registerSink() in telemetry.ts. */
 export function networkSink(entry: LoggedEvent) {
-  if (entry.layer !== "semantic") return;
+  // cycle_summary is a "derived" event (built in derive.ts), so it must be
+  // handled before the semantic-only filter below.
+  if (entry.event !== "cycle_summary" && entry.layer !== "semantic") return;
   const a = current();
 
-  // Kept in memory only; saved with the next sync (or on tab hide).
-  a.last = {
-    event: entry.event,
-    level_id: entry.level_id ?? null,
-    attempt_number: entry.attempt_number ?? null,
-    turn: entry.turn ?? null,
-    ts: entry.ts,
-  };
+  // Last deliberate action – kept in memory only; saved with the next sync
+  // (or on tab hide) so we can see where people stopped.
+  if (entry.layer === "semantic") {
+    a.last = {
+      event: entry.event,
+      level_id: entry.level_id ?? null,
+      attempt_number: entry.attempt_number ?? null,
+      turn: entry.turn ?? null,
+      ts: entry.ts,
+    };
+  }
 
   switch (entry.event) {
     case "setup_submitted":
@@ -92,7 +97,7 @@ export function networkSink(entry: LoggedEvent) {
       break;
     }
     case "final_debrief_closed":
-      a.final = { outcome: entry.payload?.outcome ?? null, dwell_ms: entry.payload?.dwell_ms ?? null, ts: entry.ts };
+      a.final = { dwell_ms: entry.payload?.dwell_ms ?? null, ts: entry.ts };
       save(true);
       break;
   }
