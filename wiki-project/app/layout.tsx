@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import { getNavTree } from "@/lib/wiki";
 import { TelemetryProvider } from "@/context/TelemetryContext";
 import ParticipantSetupModal from "@/components/ParticipantSetupModal";
+import LSIntroModal from "@/components/LSIntroModal";
 import { CompletionProvider } from "@/context/CompletionContext";
 import StudyCompleteModal from "@/components/StudyCompleteModal";
 import ClearStateButton from "@/components/ClearStateButton"; // DEV_TOOLS — remove before shipping
@@ -46,6 +47,7 @@ export default function RootLayout({
           <CompletionProvider>
             <ThemeProvider>
               <ParticipantSetupModal />
+              <LSIntroModal />
               <StudyCompleteModal nav={nav} />
               <ClearStateButton /> {/* DEV_TOOLS — remove before shipping */}
               <div className="flex md:min-h-screen">

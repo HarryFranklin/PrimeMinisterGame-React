@@ -5,13 +5,22 @@ import D3Chart from '../D3Chart';
 import { AxisVariable } from '../../utils/types';
 import { loadPopulation } from '../../utils/dataLoader';
 import { track } from '../../client/telemetry';
+import { getBaselineLS } from '../../client/sessionMeta';
 
 // ---------------------------------------------------------------------------
 // On-screen text. The question wording is the ONS / previous-study wording;
 // the UK context follows Layard & Oparina's preamble (softened so a player
 // with a low score isn't told they are "in misery").
+//
+// Normally the LS question is asked in the baseline survey and arrives in the
+// link (?LS=7), so this screen only introduces it (the "known" texts). If the
+// link has no LS (pilots/testing) the question is asked here instead. The
+// wiki shows the same screen, apart from the `game` line.
 // ---------------------------------------------------------------------------
 const TEXT = {
+  titleKnown: 'Before you take office',
+  introKnown: 'Life satisfaction (LS) is how a person rates their life as a whole, on a scale from 0 to 10.',
+  knownTitle: (ls: number) => `Earlier, you told us your life satisfaction is ${ls} out of 10.`,
   title: 'One question before you take office',
   intro:
     'Life satisfaction (LS) is how a person rates their life as a whole, on a scale from 0 to 10. Let’s start with yours.',
@@ -37,7 +46,10 @@ interface LifeSatisfactionTabProps {
 }
 
 export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabProps) {
-  const [ls, setLs] = useState<number | null>(null);
+  // LS from the baseline survey, if the link carried one.
+  const [baselineLS] = useState<number | null>(() => getBaselineLS());
+  const known = baselineLS !== null;
+  const [ls, setLs] = useState<number | null>(baselineLS);
   const changes = useRef(0);
   const openedAt = useRef(Date.now());
 
@@ -63,6 +75,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
     if (ls === null) return;
     track('life_satisfaction_submitted', {
       ls,
+      source: known ? 'url' : 'asked',
       changed_answer_count: changes.current,
       dwell_ms: Date.now() - openedAt.current,
     });
@@ -76,6 +89,13 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
         animate={{ opacity: 1, y: 0 }}
         className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col gap-6"
       >
+        {known ? (
+          <div>
+            <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.titleKnown}</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">{TEXT.introKnown}</p>
+          </div>
+        ) : (
+        <>
         <div>
           <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.title}</h2>
           <p className="text-sm text-zinc-400 leading-relaxed mb-4">{TEXT.intro}</p>
@@ -110,6 +130,8 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
             <span>{TEXT.highLabel}</span>
           </div>
         </div>
+        </>
+        )}
 
         <AnimatePresence>
           {ls !== null && (
@@ -121,7 +143,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
               className="flex flex-col gap-4 overflow-hidden"
             >
               <div className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4">
-                <p className="text-base font-bold text-white mb-1">{TEXT.explainTitle(ls)}</p>
+                <p className="text-base font-bold text-white mb-1">{known ? TEXT.knownTitle(ls) : TEXT.explainTitle(ls)}</p>
                 <p className="text-sm text-zinc-300 leading-relaxed mb-2">{TEXT.policy}</p>
                 <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.game}</p>
               </div>

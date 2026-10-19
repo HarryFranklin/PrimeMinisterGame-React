@@ -408,7 +408,7 @@ export type TelemetryEvent =
   // ---- Life satisfaction question (start of game) ----
   | {
       event: "life_satisfaction_submitted";
-      payload: { ls: number; changed_answer_count: number; dwell_ms: number };
+      payload: { ls: number; source: "url" | "asked"; changed_answer_count: number; dwell_ms: number };
     }
 
   // ---- Utility elicitation (social block before Level 3, personal before Level 4) ----
@@ -450,7 +450,7 @@ export type TelemetryEvent =
   // ---- Life satisfaction question (start of game) ----
   | {
       event: "life_satisfaction_submitted";
-      payload: { ls: number; changed_answer_count: number; dwell_ms: number };
+      payload: { ls: number; source: "url" | "asked"; changed_answer_count: number; dwell_ms: number };
     }
 
   // ---- Utility elicitation block (before Level 3) ----

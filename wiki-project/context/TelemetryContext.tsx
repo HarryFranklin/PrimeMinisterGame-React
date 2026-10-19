@@ -9,6 +9,7 @@ import {
   syncPayload,
   syncIfNeeded,
   syncIfDirty,
+  parseLS,
   setVisible,
   recordScroll,
   noteNavigation,
@@ -102,6 +103,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
       prolificSessionId: urlSessionId || null,
       studyId: studyId || null,
       appVersion: process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? 'dev',
+      baselineLs: parseLS(urlParams.get('LS')),
     };
 
     storeSession(newSession);

@@ -22,6 +22,15 @@ export interface ParticipantSession {
   prolificSessionId: string | null;
   studyId: string | null;
   appVersion: string;
+  /** LS from the baseline survey link (?LS=0-10); null/absent if not passed. */
+  baselineLs?: number | null;
+}
+
+/** A whole number 0-10, or null if missing/invalid. */
+export function parseLS(raw: string | null): number | null {
+  if (raw === null || !/^\d{1,2}$/.test(raw.trim())) return null;
+  const n = Number(raw.trim());
+  return n >= 0 && n <= 10 ? n : null;
 }
 
 const STORAGE_KEY_SESSION = 'wiki_study_session';
@@ -64,6 +73,16 @@ export interface PageTotal {
 
 export type CompletionOutcome = 'chose_finish' | 'finished_during_extension' | 'auto_finished_timeout';
 
+/** The LS intro screen shown before reading (same screen as in the game). */
+export interface LsIntro {
+  ls: number | null;
+  source: 'url' | 'asked' | null;    // from the survey link, or asked on the screen
+  shown_at: number | null;
+  done_at: number | null;            // when they pressed Continue
+  changed_answer_count: number;      // only when asked on the screen
+  dwell_ms: number | null;
+}
+
 export interface WikiPayload {
   v: 1;
   seq: number;                              // bumped on every sync; the worker ignores older copies
@@ -79,6 +98,11 @@ export interface WikiPayload {
     outcome: CompletionOutcome | null;
     finished_at: number | null;
   };
+  ls_intro: LsIntro;
+}
+
+function freshLsIntro(): LsIntro {
+  return { ls: null, source: null, shown_at: null, done_at: null, changed_answer_count: 0, dwell_ms: null };
 }
 
 function freshPayload(now = Date.now()): WikiPayload {
@@ -91,6 +115,7 @@ function freshPayload(now = Date.now()): WikiPayload {
     totals: {},
     completed_pages: {},
     completion: { modal_shown_at: null, extended_at: null, extend_deadline: null, outcome: null, finished_at: null },
+    ls_intro: freshLsIntro(),
   };
 }
 
@@ -268,6 +293,26 @@ export function recordPageComplete(slug: string): void {
   const p = loadPayload();
   if (p.completed_pages[slug]) return;
   p.completed_pages[slug] = Date.now();
+  savePayload(p);
+  dirty = true;
+}
+
+export function getLsIntro(): LsIntro {
+  return loadPayload().ls_intro ?? freshLsIntro();
+}
+
+export function recordLsIntroShown(): void {
+  const p = loadPayload();
+  p.ls_intro ??= freshLsIntro();
+  p.ls_intro.shown_at ??= Date.now();
+  savePayload(p);
+  dirty = true;
+}
+
+export function recordLsIntroDone(ls: number, source: 'url' | 'asked', changedAnswerCount: number, dwellMs: number): void {
+  const p = loadPayload();
+  p.ls_intro ??= freshLsIntro();
+  Object.assign(p.ls_intro, { ls, source, changed_answer_count: changedAnswerCount, dwell_ms: dwellMs, done_at: Date.now() });
   savePayload(p);
   dirty = true;
 }
