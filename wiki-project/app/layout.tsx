@@ -5,11 +5,10 @@ import ThemeProvider from "@/components/ThemeProvider";
 import Sidebar from "@/components/Sidebar";
 import { getNavTree } from "@/lib/wiki";
 import { TelemetryProvider } from "@/context/TelemetryContext";
-import ParticipantSetupModal from "@/components/ParticipantSetupModal";
 import LSIntroModal from "@/components/LSIntroModal";
 import { CompletionProvider } from "@/context/CompletionContext";
 import StudyCompleteModal from "@/components/StudyCompleteModal";
-import ClearStateButton from "@/components/ClearStateButton"; // DEV_TOOLS — remove before shipping
+import WikiStudyGate from "@/components/WikiStudyGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,20 +42,22 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-        <TelemetryProvider>
-          <CompletionProvider>
-            <ThemeProvider>
-              <ParticipantSetupModal />
-              <LSIntroModal />
-              <StudyCompleteModal nav={nav} />
-              <ClearStateButton /> {/* DEV_TOOLS — remove before shipping */}
-              <div className="flex md:min-h-screen">
-                <Sidebar nav={nav} />
-                <div className="flex-1 min-w-0">{children}</div>
-              </div>
-            </ThemeProvider>
-          </CompletionProvider>
-        </TelemetryProvider>
+        <ThemeProvider>
+          {/* Study screens first; the wiki (and its tracking) only mounts once
+              the participant reaches the reading stage. */}
+          <WikiStudyGate>
+            <TelemetryProvider>
+              <CompletionProvider>
+                <LSIntroModal />
+                <StudyCompleteModal nav={nav} />
+                <div className="flex md:min-h-screen">
+                  <Sidebar nav={nav} />
+                  <div className="flex-1 min-w-0">{children}</div>
+                </div>
+              </CompletionProvider>
+            </TelemetryProvider>
+          </WikiStudyGate>
+        </ThemeProvider>
       </body>
     </html>
   );

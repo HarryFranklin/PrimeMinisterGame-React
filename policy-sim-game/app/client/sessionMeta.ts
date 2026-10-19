@@ -46,34 +46,3 @@ export function getProlificMeta(): ProlificMeta {
   cached = { prolific_pid: null, study_id: null, prolific_session_id: null };
   return cached;
 }
-
-// ---------------------------------------------------------------------------
-// Life satisfaction from the baseline survey. Qualtrics adds ?LS=<0-10> to
-// the game link; it's persisted so a mid-game refresh doesn't lose it. Kept
-// separate from ProlificMeta so it isn't copied onto every telemetry event.
-// ---------------------------------------------------------------------------
-
-const LS_KEY = "baseline_ls_v1";
-
-/** A whole number 0-10, or null if missing/invalid. */
-export function parseLS(raw: string | null): number | null {
-  if (raw === null || !/^\d{1,2}$/.test(raw.trim())) return null;
-  const n = Number(raw.trim());
-  return n >= 0 && n <= 10 ? n : null;
-}
-
-/** The participant's baseline LS from the URL (or saved from an earlier
- * visit in this browser), or null if the survey didn't pass one. */
-export function getBaselineLS(): number | null {
-  if (typeof window === "undefined") return null;
-  const fromUrl = parseLS(new URLSearchParams(window.location.search).get("LS"));
-  try {
-    if (fromUrl !== null) {
-      localStorage.setItem(LS_KEY, String(fromUrl));
-      return fromUrl;
-    }
-    return parseLS(localStorage.getItem(LS_KEY));
-  } catch {
-    return fromUrl;
-  }
-}

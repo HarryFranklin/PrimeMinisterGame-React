@@ -5,17 +5,18 @@ import D3Chart from '../D3Chart';
 import { AxisVariable } from '../../utils/types';
 import { loadPopulation } from '../../utils/dataLoader';
 import { track } from '../../client/telemetry';
-import { getBaselineLS } from '../../client/sessionMeta';
+import { getBaselineLS } from '@study';
 
 // ---------------------------------------------------------------------------
 // On-screen text. The question wording is the ONS / previous-study wording;
 // the UK context follows Layard & Oparina's preamble (softened so a player
 // with a low score isn't told they are "in misery").
 //
-// Normally the LS question is asked in the baseline survey and arrives in the
-// link (?LS=7), so this screen only introduces it (the "known" texts). If the
-// link has no LS (pilots/testing) the question is asked here instead. The
-// wiki shows the same screen, apart from the `game` line.
+// The LS question is asked in the baseline questions (shared study screens),
+// so this screen only introduces it (the "known" texts). If they chose
+// "Prefer not to say", it shows without their number. If there's no baseline
+// answer at all (dev/testing) the question is asked here instead. The wiki
+// shows the same screen, apart from the `game` line.
 // ---------------------------------------------------------------------------
 const TEXT = {
   titleKnown: 'Before you take office',
@@ -46,10 +47,11 @@ interface LifeSatisfactionTabProps {
 }
 
 export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabProps) {
-  // LS from the baseline survey, if the link carried one.
-  const [baselineLS] = useState<number | null>(() => getBaselineLS());
-  const known = baselineLS !== null;
-  const [ls, setLs] = useState<number | null>(baselineLS);
+  // LS from the baseline questions.
+  const [baseline] = useState(() => getBaselineLS());
+  const known = baseline.status === 'answered';
+  const preferNot = baseline.status === 'prefer_not';
+  const [ls, setLs] = useState<number | null>(baseline.status === 'answered' ? baseline.ls : null);
   const changes = useRef(0);
   const openedAt = useRef(Date.now());
 
@@ -72,14 +74,14 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
   };
 
   const handleContinue = () => {
-    if (ls === null) return;
+    if (ls === null && !preferNot) return;
     track('life_satisfaction_submitted', {
-      ls,
-      source: known ? 'url' : 'asked',
+      ls: ls ?? -1, // -1 = prefer not to say
+      source: known ? 'baseline' : preferNot ? 'prefer_not' : 'asked',
       changed_answer_count: changes.current,
       dwell_ms: Date.now() - openedAt.current,
     });
-    onSubmit(ls);
+    onSubmit(ls ?? -1);
   };
 
   return (
@@ -89,7 +91,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
         animate={{ opacity: 1, y: 0 }}
         className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col gap-6"
       >
-        {known ? (
+        {known || preferNot ? (
           <div>
             <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.titleKnown}</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">{TEXT.introKnown}</p>
@@ -134,7 +136,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
         )}
 
         <AnimatePresence>
-          {ls !== null && (
+          {(ls !== null || preferNot) && (
             <motion.div
               key="explain"
               initial={{ opacity: 0, height: 0 }}
@@ -143,7 +145,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
               className="flex flex-col gap-4 overflow-hidden"
             >
               <div className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4">
-                <p className="text-base font-bold text-white mb-1">{known ? TEXT.knownTitle(ls) : TEXT.explainTitle(ls)}</p>
+                {ls !== null && <p className="text-base font-bold text-white mb-1">{known ? TEXT.knownTitle(ls) : TEXT.explainTitle(ls)}</p>}
                 <p className="text-sm text-zinc-300 leading-relaxed mb-2">{TEXT.policy}</p>
                 <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.game}</p>
               </div>
@@ -159,7 +161,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
                   color="#71717a"
                   visualStyle="solid"
                   yAxisMax={yAxisMax}
-                  markers={[{ value: ls, label: 'You', color: '#ec4899' }]}
+                  markers={ls !== null ? [{ value: ls, label: 'You', color: '#ec4899' }] : []}
                   theme="dark"
                 />
               </div>

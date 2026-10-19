@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui';
 import { track } from '../../client/telemetry';
+import { getStudyState } from '@study';
 
 interface SetupTabProps {
   onSubmit: (participantId: string) => void;
@@ -16,10 +17,16 @@ export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: 
     track('setup_opened', {});
   }, []);
 
-  // Generate a random temporary ID for testing
+  // The participant's ID comes from the study session (Prolific ID, or a
+  // PILOT_/TEST_ id from the study worker), so setup starts by itself. The
+  // form below is only a fallback and is never shown in normal use.
   useEffect(() => {
-    const randomNum = Math.floor(Math.random() * 900000) + 100000;
-    setProlificId(`PROLIFIC_${randomNum}`);
+    const pid = getStudyState().session?.pid;
+    if (pid) {
+      setProlificId(pid);
+      onSubmit(pid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

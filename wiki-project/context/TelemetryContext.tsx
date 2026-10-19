@@ -6,37 +6,61 @@ import {
   getStoredSession,
   storeSession,
   resetPayload,
+  clearAllLocalState,
   syncPayload,
   syncIfNeeded,
   syncIfDirty,
-  parseLS,
   setVisible,
   recordScroll,
   noteNavigation,
   HEARTBEAT_MS,
 } from '@/lib/telemetry';
+import { getStudyState } from '@study';
+
+/** The wiki's reading session for the study participant. Created the first
+ * time they reach the wiki (after consent + baseline questions). If this
+ * device holds a different participant's reading data, it's cleared first –
+ * synchronously, before any page or completion state is read. */
+function ensureWikiSession(): ParticipantSession | null {
+  if (typeof window === 'undefined') return null;
+  const study = getStudyState().session;
+  if (!study) return null;
+  const existing = getStoredSession();
+  if (existing && existing.prolificPid === study.pid) return existing;
+  clearAllLocalState();
+  const fresh: ParticipantSession = {
+    userId: crypto.randomUUID(),
+    prolificPid: study.pid,
+    sessionId: crypto.randomUUID(),
+    prolificSessionId: null,
+    studyId: null,
+    appVersion: (process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA ?? 'dev').slice(0, 8),
+  };
+  storeSession(fresh);
+  resetPayload();
+  return fresh;
+}
 
 interface TelemetryContextType {
   session: ParticipantSession | null;
   isInitialised: boolean;
-  initialiseSession: (prolificId: string) => Promise<void>;
 }
 
 const TelemetryContext = createContext<TelemetryContextType | undefined>(undefined);
 
 export function TelemetryProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<ParticipantSession | null>(null);
-  const [isInitialised, setIsInitialised] = useState<boolean>(false);
+  // Mounted only once the participant reaches the wiki (inside StudyGate), so
+  // the study session already exists here.
+  const [session] = useState<ParticipantSession | null>(() => ensureWikiSession());
+  const isInitialised = session !== null;
   const sessionRef = useRef<ParticipantSession | null>(null);
   sessionRef.current = session;
 
+  // Save the (empty) reading record straight away, so the activity cell exists
+  // even if they leave before opening a page.
   useEffect(() => {
-    const existing = getStoredSession();
-    if (existing) {
-      setSession(existing);
-      setIsInitialised(true);
-    }
-  }, []);
+    if (session) syncPayload(session);
+  }, [session]);
 
   // Page-wide listeners, attached once a session exists. None of these write
   // to the database except the hide/close and heartbeat syncs.
@@ -91,33 +115,8 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session]);
 
-  const initialiseSession = async (prolificId: string) => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const studyId = urlParams.get('STUDY_ID');
-    const urlSessionId = urlParams.get('SESSION_ID');
-
-    const newSession: ParticipantSession = {
-      userId: crypto.randomUUID(),
-      prolificPid: prolificId.trim(),
-      sessionId: urlSessionId || crypto.randomUUID(),
-      prolificSessionId: urlSessionId || null,
-      studyId: studyId || null,
-      appVersion: process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? 'dev',
-      baselineLs: parseLS(urlParams.get('LS')),
-    };
-
-    storeSession(newSession);
-    resetPayload();
-    setSession(newSession);
-    setIsInitialised(true);
-
-    // Creates the participant's row straight away, so someone who enters
-    // their ID and leaves before opening a page is still recorded.
-    syncPayload(newSession);
-  };
-
   return (
-    <TelemetryContext.Provider value={{ session, isInitialised, initialiseSession }}>
+    <TelemetryContext.Provider value={{ session, isInitialised }}>
       {children}
     </TelemetryContext.Provider>
   );
@@ -130,7 +129,6 @@ export function useTelemetrySession() {
     return {
       session: null,
       isInitialised: false,
-      initialiseSession: async () => {},
     };
   }
   return context;

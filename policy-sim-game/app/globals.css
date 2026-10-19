@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Shared study screens (copied in from /study-kit, git-ignored) */
+@source "../.study-kit";
 
 :root {
   --background: #ff0000;

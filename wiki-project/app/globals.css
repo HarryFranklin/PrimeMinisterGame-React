@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Shared study screens (copied in from /study-kit, git-ignored) */
+@source "../.study-kit";
 
 /* Enables `dark:` classes to be driven by a `.dark` class on <html> (set by
    next-themes), instead of only the OS-level prefers-color-scheme. This is

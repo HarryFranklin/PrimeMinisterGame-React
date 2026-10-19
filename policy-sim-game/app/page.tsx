@@ -26,16 +26,48 @@ import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
 import UtilityElicitationOverlay from "./components/modals/UtilityElicitationOverlay";
 
 import { useGameEngine } from "./hooks/useGameEngine";
-import { GamePhase } from "./utils/types";
+import { GamePhase, AxisVariable } from "./utils/types";
+import { isTelemetryDebugEnabled } from "./client/telemetry";
+import D3Chart from "./components/D3Chart";
+import { StudyGate, isStudyTestMode, type RenderChart } from "@study";
 
+// Build commit (set by Cloudflare Pages via next.config.ts), saved with every sync.
+const APP_VERSION = (process.env.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA ?? "dev").slice(0, 8);
+
+// How question charts are drawn in the study screens – same faces as the game.
+const renderChart: RenderChart = ({ counts, yMax }) => (
+  <D3Chart
+    plotType="1D"
+    chartData={[]}
+    histogramData={counts.map((count, name) => ({ name, count }))}
+    xAxisType={AxisVariable.LifeSatisfaction}
+    yAxisType={AxisVariable.LifeSatisfaction}
+    color="#ec4899"
+    visualStyle="faces"
+    faceCols={1}
+    yAxisMax={yMax}
+    theme="dark"
+  />
+);
+
+// Information sheet, consent and questions come first (StudyGate); the game
+// itself only mounts once the participant reaches the activity stage.
 export default function Home() {
+  return (
+    <StudyGate condition="game" accent="pink" appVersion={APP_VERSION} renderChart={renderChart} enforceMinScreen={false}>
+      <GameApp />
+    </StudyGate>
+  );
+}
+
+function GameApp() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
 
   useEffect(() => {
     registerSink(networkSink);
-    initTelemetry({ appVersion: (globalThis as any).process?.env?.NEXT_PUBLIC_CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? "dev" });
+    initTelemetry({ appVersion: APP_VERSION });
     startRawCapture();
     startDerivations();
 
@@ -73,6 +105,8 @@ export default function Home() {
   }, []);
 
   const game = useGameEngine();
+  // Developer tools: only on localhost, with ?telemetryDebug=1, or for test participants.
+  const [showDevTools] = useState(() => isTelemetryDebugEnabled() || isStudyTestMode());
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 font-sans text-zinc-900 overflow-hidden relative">
@@ -175,7 +209,7 @@ export default function Home() {
         </GameProvider>
       </UIProvider>
 
-      <DevPanel 
+      {showDevTools && <DevPanel 
         devMode={devMode} 
         setDevMode={setDevMode} 
         jumpToCycle={game.jumpToCycle}
@@ -188,9 +222,9 @@ export default function Home() {
         cycleMAO={game.cycleMAO}
         difficultySeed={game.difficultySeed}
         jumpToElicitation={game.jumpToElicitation}
-      />
+      />}
       
-      <TelemetryDevPanel />
+      {showDevTools && <TelemetryDevPanel />}
     </div>
   );
 }

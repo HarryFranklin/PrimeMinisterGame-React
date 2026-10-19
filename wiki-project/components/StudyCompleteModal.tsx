@@ -8,9 +8,8 @@ import { useCompletion } from '@/context/CompletionContext';
 import { recordModalShown, recordExtend, recordFinish, syncPayload, CompletionOutcome } from '@/lib/telemetry';
 import { getCompletionDecisionState, setCompletionDecisionState, CompletionDecisionState } from '@/lib/completion';
 import type { NavCategory } from '@/lib/wiki';
+import { finishActivity } from '@study';
 
-// Placeholder — replace with your actual Prolific completion URL.
-const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?cc=PLACEHOLDER';
 const EXTENSION_MS = 5 * 60 * 1000;
 
 function formatCountdown(ms: number): string {
@@ -24,10 +23,10 @@ function formatCountdown(ms: number): string {
  * can appear no matter which page the participant is on when they mark the
  * last remaining page complete.
  *
- * Flow: modal appears once, offering "Continue to Prolific" or a single
- * "5 more minutes" extension. There is no third option to defer
+ * Flow: modal appears once, offering "Continue" (to the final questions) or a
+ * single "5 more minutes" extension. There is no third option to defer
  * indefinitely — if they extend, a countdown bar replaces the modal and
- * auto-finishes (marks the study complete + redirects) the instant the
+ * auto-finishes (moves on to the final questions) the instant the
  * timer runs out, even with no further interaction. Every step is logged
  * to telemetry with its own timestamp, and the decision state is persisted
  * to localStorage so a page refresh can't be used to dodge the timer or
@@ -76,8 +75,8 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
     setCompletionDecisionState(updated);
     setState(updated);
     recordFinish(outcome);
-    await syncPayload(session, { finalOutcome: outcome})
-    window.location.href = PROLIFIC_COMPLETION_URL;
+    await syncPayload(session, { finalOutcome: outcome });
+    finishActivity(); // → post-test questions (shared study screens)
   };
 
   const handleExtend = () => {
@@ -143,8 +142,8 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
             That's everything
           </h2>
           <p className="text-sm text-zinc-400 mb-6 leading-relaxed">
-            You've read through every page. You can head back to Prolific now, or take
-            5 more minutes to go back over anything before you finish.
+            You've read through every page. You can continue to the final questions now,
+            or take 5 more minutes to go back over anything first.
           </p>
           <div className="flex flex-col gap-3">
             <button
@@ -152,7 +151,7 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
               className="w-full inline-flex items-center justify-center gap-2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl uppercase tracking-widest text-xs transition-colors shadow-lg"
             >
               <CheckCircle2 size={16} />
-              Continue to Prolific
+              Continue
             </button>
             <button
               onClick={handleExtend}
@@ -163,7 +162,7 @@ export default function StudyCompleteModal({ nav }: { nav: NavCategory[] }) {
             </button>
           </div>
           <p className="text-xs text-zinc-500 mt-4 text-center">
-            You can only extend once — after 5 minutes you'll be returned to Prolific automatically.
+            You can only extend once — after 5 minutes you'll move on to the final questions automatically.
           </p>
         </motion.div>
       </motion.div>

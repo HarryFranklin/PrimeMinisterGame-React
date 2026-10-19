@@ -1,95 +1,109 @@
 // app/client/networkSink.ts
-// Ships two lightweight payload shapes to the D1-backed worker: a
-// participant identity/completion ping, and a per-attempt cycle_summary
-// rollup. Per-turn/raw/derived noise never leaves the device - it's already
-// folded into the cycle_summary by the time this sees it (see derive.ts).
+// Turns the game's telemetry into the participant's `activity` record, saved
+// by the shared study code (@study → study-worker /sync, one row per sync).
+// Raw/derived events never leave the device – each attempt's cycle_summary
+// already rolls them up (see derive.ts / cycleSummary.ts).
+//
+// activity = {
+//   v: 1,
+//   setup:       { difficulty_seed, win_threshold_scalars }
+//   ls:          life_satisfaction_submitted payload (LS intro screen)
+//   elicitation: { social: …, personal: … }   elicitation_completed payloads
+//   attempts:    [cycle_summary, …]            one per term attempt, incl. turns
+//   last:        last semantic event (where people stopped)
+//   final:       { outcome, dwell_ms, ts }     final debrief closed
+// }
 
 import type { LoggedEvent } from "./telemetry";
+import { setActivity, syncStudy, getStudyState } from "@study";
 
-const BASE = "https://telemetry-worker.franklinh.workers.dev";
-// const BASE = "http://localhost:8787"; // for local dev d1
+interface GameActivity {
+  v: 1;
+  setup: Record<string, unknown> | null;
+  ls: Record<string, unknown> | null;
+  elicitation: Record<string, unknown>;
+  attempts: Record<string, unknown>[];
+  last: Record<string, unknown> | null;
+  final: Record<string, unknown> | null;
+}
 
-function send(path: string, body: unknown, useBeacon = false) {
-  const json = JSON.stringify(body);
-  if (useBeacon && "sendBeacon" in navigator) {
-    navigator.sendBeacon(BASE + path, new Blob([json], { type: "application/json" }));
-    return;
+let activity: GameActivity | null = null;
+
+/** The record so far – restored from the saved study state after a refresh. */
+function current(): GameActivity {
+  if (!activity) {
+    const saved = getStudyState().cells.activity as Partial<GameActivity> | undefined;
+    activity = {
+      v: 1,
+      setup: saved?.setup ?? null,
+      ls: saved?.ls ?? null,
+      elicitation: saved?.elicitation ?? {},
+      attempts: saved?.attempts ?? [],
+      last: saved?.last ?? null,
+      final: saved?.final ?? null,
+    };
   }
-  fetch(BASE + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: json,
-    keepalive: true,
-  }).catch(() => {
-    // best-effort - at this write volume a dropped ping isn't worth a retry queue
-  });
+  return activity;
 }
 
-function identity(entry: LoggedEvent, extra: Record<string, unknown> = {}) {
-  return {
-    user_id: entry.user_id,
-    session_id: entry.session_id,
-    prolific_pid: entry.prolific_pid ?? null,
-    study_id: entry.study_id ?? null,
-    prolific_session_id: entry.prolific_session_id ?? null,
-    app_version: entry.app_version ?? null,
-    difficulty_seed: entry.difficulty_seed ?? null,
-    win_threshold_scalars: entry.win_threshold_scalars ?? null,
-    ...extra,
-  };
+function save(sync: boolean, beacon = false) {
+  const { v, setup, ls, elicitation, attempts, last, final } = current();
+  setActivity({ v, setup, ls, elicitation, attempts, last, final }, { sync, beacon });
 }
-
-// Last semantic event seen - kept in memory only, no network cost until
-// pingProgress() actually sends it. Lets us answer "where did people quit"
-// without a new event type or extra instrumentation anywhere else.
-let latestSemanticEntry: LoggedEvent | null = null;
 
 /** Pass this to registerSink() in telemetry.ts. */
 export function networkSink(entry: LoggedEvent) {
-  if (entry.layer === "semantic") {
-    latestSemanticEntry = entry;
-  }
+  if (entry.layer !== "semantic") return;
+  const a = current();
 
-  // Fire to database when session starts OR when setup is submitted
-  if (entry.event === "session_started" || entry.event === "setup_submitted") {
-    send("/participant", identity(entry));
-    return;
-  }
+  // Kept in memory only; saved with the next sync (or on tab hide).
+  a.last = {
+    event: entry.event,
+    level_id: entry.level_id ?? null,
+    attempt_number: entry.attempt_number ?? null,
+    turn: entry.turn ?? null,
+    ts: entry.ts,
+  };
 
-  if (entry.event === "cycle_summary") {
-    send("/cycle-attempt", { ...identity(entry), ...entry.payload });
-    return;
-  }
-
-  // Player's own LS and the elicitation rollup. NOTE: the worker needs a
-  // matching /elicitation endpoint (and table) before these are stored.
-  if (entry.event === "life_satisfaction_submitted" || entry.event === "elicitation_completed") {
-    send("/elicitation", { ...identity(entry), kind: entry.event, ...entry.payload });
-    return;
-  }
-  if (entry.event === "final_debrief_closed") {
-    send("/participant", identity(entry, { completed: true, final_outcome: entry.payload?.outcome ?? null }), true);
-    return;
+  switch (entry.event) {
+    case "setup_submitted":
+      a.setup = {
+        difficulty_seed: entry.payload?.difficulty_seed ?? null,
+        win_threshold_scalars: entry.payload?.win_threshold_scalars ?? null,
+      };
+      save(true);
+      break;
+    case "life_satisfaction_submitted":
+      a.ls = { ...entry.payload, ts: entry.ts };
+      save(true);
+      break;
+    case "elicitation_completed": {
+      const block = (entry.payload?.block as string) ?? "all";
+      a.elicitation = { ...a.elicitation, [block]: { ...entry.payload, ts: entry.ts } };
+      save(true);
+      break;
+    }
+    case "cycle_summary": {
+      const summary: Record<string, unknown> = { ...entry.payload, app_version: entry.app_version ?? null };
+      const id = summary.attempt_id;
+      // Replace if this attempt was already saved (e.g. resent), else append.
+      a.attempts = [...a.attempts.filter((x) => !id || x.attempt_id !== id), summary];
+      save(true);
+      break;
+    }
+    case "final_debrief_closed":
+      a.final = { outcome: entry.payload?.outcome ?? null, dwell_ms: entry.payload?.dwell_ms ?? null, ts: entry.ts };
+      save(true);
+      break;
   }
 }
 
-/** Kept for call-site compatibility with page.tsx's beforeunload listener -
- * there's no queue to flush any more, sinks fire immediately. */
+/** Kept for call-site compatibility with page.tsx's unload listener. */
 export function flushOnExit() {}
 
-/** "Last known position" beacon - call this on tab-hide/pagehide. For
- * participants who never reach final_debrief_closed, this is how we find
- * out where in the game they actually stopped. Uses sendBeacon so it
- * fires reliably during teardown. */
+/** Tab hidden/closed: save the last position so we know where people stopped. */
 export function pingProgress() {
-  if (!latestSemanticEntry) return;
-  if (latestSemanticEntry.event === "session_started") return;
-  const e = latestSemanticEntry;
-  send("/participant", identity(e, {
-    last_event: e.event,
-    last_cycle: e.level_id ?? null,
-    last_attempt_number: e.attempt_number ?? null,
-    last_turn: e.turn ?? null,
-    last_progress_at: e.ts,
-  }), true);
+  if (!activity) return;
+  save(false);
+  syncStudy({ beacon: true });
 }

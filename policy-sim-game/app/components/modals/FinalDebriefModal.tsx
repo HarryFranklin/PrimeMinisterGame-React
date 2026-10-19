@@ -11,6 +11,7 @@ import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
 import { useDwellTimer } from '../../client/hooks';
+import { finishActivity } from '@study';
 
 const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
@@ -58,11 +59,8 @@ const OmniConfetti = ({ triggerKey }: { triggerKey: number }) => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// Where "Finish" sends the player. Paste the Prolific completion link or the
-// post-test questionnaire link here. Leave empty to show TEXT.finishedNoLink.
-// ---------------------------------------------------------------------------
-const STUDY_COMPLETION_URL = 'https://www.prolific.com/e';
+// "Finish" moves the participant on to the post-test questions (shared study
+// screens in /study-kit), which end with the Prolific completion link.
 
 const TEXT = {
   header: 'Final Debrief: Your Four Terms',
@@ -86,7 +84,6 @@ const TEXT = {
   finish: 'Finish',
   finishing: 'Opening the next part of the study…',
   finishedTitle: 'Thank you for playing',
-  finishedNoLink: 'You have finished the game. Please return to the study to continue.',
   celebrate: 'Celebrate',
 };
 
@@ -150,10 +147,8 @@ export default function FinalDebriefModal() {
     // This event is what marks the participant as completed on the server.
     track('final_debrief_closed', { dwell_ms: dwell.stop() });
     setFinished(true);
-    if (STUDY_COMPLETION_URL) {
-      // Short pause so the completion ping is sent before the page changes.
-      setTimeout(() => { window.location.href = STUDY_COMPLETION_URL; }, 1500);
-    }
+    // Short pause so the player sees the confirmation, then the post-test.
+    setTimeout(finishActivity, 1500);
   };
 
   const lensRule = lens !== null ? FRAMEWORK_RULES[lens] : null;
@@ -305,7 +300,7 @@ export default function FinalDebriefModal() {
             className="p-5 bg-zinc-900 rounded-xl flex items-center justify-between gap-4 text-white shadow-xl shrink-0">
             <div>
               <h3 className="text-base font-bold mb-1 text-emerald-400">✓ {TEXT.finishedTitle}</h3>
-              <p className="text-zinc-300 text-sm">{STUDY_COMPLETION_URL ? TEXT.finishing : TEXT.finishedNoLink}</p>
+              <p className="text-zinc-300 text-sm">{TEXT.finishing}</p>
             </div>
             <button type="button"
               onClick={() => { track('final_debrief_celebrate_clicked', {}); setConfettiKey((k) => k + 1); }}

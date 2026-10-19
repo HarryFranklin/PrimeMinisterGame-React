@@ -89,14 +89,19 @@ const opts = (...labels: string[]): Option[] =>
 // Baseline and post-test LO1 use DIFFERENT distributions (practice effect).
 // ---------------------------------------------------------------------------
 export const DISTRIBUTIONS: Record<string, { label: string; counts: number[] | null }> = {
+  // TODO(Harry): LO1 baseline and post-test societies (to be made in the same style).
   pre_A: { label: 'Society A', counts: null },
   pre_B: { label: 'Society B', counts: null },
-  post_A: { label: 'Society A', counts: null },
-  post_B: { label: 'Society B', counts: null },
-  post_C: { label: 'Society C', counts: null },
-  lo2_1: { label: 'Society 1', counts: null },
-  lo2_2: { label: 'Society 2', counts: null },
-  lo2_3: { label: 'Society 3', counts: null },
+  post_1: { label: 'Society 1', counts: null },
+  post_2: { label: 'Society 2', counts: null },
+  post_3: { label: 'Society 3', counts: null },
+  // LO2.3 – read off Harry's images (19 Oct; faces were 4 people each, so ±2).
+  // Replace with the exact counts if you have them. Means: A 5.8, B 6.7, C 6.2;
+  // floors: A 5, B 1, C 3  →  Benthamite prefers B, Rawlsian prefers A.
+  //              0  1  2  3   4   5   6   7   8   9  10
+  lo2_A: { label: 'Society A', counts: [0, 0, 0, 0, 0, 45, 35, 15, 5, 0, 0] },
+  lo2_B: { label: 'Society B', counts: [0, 4, 4, 2, 0, 0, 19, 37, 25, 9, 0] },
+  lo2_C: { label: 'Society C', counts: [0, 0, 0, 8, 12, 18, 20, 16, 12, 9, 5] },
 };
 
 const SOCIETIES_AB: Option[] = [
@@ -321,10 +326,10 @@ export const POSTTEST: Page[] = [
     title: 'Reading charts',
     intro: 'Each chart shows how many people in a society have each life satisfaction score, from 0 to 10.',
     content: [
-      { type: 'charts', charts: ['post_A', 'post_B', 'post_C'] },
-      { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_ABC },
-      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_ABC },
-      { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_ABC },
+      { type: 'charts', charts: ['post_1', 'post_2', 'post_3'] },
+      { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_123 },
+      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_123 },
+      { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_123 },
     ],
   },
   {
@@ -353,7 +358,7 @@ export const POSTTEST: Page[] = [
           'Strongly protects whoever has the lowest life satisfaction, even at the cost of gains elsewhere'
         ),
       },
-      { type: 'charts', charts: ['lo2_1', 'lo2_2', 'lo2_3'] },
+      { type: 'charts', charts: ['lo2_A', 'lo2_B', 'lo2_C'] },
       {
         id: 'lo2_3',
         type: 'grid',
@@ -362,7 +367,7 @@ export const POSTTEST: Page[] = [
           { value: 'benthamite', label: 'Under Benthamite logic' },
           { value: 'rawlsian', label: 'Under Rawlsian logic' },
         ],
-        options: SOCIETIES_123,
+        options: SOCIETIES_ABC,
       },
     ],
   },

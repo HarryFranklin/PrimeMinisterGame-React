@@ -1,19 +1,19 @@
 // Wiki telemetry: one JSON payload per participant.
 //
 // Everything a participant does is kept in a single payload object in
-// localStorage and synced to the worker as a whole, overwriting the previous
-// copy. The worker stores it in participants.wiki_payload, so each sync costs
-// ONE database row written, no matter how much happened since the last sync.
+// localStorage and saved as the participant's `activity` record through the
+// shared study code (@study → study-worker /sync). Each sync costs ONE
+// database row written, no matter how much happened since the last sync.
 //
 // Syncs happen only when needed:
-//   - when the participant enters their Prolific ID (creates their row)
+//   - when the participant first reaches the wiki
 //   - when the tab is hidden or closed (covers leaving, switching, closing)
 //   - when they take the 5-minute extension, and when they finish
 //   - a heartbeat every few minutes, but only if something has changed
 // Moving between pages, scrolling and marking pages complete are recorded
 // locally and go up with the next sync.
 
-export const WORKER_URL = process.env.NEXT_PUBLIC_TELEMETRY_WORKER_URL || 'https://wiki-telemetry-worker.franklinh.workers.dev';
+import { setActivity, syncStudy } from '@study';
 
 export interface ParticipantSession {
   userId: string;
@@ -22,15 +22,6 @@ export interface ParticipantSession {
   prolificSessionId: string | null;
   studyId: string | null;
   appVersion: string;
-  /** LS from the baseline survey link (?LS=0-10); null/absent if not passed. */
-  baselineLs?: number | null;
-}
-
-/** A whole number 0-10, or null if missing/invalid. */
-export function parseLS(raw: string | null): number | null {
-  if (raw === null || !/^\d{1,2}$/.test(raw.trim())) return null;
-  const n = Number(raw.trim());
-  return n >= 0 && n <= 10 ? n : null;
 }
 
 const STORAGE_KEY_SESSION = 'wiki_study_session';
@@ -42,8 +33,6 @@ export const HEARTBEAT_MS = 5 * 60 * 1000;
 const MIN_IDLE_SYNC_GAP_MS = 10 * 1000;
 /** Views shorter than this are dropped (e.g. React dev-mode double mounts). */
 const MIN_VIEW_MS = 250;
-/** fetch keepalive refuses bodies over 64 KB. */
-const KEEPALIVE_LIMIT = 60 * 1024;
 
 // ---------------------------------------------------------------------------
 // Payload shape (this is exactly what ends up in participants.wiki_payload)
@@ -75,8 +64,8 @@ export type CompletionOutcome = 'chose_finish' | 'finished_during_extension' | '
 
 /** The LS intro screen shown before reading (same screen as in the game). */
 export interface LsIntro {
-  ls: number | null;
-  source: 'url' | 'asked' | null;    // from the survey link, or asked on the screen
+  ls: number | null;                 // null = prefer not to say
+  source: 'baseline' | 'asked' | 'prefer_not' | null; // from the baseline questions, or asked on the screen
   shown_at: number | null;
   done_at: number | null;            // when they pressed Continue
   changed_answer_count: number;      // only when asked on the screen
@@ -309,7 +298,7 @@ export function recordLsIntroShown(): void {
   dirty = true;
 }
 
-export function recordLsIntroDone(ls: number, source: 'url' | 'asked', changedAnswerCount: number, dwellMs: number): void {
+export function recordLsIntroDone(ls: number | null, source: 'baseline' | 'asked' | 'prefer_not', changedAnswerCount: number, dwellMs: number): void {
   const p = loadPayload();
   p.ls_intro ??= freshLsIntro();
   Object.assign(p.ls_intro, { ls, source, changed_answer_count: changedAnswerCount, dwell_ms: dwellMs, done_at: Date.now() });
@@ -352,7 +341,8 @@ interface SyncOptions {
   finalOutcome?: CompletionOutcome;
 }
 
-/** Sends the whole payload. Each call = one row written in D1. */
+/** Saves the whole payload as the activity record. Each call = one row written in D1. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function syncPayload(session: ParticipantSession, opts: SyncOptions = {}): Promise<void> {
   snapshotCurrent(false);
   const p = loadPayload();
@@ -363,31 +353,8 @@ export function syncPayload(session: ParticipantSession, opts: SyncOptions = {})
   dirty = false;
   lastSyncAt = now;
 
-  const body = JSON.stringify({
-    user_id: session.userId,
-    prolific_pid: session.prolificPid,
-    session_id: session.sessionId,
-    prolific_session_id: session.prolificSessionId,
-    study_id: session.studyId,
-    app_version: session.appVersion,
-    payload: p,
-    ...(opts.finalOutcome ? { completed: true, final_outcome: `wiki_${opts.finalOutcome}` } : {}),
-  });
-
-  // text/plain keeps this a "simple" cross-origin request: no CORS preflight
-  // (one fewer worker call) and sendBeacon accepts it in every browser.
-  const url = `${WORKER_URL}/wiki-sync`;
-  if (opts.beacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    if (navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))) return Promise.resolve();
-  }
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body,
-    keepalive: body.length < KEEPALIVE_LIMIT,
-  })
-    .then(() => undefined)
-    .catch((err) => console.error('Wiki sync failed:', err));
+  setActivity(p as unknown as Record<string, unknown>);
+  return syncStudy({ beacon: opts.beacon });
 }
 
 /** For tab hide/close and the heartbeat: sync only if there's something new. */

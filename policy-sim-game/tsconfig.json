@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@study": ["./.study-kit/index.ts"],
+      "@study/*": ["./.study-kit/*"]
     }
   },
   "include": [

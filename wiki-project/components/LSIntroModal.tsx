@@ -6,14 +6,16 @@ import D3Chart from '@/components/D3Chart';
 import { AxisVariable } from '@/utils/types';
 import { useTelemetrySession } from '@/context/TelemetryContext';
 import { getLsIntro, recordLsIntroShown, recordLsIntroDone, syncPayload } from '@/lib/telemetry';
+import { getBaselineLS } from '@study';
 
 // ---------------------------------------------------------------------------
 // Life satisfaction intro, shown once before reading. This is the same screen
 // the game shows "before you take office" (game: LifeSatisfactionTab.tsx), so
 // both study arms get the same LS introduction. Only the `wiki` line differs.
 //
-// Normally the LS question is asked in the baseline survey and arrives in the
-// link (?LS=7). If the link has no LS (pilots/testing) it is asked here.
+// The LS question is asked in the baseline questions (shared study screens).
+// If they chose "Prefer not to say", the screen shows without their number;
+// if there's no baseline answer at all (dev/testing) it is asked here.
 // ---------------------------------------------------------------------------
 const TEXT = {
   titleKnown: 'Before you start reading',
@@ -49,6 +51,7 @@ export default function LSIntroModal() {
   const { session, isInitialised } = useTelemetrySession();
   const [open, setOpen] = useState(false);
   const [baselineLS, setBaselineLS] = useState<number | null>(null);
+  const [preferNot, setPreferNot] = useState(false);
   const [ls, setLs] = useState<number | null>(null);
   const changes = useRef(0);
   const openedAt = useRef(0);
@@ -58,9 +61,11 @@ export default function LSIntroModal() {
   useEffect(() => {
     if (!isInitialised || !session) return;
     if (getLsIntro().done_at !== null) return;
-    const fromLink = session.baselineLs ?? null;
-    setBaselineLS(fromLink);
-    setLs(fromLink);
+    const baseline = getBaselineLS();
+    const fromBaseline = baseline.status === 'answered' ? baseline.ls : null;
+    setBaselineLS(fromBaseline);
+    setPreferNot(baseline.status === 'prefer_not');
+    setLs(fromBaseline);
     changes.current = 0;
     openedAt.current = Date.now();
     recordLsIntroShown();
@@ -77,8 +82,8 @@ export default function LSIntroModal() {
   };
 
   const handleContinue = () => {
-    if (ls === null) return;
-    recordLsIntroDone(ls, known ? 'url' : 'asked', changes.current, Date.now() - openedAt.current);
+    if (ls === null && !preferNot) return;
+    recordLsIntroDone(ls, known ? 'baseline' : preferNot ? 'prefer_not' : 'asked', changes.current, Date.now() - openedAt.current);
     syncPayload(session); // one row written; keeps the answer even if they leave straight away
     setOpen(false);
   };
@@ -91,7 +96,7 @@ export default function LSIntroModal() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col gap-6 text-zinc-100"
         >
-          {known ? (
+          {known || preferNot ? (
             <div>
               <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.titleKnown}</h2>
               <p className="text-sm text-zinc-400 leading-relaxed">{TEXT.introKnown}</p>
@@ -136,7 +141,7 @@ export default function LSIntroModal() {
           )}
 
           <AnimatePresence>
-            {ls !== null && (
+            {(ls !== null || preferNot) && (
               <motion.div
                 key="explain"
                 initial={{ opacity: 0, height: 0 }}
@@ -145,9 +150,11 @@ export default function LSIntroModal() {
                 className="flex flex-col gap-4 overflow-hidden"
               >
                 <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
-                  <p className="text-base font-bold text-white mb-1">
-                    {known ? TEXT.knownTitle(ls) : TEXT.explainTitle(ls)}
-                  </p>
+                  {ls !== null && (
+                    <p className="text-base font-bold text-white mb-1">
+                      {known ? TEXT.knownTitle(ls) : TEXT.explainTitle(ls)}
+                    </p>
+                  )}
                   <p className="text-sm text-zinc-300 leading-relaxed mb-2">{TEXT.policy}</p>
                   <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.wiki}</p>
                 </div>
@@ -163,7 +170,7 @@ export default function LSIntroModal() {
                     color="#71717a"
                     visualStyle="solid"
                     yAxisMax={Y_AXIS_MAX}
-                    markers={[{ value: ls, label: 'You', color: '#818cf8' }]}
+                    markers={ls !== null ? [{ value: ls, label: 'You', color: '#818cf8' }] : []}
                     theme="dark"
                   />
                 </div>

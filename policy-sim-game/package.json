@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "predeploy": "npm run build",
+    "predev": "node ../study-kit/sync.mjs .study-kit",
     "dev": "next dev",
+    "prebuild": "node ../study-kit/sync.mjs .study-kit",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

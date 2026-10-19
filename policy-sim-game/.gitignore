@@ -43,3 +43,5 @@ next-env.d.ts
 .open-next/
 .next/
 out/
+# Copied from /study-kit before dev/build – edit /study-kit/src instead
+.study-kit/

@@ -10,6 +10,7 @@ import { useSaveGame } from './useSaveGame';
 import { DifficultyEngine } from '../utils/DifficultyEngine'; 
 import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
 import { ElicitationState, GambleBlock, createElicitationState, ELICITATION_ENABLED } from '../utils/ElicitationEngine';
+import { getStudyState } from '@study';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -126,6 +127,18 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   }, [resetDpmConsulted, difficultySeed]);
 
   const handleSaveLoad = useCallback((parsed: any) => {
+    // A save left on this device by a different participant: ignore it and
+    // start this participant's game from setup.
+    const studyPid = getStudyState().session?.pid;
+    if (studyPid && parsed.participantId && parsed.participantId !== studyPid) {
+      setGamePhase(GamePhase.Setup);
+      return;
+    }
+    // Same participant after a refresh: re-attach their ID and difficulty to
+    // telemetry (previously lost on reload).
+    if (parsed.participantId && parsed.winScalars && Object.keys(parsed.winScalars).length > 0) {
+      setParticipantData(parsed.participantId, parsed.difficultySeed || 0, parsed.winScalars);
+    }
     setPopulation(parsed.population);
     setInitialPopulation(parsed.initialPopulation);
     setBaselinePopulation(parsed.baselinePopulation || parsed.initialPopulation);

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Copied from /study-kit before dev/build - edit /study-kit/src instead
+.study-kit/
