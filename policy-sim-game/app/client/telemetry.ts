@@ -235,7 +235,9 @@ const lastPayloadByType = new Map<string, string>();
  * This is the extension point for Phase 2: `registerSink(networkSink)`
  * sends everything to Cloudflare too, with zero changes anywhere else. */
 export function registerSink(sink: Sink) {
-  sinks.push(sink);
+  // React dev mode runs effects twice – never register the same sink twice
+  // (every event would be saved twice).
+  if (!sinks.includes(sink)) sinks.push(sink);
 }
 
 // --- built-in sinks ---
@@ -372,8 +374,10 @@ function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<st
     difficulty_seed: difficultySeed,
     win_threshold_scalars: winThresholdScalars,
     level_id: currentLevelId,
-    attempt_id: currentAttemptId,
-    attempt_number: currentAttemptNumber,
+    // Only events inside an open term attempt carry its id, so level select,
+    // elicitation etc. between attempts are never counted as part of one.
+    attempt_id: attemptOpen ? currentAttemptId : undefined,
+    attempt_number: attemptOpen ? currentAttemptNumber : undefined,
     turn: currentTurn,
     app_version: appVersion,
     payload,

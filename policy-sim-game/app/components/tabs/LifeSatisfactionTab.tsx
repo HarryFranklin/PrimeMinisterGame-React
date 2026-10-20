@@ -57,6 +57,8 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
 
   useEffect(() => {
     openedAt.current = Date.now();
+    track('life_satisfaction_opened', { source: known ? 'baseline' : preferNot ? 'prefer_not' : 'asked' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const histogram = useMemo(() => {
@@ -153,6 +155,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
               <div className="h-56 bg-zinc-950 rounded-lg border border-zinc-800 p-2 pt-7 relative overflow-hidden">
                 <span className="absolute top-2 left-3 text-xs font-bold text-zinc-400 z-10">{TEXT.chartTitle}</span>
                 <D3Chart
+                  hoverTrackId="ls_intro"
                   plotType="1D"
                   chartData={[]}
                   histogramData={histogram}

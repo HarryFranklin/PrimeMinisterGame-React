@@ -58,8 +58,10 @@ export default function AcademicDebriefOverlay() {
   }, []);
 
   // Call this from every "click to reveal" handler
-  const markInteraction = () => {
+  const readyAt = useRef<number | null>(null);
+  const markInteraction = (item: string) => {
     const now = Date.now();
+    track('academic_debrief_revealed', { cycle: ElectionCycle[currentCycle], item, ms_since_open: now - openedAt.current });
     if (firstInteractionAt.current === null) {
       firstInteractionAt.current = now;
       track('academic_debrief_first_interaction', {
@@ -89,6 +91,7 @@ export default function AcademicDebriefOverlay() {
     if (isReady) {
       readyFired.current = true;
       const now = Date.now();
+      readyAt.current = now;
       track('academic_debrief_closed', {
         cycle: ElectionCycle[currentCycle],
         dwell_ms: now - openedAt.current,
@@ -265,7 +268,7 @@ export default function AcademicDebriefOverlay() {
             {currentCycle === ElectionCycle.Benthamite && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div
-                  onClick={() => { setRevealedBenthamA(true); markInteraction(); }}
+                  onClick={() => { setRevealedBenthamA(true); markInteraction('bentham_a'); }}
                   className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                 >
                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
@@ -285,7 +288,7 @@ export default function AcademicDebriefOverlay() {
                 </div>
 
                 <div
-                  onClick={() => { setRevealedBenthamB(true); markInteraction(); }}
+                  onClick={() => { setRevealedBenthamB(true); markInteraction('bentham_b'); }}
                   className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                 >
                   <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
@@ -323,7 +326,7 @@ export default function AcademicDebriefOverlay() {
                   return (
                     <div
                       key={idx}
-                      onClick={() => { setReveal(true); markInteraction(); }}
+                      onClick={() => { setReveal(true); markInteraction(`citizen_${idx + 1}`); }}
                       className={`p-4 rounded-xl border transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
                     >
                       <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
@@ -363,7 +366,7 @@ export default function AcademicDebriefOverlay() {
             {currentCycle === ElectionCycle.SocietalUtility && empathyCitizen && (
               <div className="flex flex-col gap-4">
                 <div
-                  onClick={() => { setRevealedEmpathy(true); markInteraction(); }}
+                  onClick={() => { setRevealedEmpathy(true); markInteraction('empathy'); }}
                   className={`p-5 rounded-xl border transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[180px] cursor-pointer ${revealedEmpathy ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-emerald-500/40 hover:bg-emerald-500/5'}`}
                 >
                   <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{empathyCitizen.name}</p>
@@ -395,7 +398,7 @@ export default function AcademicDebriefOverlay() {
             {currentCycle === ElectionCycle.PersonalUtility && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <div
-                  onClick={() => { setRevealedSU(true); markInteraction(); }}
+                  onClick={() => { setRevealedSU(true); markInteraction('societal_utility'); }}
                   className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-emerald-500/40 hover:bg-emerald-500/5'}`}
                 >
                   <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400/70 mb-2 text-center">Term 3: Societal Utility</h3>
@@ -413,7 +416,7 @@ export default function AcademicDebriefOverlay() {
                 </div>
 
                 <div
-                  onClick={() => { setRevealedPU(true); markInteraction(); }}
+                  onClick={() => { setRevealedPU(true); markInteraction('personal_utility'); }}
                   className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-600 bg-zinc-800/60' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-600 hover:bg-zinc-800/40'}`}
                 >
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Term 4: Personal Utility</h3>
@@ -444,7 +447,16 @@ export default function AcademicDebriefOverlay() {
 
         <div className="flex justify-end">
           <button
-            onClick={resolveAcademicDebrief}
+            onClick={() => {
+              const now = Date.now();
+              track('academic_debrief_continue_clicked', {
+                cycle: ElectionCycle[currentCycle],
+                dwell_ms: now - openedAt.current,
+                ms_after_unlock: readyAt.current ? now - readyAt.current : null,
+                ms_after_last_reveal: lastInteractionAt.current ? now - lastInteractionAt.current : null,
+              });
+              resolveAcademicDebrief();
+            }}
             disabled={!ready}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${ready ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-800 text-zinc-500 opacity-50 cursor-not-allowed'}`}
           >

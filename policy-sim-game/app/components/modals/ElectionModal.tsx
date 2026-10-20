@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
@@ -49,25 +49,67 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   // We removed all track('cycle_ended', ...) calls from these handlers.
   // The cycle isn't truly over until the Academic Debrief finishes.
+  const trackExit = (action: string) => {
+    const now = Date.now();
+    track('election_exit_clicked', {
+      cycle: ElectionCycle[currentCycle],
+      action,
+      won,
+      attempt_number: cycleAttempts,
+      ms_on_stage: now - stageShownAt.current,
+      ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
+    });
+  };
+
   const handleRestartTerm = () => {
+    trackExit('restart');
     onRequestDebrief('restart', won ? "win" : "lose");
   };
 
   const handleProceedNextTerm = () => {
+    trackExit('next_term');
     onRequestDebrief('complete', 'win');
   };
 
   const handleFinishGame = () => {
+    trackExit('finish_game');
     onRequestDebrief('complete', 'win');
   };
 
   const handleLostFinal = () => {
+    trackExit('lost_restart');
     onReset("lose");
   };
 
   useEffect(() => {
     setDefinitions([]);
   }, [page]);
+
+  // Telemetry: every Continue/Back between the five stages, with time on the stage
+  // (from when it appeared) and time since its Continue button unlocked.
+  const STAGES = ['press_conference', 'term_summary', 'verdict', 'wellbeing_changes', 'electorate_feedback'];
+  const stageShownAt = useRef(Date.now());
+  const stageReadyAt = useRef<number | null>(null);
+  useEffect(() => {
+    stageShownAt.current = Date.now();
+    stageReadyAt.current = null;
+  }, [page]);
+  useEffect(() => {
+    if (pageReady && stageReadyAt.current === null) stageReadyAt.current = Date.now();
+  }, [pageReady]);
+  const goToPage = (to: number) => {
+    const now = Date.now();
+    track('election_stage_navigated', {
+      cycle: ElectionCycle[currentCycle],
+      from_stage: STAGES[page],
+      to_stage: STAGES[to],
+      direction: to > page ? 'continue' : 'back',
+      ms_on_stage: now - stageShownAt.current,
+      ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
+    });
+    setPageReady(false);
+    setPage(to);
+  };
 
   const handleToggle = (title: string, desc: string) => {
     setDefinitions(prev => {
@@ -135,7 +177,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
         {page > 0 ? (
           <button 
-            onClick={() => { setPageReady(false); setPage(p => p - 1); }} 
+            onClick={() => goToPage(page - 1)} 
             className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 transition-colors cursor-pointer"
           >
             &larr; Back
@@ -144,7 +186,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
         {page < totalPages - 1 ? (
           <button 
-            onClick={() => { setPageReady(false); setPage(p => p + 1); }} 
+            onClick={() => goToPage(page + 1)} 
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >

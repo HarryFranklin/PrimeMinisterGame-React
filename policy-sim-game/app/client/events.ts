@@ -12,6 +12,8 @@ export type TelemetryEvent =
         prolific_pid: string;
         difficulty_seed: number;
         win_threshold_scalars: Record<string, number>;
+        /** Per term: scalar chosen, win rate the random walks got with it, max score, threshold. */
+        difficulty?: Record<string, { scalar: number; simulated_win_rate: number; max_score: number; threshold: number; walks: number }>;
       };
     }
   // ---- Session ----
@@ -48,7 +50,8 @@ export type TelemetryEvent =
   | { event: "intro_proceeded"; payload: { dwell_ms: number } }
 
   // ---- Level select ----
-  | { event: "level_select_viewed"; payload: { level_id: string } }
+  | { event: "level_select_viewed"; payload: { terms_completed?: number; level_id?: string } }
+  | { event: "life_satisfaction_opened"; payload: { source: "baseline" | "asked" | "prefer_not" } }
   | {
       event: "level_select_continue_clicked";
       payload: { level_id: string; dwell_ms: number; opened_details: boolean };
@@ -159,9 +162,26 @@ export type TelemetryEvent =
         turn?: number;
       };
     }
+  | {
+      /** Hovered one bar of the life-satisfaction histogram for at least 250 ms. */
+      event: "chart_bin_hovered";
+      payload: { chart?: string; bin: number; count: number; dwell_ms: number };
+    }
+  | {
+      /** Hovered one entry of the enacted-policies history for at least 250 ms. */
+      event: "enacted_policy_hovered";
+      payload: { index: number; policy_id: string | null; enacted_turn: number; dwell_ms: number };
+    }
 
   // ---- Main play: turn lifecycle ----
-  | { event: "turn_started"; payload: { turn: number; level_id: string; score: number; avg_ls: number } }
+  | {
+      event: "turn_started";
+      payload: {
+        turn: number; level_id: string; score: number; avg_ls: number; approval?: number;
+        /** Turn 1 only: this term's win threshold, best possible score and scalar. */
+        target_score?: number; max_score?: number; win_scalar?: number;
+      };
+    }
   | {
       event: "policy_options_presented";
       payload: { turn: number; level_id: string; options: string[] };
@@ -173,10 +193,14 @@ export type TelemetryEvent =
         level_id: string;
         policy_id: string;
         options_available: string[];
+        /** Change in this term's metric each offered policy would have caused. */
+        option_effects?: Record<string, number>;
         score_before: number;
         score_after: number;
         avg_ls_before: number;
         avg_ls_after: number;
+        approval_before?: number;
+        approval_after?: number;
       };
     }
   | {
@@ -186,6 +210,7 @@ export type TelemetryEvent =
         level_id: string;
         score: number;
         avg_ls: number;
+        approval?: number;
         wellbeing?: number;
         /** ms from turn_started to policy confirm */
         time_on_turn_ms: number;
@@ -287,6 +312,8 @@ export type TelemetryEvent =
       event: "term_summary_timeline_completed";
       payload: { cycle: string; was_auto: boolean };
     }
+  | { event: "term_summary_timeline_paused"; payload: { cycle: string; at_turn: number } }
+  | { event: "term_summary_definition_clicked"; payload: { cycle: string; metric: string } }
 
   // ---- Verdict ----
   | {
@@ -317,6 +344,26 @@ export type TelemetryEvent =
       payload: { cycle: string };
     }
 
+  // ---- Election screens: Continue / Back between the five stages ----
+  | {
+      event: "election_stage_navigated";
+      payload: {
+        cycle: string;
+        from_stage: string;
+        to_stage: string;
+        direction: "continue" | "back";
+        ms_on_stage: number;
+        /** ms between the Continue button unlocking and the click (null = clicked Back before it unlocked) */
+        ms_after_unlock: number | null;
+      };
+    }
+
+  /** Restart Term / Proceed to Next Term / Finish Game / Election Lost - Restart Term clicked. */
+  | {
+      event: "election_exit_clicked";
+      payload: { cycle: string; action: string; won: boolean; attempt_number: number; ms_on_stage: number; ms_after_unlock: number | null };
+    }
+
   // ---- Electorate Feedback ----
   | {
       event: "electorate_feedback_opened";
@@ -326,6 +373,7 @@ export type TelemetryEvent =
       event: "electorate_feedback_closed";
       payload: { cycle: string; dwell_ms: number; policies_clicked: number };
     }
+  | { event: "electorate_feedback_policy_clicked"; payload: { cycle: string; policy_id: string; ms_since_open: number } }
 
   // ---- Academic Debrief ----
   | {
@@ -335,6 +383,13 @@ export type TelemetryEvent =
   | {
       event: "academic_debrief_first_interaction";
       payload: { cycle: string; time_to_first_ms: number };
+    }
+  /** One "click to reveal" (e.g. the average) on the end-of-term debrief. */
+  | { event: "academic_debrief_revealed"; payload: { cycle: string; item: string; ms_since_open: number } }
+  /** Continue clicked: how long after the last reveal / after Continue unlocked. */
+  | {
+      event: "academic_debrief_continue_clicked";
+      payload: { cycle: string; dwell_ms: number; ms_after_unlock: number | null; ms_after_last_reveal: number | null };
     }
   | {
       event: "academic_debrief_closed";
@@ -540,7 +595,15 @@ export type TelemetryEvent =
   // for to compute and emit the cycle_summary rollup.
   | {
       event: "cycle_ended";
-      payload: { cycle: string; outcome: "won" | "lost_retry" | "lost_final" };
+      payload: {
+        cycle: string;
+        outcome: "won" | "lost_retry" | "lost_final";
+        /** Did the election verdict say they won (approval >= 51%)? */
+        won?: boolean;
+        /** Which button ended it: Restart Term, Proceed to Next Term, Finish Game. */
+        exit?: "restart" | "next_term" | "finish_game";
+        approval?: number;
+      };
     }
 
   // ---- Final Debrief ----

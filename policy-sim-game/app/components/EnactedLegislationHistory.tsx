@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { track } from '../client/telemetry';
+
+/** Hovers shorter than this are ignored (mouse passing through). */
+const HOVER_MIN_MS = 250;
 import { Policy, TurnHistory } from '../utils/types';
 import { PolicyRuleList } from './PolicyRuleCard';
 
@@ -20,6 +24,16 @@ export default function EnactedLegislationHistory({
   onHover,
 }: EnactedLegislationHistoryProps) {
   const [dynamicMaxHeight, setDynamicMaxHeight] = useState<number | null>(null);
+  // Which enacted policy is being read, and since when (for enacted_policy_hovered).
+  const hoverStart = useRef<{ index: number; policyId: string | null; turn: number; at: number } | null>(null);
+
+  const endHover = () => {
+    const h = hoverStart.current;
+    hoverStart.current = null;
+    if (h && Date.now() - h.at >= HOVER_MIN_MS) {
+      track('enacted_policy_hovered', { index: h.index + 1, policy_id: h.policyId, enacted_turn: h.turn, dwell_ms: Date.now() - h.at });
+    }
+  };
 
   const handleMouseEnter = (e: React.MouseEvent, leg: EnactedLegEntry, index: number) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -35,6 +49,7 @@ export default function EnactedLegislationHistory({
     }
     
     onHover(leg.enactedPolicyId, leg.turn);
+    hoverStart.current = { index, policyId: leg.enactedPolicyId ?? null, turn: leg.turn, at: Date.now() };
   };
 
   return (
@@ -47,7 +62,7 @@ export default function EnactedLegislationHistory({
           <div
             key={index}
             onMouseEnter={(e) => handleMouseEnter(e, leg, index)}
-            onMouseLeave={() => { setDynamicMaxHeight(null); onHover(null, null); }}
+            onMouseLeave={() => { endHover(); setDynamicMaxHeight(null); onHover(null, null); }}
             className={`relative flex flex-col justify-center bg-white p-3 rounded-lg border border-zinc-200 shadow-sm cursor-pointer transition-colors shrink-0 ${
               isHovered ? 'z-50 ring-2 ring-pink-500/20' : 'z-10 hover:bg-zinc-50'
             }`}

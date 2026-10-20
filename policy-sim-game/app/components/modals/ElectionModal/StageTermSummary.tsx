@@ -139,6 +139,7 @@ export default function StageTermSummary({
       track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
     } else {
       if (!isPlaying) track('term_summary_timeline_started', { cycle: ElectionCycle[currentCycle] });
+      else track('term_summary_timeline_paused', { cycle: ElectionCycle[currentCycle], at_turn: activeTurn });
       setIsPlaying(!isPlaying);
     }
   };
@@ -159,7 +160,10 @@ export default function StageTermSummary({
           highlights={[
             { 
               word: rule.targetMetricName, 
-              onClick: () => onDefinitionToggle(rule.targetMetricName, rule.targetMetricDescription) 
+              onClick: () => {
+                track('term_summary_definition_clicked', { cycle: ElectionCycle[currentCycle], metric: rule.targetMetricName });
+                onDefinitionToggle(rule.targetMetricName, rule.targetMetricDescription);
+              }
             }
           ]} 
         />
@@ -191,6 +195,7 @@ export default function StageTermSummary({
 
         <div className="h-[250px] shrink-0 w-full mb-4">
           <D3Chart
+            hoverTrackId="term_summary"
             plotType="1D"
             chartData={[]}
             histogramData={activeData.histogram}

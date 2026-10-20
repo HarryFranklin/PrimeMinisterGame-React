@@ -25,6 +25,8 @@ export default function LevelSelectTab() {
   const arrivedAt = useRef(Date.now());
   useEffect(() => {
     arrivedAt.current = Date.now();
+    track('level_select_viewed', { terms_completed: completedRuns.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStartLevel = (cycle: ElectionCycle) => {
@@ -158,6 +160,7 @@ export default function LevelSelectTab() {
                        <div className="h-55 bg-zinc-50 rounded-lg border border-zinc-200 mt-2 p-2 pt-6 relative overflow-hidden">
                          <span className="absolute top-3 left-2 text-[11px] font-bold text-zinc-400 uppercase tracking-widest z-10">Life Satisfaction Distribution</span>
                          <D3Chart 
+                           hoverTrackId={`level_select_${ElectionCycle[run.cycle]}`}
                            plotType="1D"
                            chartData={[]}
                            histogramData={generateHistogram(run.finalPopulation)}

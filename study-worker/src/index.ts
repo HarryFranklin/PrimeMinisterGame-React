@@ -25,7 +25,9 @@ type Condition = 'game' | 'wiki';
 const CELLS = ['pis', 'consent', 'pretest', 'activity', 'posttest'] as const;
 type Cell = (typeof CELLS)[number];
 
-const MAX_BODY_BYTES = 512 * 1024;
+// The game's activity record carries every term attempt's action timeline
+// (the game keeps it under 1.3 MB); D1's limit is 2 MB per row.
+const MAX_BODY_BYTES = 1_900_000;
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 // ---------------------------------------------------------------------------

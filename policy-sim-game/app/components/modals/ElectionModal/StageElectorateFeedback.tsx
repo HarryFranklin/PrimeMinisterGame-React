@@ -57,7 +57,7 @@ function PolicySpan({
   policy: PolicyRef;
   onHoverPolicy: (id: string | null) => void;
   onDefinitionToggle: (title: string, desc: string) => void;
-  onPolicyClicked: () => void;
+  onPolicyClicked: (policyId: string) => void;
 }) {
   return (
     <span
@@ -68,7 +68,7 @@ function PolicySpan({
         const fullPolicy = availablePolicies.find(p => p.id === policy.id);
         if (fullPolicy) {
           onDefinitionToggle(fullPolicy.policyName, fullPolicy.description);
-          onPolicyClicked(); // increment counter
+          onPolicyClicked(policy.id); // count + log the click
         }
       }}
     >
@@ -83,7 +83,7 @@ function renderVoterQuote(
   altFormat: boolean,
   onHoverPolicy: (id: string | null) => void,
   onDefinitionToggle: (title: string, desc: string) => void,
-  onPolicyClicked: () => void
+  onPolicyClicked: (policyId: string) => void
 ): React.ReactNode {
   const segments = VOTER_QUOTES[sentiment.kind][altFormat ? 'alt' : 'standard'];
   const interpolate = (s: string) => s.replace(/\{pmName\}/g, pmName);
@@ -163,8 +163,9 @@ export default function StageElectorateFeedback({
     };
   }, [currentCycle]);
 
-  const handlePolicyClicked = () => {
+  const handlePolicyClicked = (policyId: string) => {
     policiesClickedCount.current += 1;
+    track('electorate_feedback_policy_clicked', { cycle: ElectionCycle[currentCycle], policy_id: policyId, ms_since_open: Date.now() - openedAt.current });
   };
 
   const currentPMProfile = PM_PROFILES.find((p) => p.cycle === currentCycle);

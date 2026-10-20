@@ -98,6 +98,7 @@ export default function PopulationPanel({
           yAxisType={rule.yAxisType}
           color="#d4d4d8"
           markers={activeMarkers}
+          hoverTrackId="population_current"
           visualStyle="faces"
           yAxisMax={yAxisMax}
           faceCols={2}

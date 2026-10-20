@@ -2,6 +2,10 @@ import React, { useRef, useEffect, useState, useId } from 'react';
 import * as d3 from 'd3';
 import { AxisVariable } from '../utils/types';
 import { IMPACT_COLORS } from '../utils/uiHelpers';
+import { track } from '../client/telemetry';
+
+/** Bin hovers shorter than this are ignored (mouse passing through). */
+const BIN_HOVER_MIN_MS = 250;
 
 export interface ChartMarker {
   value: number;
@@ -29,6 +33,8 @@ interface D3ChartProps {
   faceCols?: number;
   activePolicyRules?: any[] | null;
   theme?: 'light' | 'dark';
+  /** If set, hovering a histogram bin (≥250 ms) is tracked as chart_bin_hovered with this chart id. */
+  hoverTrackId?: string;
 }
 
 const COLOUR_IMPROVE = IMPACT_COLORS['Will improve'];
@@ -65,9 +71,10 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light',
+  activePolicyRules = null, theme = 'light', hoverTrackId,
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const binHover = useRef<{ bin: string | number; count: number; at: number } | null>(null);
   const svgRef       = useRef<SVGSVGElement>(null);
   const prevPlot     = useRef<string | null>(null);
   const prevX        = useRef<AxisVariable | null>(null);
@@ -234,6 +241,7 @@ export default function D3Chart({
       // Bind Tooltip interactions to columns
       cols.style('cursor', 'crosshair')
         .on('mouseenter', (event, d: any) => {
+            if (hoverTrackId) binHover.current = { bin: d.name, count: d.count, at: Date.now() };
             const clampedCount = Math.min(d.count, yAxisMax);
             const rect = svgRef.current?.getBoundingClientRect();
             if (!rect) return;
@@ -249,6 +257,11 @@ export default function D3Chart({
         })
         .on('mouseleave', () => {
             tooltip.style('opacity', 0);
+            const h = binHover.current;
+            binHover.current = null;
+            if (hoverTrackId && h && Date.now() - h.at >= BIN_HOVER_MIN_MS) {
+              track('chart_bin_hovered', { chart: hoverTrackId, bin: Number(h.bin), count: h.count, dwell_ms: Date.now() - h.at });
+            }
         });
 
       if (visualStyle === 'faces') {

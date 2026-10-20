@@ -8,8 +8,14 @@
 //                      SCORES (pre_numeracy, pre_lo1, post_lo1…post_lo4,
 //                      post_total + one score_ column per item), then every
 //                      baseline (pre_*) and post-test (post_*) answer
-//   game_attempts.csv  one row per game term attempt (cycle summary)
-//   game_turns.csv     one row per turn within each attempt
+//   game_attempts.csv  one row per game term attempt, in the order played
+//                      (attempt_seq), incl. one still in progress (complete=false):
+//                      outcome, path_label, per-screen timings, best-option roll-ups
+//   game_turns.csv     one row per turn within each attempt (picks, timings,
+//                      option effects, best option / rank, approval)
+//   game_events.csv    every deliberate action in the game, one row each: inside
+//                      term attempts (scope=attempt) and outside them (scope=session:
+//                      intro, level select, LS screen, elicitation, final debrief)
 //   wiki_views.csv     one row per wiki page visit
 //   raw.json           everything, exactly as stored (back-up/reference)
 //
@@ -41,7 +47,7 @@ function answerCols(prefix, cell) {
   return cols;
 }
 
-const participants = [], attempts = [], turns = [], views = [];
+const participants = [], attempts = [], turns = [], views = [], events = [];
 for (const r of rows) {
   const pis = parse(r.pis), consent = parse(r.consent), pre = parse(r.pretest), post = parse(r.posttest), act = parse(r.activity);
   const base = { pid: r.pid, mode: r.mode, condition: r.condition };
@@ -76,16 +82,44 @@ for (const r of rows) {
       for (const [pt, risk] of Object.entries(el[block]?.loss_risks ?? {})) p[`elic_${block}_risk${pt}`] = risk;
       p[`elic_${block}_ms`] = el[block]?.dwell_ms ?? '';
     }
-    for (const a of act?.attempts ?? []) {
-      const { turns: t, ...rest } = a;
-      const row = { ...base };
+    // Difficulty per term (random-walk calibration) and the player's path.
+    p.difficulty_seed = act?.setup?.difficulty_seed ?? '';
+    for (const [term, d] of Object.entries(act?.setup?.difficulty ?? {})) {
+      p[`diff_${term}_scalar`] = d?.scalar ?? '';
+      p[`diff_${term}_sim_win_rate`] = d?.simulated_win_rate ?? '';
+      p[`diff_${term}_max_score`] = d?.max_score ?? '';
+      p[`diff_${term}_threshold`] = d?.threshold ?? '';
+    }
+    const all = [...(act?.attempts ?? []), ...(act?.open_attempt ? [{ ...act.open_attempt, complete: false }] : [])];
+    p.game_path = all.map((a) => a.path_label ?? `${a.cycle}_${a.player_won === true ? 'won' : a.player_won === false ? 'fail' : 'incomplete'}`).join(' > ');
+    p.game_terms_won = new Set(all.filter((a) => a.won ?? a.player_won).map((a) => a.cycle)).size;
+    p.game_attempts_incl_unfinished = all.length;
+    for (const term of ['Benthamite', 'Rawlsian', 'SocietalUtility', 'PersonalUtility']) {
+      p[`game_${term}_attempts`] = all.filter((a) => a.cycle === term).length;
+    }
+    p.game_page_loads = act?.loads?.length ?? '';
+    p.game_minutes = all.length ? ((Math.max(...all.map((a) => a.ended_at ?? 0)) - Math.min(...all.map((a) => a.started_at ?? Infinity))) / 60000).toFixed(1) : '';
+
+    all.forEach((a, i) => {
+      const { turns: t, screens, timeline, ...rest } = a;
+      const row = { ...base, attempt_seq: i + 1 };
       for (const [k, v] of Object.entries(rest)) row[k] = flat(v);
+      for (const [k, v] of Object.entries(screens ?? {})) row[k] = flat(v);
+      row.started = iso(a.started_at);
       attempts.push(row);
+      const ctx = { attempt_seq: i + 1, attempt_id: a.attempt_id, cycle: a.cycle, attempt_number: a.attempt_number };
       for (const turn of t ?? []) {
-        const tr = { ...base, attempt_id: a.attempt_id, cycle: a.cycle, attempt_number: a.attempt_number };
+        const tr = { ...base, ...ctx };
         for (const [k, v] of Object.entries(turn)) tr[k] = flat(v);
         turns.push(tr);
       }
+      for (const [dt, event, turn, payload] of timeline ?? []) {
+        const ts = (a.started_at ?? 0) + dt;
+        events.push({ ...base, scope: 'attempt', ...ctx, ts_ms: ts, time: iso(ts), t_in_attempt_ms: dt, turn: turn ?? '', event, payload: payload ? JSON.stringify(payload) : '' });
+      }
+    });
+    for (const [ts, event, payload] of act?.session ?? []) {
+      events.push({ ...base, scope: 'session', ts_ms: ts, time: iso(ts), event, payload: payload ? JSON.stringify(payload) : '' });
     }
   } else if (r.condition === 'wiki') {
     for (const v of act?.views ?? []) {
@@ -105,7 +139,8 @@ mkdirSync(dir, { recursive: true });
 writeFileSync(join(dir, 'participants.csv'), toCsv(participants));
 writeFileSync(join(dir, 'game_attempts.csv'), toCsv(attempts));
 writeFileSync(join(dir, 'game_turns.csv'), toCsv(turns));
+writeFileSync(join(dir, 'game_events.csv'), toCsv(events.sort((x, y) => (x.pid < y.pid ? -1 : x.pid > y.pid ? 1 : x.ts_ms - y.ts_ms))));
 writeFileSync(join(dir, 'wiki_views.csv'), toCsv(views));
 writeFileSync(join(dir, 'raw.json'), JSON.stringify(rows, null, 2));
 writeFileSync(join(dir, 'max_scores.json'), JSON.stringify({ answer_key: KEY.version, ...maxScores() }, null, 2));
-console.log(`${rows.length} participants, ${attempts.length} game attempts, ${turns.length} turns, ${views.length} wiki views → ${dir}`);
+console.log(`${rows.length} participants, ${attempts.length} game attempts, ${turns.length} turns, ${events.length} game events, ${views.length} wiki views → ${dir}`);

@@ -227,7 +227,7 @@ export default function FinalDebriefModal() {
                   { label: TEXT.end, hist: histogram(run.finalPopulation), color: rule.graphColor }].map((c) => (
                   <div key={c.label} className="bg-zinc-50 rounded-lg border border-zinc-200 p-1.5 pt-5 relative h-[150px]">
                     <span className="absolute top-1 left-2 text-[11px] font-bold text-zinc-500 z-10">{c.label}</span>
-                    <D3Chart plotType="1D" chartData={[]} histogramData={c.hist}
+                    <D3Chart hoverTrackId="final_debrief" plotType="1D" chartData={[]} histogramData={c.hist}
                       xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction}
                       color={c.color} visualStyle="solid" yAxisMax={yAxisMax} />
                   </div>

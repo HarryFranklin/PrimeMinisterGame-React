@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Respondent, ElectionCycle, Policy, TurnHistory, GamePhase, TurnLedger, CompletedRun, CycleLedger } from '../utils/types';
 import { loadPopulation, getONSBaselineLS } from '../utils/dataLoader';
 import { WelfareMetrics } from '../utils/WelfareMetrics';
@@ -13,6 +13,8 @@ import { ElicitationState, GambleBlock, createElicitationState, ELICITATION_ENAB
 import { getStudyState } from '@study';
 
 const TURNS_PER_CYCLE = 5;
+
+const PENDING_DEBRIEF_KEY = 'pending_debrief_v1';
 
 const calculateAverage = (pop: Respondent[]): number => {
   return pop.length > 0 ? pop.reduce((sum, r) => sum + r.currentLS, 0) / pop.length : 0;
@@ -50,7 +52,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [pulsePolicy, setPulsePolicy] = useState(false);
   const [yAxisMax, setYAxisMax] = useState(100);
   const [hasSeenUtilityIntervention, setHasSeenUtilityIntervention] = useState(false);
-  const [pendingDebriefAction, setPendingDebriefAction] = useState<{ type: 'restart' | 'complete'; outcome: 'win' | 'lose' } | null>(null);
   // Player's own life satisfaction (asked at the start) and their answers to
   // the utility elicitation block (before Level 3).
   const [playerLS, setPlayerLS] = useState<number | null>(null);
@@ -169,18 +170,41 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.Setup); 
   }, []);
 
+  // Setup starts by itself on load (SetupTab), at the same moment as the saved
+  // game is restored. After a refresh the save wins: setup must not run (and,
+  // if already running, must not then reset the game to the intro).
+  const gamePhaseRef = useRef(gamePhase);
+  gamePhaseRef.current = gamePhase;
+  const setupStarted = useRef(false);
+
   const handleSetupComplete = async (id: string) => {
-    setParticipantId(id);
+    if (setupStarted.current) return; // React dev mode mounts twice
+    setupStarted.current = true;
     setIsCalculating(true);
     setCalcProgress(0);
 
     await new Promise(resolve => setTimeout(resolve, 50));
+    if (gamePhaseRef.current !== GamePhase.Setup) {
+      // A saved game was restored meanwhile.
+      setupStarted.current = false;
+      setIsCalculating(false);
+      return;
+    }
+    setParticipantId(id);
 
     const numericSeed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     setDifficultySeed(numericSeed);
 
     const initialPop = loadPopulation();
-    const scalars = await DifficultyEngine.calculateDynamicScalars(numericSeed, initialPop, 500, setCalcProgress);
+    const difficulty: Record<string, { scalar: number; simulated_win_rate: number; max_score: number; threshold: number; walks: number }> = {};
+    const scalars = await DifficultyEngine.calculateDynamicScalars(numericSeed, initialPop, 500, setCalcProgress, (cycle, d) => {
+      difficulty[ElectionCycle[cycle]] = d; // keyed by term name, e.g. "Benthamite"
+    });
+    if (gamePhaseRef.current !== GamePhase.Setup) {
+      setupStarted.current = false;
+      setIsCalculating(false);
+      return;
+    }
     setWinScalars(scalars);
 
     // 1. Lock the data into global telemetry state
@@ -190,7 +214,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     track("setup_submitted", { 
       prolific_pid: id,
       difficulty_seed: numericSeed, 
-      win_threshold_scalars: scalars 
+      win_threshold_scalars: scalars,
+      difficulty,
     });
 
     setIsCalculating(false);
@@ -245,6 +270,23 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     return Math.max(0, Math.min(100, base + pressConferenceModifier));
   }, [turnMetricScore, cycleMAO, currentCycle, pressConferenceModifier]);
 
+  /** Public approval for a given metric score this term (as shown in the HUD). */
+  const approvalFor = (score: number) => {
+    const base = WelfareMetrics.calculateApprovalRating(score, cycleMAO, winScalars[currentCycle]);
+    return Math.round(Math.max(0, Math.min(100, base + pressConferenceModifier)) * 10) / 10;
+  };
+
+  /** What each of the offered policies would do to this term's metric, so the
+   * export can tell whether the player picked the best one available. */
+  const optionEffectsFor = (pop: Respondent[], deck: typeof currentDeck) => {
+    const base = MetricsEngine.getMetricScore(pop, currentCycle);
+    const effects: Record<string, number> = {};
+    for (const p of deck.slice(0, 4)) {
+      effects[p.id] = Math.round((MetricsEngine.getMetricScore(PolicyEngine.applyPolicy(pop, p), currentCycle) - base) * 10000) / 10000;
+    }
+    return effects;
+  };
+
   const applyPressConferenceDelta = useCallback((delta: number) => {
     setPressConferenceModifier(prev => prev + delta);
   }, []);
@@ -274,16 +316,20 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       level_id: levelId,
       policy_id: enactedPolicy.id,
       options_available: currentDeck.slice(0, 4).map(p => p.id),
+      option_effects: optionEffectsFor(population, currentDeck),
       score_before: scoreBefore,
       score_after: scoreAfter,
       avg_ls_before: populationBefore,
       avg_ls_after: populationAfter,
+      approval_before: approvalFor(scoreBefore),
+      approval_after: approvalFor(scoreAfter),
     });
     track("turn_completed", {
       turn: enactedTurn,
       level_id: levelId,
       score: scoreAfter,
       avg_ls: populationAfter,
+      approval: approvalFor(scoreAfter),
       time_on_turn_ms: timeOnTurnMs,
     });
 
@@ -311,11 +357,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
         setCurrentDeck(updatedSchedule[enactedTurn]);
         setCurrentTurn(nextTurn);
         setContext({ turn: nextTurn });
-        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, avg_ls: populationAfter });
+        track("turn_started", { turn: nextTurn, level_id: levelId, score: scoreAfter, avg_ls: populationAfter, approval: approvalFor(scoreAfter) });
         track("policy_options_presented", { turn: nextTurn, level_id: levelId, options: updatedSchedule[enactedTurn].slice(0, 4).map(p => p.id) });
         startTimer('turn_active');
       } else {
         setIsParliamentDissolved(true);
+        startTimer('after_final_turn');
       }
 
       setSelectedPolicy(null);
@@ -326,11 +373,16 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleBriefingAcknowledged = useCallback(() => {
     const levelId = ElectionCycle[currentCycle];
     setContext({ levelId, turn: 1 });
+    const startScore = MetricsEngine.getMetricScore(population, currentCycle);
     track("turn_started", {
       turn: 1,
       level_id: levelId,
-      score: MetricsEngine.getMetricScore(population, currentCycle),
+      score: startScore,
       avg_ls: calculateAverage(population),
+      approval: approvalFor(startScore),
+      target_score: cycleMAO * winScalars[currentCycle],
+      max_score: cycleMAO,
+      win_scalar: winScalars[currentCycle],
     });
     track("policy_options_presented", {
       turn: 1,
@@ -339,7 +391,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
     startTimer('turn_active');
     setGamePhase(GamePhase.Playing);
-  }, [currentCycle, population, currentDeck]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCycle, population, currentDeck, cycleMAO, winScalars, pressConferenceModifier]);
 
   const handleFaceElectorate = useCallback(() => {
     // This must only ever fire once the 5-turn cycle is genuinely finished.
@@ -349,6 +402,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     // a cycle that's barely been played, with a near-empty term summary
     // that can't be continued (exactly the "hard locked" symptom).
     if (!isParliamentDissolved) return;
+    // 0 if the page was refreshed after the last turn (timer lost).
+    track("hold_press_conference_clicked", { time_after_turn5_ms: stopTimer('after_final_turn') });
     setLastTurnSummary(null);
     setGamePhase(GamePhase.Election);
   }, [isParliamentDissolved]);
@@ -360,7 +415,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
     track("cycle_ended", { 
       cycle: ElectionCycle[currentCycle], 
-      outcome: cycleOutcome 
+      outcome: cycleOutcome,
+      won: turnApprovalRating >= 51,
+      exit: "restart",
+      approval: Math.round(turnApprovalRating * 10) / 10,
     });
 
     track("level_attempt_ended", {
@@ -372,7 +430,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     wipeSave();
     startCycle(currentCycle);
     setCycleAttempts(prev => prev + 1);
-  }, [currentCycle, currentTurn, cycleAttempts, wipeSave, startCycle]);
+  }, [currentCycle, currentTurn, cycleAttempts, wipeSave, startCycle, turnApprovalRating]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
     wipeSave();
@@ -455,9 +513,15 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     const targetScore = cycleMAO * winScalars[currentCycle];
 
     // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
+    // Proceeding is also allowed after losing a third time, so the outcome
+    // comes from the verdict (approval >= 51%, as on the Election screen).
+    const wonTerm = turnApprovalRating >= 51;
     track("cycle_ended", { 
       cycle: ElectionCycle[currentCycle], 
-      outcome: 'won' 
+      outcome: wonTerm ? 'won' : 'lost_final',
+      won: wonTerm,
+      exit: currentCycle === ElectionCycle.PersonalUtility ? "finish_game" : "next_term",
+      approval: Math.round(turnApprovalRating * 10) / 10,
     });
 
     track("level_completed", {
@@ -490,22 +554,31 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.LevelSelect);
   }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn, winScalars]);
 
+  // Which button sent the player to the end-of-term debrief (Restart Term or
+  // Proceed/Finish). Kept in localStorage too, so Continue still works after a
+  // refresh on the debrief screen. (Previously this ran inside a state updater,
+  // which React may call twice - restarting the term twice.)
   const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
-    setPendingDebriefAction({ type, outcome });
+    try { localStorage.setItem(PENDING_DEBRIEF_KEY, JSON.stringify({ type, outcome })); } catch { /* ignore */ }
     setGamePhase(GamePhase.AcademicDebrief);
   }, []);
 
+  const resolvingDebrief = useRef(false);
   const resolveAcademicDebrief = useCallback(() => {
-    setPendingDebriefAction(pending => {
-      if (!pending) return pending;
-      if (pending.type === 'restart') {
-        handleResetCycle(pending.outcome);
-      } else {
-        handleCompleteTerm();
-      }
-      return null;
-    });
-  }, [handleResetCycle, handleCompleteTerm]);
+    if (resolvingDebrief.current) return;
+    resolvingDebrief.current = true;
+    setTimeout(() => { resolvingDebrief.current = false; }, 1000);
+    let pending: { type: 'restart' | 'complete'; outcome: 'win' | 'lose' } | null = null;
+    try { pending = JSON.parse(localStorage.getItem(PENDING_DEBRIEF_KEY) || 'null'); } catch { /* ignore */ }
+    try { localStorage.removeItem(PENDING_DEBRIEF_KEY); } catch { /* ignore */ }
+    if (!pending) {
+      // Lost (e.g. storage blocked): same rule as the Election screen.
+      const won = turnApprovalRating >= 51;
+      pending = won || cycleAttempts >= 3 ? { type: 'complete', outcome: 'win' } : { type: 'restart', outcome: 'lose' };
+    }
+    if (pending.type === 'restart') handleResetCycle(pending.outcome);
+    else handleCompleteTerm();
+  }, [handleResetCycle, handleCompleteTerm, turnApprovalRating, cycleAttempts]);
 
   const currentChartData = useMemo(() => {
     if (population.length === 0) return [];

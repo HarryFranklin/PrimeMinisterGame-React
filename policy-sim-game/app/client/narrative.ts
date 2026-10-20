@@ -27,6 +27,7 @@ export function groupTimeline(log: LoggedEvent[]): TimelineGroup[] {
   const groups: TimelineGroup[] = [];
   let current: TimelineGroup | null = null;
   let levelSelectVisits = 0;
+  let otherVisits = 0;
 
   for (const e of sorted) {
     // hide raw/derived noise from grouping decisions entirely except
@@ -47,9 +48,12 @@ export function groupTimeline(log: LoggedEvent[]): TimelineGroup[] {
       }
       bucketKey = `levelselect:${levelSelectVisits}`;
       bucketLabel = "Level Select";
-    } else {
-      bucketKey = "intro";
-      bucketLabel = "Intro / Welcome";
+        } else {
+      // Everything else outside a term attempt (intro, LS question, elicitation,
+      // final debrief). Numbered per stretch so React keys stay unique.
+      if (!current || !current.key.startsWith("other:")) otherVisits += 1;
+      bucketKey = `other:${otherVisits}`;
+      bucketLabel = otherVisits === 1 ? "Intro / Welcome" : "Between terms";
     }
 
     if (!current || current.key !== bucketKey) {

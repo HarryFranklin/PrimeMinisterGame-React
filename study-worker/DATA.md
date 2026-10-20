@@ -8,10 +8,27 @@ treats `$` in the commands as a variable). All commands act on the live database
 ```bat
 npm run export
 ```
-Writes CSVs to `study-worker/exports/<date-time>/` (git-ignored): `participants.csv` (one row per
-person, all answers as `pre_*` / `post_*` columns), `game_attempts.csv`, `game_turns.csv`,
-`wiki_views.csv`, and `raw.json`. Filter on the `mode` column: `live` = real participants,
-`pilot` = pilots, `test` = you.
+Writes CSVs to `study-worker/exports/<date-time>/` (git-ignored). Filter on the `mode` column:
+`live` = real participants, `pilot` = pilots, `test` = you. Join files on `pid` (and `attempt_seq`).
+
+- `participants.csv` – one row per person: answers as `pre_*` / `post_*`, scores, and for the game
+  `game_path` (e.g. `Benthamite_won > Rawlsian_fail > Rawlsian_won`), attempts per term, terms won,
+  `difficulty_seed` and each term's difficulty (`diff_<term>_scalar`, `_sim_win_rate`, `_max_score`,
+  `_threshold`).
+- `game_attempts.csv` – one row per term attempt, in the order played (`attempt_seq`): outcome
+  (`won`, `exit`, `path_label`), approval, time on every screen, briefing skip / % seen, press
+  answers, term-summary timeline use, debrief reveals, best-option roll-ups. `complete=false` = a
+  term they were still in (or abandoned).
+- `game_turns.csv` – one row per turn: cards picked in order, time per card and per View Details,
+  `option_effects` (what each offered policy would have done), `best_option`, `enacted_rank`
+  (1 = best), `picked_best`, approval, chart hovers.
+- `game_events.csv` – every deliberate action, one row each with its time: inside term attempts
+  (`scope=attempt`) and outside them (`scope=session`: intro, level select, LS screen, elicitation,
+  final debrief). Use it for anything the summaries don't already give you.
+- `wiki_views.csv`, `raw.json` (everything exactly as stored), `max_scores.json`.
+
+`path_label` endings: `_won`, `_fail`, `_won_replayed` (won but chose Restart Term), `_fail_moved_on`
+(lost a third time and carried on), `_incomplete` (stopped part-way through).
 
 **Scores** are added to `participants.csv` automatically: `pre_numeracy` (/3), `pre_lo1` (/3),
 `post_lo1` (/3), `post_lo2` (/4), `post_lo3` (/5), `post_lo4` (/10), `post_total` (LO2–LO4, /19),

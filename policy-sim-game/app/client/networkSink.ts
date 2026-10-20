@@ -1,31 +1,58 @@
 // app/client/networkSink.ts
 // Turns the game's telemetry into the participant's `activity` record, saved
 // by the shared study code (@study → study-worker /sync, one row per sync).
-// Raw/derived events never leave the device – each attempt's cycle_summary
-// already rolls them up (see derive.ts / cycleSummary.ts).
+// Raw sensor events (mouse moves etc.) never leave the device.
 //
 // activity = {
-//   v: 1,
-//   setup:       { difficulty_seed, win_threshold_scalars }
-//   ls:          life_satisfaction_submitted payload (LS intro screen)
-//   elicitation: { social: …, personal: … }   elicitation_completed payloads
-//   attempts:    [cycle_summary, …]            one per term attempt, incl. turns
-//   last:        last semantic event (where people stopped)
-//   final:       { dwell_ms, ts }              final debrief closed
+//   v: 2,
+//   setup:        { difficulty_seed, win_threshold_scalars, difficulty: { <term>: { scalar,
+//                   simulated_win_rate, max_score, threshold, walks } } }
+//   ls:           life_satisfaction_submitted payload (LS intro screen)
+//   elicitation:  { social: …, personal: … }   elicitation_completed payloads
+//   attempts:     [cycle_summary, …]   one per finished term attempt: outcome, per-turn
+//                 breakdown, per-screen timings, and its full action timeline
+//   open_attempt: the term attempt in progress (snapshot after every turn) or null –
+//                 shows how far someone got if they stop part-way through a term
+//   path:         ["Benthamite_won", "Rawlsian_fail", "Rawlsian_won", …]
+//   session:      [[ts, event, payload], …]  every deliberate action OUTSIDE a term
+//                 attempt (intro, level select, LS screen, elicitation, final debrief)
+//   loads:        [[ts, session_id, app_version], …]  each page load / refresh
+//   last:         last deliberate action (where people stopped)
+//   final:        { dwell_ms, ts }   final debrief closed
 // }
 
 import type { LoggedEvent } from "./telemetry";
+import { buildCycleSummary } from "./cycleSummary";
 import { setActivity, syncStudy, getStudyState } from "@study";
 
+type Json = Record<string, unknown>;
+
 interface GameActivity {
-  v: 1;
-  setup: Record<string, unknown> | null;
-  ls: Record<string, unknown> | null;
-  elicitation: Record<string, unknown>;
-  attempts: Record<string, unknown>[];
-  last: Record<string, unknown> | null;
-  final: Record<string, unknown> | null;
+  v: 2;
+  setup: Json | null;
+  ls: Json | null;
+  elicitation: Json;
+  attempts: Json[];
+  open_attempt: Json | null;
+  path: string[];
+  session: [number, string, Json | null][];
+  loads: [number, string, string][];
+  last: Json | null;
+  final: Json | null;
 }
+
+/** Keep the saved record well under the database's 2 MB row limit. */
+const MAX_ACTIVITY_CHARS = 1_300_000;
+const MAX_SESSION_EVENTS = 3000;
+
+/** Session-level events worth an immediate save to the server. */
+const SYNC_ON = new Set([
+  "intro_proceeded",
+  "level_select_continue_clicked",
+  "utility_intervention_completed",
+  "elicitation_reveal_closed",
+  "final_debrief_opened",
+]);
 
 let activity: GameActivity | null = null;
 
@@ -34,11 +61,15 @@ function current(): GameActivity {
   if (!activity) {
     const saved = getStudyState().cells.activity as Partial<GameActivity> | undefined;
     activity = {
-      v: 1,
+      v: 2,
       setup: saved?.setup ?? null,
       ls: saved?.ls ?? null,
       elicitation: saved?.elicitation ?? {},
       attempts: saved?.attempts ?? [],
+      open_attempt: saved?.open_attempt ?? null,
+      path: saved?.path ?? [],
+      session: saved?.session ?? [],
+      loads: saved?.loads ?? [],
       last: saved?.last ?? null,
       final: saved?.final ?? null,
     };
@@ -46,9 +77,34 @@ function current(): GameActivity {
   return activity;
 }
 
+function compact(entry: LoggedEvent): Json | null {
+  if (!entry.payload) return null;
+  const out: Json = { ...entry.payload };
+  if (entry.level_id && !("level_id" in out)) out.level_id = entry.level_id;
+  return Object.keys(out).length ? out : null;
+}
+
+/** If the record has grown too big, drop the action timelines of the oldest
+ * finished attempts first (their summaries stay), then old session events. */
+function shrinkIfNeeded(a: GameActivity) {
+  let size = JSON.stringify(a).length;
+  for (let i = 0; size > MAX_ACTIVITY_CHARS && i < a.attempts.length; i++) {
+    if (a.attempts[i].timeline) {
+      a.attempts[i] = { ...a.attempts[i], timeline: null, timeline_dropped: true };
+      size = JSON.stringify(a).length;
+    }
+  }
+  while (size > MAX_ACTIVITY_CHARS && a.session.length > 200) {
+    a.session = a.session.slice(Math.floor(a.session.length / 4));
+    size = JSON.stringify(a).length;
+  }
+}
+
 function save(sync: boolean, beacon = false) {
-  const { v, setup, ls, elicitation, attempts, last, final } = current();
-  setActivity({ v, setup, ls, elicitation, attempts, last, final }, { sync, beacon });
+  const a = current();
+  a.path = a.attempts.map((x) => String(x.path_label ?? "?"));
+  shrinkIfNeeded(a);
+  setActivity({ ...a }, { sync, beacon });
 }
 
 /** Pass this to registerSink() in telemetry.ts. */
@@ -58,9 +114,8 @@ export function networkSink(entry: LoggedEvent) {
   if (entry.event !== "cycle_summary" && entry.layer !== "semantic") return;
   const a = current();
 
-  // Last deliberate action – kept in memory only; saved with the next sync
-  // (or on tab hide) so we can see where people stopped.
   if (entry.layer === "semantic") {
+    // Last deliberate action – saved with the next sync (or on tab hide).
     a.last = {
       event: entry.event,
       level_id: entry.level_id ?? null,
@@ -68,13 +123,23 @@ export function networkSink(entry: LoggedEvent) {
       turn: entry.turn ?? null,
       ts: entry.ts,
     };
+    // Outside a term attempt: goes on the session timeline. (Inside one, it is
+    // in that attempt's own timeline, built by cycleSummary.ts.)
+    if (!entry.attempt_id) {
+      a.session.push([entry.ts, entry.event, compact(entry)]);
+      if (a.session.length > MAX_SESSION_EVENTS) a.session = a.session.slice(-MAX_SESSION_EVENTS);
+    }
   }
 
   switch (entry.event) {
+    case "session_started":
+      a.loads.push([entry.ts, entry.session_id, entry.app_version ?? "dev"]);
+      break;
     case "setup_submitted":
       a.setup = {
         difficulty_seed: entry.payload?.difficulty_seed ?? null,
         win_threshold_scalars: entry.payload?.win_threshold_scalars ?? null,
+        difficulty: entry.payload?.difficulty ?? null,
       };
       save(true);
       break;
@@ -88,11 +153,22 @@ export function networkSink(entry: LoggedEvent) {
       save(true);
       break;
     }
+    case "turn_completed": {
+      // Snapshot of the attempt so far, so a participant who stops mid-term
+      // still leaves every finished turn behind.
+      if (entry.attempt_id) {
+        const partial = buildCycleSummary(entry.attempt_id);
+        if (partial) a.open_attempt = { ...partial, app_version: entry.app_version ?? null } as unknown as Json;
+      }
+      save(true);
+      break;
+    }
     case "cycle_summary": {
-      const summary: Record<string, unknown> = { ...entry.payload, app_version: entry.app_version ?? null };
+      const summary: Json = { ...entry.payload, app_version: entry.app_version ?? null };
       const id = summary.attempt_id;
       // Replace if this attempt was already saved (e.g. resent), else append.
       a.attempts = [...a.attempts.filter((x) => !id || x.attempt_id !== id), summary];
+      if (a.open_attempt?.attempt_id === id) a.open_attempt = null;
       save(true);
       break;
     }
@@ -100,13 +176,15 @@ export function networkSink(entry: LoggedEvent) {
       a.final = { dwell_ms: entry.payload?.dwell_ms ?? null, ts: entry.ts };
       save(true);
       break;
+    default:
+      if (SYNC_ON.has(entry.event)) save(true);
   }
 }
 
 /** Kept for call-site compatibility with page.tsx's unload listener. */
 export function flushOnExit() {}
 
-/** Tab hidden/closed: save the last position so we know where people stopped. */
+/** Tab hidden/closed: save everything so far (also covers a refresh). */
 export function pingProgress() {
   if (!activity) return;
   save(false);

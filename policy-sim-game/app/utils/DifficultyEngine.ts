@@ -14,7 +14,10 @@ export class DifficultyEngine {
     playerSeed: number,
     initialPopulation: Respondent[],
     walks: number = 500,
-    onProgress?: (fraction: number) => void
+    onProgress?: (fraction: number) => void,
+    /** Per term: the chosen scalar, the win rate the random walks achieved with
+     * it, the best possible score (MAO) and the resulting win threshold. */
+    onDetail?: (cycle: ElectionCycle, detail: { scalar: number; simulated_win_rate: number; max_score: number; threshold: number; walks: number }) => void
   ): Promise<Record<ElectionCycle, number>> {
     const cycles = [
       ElectionCycle.Benthamite,
@@ -52,6 +55,7 @@ export class DifficultyEngine {
       // is far more robust to that than early-exit.
       let bestScalar = FRAMEWORK_RULES[cycle].winThresholdScalar; // Default fallback
       let bestDistance = Infinity;
+      let bestWinRate = NaN;
 
       for (let iter = 0; iter < ITERATIONS; iter++) {
         const midScalar = (minScalar + maxScalar) / 2;
@@ -91,6 +95,7 @@ export class DifficultyEngine {
         if (distance < bestDistance) {
           bestDistance = distance;
           bestScalar = midScalar;
+          bestWinRate = winRate;
         }
 
         // Still bisect toward the target band each iteration - this keeps
@@ -112,6 +117,13 @@ export class DifficultyEngine {
       }
 
       scalars[cycle] = bestScalar;
+      onDetail?.(cycle, {
+        scalar: bestScalar,
+        simulated_win_rate: bestWinRate,
+        max_score: maoResult.maxScore,
+        threshold: maoResult.maxScore * bestScalar,
+        walks,
+      });
     }
     return scalars;
   }
