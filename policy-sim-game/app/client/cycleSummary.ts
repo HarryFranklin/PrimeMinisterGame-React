@@ -81,6 +81,8 @@ export interface CycleSummary {
 
   /** wall-clock ms from the first event of this attempt to the last */
   total_cycle_duration_ms: number;
+  /** page refreshes during this attempt (the game resumed at the start of the turn) */
+  refreshes: number;
 }
 
 function findFirst(events: LoggedEvent[], name: string): LoggedEvent | undefined {
@@ -230,5 +232,6 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
     pct_policy_options_view_details_opened: totalOptions > 0 ? Math.round((totalViewDetails / totalOptions) * 100) : null,
 
     total_cycle_duration_ms: events[events.length - 1].ts - first.ts,
+    refreshes: events.filter((e) => e.event === "session_resumed").length,
   };
 }

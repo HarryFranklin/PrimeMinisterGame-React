@@ -1,5 +1,6 @@
 import type { TelemetryEventName, PayloadFor } from "./events";
 import { getProlificMeta } from "./sessionMeta";
+import { getStudyState } from "@study";
 
 // ---------------------------------------------------------------------------
 // Environment / debug detection
@@ -62,13 +63,19 @@ function getSessionId(): string {
 // to reconstruct after the fact.
 // ---------------------------------------------------------------------------
 
-const ATTEMPT_COUNT_PREFIX = "telemetry_attempt_count:"; // + levelId, persisted so counts survive reloads
+const ATTEMPT_COUNT_PREFIX = "telemetry_attempt_count:"; // + participant + levelId, persisted so counts survive reloads
 
 let currentAttemptId: string | undefined;
 let currentAttemptNumber: number | undefined;
 
+/** Study participant on this device – keeps attempt counters and the open
+ * attempt separate per participant (pilots may share a lab computer). */
+function participantKey(): string {
+  return getStudyState().session?.pid ?? "anon";
+}
+
 function nextAttemptNumber(levelId: string): number {
-  const key = ATTEMPT_COUNT_PREFIX + levelId;
+  const key = `${ATTEMPT_COUNT_PREFIX}${participantKey()}:${levelId}`;
   const prev = Number(localStorage.getItem(key) ?? "0");
   const next = prev + 1;
   try {
@@ -87,7 +94,71 @@ export function startLevelAttempt(levelId: string) {
   currentAttemptId = uuid();
   currentAttemptNumber = nextAttemptNumber(levelId);
   currentTurn = 0;
+  attemptOpen = true;
   track("level_attempt_started", { level_id: levelId, attempt_number: currentAttemptNumber });
+}
+
+// ---------------------------------------------------------------------------
+// Surviving a refresh
+// The term-attempt summary (cycle_summary) is built from this attempt's events
+// in memory, which a page refresh would wipe – and the refreshed page would
+// not even know which attempt it was in, so the whole attempt's summary would
+// be lost. So the open attempt (its id, number, level, turn and its semantic/
+// derived events) is mirrored to localStorage on every event and restored on
+// load. The game itself resumes at the start of the current turn.
+// ---------------------------------------------------------------------------
+
+const OPEN_ATTEMPT_KEY = "telemetry_open_attempt_v1";
+let attemptOpen = false;
+
+interface StoredAttempt {
+  pid: string;
+  attemptId: string;
+  attemptNumber?: number;
+  levelId?: string;
+  turn?: number;
+  events: LoggedEvent[];
+}
+
+function persistOpenAttempt() {
+  if (!attemptOpen || !currentAttemptId) return;
+  const stored: StoredAttempt = {
+    pid: participantKey(),
+    attemptId: currentAttemptId,
+    attemptNumber: currentAttemptNumber,
+    levelId: currentLevelId,
+    turn: currentTurn,
+    events: fullLog.filter((e) => e.attempt_id === currentAttemptId && e.layer !== "raw"),
+  };
+  try {
+    localStorage.setItem(OPEN_ATTEMPT_KEY, JSON.stringify(stored));
+  } catch {
+    // storage full – the summary may then miss pre-refresh events
+  }
+}
+
+/** On load: re-open the attempt that was in progress before a refresh. */
+function restoreOpenAttempt(): StoredAttempt | null {
+  try {
+    const raw = localStorage.getItem(OPEN_ATTEMPT_KEY);
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as StoredAttempt;
+    if (stored.pid !== participantKey()) {
+      localStorage.removeItem(OPEN_ATTEMPT_KEY); // a different participant's leftover
+      return null;
+    }
+    currentAttemptId = stored.attemptId;
+    currentAttemptNumber = stored.attemptNumber;
+    currentLevelId = stored.levelId;
+    currentTurn = stored.turn;
+    attemptOpen = true;
+    const seen = new Set(fullLog.map((e) => `${e.ts}|${e.event}`));
+    for (const e of stored.events) if (!seen.has(`${e.ts}|${e.event}`)) fullLog.push(e);
+    fullLog.sort((a, b) => a.ts - b.ts);
+    return stored;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -245,7 +316,19 @@ export function initTelemetry(options?: { appVersion?: string }) {
     }
   }
 
+  const resumed = restoreOpenAttempt();
   track("session_started", {});
+  // Marks the refresh inside the attempt (counted as `refreshes` in its summary).
+  if (resumed) {
+    // The game restarts the current turn, so time it from now (the in-memory
+    // turn timer was lost with the refresh).
+    startTimer("turn_active");
+    track("session_resumed", {
+      level_id: resumed.levelId ?? null,
+      turn: resumed.turn ?? null,
+      attempt_number: resumed.attemptNumber ?? null,
+    });
+  }
 }
 
 /** So subsequent events auto-tag with the right level/turn without threading
@@ -253,6 +336,7 @@ export function initTelemetry(options?: { appVersion?: string }) {
 export function setContext(ctx: { levelId?: string; turn?: number }) {
   if (ctx.levelId !== undefined) currentLevelId = ctx.levelId;
   if (ctx.turn !== undefined) currentTurn = ctx.turn;
+  persistOpenAttempt();
 }
 
 function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<string, unknown> | undefined) {
@@ -298,6 +382,7 @@ function logEntry(event: string, layer: LoggedEvent["layer"], payload: Record<st
   };
 
   fullLog.push(entry);
+  if (layer !== "raw" && entry.attempt_id === currentAttemptId) persistOpenAttempt();
   for (const sink of sinks) sink(entry);
   eventListeners.forEach((l) => l(entry, fullLog));
   return entry;
@@ -338,6 +423,15 @@ export function endSession(durationMs: number) {
  * manually too (e.g. on leaving a level early) for defensive coverage. */
 export function closeOutAttempt(attemptId: string = currentAttemptId ?? "") {
   if (!attemptId) return;
+  // The attempt is over: nothing left to restore after a refresh.
+  if (attemptId === currentAttemptId) {
+    attemptOpen = false;
+    try {
+      localStorage.removeItem(OPEN_ATTEMPT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
   setSaveStatus("saving");
   const attemptEvents = fullLog.filter((e) => e.attempt_id === attemptId);
   try {

@@ -17,6 +17,8 @@ export type TelemetryEvent =
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }
+  /** Page reloaded part-way through a term attempt (the attempt was restored). */
+  | { event: "session_resumed"; payload: { level_id: string | null; turn: number | null; attempt_number: number | null } }
 
   // ---- Level attempts (a player can retry a level) ----
   | { event: "level_attempt_started"; payload: { level_id: string; attempt_number: number } }
