@@ -16,7 +16,7 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.2 (20 Oct 2026, draft)';
+export const QUESTIONNAIRE_VERSION = 'q-0.3 (20 Oct 2026, draft)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -34,8 +34,11 @@ interface ItemBase {
   help?: string;
   /** Default true. Optional items can be left blank. */
   required?: boolean;
-  /** Only shown to this arm. */
+  /** Only shown to this arm. Keep arm-only items LAST (in the phase or on
+   * their page) so every shared question has the same number in both arms. */
   onlyFor?: Condition;
+  /** Shown without a question number (e.g. optional final comments). */
+  unnumbered?: boolean;
 }
 
 export type Item =
@@ -212,27 +215,6 @@ export const PRETEST: Page[] = [
         lowLabel: 'Not at all',
         highLabel: 'Very',
       },
-      {
-        id: 'gaming_frequency',
-        type: 'single',
-        onlyFor: 'game',
-        prompt: 'How often do you play video games?',
-        options: [
-          { value: 'never', label: 'Never' },
-          { value: 'rarely', label: 'Rarely' },
-          { value: 'monthly', label: 'Monthly' },
-          { value: 'weekly', label: 'Weekly' },
-          { value: 'daily', label: 'Daily' },
-        ],
-      },
-      {
-        id: 'gaming_types',
-        type: 'text',
-        onlyFor: 'game',
-        required: false,
-        prompt: 'What type of games do you play?',
-        help: 'For example: puzzle, strategy, simulation, sports, mobile games. Leave blank if none.',
-      },
     ],
   },
   {
@@ -302,6 +284,33 @@ export const PRETEST: Page[] = [
           { value: 'X', label: 'Society X' },
           { value: 'Y', label: 'Society Y' },
         ],
+      },
+    ],
+  },
+  {
+    // Game group only, and last, so it never shifts other question numbers.
+    id: 'gaming',
+    title: 'Video games',
+    onlyFor: 'game',
+    content: [
+      {
+        id: 'gaming_frequency',
+        type: 'single',
+        prompt: 'How often do you play video games?',
+        options: [
+          { value: 'never', label: 'Never' },
+          { value: 'rarely', label: 'Rarely' },
+          { value: 'monthly', label: 'Monthly' },
+          { value: 'weekly', label: 'Weekly' },
+          { value: 'daily', label: 'Daily' },
+        ],
+      },
+      {
+        id: 'gaming_types',
+        type: 'text',
+        required: false,
+        prompt: 'What type of games do you play?',
+        help: 'For example: puzzle, strategy, simulation, sports, mobile games. Leave blank if none.',
       },
     ],
   },
@@ -549,13 +558,6 @@ export const POSTTEST: Page[] = [
     content: [
       { id: 'exp_control', type: 'single', options: AGREE5, prompt: 'I felt in control of my learning experience.' },
       {
-        id: 'exp_impact',
-        type: 'single',
-        options: AGREE5,
-        onlyFor: 'game',
-        prompt: 'I felt that my decisions had a meaningful impact on the outcomes in the game.',
-      },
-      {
         id: 'exp_enjoy',
         type: 'single',
         options: AGREE5,
@@ -615,6 +617,13 @@ export const POSTTEST: Page[] = [
         options: AGREE5,
         prompt: 'I did not feel overwhelmed by the amount of information presented on screen at one time.',
       },
+      {
+        id: 'exp_impact',
+        type: 'single',
+        options: AGREE5,
+        onlyFor: 'game',
+        prompt: 'I felt that my decisions had a meaningful impact on the outcomes in the game.',
+      },
     ],
   },
   {
@@ -624,6 +633,7 @@ export const POSTTEST: Page[] = [
       {
         id: 'final_comments',
         type: 'text',
+        unnumbered: true,
         multiline: true,
         required: false,
         prompt: 'If you have any final comments or feedback on the study, please use the space below (optional).',
@@ -632,14 +642,19 @@ export const POSTTEST: Page[] = [
   },
 ];
 
-/** The pages this participant sees, with arm-only items removed. */
-export function pagesFor(phase: Phase, condition: Condition): Page[] {
+/** The pages this participant sees, with arm-only items removed and question
+ * numbers (Q1, Q2…) added. Numbers run through the whole phase; because
+ * arm-only items come last, shared questions get the same number in both arms. */
+export function pagesFor(phase: Phase, condition: Condition): (Page & { content: (Item & { num?: number } | Block)[] })[] {
   const pages = phase === 'pre' ? PRETEST : POSTTEST;
+  let n = 0;
   return pages
     .filter((p) => !p.onlyFor || p.onlyFor === condition)
     .map((p) => ({
       ...p,
-      content: p.content.filter((c) => !('onlyFor' in c) || !c.onlyFor || c.onlyFor === condition),
+      content: p.content
+        .filter((c) => !('onlyFor' in c) || !c.onlyFor || c.onlyFor === condition)
+        .map((c) => ('id' in c && !c.unnumbered ? { ...c, num: ++n } : c)),
     }));
 }
 

@@ -211,7 +211,7 @@ function OptionButton({ option, selected, accent, onClick, role = 'radio' }: { o
 
 function ItemView({
   item, condition, accent, value, onChange, error,
-}: { item: Item; condition: Condition; accent: Accent; value: Answer | undefined; onChange: (v: Answer) => void; error: boolean }) {
+}: { item: Item & { num?: number }; condition: Condition; accent: Accent; value: Answer | undefined; onChange: (v: Answer) => void; error: boolean }) {
   const prompt = armText(item.prompt, condition);
   const [numText, setNumText] = useState(typeof value === 'number' ? String(value) : '');
 
@@ -338,6 +338,7 @@ function ItemView({
     <div data-item={item.id} data-type={item.type} className={`flex flex-col gap-3 rounded-xl p-4 border ${error ? 'border-red-500/70 bg-red-500/5' : 'border-transparent'}`}>
       <div>
         <p className="text-base font-semibold text-zinc-100 leading-snug">
+          {item.num !== undefined && <span className={`mr-2 font-black ${ACCENT[accent].text}`}>Q{item.num}</span>}
           <Markup text={prompt} />
           {item.required === false && <span className="text-zinc-500 font-normal text-sm"> (optional)</span>}
         </p>
