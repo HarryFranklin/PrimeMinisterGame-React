@@ -7,7 +7,9 @@
     "deploy": "wrangler deploy",
     "migrate:local": "wrangler d1 migrations apply policy-sim-telemetry --local",
     "migrate:remote": "wrangler d1 migrations apply policy-sim-telemetry --remote",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "export": "node scripts/export.mjs",
+    "export:local": "node scripts/export.mjs --local"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
