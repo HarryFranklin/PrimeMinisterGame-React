@@ -111,7 +111,7 @@ async function callStart(params: Record<string, string>): Promise<{ pid: string;
 
 function stripIdentityFromUrl() {
   const url = new URL(window.location.href);
-  ['pid', 't', 'mode', 'new', 'PROLIFIC_PID', 'STUDY_ID', 'SESSION_ID'].forEach((k) => url.searchParams.delete(k));
+  ['pid', 't', 'mode', 'new', 'skip', 'PROLIFIC_PID', 'STUDY_ID', 'SESSION_ID'].forEach((k) => url.searchParams.delete(k));
   window.history.replaceState(null, '', url.toString());
 }
 
@@ -126,7 +126,8 @@ function begin(session: StudySession) {
  * Entry routes, in order:
  *   ?pid=…&t=…&mode=…   – from the worker's /start redirect (normal route)
  *   ?PROLIFIC_PID=…      – someone used the app's own URL from Prolific
- *   ?mode=pilot|test     – opened directly for piloting/testing (&new=1 forces a fresh participant)
+ *   ?mode=pilot|test     – opened directly for piloting/testing (&new=1 forces a fresh participant;
+ *                          &skip=1 with mode=test jumps straight to the game/reading)
  *   nothing              – resume the participant stored on this device, if any
  */
 let initPromise: Promise<InitResult> | null = null;
@@ -173,6 +174,12 @@ async function runInit(condition: Condition, version: string): Promise<InitResul
     }
   } catch (err) {
     return { status: 'error', message: String(err) };
+  }
+
+  // Testing shortcut: ?mode=test&skip=1 skips the information sheet, consent and
+  // baseline questions. Test participants only – never live or pilot.
+  if (q.get('skip') === '1' && state.session?.mode === 'test' && ['pis', 'consent', 'pretest'].includes(state.stage)) {
+    set({ ...state, stage: 'activity', metaDirty: true });
   }
 
   stripIdentityFromUrl();
@@ -253,6 +260,7 @@ export function syncStudy(opts: { beacon?: boolean } = {}): Promise<void> {
   }
   return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body, keepalive: small })
     .then((res) => {
+      if (res.status === 404) return recoverMissingParticipant();
       if (!res.ok) throw new Error(`sync ${res.status}`);
     })
     .catch((err) => {
@@ -261,6 +269,33 @@ export function syncStudy(opts: { beacon?: boolean } = {}): Promise<void> {
       const dirty = Array.from(new Set([...state.dirty, ...sent]));
       set({ ...state, dirty, metaDirty: true });
     });
+}
+
+/** The server has no row for this participant (e.g. test rows were deleted
+ * while this browser still remembered one). Pilot/test: register a fresh
+ * participant and re-send everything done so far. Live participants are never
+ * deleted, so for them the data stays on the device and is logged. */
+let recovering = false;
+async function recoverMissingParticipant(): Promise<void> {
+  const s = state.session;
+  if (!s || recovering) return;
+  if (s.mode === 'live') {
+    console.error('Study: participant not found on the server; answers are kept on this device.');
+    return;
+  }
+  recovering = true;
+  try {
+    const r = await callStart({ mode: s.mode, condition: s.condition });
+    const all = Object.keys(state.cells) as CellName[];
+    set({ ...state, session: { pid: r.pid, t: r.token, mode: r.mode, condition: r.condition }, dirty: all, metaDirty: true });
+    console.warn(`Study: previous ${s.mode} participant ${s.pid} no longer exists; continuing as ${r.pid}.`);
+  } catch (err) {
+    console.warn('Study: could not re-register participant', err);
+    return;
+  } finally {
+    recovering = false;
+  }
+  await syncStudy();
 }
 
 function installListeners() {

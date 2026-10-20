@@ -4,7 +4,7 @@ import { PROLIFIC, MIN_SCREEN, CONTACT } from '../config';
 import type { Condition } from '../content/questions';
 import { infoSheetFor, consentFormFor } from '../content/infoAndConsent';
 import {
-  initStudy, subscribeStudy, getStudyState, getCell, isStudyTestMode, resetStudyOnDevice, finishActivity,
+  initStudy, subscribeStudy, getStudyState, getCell, isStudyTestMode, resetStudyOnDevice, finishActivity, setStage,
   type InitResult, type StudyState,
 } from '../session';
 import { InfoSheetScreen, ConsentScreen } from './InfoAndConsentScreens';
@@ -89,6 +89,16 @@ export function StudyGate({
   // Test mode only (mode=test or localhost): shortcuts for checking the flow.
   const testTools = init?.status === 'ready' && isStudyTestMode() && (
     <div className="fixed bottom-4 right-4 z-[9500] flex gap-2">
+      {['pis', 'consent', 'pretest'].includes(study.stage) && (
+        <button
+          type="button"
+          onClick={() => setStage('activity')}
+          className="rounded-full bg-amber-600 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 shadow-lg cursor-pointer"
+          title="Test mode only: skip the information sheet, consent and baseline questions"
+        >
+          Test: skip to {condition === 'game' ? 'game' : 'reading'}
+        </button>
+      )}
       {study.stage === 'activity' && (
         <button
           type="button"
