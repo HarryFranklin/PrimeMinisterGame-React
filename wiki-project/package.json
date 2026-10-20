@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node ../study-kit/sync.mjs .study-kit",
-    "dev": "next dev",
+    "dev": "node ../study-kit/sync.mjs .study-kit --watch -- next dev",
     "prebuild": "node ../study-kit/sync.mjs .study-kit",
     "build": "next build",
     "start": "next start",
