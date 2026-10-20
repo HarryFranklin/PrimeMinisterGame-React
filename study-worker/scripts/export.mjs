@@ -5,7 +5,9 @@
 //
 // Writes to ./exports/<date-time>/ (git-ignored):
 //   participants.csv   one row per participant: status, timings, consent,
-//                      every baseline (pre_*) and post-test (post_*) answer
+//                      SCORES (pre_numeracy, pre_lo1, post_lo1…post_lo4,
+//                      post_total + one score_ column per item), then every
+//                      baseline (pre_*) and post-test (post_*) answer
 //   game_attempts.csv  one row per game term attempt (cycle summary)
 //   game_turns.csv     one row per turn within each attempt
 //   wiki_views.csv     one row per wiki page visit
@@ -16,6 +18,7 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { scorePhase, maxScores, KEY } from './score.mjs';
 
 const remote = !process.argv.includes('--local');
 const cmd = `npx wrangler d1 execute policy-sim-telemetry ${remote ? '--remote' : '--local'} --json --command "SELECT * FROM participants ORDER BY id"`;
@@ -58,6 +61,9 @@ for (const r of rows) {
     wiki_pages_completed: r.condition === 'wiki' ? Object.keys(act?.completed_pages ?? {}).length : '',
     wiki_finish: r.condition === 'wiki' ? (act?.completion?.outcome ?? '') : '',
     last_event: act?.last?.event ?? '',
+    answer_key: KEY.version,
+    ...scorePhase('pre', pre?.answers),
+    ...scorePhase('post', post?.answers),
     ...answerCols('pre_', pre),
     ...answerCols('post_', post),
   });
@@ -101,4 +107,5 @@ writeFileSync(join(dir, 'game_attempts.csv'), toCsv(attempts));
 writeFileSync(join(dir, 'game_turns.csv'), toCsv(turns));
 writeFileSync(join(dir, 'wiki_views.csv'), toCsv(views));
 writeFileSync(join(dir, 'raw.json'), JSON.stringify(rows, null, 2));
+writeFileSync(join(dir, 'max_scores.json'), JSON.stringify({ answer_key: KEY.version, ...maxScores() }, null, 2));
 console.log(`${rows.length} participants, ${attempts.length} game attempts, ${turns.length} turns, ${views.length} wiki views → ${dir}`);

@@ -13,6 +13,13 @@ person, all answers as `pre_*` / `post_*` columns), `game_attempts.csv`, `game_t
 `wiki_views.csv`, and `raw.json`. Filter on the `mode` column: `live` = real participants,
 `pilot` = pilots, `test` = you.
 
+**Scores** are added to `participants.csv` automatically: `pre_numeracy` (/3), `pre_lo1` (/3),
+`post_lo1` (/3), `post_lo2` (/4), `post_lo3` (/5), `post_lo4` (/10), `post_total` (LO2–LO4, /19),
+plus one `pre_score_…` / `post_score_…` column per item (multi-select items also get a
+`_partial` score). Correct answers are in `study-kit/answer-key.json`; the chart questions'
+answers are worked out from `study-kit/src/content/charts.json`. `max_scores.json` in each
+export lists the maximum for each total.
+
 Quick check of the latest rows:
 ```bat
 npx wrangler d1 execute policy-sim-telemetry --remote --command "SELECT id, pid, mode, condition, stage, consent_status, completed_at FROM participants ORDER BY id DESC LIMIT 10"

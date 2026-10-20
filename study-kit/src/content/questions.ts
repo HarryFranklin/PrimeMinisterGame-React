@@ -10,10 +10,13 @@
 // Answers are stored by item id (and row id for grids), e.g.
 //   pretest.answers.ls = 7, posttest.answers['lo3_2'] = { benthamite: 'X', … }
 //
-// Items marked TODO need data from Harry (chart distributions).
+// Chart data: charts.json. Correct answers: /study-kit/answer-key.json (not
+// shipped to participants' browsers; used by the export's scoring).
 // ============================================================================
 
-export const QUESTIONNAIRE_VERSION = 'q-0.1 (19 Oct 2026, draft)';
+import charts from './charts.json';
+
+export const QUESTIONNAIRE_VERSION = 'q-0.2 (20 Oct 2026, draft)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -84,25 +87,12 @@ const opts = (...labels: string[]): Option[] =>
   labels.map((label, i) => ({ value: String.fromCharCode(97 + i), label })); // a, b, c…
 
 // ---------------------------------------------------------------------------
-// Charts used in questions. counts = number of people at LS 0,1,…,10.
-// TODO(Harry): replace null with the real distributions (11 numbers each).
-// Baseline and post-test LO1 use DIFFERENT distributions (practice effect).
+// Charts used in questions live in charts.json (shared with the scoring script,
+// which works out the LO1 / LO2.3 answers from the same numbers).
 // ---------------------------------------------------------------------------
-export const DISTRIBUTIONS: Record<string, { label: string; counts: number[] | null }> = {
-  // TODO(Harry): LO1 baseline and post-test societies (to be made in the same style).
-  pre_A: { label: 'Society A', counts: null },
-  pre_B: { label: 'Society B', counts: null },
-  post_1: { label: 'Society 1', counts: null },
-  post_2: { label: 'Society 2', counts: null },
-  post_3: { label: 'Society 3', counts: null },
-  // LO2.3 – read off Harry's images (19 Oct; faces were 4 people each, so ±2).
-  // Replace with the exact counts if you have them. Means: A 5.8, B 6.7, C 6.2;
-  // floors: A 5, B 1, C 3  →  Benthamite prefers B, Rawlsian prefers A.
-  //              0  1  2  3   4   5   6   7   8   9  10
-  lo2_A: { label: 'Society A', counts: [0, 0, 0, 0, 0, 45, 35, 15, 5, 0, 0] },
-  lo2_B: { label: 'Society B', counts: [0, 4, 4, 2, 0, 0, 19, 37, 25, 9, 0] },
-  lo2_C: { label: 'Society C', counts: [0, 0, 0, 8, 12, 18, 20, 16, 12, 9, 5] },
-};
+export const DISTRIBUTIONS: Record<string, { label: string; counts: number[] | null }> = Object.fromEntries(
+  Object.entries(charts).filter(([k]) => !k.startsWith('_')) as [string, { label: string; counts: number[] }][]
+);
 
 const SOCIETIES_AB: Option[] = [
   { value: 'A', label: 'Society A' },

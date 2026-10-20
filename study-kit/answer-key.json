@@ -1,0 +1,41 @@
+{
+  "_readme": "Correct answers for scoring (used by study-worker/scripts/score.mjs during `npm run export`). Kept OUTSIDE study-kit/src so it is never shipped to participants' browsers. Option letters/values match questions.ts. 'chart' items are worked out from charts.json (highest mean / highest floor / largest spread), so they follow any chart changes automatically. CHECK every answer marked ⚠ before relying on scores.",
+  "version": "key-0.1 (20 Oct 2026)",
+  "pre": {
+    "numeracy": {
+      "n1": { "type": "single", "correct": "c", "note": "1 in 10" },
+      "n2": { "type": "number", "correct": 10 },
+      "n3": { "type": "number", "correct": 50, "note": "10% of 100 plays x £5" }
+    },
+    "lo1": {
+      "lo1_1": { "type": "chart", "measure": "mean", "options": { "A": "pre_A", "B": "pre_B" } },
+      "lo1_2": { "type": "chart", "measure": "floor", "options": { "A": "pre_A", "B": "pre_B" } },
+      "lo1_3": { "type": "chart", "measure": "spread", "options": { "A": "pre_A", "B": "pre_B" } }
+    }
+  },
+  "post": {
+    "lo1": {
+      "lo1_1": { "type": "chart", "measure": "mean", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } },
+      "lo1_2": { "type": "chart", "measure": "floor", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } },
+      "lo1_3": { "type": "chart", "measure": "spread", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } }
+    },
+    "lo2": {
+      "lo2_1": { "type": "multi", "correct": ["a", "d"], "options": ["a", "b", "c", "d"], "note": "Benthamite: maximises total; can justify large losses with no floor protection" },
+      "lo2_2": { "type": "multi", "correct": ["c", "d"], "options": ["a", "b", "c", "d"], "note": "⚠ Rawlsian: ignores majority gains once floor addressed; protects lowest" },
+      "lo2_3": { "type": "chart_grid", "rows": { "benthamite": "mean", "rawlsian": "floor" }, "options": { "A": "lo2_A", "B": "lo2_B", "C": "lo2_C" } }
+    },
+    "lo3": {
+      "lo3_1": { "type": "single", "correct": "b" },
+      "lo3_2": { "type": "grid", "correct": { "benthamite": "X", "rawlsian": "Y", "between": "Z" } },
+      "lo3_3": { "type": "single", "correct": "b" }
+    },
+    "lo4": {
+      "lo4_1a": { "type": "single", "correct": "a", "note": "veil of ignorance" },
+      "lo4_1b": { "type": "grid", "correct": { "personal": "d", "social": "c" } },
+      "lo4_2": { "type": "single", "correct": "c", "note": "riskier for themselves" },
+      "lo4_3": { "type": "single", "correct": "a" },
+      "lo4_4": { "type": "grid", "correct": { "personal": "A", "social": "B" }, "note": "A: 5x60=300 vs B: 100 (personal); A: 5x10=50 vs B: 100 (social)" },
+      "lo4_5": { "type": "grid", "correct": { "a": "personal", "b": "social", "c": "neither" } }
+    }
+  }
+}
