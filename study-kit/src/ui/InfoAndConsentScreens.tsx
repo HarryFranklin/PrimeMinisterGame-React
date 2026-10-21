@@ -98,7 +98,7 @@ export function InfoSheetScreen({ accent }: { accent: Accent }) {
             <Blocks blocks={s.blocks} />
           </section>
         ))}
-        <p className="text-xs text-zinc-500 mt-4">Version: {sheet.version}</p>
+        <p className="text-xs text-zinc-400 mt-4">Version: {sheet.version}</p>
         <div ref={endRef} />
       </div>
       <div className="flex flex-wrap gap-3 justify-between items-center border-t border-zinc-800 pt-5">
@@ -173,7 +173,7 @@ export function ConsentScreen({ accent }: { accent: Accent }) {
       <header>
         <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${ACCENT[accent].text}`}>Consent form</p>
         <h1 className="text-xl font-black text-white leading-snug">{form.projectTitle}</h1>
-        <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs text-zinc-400 mt-2">
           Lead researcher: {form.leadResearcher}
           {form.srecReference ? ` · SREC reference: ${form.srecReference}` : ''} · Version: {form.version}
         </p>
@@ -194,7 +194,7 @@ export function ConsentScreen({ accent }: { accent: Accent }) {
                 className={`mt-0.5 h-5 w-5 shrink-0 ${ACCENT[accent].check}`}
               />
               <span className="text-sm text-zinc-200 leading-relaxed">
-                <span className="text-zinc-500 mr-1">{i + 1}.</span>
+                <span className="text-zinc-400 mr-1">{i + 1}.</span>
                 {s.text}
               </span>
             </label>

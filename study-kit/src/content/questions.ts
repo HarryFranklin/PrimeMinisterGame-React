@@ -56,9 +56,10 @@ export type Item =
     })
   | (ItemBase & { type: 'scale'; min: number; max: number; lowLabel: string; highLabel: string; alternatives?: Option[] })
   | (ItemBase & { type: 'grid'; rows: Option[]; options: Option[] }) // one answer per row
-  | (ItemBase & { type: 'text'; multiline?: boolean });
+  | (ItemBase & { type: 'text'; multiline?: boolean; /** Default 200 (one line) / 1500 (multiline). */ maxLength?: number });
 
-/** Non-question content shown between items. */
+/** Non-question content (info, charts, tables). Shown inside the box of the
+ * question that FOLLOWS it, under that question's number. */
 export type Block =
   | { type: 'info'; text: ArmText }
   | { type: 'charts'; charts: string[] } // ids in DISTRIBUTIONS
@@ -271,7 +272,7 @@ export const PRETEST: Page[] = [
           'A policy could raise one person’s life satisfaction by exactly one point. Should that gain count for more if the person starts at 2/10 than if they start at 8/10?',
         options: opts('Yes, it should count for more', 'No, it should count the same', 'It should count for less', 'Not sure'),
       },
-      { type: 'info', text: '**Society X:** all 10 people are at 6/10. **Society Y:** 9 people are at 8/10 and 1 person is at 2/10.' },
+      { type: 'info', text: '- **Society X:** all 10 people are at 6/10.\n- **Society Y:** 9 people are at 8/10 and 1 person is at 2/10.' },
       {
         id: 'bi2',
         type: 'grid',

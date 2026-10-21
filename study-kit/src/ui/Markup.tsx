@@ -1,20 +1,38 @@
 'use client';
 import React from 'react';
 
-// Tiny text formatter for the content files: **bold**, line breaks, and bare
-// https:// links. Deliberately minimal – no HTML from content is ever injected.
+// Tiny text formatter for the content files: **bold**, line breaks, bare
+// https:// links, and bullet lists (lines starting "- "). Deliberately minimal
+// – no HTML from content is ever injected. Renders block elements for bullets,
+// so put it inside a <div>, not a <p>, when the text may contain them.
 export function Markup({ text }: { text: string }) {
   const lines = text.split('\n');
-  return (
-    <>
-      {lines.map((line, i) => (
-        <React.Fragment key={i}>
-          {i > 0 && <br />}
-          {formatLine(line)}
-        </React.Fragment>
-      ))}
-    </>
-  );
+  const out: React.ReactNode[] = [];
+  let bullets: string[] = [];
+  const flush = (key: number) => {
+    if (!bullets.length) return;
+    out.push(
+      <ul key={`ul${key}`} className="list-disc pl-5 my-1 flex flex-col gap-1">
+        {bullets.map((b, j) => <li key={j}>{formatLine(b)}</li>)}
+      </ul>
+    );
+    bullets = [];
+  };
+  lines.forEach((line, i) => {
+    if (line.startsWith('- ')) {
+      bullets.push(line.slice(2));
+      return;
+    }
+    flush(i);
+    out.push(
+      <React.Fragment key={i}>
+        {i > 0 && !lines[i - 1].startsWith('- ') && <br />}
+        {formatLine(line)}
+      </React.Fragment>
+    );
+  });
+  flush(lines.length);
+  return <>{out}</>;
 }
 
 function formatLine(line: string): React.ReactNode[] {

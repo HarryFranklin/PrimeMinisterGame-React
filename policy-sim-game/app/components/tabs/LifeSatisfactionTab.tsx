@@ -96,15 +96,15 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
         {known || preferNot ? (
           <div>
             <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.titleKnown}</h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">{TEXT.introKnown}</p>
+            <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.introKnown}</p>
           </div>
         ) : (
         <>
         <div>
           <h2 className="text-xl font-black text-white tracking-tight mb-3">{TEXT.title}</h2>
-          <p className="text-sm text-zinc-400 leading-relaxed mb-4">{TEXT.intro}</p>
+          <p className="text-sm text-zinc-300 leading-relaxed mb-4">{TEXT.intro}</p>
           <p className="text-lg text-zinc-200 font-semibold leading-snug">{TEXT.question}</p>
-          <p className="text-sm text-zinc-400 mt-1">{TEXT.scaleHint}</p>
+          <p className="text-sm text-zinc-300 mt-1">{TEXT.scaleHint}</p>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -129,7 +129,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
               );
             })}
           </div>
-          <div className="flex justify-between text-xs text-zinc-500 px-1">
+          <div className="flex justify-between text-sm text-zinc-300 px-1">
             <span>{TEXT.lowLabel}</span>
             <span>{TEXT.highLabel}</span>
           </div>
@@ -169,7 +169,7 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
                 />
               </div>
 
-              <p className="text-sm text-zinc-400 leading-relaxed">{TEXT.context}</p>
+              <p className="text-sm text-zinc-300 leading-relaxed">{TEXT.context}</p>
 
               <Button variant="accent" size="lg" loud fullWidth onClick={handleContinue}>
                 {TEXT.continue}

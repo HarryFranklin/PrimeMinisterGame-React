@@ -119,23 +119,25 @@ export function Questionnaire({
           {phase === 'pre' ? 'Before you start' : 'Final questions'} · Page {pageIndex + 1} of {pages.length}
         </p>
         <h1 className="text-xl font-black text-white">{page.title}</h1>
-        {page.intro && <p className="text-sm text-zinc-400 mt-2 leading-relaxed"><Markup text={page.intro} /></p>}
+        {page.intro && <div className="text-sm text-zinc-300 mt-2 leading-relaxed"><Markup text={page.intro} /></div>}
       </header>
 
       <div className="flex flex-col gap-6">
-        {page.content.map((c, i) =>
-          isItem(c) ? (
+        {groupContent(page.content).map((g, i) =>
+          g.item ? (
             <ItemView
-              key={c.id}
-              item={c}
+              key={g.item.id}
+              item={g.item}
+              lead={g.lead}
+              renderChart={renderChart}
               condition={condition}
               accent={accent}
-              value={answers[c.id]}
-              onChange={(v) => setAnswer(c.id, v)}
-              error={showErrors && missing.includes(c)}
+              value={answers[g.item.id]}
+              onChange={(v) => setAnswer(g.item!.id, v)}
+              error={showErrors && missing.includes(g.item)}
             />
           ) : (
-            <BlockView key={`b${i}`} block={c} condition={condition} renderChart={renderChart} />
+            g.lead.map((b, j) => <BlockView key={`b${i}-${j}`} block={b} condition={condition} renderChart={renderChart} />)
           )
         )}
       </div>
@@ -151,9 +153,26 @@ export function Questionnaire({
 }
 
 // ---------------------------------------------------------------------------
+/** Info, charts and tables belong to the question that follows them: they are
+ * shown inside its box, under its number (so "Q6" comes first, then what Q6
+ * is about, then the question itself). */
+function groupContent<T extends { id: string }>(content: (T | Block)[]): { item?: T; lead: Block[] }[] {
+  const groups: { item?: T; lead: Block[] }[] = [];
+  let lead: Block[] = [];
+  for (const c of content) {
+    if ('id' in c) {
+      groups.push({ item: c as T, lead });
+      lead = [];
+    } else lead.push(c as Block);
+  }
+  if (lead.length) groups.push({ lead });
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
 function BlockView({ block, condition, renderChart }: { block: Block; condition: Condition; renderChart: RenderChart }) {
   if (block.type === 'info')
-    return <p className="text-sm text-zinc-300 leading-relaxed rounded-xl bg-zinc-950 border border-zinc-800 p-4"><Markup text={armText(block.text, condition)} /></p>;
+    return <div className="text-sm text-zinc-200 leading-relaxed rounded-xl bg-zinc-950 border border-zinc-800 p-4"><Markup text={armText(block.text, condition)} /></div>;
   if (block.type === 'table')
     return (
       <div className="overflow-x-auto">
@@ -184,7 +203,7 @@ function BlockView({ block, condition, renderChart }: { block: Block; condition:
                 <div className="h-full flex items-center justify-center text-xs text-zinc-500 border border-dashed border-zinc-700 rounded-lg">Chart data to be added</div>
               )}
             </div>
-            {d?.counts && <p className="text-xs text-zinc-500 text-center mt-1">Population: {d.counts.reduce((a, b) => a + b, 0)} people</p>}
+            {d?.counts && <p className="text-xs text-zinc-400 text-center mt-1">Population: {d.counts.reduce((a, b) => a + b, 0)} people</p>}
           </div>
         );
       })}
@@ -210,8 +229,18 @@ function OptionButton({ option, selected, accent, onClick, role = 'radio' }: { o
 }
 
 function ItemView({
-  item, condition, accent, value, onChange, error,
-}: { item: Item & { num?: number }; condition: Condition; accent: Accent; value: Answer | undefined; onChange: (v: Answer) => void; error: boolean }) {
+  item, lead = [], renderChart, condition, accent, value, onChange, error,
+}: {
+  item: Item & { num?: number };
+  /** Info/charts/tables shown under the number, before the question. */
+  lead?: Block[];
+  renderChart: RenderChart;
+  condition: Condition;
+  accent: Accent;
+  value: Answer | undefined;
+  onChange: (v: Answer) => void;
+  error: boolean;
+}) {
   const prompt = armText(item.prompt, condition);
   const [numText, setNumText] = useState(typeof value === 'number' ? String(value) : '');
 
@@ -260,7 +289,7 @@ function ItemView({
               </button>
             ))}
           </div>
-          <div className="flex justify-between text-xs text-zinc-500 px-1">
+          <div className="flex justify-between text-sm text-zinc-300 px-1">
             <span>{item.lowLabel}</span>
             <span>{item.highLabel}</span>
           </div>
@@ -281,6 +310,7 @@ function ItemView({
             <input
               type="text"
               inputMode="decimal"
+              maxLength={12}
               value={numText}
               onChange={(e) => {
                 const t = e.target.value.trim();
@@ -315,35 +345,51 @@ function ItemView({
       );
       break;
     }
-    case 'text':
-      body = item.multiline ? (
-        <textarea
-          rows={4}
-          value={typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
-        />
-      ) : (
-        <input
-          type="text"
-          value={typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
-        />
+    case 'text': {
+      const max = item.maxLength ?? (item.multiline ? 1500 : 200);
+      const text = typeof value === 'string' ? value : '';
+      body = (
+        <div className="flex flex-col gap-1">
+          {item.multiline ? (
+            <textarea
+              rows={4}
+              maxLength={max}
+              value={text}
+              onChange={(e) => onChange(e.target.value.slice(0, max))}
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
+            />
+          ) : (
+            <input
+              type="text"
+              maxLength={max}
+              value={text}
+              onChange={(e) => onChange(e.target.value.slice(0, max))}
+              className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
+            />
+          )}
+          {text.length > max * 0.8 && <p className="text-xs text-zinc-400 text-right tabular-nums">{text.length} / {max} characters</p>}
+        </div>
       );
       break;
+    }
   }
 
   return (
     <div data-item={item.id} data-type={item.type} className={`flex flex-col gap-3 rounded-xl p-4 border ${error ? 'border-red-500/70 bg-red-500/5' : 'border-transparent'}`}>
+      {lead.length > 0 && (
+        <>
+          {item.num !== undefined && <p className={`text-base font-black ${ACCENT[accent].text}`}>Q{item.num}</p>}
+          {lead.map((b, i) => <BlockView key={i} block={b} condition={condition} renderChart={renderChart} />)}
+        </>
+      )}
       <div>
-        <p className="text-base font-semibold text-zinc-100 leading-snug">
-          {item.num !== undefined && <span className={`mr-2 font-black ${ACCENT[accent].text}`}>Q{item.num}</span>}
+        <div className="text-base font-semibold text-zinc-100 leading-snug">
+          {item.num !== undefined && lead.length === 0 && <span className={`mr-2 font-black ${ACCENT[accent].text}`}>Q{item.num}</span>}
           <Markup text={prompt} />
-          {item.required === false && <span className="text-zinc-500 font-normal text-sm"> (optional)</span>}
-        </p>
-        {item.help && <p className="text-sm text-zinc-500 mt-1"><Markup text={item.help} /></p>}
-        {item.type === 'multi' && <p className="text-xs text-zinc-500 mt-1">Select all that apply (or none).</p>}
+          {item.required === false && <span className="text-zinc-400 font-normal text-sm"> (optional)</span>}
+        </div>
+        {item.help && <div className="text-sm text-zinc-400 mt-1"><Markup text={item.help} /></div>}
+        {item.type === 'multi' && <p className="text-xs text-zinc-400 mt-1">Select all that apply (or none).</p>}
       </div>
       {body}
     </div>
