@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import DevPanel from "./components/DevPanel";
 import TelemetryDevPanel from "./client/TelemetryDevPanel";
-import { initTelemetry, registerSink, endSession } from "./client/telemetry";
+import { initTelemetry, registerSink, endSession, track } from "./client/telemetry";
 import { networkSink, flushOnExit, pingProgress } from "./client/networkSink";
 import { startRawCapture } from "./client/rawcapture";
 import { startDerivations } from "./client/derive";
@@ -84,12 +84,15 @@ function GameApp() {
         pingProgress();
       }
     };
+    // The study's "Leave site?" prompt (refresh/close during the game): count
+    // it. If they then really leave, pagehide records session_ended.
+    const onLeaveWarning = () => track("leave_warning_shown", {});
     window.addEventListener("pagehide", onExit);
-    window.addEventListener("beforeunload", onExit);
+    window.addEventListener("study:leave-warning", onLeaveWarning);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("pagehide", onExit);
-      window.removeEventListener("beforeunload", onExit);
+      window.removeEventListener("study:leave-warning", onLeaveWarning);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);

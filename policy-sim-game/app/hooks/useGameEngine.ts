@@ -533,7 +533,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
     const run: CompletedRun = {
       cycle: currentCycle,
-      finalPopulation: [...population],
+      // Level select and the final debrief only need each citizen's final LS and
+      // utilities, so the turn-by-turn ledger is dropped (~240 KB per term in
+      // the browser save).
+      finalPopulation: population.map(p => ({ ...p, historicalLedger: [] })),
       finalScore: turnMetricScore,
       targetScore,
       approvalRating: turnApprovalRating,

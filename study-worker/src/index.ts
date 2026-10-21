@@ -4,6 +4,9 @@
 //                 row, assigns game or wiki, and redirects to that app.
 //   POST /sync    The apps send the participant's progress here. One call =
 //                 one row written, however much changed.
+//   GET  /state   ?pid=…&t=… → the participant's saved progress. The apps call
+//                 it on every page load and keep whichever copy is newer, so a
+//                 refresh can never put someone back to an older point.
 //   GET  /health  Quick check that the worker and database respond.
 //
 // /start query parameters
@@ -177,6 +180,42 @@ interface SyncBody {
   cells?: Partial<Record<Cell, { _v: number } & Record<string, unknown>>>;
 }
 
+const STAGES = ['pis', 'consent', 'pretest', 'activity', 'posttest', 'done', 'declined'];
+/** SQL for a stage's position in the study (declined counts as finished). */
+function stageRank(expr: string): string {
+  return `(CASE ${expr} WHEN 'pis' THEN 0 WHEN 'consent' THEN 1 WHEN 'pretest' THEN 2 WHEN 'activity' THEN 3 WHEN 'posttest' THEN 4 WHEN 'done' THEN 5 WHEN 'declined' THEN 5 ELSE -1 END)`;
+}
+
+/** GET /state – the participant's saved progress (needs their secret token). */
+async function handleState(request: Request, env: Env): Promise<Response> {
+  const q = new URL(request.url).searchParams;
+  const pid = q.get('pid') ?? '';
+  const t = q.get('t') ?? '';
+  if (!ID_PATTERN.test(pid) || !t) return json({ error: 'missing pid or token' }, 400);
+  const row = await env.DB.prepare(
+    `SELECT stage, consent_status, completed_at, final_outcome, ${CELLS.join(', ')} FROM participants WHERE pid = ?1 AND token = ?2`
+  )
+    .bind(pid, t)
+    .first<Record<string, unknown>>();
+  if (!row) return json({ error: 'unknown participant or token' }, 404);
+  const cells: Record<string, unknown> = {};
+  for (const c of CELLS) {
+    if (typeof row[c] !== 'string') continue;
+    try {
+      cells[c] = JSON.parse(row[c] as string);
+    } catch {
+      /* unreadable cell: leave it out */
+    }
+  }
+  return json({
+    stage: STAGES.includes(row.stage as string) ? row.stage : null,
+    consent_status: row.consent_status ?? null,
+    completed: !!row.completed_at,
+    final_outcome: row.final_outcome ?? null,
+    cells,
+  });
+}
+
 async function handleSync(request: Request, env: Env): Promise<Response> {
   const text = await request.text();
   if (text.length > MAX_BODY_BYTES) return json({ error: 'payload too large' }, 413);
@@ -216,7 +255,8 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
       sync_count        = sync_count + 1,
       origin            = COALESCE(origin, ?2),
       app_version       = COALESCE(?3, app_version),
-      stage             = COALESCE(?4, stage),
+      -- the stage only ever moves forward (an out-of-date tab can't move it back)
+      stage             = CASE WHEN ?4 IS NOT NULL AND ${stageRank('?4')} >= ${stageRank('stage')} THEN ?4 ELSE stage END,
       consent_status    = CASE WHEN consent_status = 'pending' AND ?5 IS NOT NULL THEN ?5 ELSE consent_status END,
       consent_signed_at = CASE WHEN consent_signed_at IS NULL AND ?5 = 'signed' THEN ?1 ELSE consent_signed_at END,
       completed_at      = CASE WHEN completed_at IS NULL AND ?6 = 1 THEN ?1 ELSE completed_at END,
@@ -247,6 +287,7 @@ export default {
       let res: Response;
       if (pathname === '/start' && request.method === 'GET') res = await handleStart(request, env);
       else if (pathname === '/sync' && request.method === 'POST') res = await handleSync(request, env);
+      else if (pathname === '/state' && request.method === 'GET') res = await handleState(request, env);
       else if (pathname === '/health') {
         await env.DB.prepare('SELECT 1').first();
         res = json({ ok: true });

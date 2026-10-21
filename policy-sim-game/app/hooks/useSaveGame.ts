@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { safeSetItem } from '@study';
 
 export const SAVE_KEY = 'policy-sim-save-v3';
 
@@ -34,7 +35,9 @@ export function useSaveGame(
     if (!snapshot.population || snapshot.population.length === 0 || !snapshot.cycleSchedule || snapshot.cycleSchedule.length === 0) {
         return;
     }
-    localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+    // Never throws (a full browser storage used to crash the game here); if
+    // storage is full, throwaway data is cleared and the save retried.
+    if (!safeSetItem(SAVE_KEY, JSON.stringify(snapshot))) console.warn('Game: could not save progress to browser storage (full?)');
   }, [snapshot]);
 
   const wipeSave = useCallback(() => {

@@ -3,6 +3,7 @@ export { StudyGate, useStudy } from './ui/StudyGate';
 export type { RenderChart } from './ui/Questionnaire';
 export {
   setActivity, finishActivity, syncStudy, getBaselineLS, getStudyState, isStudyTestMode,
+  safeSetItem, freeBrowserStorage,
   type StudySession, type Stage,
 } from './session';
 export { WORKER_URL, PROLIFIC, CONTACT } from './config';

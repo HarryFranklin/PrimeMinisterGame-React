@@ -9,6 +9,15 @@
 // activity, posttest) carries its own version number `_v`; only cells that
 // changed since the last sync are sent, and the worker ignores anything older
 // than what it already has. One sync = one database row written.
+//
+// Safety nets (a refresh must never put someone back to an older point):
+//  - on every load the saved copy is checked against the server's (/state)
+//    and the newer one is kept;
+//  - if the study is opened in a second tab, the older tab stops saving and
+//    says so (only one tab can write);
+//  - writes to browser storage never throw; if storage is full, throwaway
+//    data is cleared and the write retried;
+//  - during the game/reading, refreshing or closing asks "Leave site?".
 // ============================================================================
 import { WORKER_URL } from './config';
 import type { StudyMode } from './content/infoAndConsent';
@@ -44,6 +53,11 @@ export type InitResult =
   | { status: 'error'; message: string };
 
 const STORAGE_KEY = 'study_state_v1';
+const CELL_NAMES: CellName[] = ['pis', 'consent', 'pretest', 'activity', 'posttest'];
+const STAGE_ORDER: Record<Stage, number> = { pis: 0, consent: 1, pretest: 2, activity: 3, posttest: 4, done: 5, declined: 5 };
+/** Browser-storage keys that are only local copies/dev logs and safe to delete
+ * when storage is full (the data itself is on the server). */
+const EXPENDABLE_PREFIXES = ['telemetry_attempt:', 'telemetry_dev_log'];
 /** fetch keepalive and sendBeacon both refuse bodies over 64 KB. */
 const KEEPALIVE_LIMIT = 60 * 1024;
 
@@ -62,6 +76,12 @@ let state: StudyState = EMPTY;
 let appVersion = 'dev';
 let listenersInstalled = false;
 const subscribers = new Set<() => void>();
+/** True once a newer tab has taken over: this tab must not write anything. */
+let suspended = false;
+/** What the server had newer than this browser on load (test-mode notice). */
+let restoredFromServer: string[] = [];
+/** A save to browser storage failed even after clearing throwaway data. */
+let storageFailed = false;
 
 // ---------------------------------------------------------------------------
 // Store plumbing
@@ -76,11 +96,47 @@ function load(): StudyState {
   return EMPTY;
 }
 
-function save() {
+/** Deletes local-only copies (dev logs, per-attempt telemetry copies) to free
+ * browser storage. Returns how many keys were removed. */
+export function freeBrowserStorage(): number {
+  let removed = 0;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    for (const key of Object.keys(localStorage)) {
+      if (EXPENDABLE_PREFIXES.some((p) => key.startsWith(p))) {
+        localStorage.removeItem(key);
+        removed++;
+      }
+    }
   } catch {
-    /* storage full/unavailable: data still goes to the server on sync */
+    /* storage unavailable */
+  }
+  return removed;
+}
+
+/** localStorage.setItem that never throws: if storage is full it frees
+ * throwaway data and tries once more. Returns false if it still failed. */
+export function safeSetItem(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    freeBrowserStorage();
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function save() {
+  if (suspended) return;
+  // If this fails the data still reaches the server on sync, and the next
+  // load takes the server's copy.
+  if (!safeSetItem(STORAGE_KEY, JSON.stringify(state))) {
+    if (!storageFailed) console.warn('Study: could not save to browser storage (full?)');
+    storageFailed = true;
   }
 }
 
@@ -99,6 +155,17 @@ export function getStudyState(): StudyState {
   return state;
 }
 
+/** True if the study has been opened in another (newer) tab. */
+export function isStudySuspended(): boolean {
+  return suspended;
+}
+
+/** For the test-mode notice: what was restored from the server on load, and
+ * whether browser storage is failing. */
+export function getStorageHealth(): { restoredFromServer: string[]; storageFailed: boolean } {
+  return { restoredFromServer, storageFailed };
+}
+
 // ---------------------------------------------------------------------------
 // Start-up: work out who this is.
 // ---------------------------------------------------------------------------
@@ -113,6 +180,67 @@ function stripIdentityFromUrl() {
   const url = new URL(window.location.href);
   ['pid', 't', 'mode', 'new', 'skip', 'PROLIFIC_PID', 'STUDY_ID', 'SESSION_ID'].forEach((k) => url.searchParams.delete(k));
   window.history.replaceState(null, '', url.toString());
+}
+
+/** Keeps whichever copy is newer, cell by cell: this browser's or the
+ * server's. Protects against a refresh loading an out-of-date browser copy
+ * (e.g. after a save failed or another tab overwrote it). If the server can't
+ * be reached, carries on with the browser's copy. */
+async function reconcileWithServer(): Promise<void> {
+  const s = state.session;
+  if (!s) return;
+  let server: {
+    stage: Stage | null;
+    consent_status: string | null;
+    completed: boolean;
+    final_outcome: string | null;
+    cells: Partial<Record<CellName, Cell>>;
+  };
+  try {
+    const res = await fetch(`${WORKER_URL}/state?${new URLSearchParams({ pid: s.pid, t: s.t })}`, { cache: 'no-store' });
+    if (!res.ok) return; // e.g. a deleted test row – the next sync handles it
+    server = await res.json();
+  } catch {
+    return;
+  }
+  if (state.session?.pid !== s.pid) return;
+
+  const restored: string[] = [];
+  const cells = { ...state.cells };
+  let dirty = [...state.dirty];
+  for (const name of CELL_NAMES) {
+    const sv = server.cells?.[name];
+    const lv = cells[name];
+    if (sv && typeof sv._v === 'number' && (!lv || sv._v > lv._v)) {
+      cells[name] = sv;
+      dirty = dirty.filter((d) => d !== name);
+      restored.push(name);
+    } else if (lv && (!sv || lv._v > sv._v) && !dirty.includes(name)) {
+      dirty.push(name); // this browser is ahead (not yet sent): send it
+    }
+  }
+  let { stage, metaDirty } = state;
+  if (server.stage && STAGE_ORDER[server.stage] > STAGE_ORDER[stage]) {
+    stage = server.stage;
+    restored.push(`stage (${server.stage})`);
+  } else if (!server.stage || STAGE_ORDER[stage] > STAGE_ORDER[server.stage]) {
+    metaDirty = true;
+  }
+  const consentStatus =
+    state.consentStatus ?? (server.consent_status === 'signed' || server.consent_status === 'declined' ? server.consent_status : null);
+  set({
+    ...state,
+    cells,
+    dirty,
+    metaDirty,
+    stage,
+    consentStatus,
+    completed: state.completed || !!server.completed,
+    finalOutcome: state.finalOutcome ?? server.final_outcome ?? null,
+  });
+  restoredFromServer = restored;
+  if (restored.length) console.warn('Study: this browser was behind the server; restored', restored.join(', '));
+  if (dirty.length || metaDirty) syncStudy();
 }
 
 function begin(session: StudySession) {
@@ -184,6 +312,7 @@ async function runInit(condition: Condition, version: string): Promise<InitResul
 
   stripIdentityFromUrl();
   if (!state.session) return { status: 'no-session' };
+  if (state.session.condition === condition) await reconcileWithServer();
   if (state.session.condition !== condition) return { status: 'wrong-app', url: null };
   return { status: 'ready' };
 }
@@ -235,6 +364,7 @@ export function getBaselineLS(): { status: 'answered'; ls: number } | { status: 
 /** Send whatever has changed. Safe to call often – does nothing if nothing changed. */
 export function syncStudy(opts: { beacon?: boolean } = {}): Promise<void> {
   const s = state;
+  if (suspended) return Promise.resolve();
   if (!s.session || (!s.dirty.length && !s.metaDirty)) return Promise.resolve();
 
   const cells: Partial<Record<CellName, Cell>> = {};
@@ -301,6 +431,30 @@ async function recoverMissingParticipant(): Promise<void> {
 function installListeners() {
   if (listenersInstalled || typeof document === 'undefined') return;
   listenersInstalled = true;
+
+  // One tab at a time: a newly opened tab announces itself and any older tab
+  // stops saving (so it can't overwrite the newer tab's progress).
+  if (typeof BroadcastChannel !== 'undefined') {
+    const channel = new BroadcastChannel('study_tabs_v1');
+    const tabId = Math.random().toString(36).slice(2);
+    channel.onmessage = (ev) => {
+      if (ev.data?.type === 'opened' && ev.data.id !== tabId && !suspended) {
+        suspended = true;
+        subscribers.forEach((fn) => fn());
+      }
+    };
+    channel.postMessage({ type: 'opened', id: tabId });
+  }
+
+  // During the game/reading only: refreshing or closing asks "Leave site?"
+  // (the browser's own wording). Apps can listen for 'study:leave-warning'.
+  window.addEventListener('beforeunload', (e) => {
+    if (suspended || state.stage !== 'activity') return;
+    e.preventDefault();
+    e.returnValue = '';
+    window.dispatchEvent(new CustomEvent('study:leave-warning'));
+  });
+
   // Leaving/switching tab: last chance to save.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') syncStudy({ beacon: true });
@@ -318,6 +472,7 @@ export function isStudyTestMode(): boolean {
 /** Forget this participant on this device (test mode only). */
 export function resetStudyOnDevice() {
   initPromise = null;
+  restoredFromServer = [];
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {

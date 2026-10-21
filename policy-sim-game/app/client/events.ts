@@ -19,6 +19,8 @@ export type TelemetryEvent =
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }
+  /** Refresh/close during the game: the browser's "Leave site?" prompt was shown. */
+  | { event: "leave_warning_shown"; payload: {} }
   /** Page reloaded part-way through a term attempt (the attempt was restored). */
   | { event: "session_resumed"; payload: { level_id: string | null; turn: number | null; attempt_number: number | null } }
 

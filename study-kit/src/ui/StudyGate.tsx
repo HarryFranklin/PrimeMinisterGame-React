@@ -5,6 +5,7 @@ import type { Condition } from '../content/questions';
 import { infoSheetFor, consentFormFor } from '../content/infoAndConsent';
 import {
   initStudy, subscribeStudy, getStudyState, getCell, isStudyTestMode, resetStudyOnDevice, finishActivity, setStage,
+  isStudySuspended, getStorageHealth,
   type InitResult, type StudyState,
 } from '../session';
 import { InfoSheetScreen, ConsentScreen } from './InfoAndConsentScreens';
@@ -80,15 +81,33 @@ export function StudyGate({
 }) {
   const [init, setInit] = useState<InitResult | null>(null);
   const study = useStudy();
+  const suspended = useSyncExternalStore(subscribeStudy, isStudySuspended, () => false);
   const tooSmall = useScreenTooSmall(enforceMinScreen);
+  const [noticeHidden, setNoticeHidden] = useState(false);
 
   useEffect(() => {
     initStudy(condition, appVersion).then(setInit);
   }, [condition, appVersion]);
 
+  // Test mode only: say if this browser's saved copy was behind the server
+  // (restored on load) or browser storage is failing – so pilots spot it.
+  const health = getStorageHealth();
+  const storageNotice = init?.status === 'ready' && isStudyTestMode() && !noticeHidden &&
+    (health.restoredFromServer.length > 0 || health.storageFailed) && (
+    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[9600] max-w-xl rounded-lg bg-amber-500 text-black text-xs font-semibold px-4 py-2 shadow-xl flex gap-3 items-start">
+      <span>
+        Test notice:{' '}
+        {health.restoredFromServer.length > 0 && <>this browser&apos;s saved copy was behind the server – restored {health.restoredFromServer.join(', ')}. </>}
+        {health.storageFailed && <>browser storage is full – progress is only being saved to the server.</>}
+      </span>
+      <button type="button" className="underline cursor-pointer" onClick={() => setNoticeHidden(true)}>Hide</button>
+    </div>
+  );
+
   // Test mode only (mode=test or localhost): shortcuts for checking the flow.
   const testTools = init?.status === 'ready' && isStudyTestMode() && (
     <div className="fixed bottom-4 right-4 z-[9500] flex gap-2">
+      {storageNotice}
       {['pis', 'consent', 'pretest'].includes(study.stage) && (
         <button
           type="button"
@@ -125,6 +144,15 @@ export function StudyGate({
       <Shell>
         <Message title="Desktop or laptop required">
           <p>This study needs a screen at least {MIN_SCREEN.width} × {MIN_SCREEN.height} pixels. Please open the link on a desktop or laptop computer, or make this window larger.</p>
+        </Message>
+      </Shell>
+    );
+
+  if (suspended)
+    return (
+      <Shell>
+        <Message title="This study is open in another tab">
+          <p>You opened the study again in another tab or window, so this one has been paused to keep your progress safe. Please carry on in the other tab and close this one.</p>
         </Message>
       </Shell>
     );

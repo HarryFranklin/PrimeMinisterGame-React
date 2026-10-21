@@ -1,6 +1,6 @@
 import type { TelemetryEventName, PayloadFor } from "./events";
 import { getProlificMeta } from "./sessionMeta";
-import { getStudyState } from "@study";
+import { getStudyState, freeBrowserStorage } from "@study";
 
 // ---------------------------------------------------------------------------
 // Environment / debug detection
@@ -318,6 +318,11 @@ export function initTelemetry(options?: { appVersion?: string }) {
     }
   }
 
+  // Outside debug mode, never keep local copies of the event log: they can
+  // fill browser storage (raw hovers run to MBs per term). Clear any left by
+  // older versions / earlier test runs. The data itself is on the server.
+  if (!isTelemetryDebugEnabled()) freeBrowserStorage();
+
   const resumed = restoreOpenAttempt();
   track("session_started", {});
   // Marks the refresh inside the attempt (counted as `refreshes` in its summary).
@@ -437,11 +442,15 @@ export function closeOutAttempt(attemptId: string = currentAttemptId ?? "") {
     }
   }
   setSaveStatus("saving");
-  const attemptEvents = fullLog.filter((e) => e.attempt_id === attemptId);
-  try {
-    localStorage.setItem(`telemetry_attempt:${attemptId}`, JSON.stringify(attemptEvents));
-  } catch {
-    // dev-only convenience; ignore quota errors
+  // Local copy of the attempt's events: debug mode only (dev convenience –
+  // includes raw hovers, so it can be MBs and fill browser storage).
+  if (isTelemetryDebugEnabled()) {
+    const attemptEvents = fullLog.filter((e) => e.attempt_id === attemptId);
+    try {
+      localStorage.setItem(`telemetry_attempt:${attemptId}`, JSON.stringify(attemptEvents));
+    } catch {
+      // ignore quota errors
+    }
   }
   // tiny delay so the pulsing "Saving..." state is actually visible/felt,
   // rather than flashing saved instantly
