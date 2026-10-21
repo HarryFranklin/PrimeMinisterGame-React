@@ -1,6 +1,6 @@
 {
   "_readme": "Correct answers for scoring (used by study-worker/scripts/score.mjs during `npm run export`). Kept OUTSIDE study-kit/src so it is never shipped to participants' browsers. Option letters/values match questions.ts. 'chart' items are worked out from charts.json (highest mean / highest floor / largest spread), so they follow any chart changes automatically. CHECK every answer marked ⚠ before relying on scores.",
-  "version": "key-0.1 (20 Oct 2026)",
+  "version": "key-0.2 (21 Oct 2026, questionnaire q-0.4)",
   "pre": {
     "numeracy": {
       "n1": { "type": "single", "correct": "c", "note": "1 in 10" },
@@ -31,7 +31,8 @@
     },
     "lo4": {
       "lo4_1a": { "type": "single", "correct": "a", "note": "veil of ignorance" },
-      "lo4_1b": { "type": "grid", "correct": { "personal": "d", "social": "c" } },
+      "lo4_1b_personal": { "type": "single", "correct": "d", "note": "own life, choices about own life" },
+      "lo4_1b_social": { "type": "single", "correct": "c", "note": "gains for others, choices when in charge of others" },
       "lo4_2": { "type": "single", "correct": "c", "note": "riskier for themselves" },
       "lo4_3": { "type": "single", "correct": "a" },
       "lo4_4": { "type": "grid", "correct": { "personal": "A", "social": "B" }, "note": "A: 5x60=300 vs B: 100 (personal); A: 5x10=50 vs B: 100 (social)" },

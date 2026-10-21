@@ -16,7 +16,7 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.3 (20 Oct 2026, draft)';
+export const QUESTIONNAIRE_VERSION = 'q-0.4 (21 Oct 2026, draft)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -96,6 +96,15 @@ const opts = (...labels: string[]): Option[] =>
 // ---------------------------------------------------------------------------
 export const DISTRIBUTIONS: Record<string, { label: string; counts: number[] | null }> = Object.fromEntries(
   Object.entries(charts).filter(([k]) => !k.startsWith('_')) as [string, { label: string; counts: number[] }][]
+);
+
+/** Shared options for the two "where would the value come from" questions
+ * (personal = d, social = c). */
+const UTILITY_SOURCES: Option[] = opts(
+  'Asking people how much gains for others are worth, based on the risks they would take in their own life',
+  'Asking people how much a gain in their own life is worth, based on choices they would make if they were in charge of others',
+  'Asking people how much gains for others are worth, based on choices they would make if they were in charge of others',
+  'Asking people how much a gain in their own life is worth, based on choices they would make about their own life'
 );
 
 const SOCIETIES_AB: Option[] = [
@@ -200,11 +209,12 @@ export const PRETEST: Page[] = [
         id: 'prior_study',
         type: 'single',
         prompt: 'Have you studied economics, philosophy or politics?',
+        help: 'Choose the highest level. Informal study counts too (e.g. reading, online courses) – pick the level it is closest to.',
         options: [
           { value: 'no', label: 'No' },
-          { value: 'school', label: 'Yes – school level' },
-          { value: 'ug', label: 'Yes – undergraduate' },
-          { value: 'pg', label: 'Yes – postgraduate' },
+          { value: 'school', label: 'Yes – school or equivalent level (e.g. GCSE, A level)' },
+          { value: 'ug', label: 'Yes – undergraduate or equivalent level' },
+          { value: 'pg', label: 'Yes – postgraduate or equivalent level' },
         ],
       },
       {
@@ -308,10 +318,29 @@ export const PRETEST: Page[] = [
       },
       {
         id: 'gaming_types',
+        type: 'multi',
+        prompt: 'What types of games do you play?',
+        options: [
+          { value: 'puzzle', label: 'Puzzle' },
+          { value: 'strategy', label: 'Strategy' },
+          { value: 'simulation', label: 'Simulation / management' },
+          { value: 'rpg', label: 'Role-playing' },
+          { value: 'action', label: 'Action / adventure' },
+          { value: 'shooter', label: 'Shooter' },
+          { value: 'sports', label: 'Sports / racing' },
+          { value: 'casual', label: 'Casual / mobile' },
+          { value: 'party', label: 'Party / social' },
+          { value: 'other', label: 'Other (please say below)' },
+          { value: 'none', label: 'I don’t play video games' },
+        ],
+      },
+      {
+        id: 'gaming_types_other',
         type: 'text',
         required: false,
-        prompt: 'What type of games do you play?',
-        help: 'For example: puzzle, strategy, simulation, sports, mobile games. Leave blank if none.',
+        unnumbered: true,
+        maxLength: 100,
+        prompt: 'Other types of game (if any):',
       },
     ],
   },
@@ -388,16 +417,16 @@ export const POSTTEST: Page[] = [
       },
       {
         type: 'info',
-        text: 'Each scoring system shows how many points a government earns for raising one person by 1 point, depending on where they start. You can assume there are always some people in the 2–3 bracket.',
+        text: 'A government earns points each time it raises one person’s life satisfaction by 1 point. Under each scoring system below, the points it earns depend on where that person starts. You can assume there are always some people at 2.',
       },
       {
         type: 'table',
-        columns: ['Step', 'System X', 'System Y', 'System Z'],
+        columns: ['Raising one person from…', 'System X', 'System Y', 'System Z'],
         rows: [
-          ['2–3', '100', '100', '100'],
-          ['4–5', '100', '0', '60'],
-          ['6–7', '100', '0', '30'],
-          ['8–9', '100', '0', '10'],
+          ['2 to 3', '100 points', '100 points', '100 points'],
+          ['4 to 5', '100 points', '0 points', '60 points'],
+          ['6 to 7', '100 points', '0 points', '30 points'],
+          ['8 to 9', '100 points', '0 points', '10 points'],
         ],
       },
       {
@@ -418,7 +447,7 @@ export const POSTTEST: Page[] = [
       {
         id: 'lo3_3',
         type: 'single',
-        prompt: 'Where do utility values come from?',
+        prompt: { game: 'In the game, where do the utility values come from?', wiki: 'In the wiki, where do the utility values come from?' },
         options: opts(
           'National GDP and economic growth figures',
           'The choices people make between hypothetical gambles',
@@ -440,19 +469,16 @@ export const POSTTEST: Page[] = [
         options: opts('The veil of ignorance', 'Diminishing marginal utility', 'Benthamite ethics', 'Risk aversion'),
       },
       {
-        type: 'info',
-        text:
-          '(a) How much you value gains for others, based on the risks you would take yourself\n(b) How much you value a gain in your own life, based on hypothetical choices you’d make as if in charge of others\n(c) How much you value gains for others, based on having to make hypothetical choices that affect others\n(d) How much you value a gain in your own life, based on hypothetical choices about your own life',
+        id: 'lo4_1b_personal',
+        type: 'single',
+        prompt: 'If a government chose policies based on **personal utility**, the value of each person’s gain would come from…',
+        options: UTILITY_SOURCES,
       },
       {
-        id: 'lo4_1b',
-        type: 'grid',
-        prompt: 'Which statement above describes personal utility, and which describes social utility?',
-        rows: [
-          { value: 'personal', label: 'Personal utility' },
-          { value: 'social', label: 'Social utility' },
-        ],
-        options: opts('(a)', '(b)', '(c)', '(d)'),
+        id: 'lo4_1b_social',
+        type: 'single',
+        prompt: 'If a government chose policies based on **social utility**, the value of each person’s gain would come from…',
+        options: UTILITY_SOURCES,
       },
       {
         id: 'lo4_2',
@@ -478,10 +504,10 @@ export const POSTTEST: Page[] = [
       },
       {
         type: 'table',
-        columns: ['Policy', 'People', 'Step', 'Personal value per person', 'Social value per person'],
+        columns: ['Policy', 'People raised', 'Each person goes from…', 'Personal value per person', 'Social value per person'],
         rows: [
-          ['A', '5', '6→7', '60', '10'],
-          ['B', '1', '2→3', '100', '100'],
+          ['A', '5', '6 to 7', '60', '10'],
+          ['B', '1', '2 to 3', '100', '100'],
         ],
       },
       {
