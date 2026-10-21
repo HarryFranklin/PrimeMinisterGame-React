@@ -36,12 +36,20 @@ const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return n
 const iso = (ms) => (typeof ms === 'number' ? new Date(ms).toISOString() : '');
 const flat = (v) => (v === null || v === undefined ? '' : Array.isArray(v) ? v.join('|') : typeof v === 'object' ? JSON.stringify(v) : v);
 
-/** Questionnaire answers → columns: grids become one column per row (q_row), multi-selects are a|b. */
+/** Multi-select answers seen, e.g. 'pre_gaming_types' → its 1/0 columns are filled in below. */
+const MULTI = new Set();
+
+/** Questionnaire answers → columns: grids become one column per row (q_row); multi-selects are a|b
+ * plus one 1/0 column per option (q__option, e.g. pre_gaming_types__puzzle). */
 function answerCols(prefix, cell) {
   const cols = {};
   for (const [id, v] of Object.entries(cell?.answers ?? {})) {
     if (v && typeof v === 'object' && !Array.isArray(v)) for (const [row, rv] of Object.entries(v)) cols[`${prefix}${id}_${row}`] = rv;
     else cols[`${prefix}${id}`] = flat(v);
+    if (Array.isArray(v)) {
+      MULTI.add(`${prefix}${id}`);
+      for (const o of v) cols[`${prefix}${id}__${o}`] = 1;
+    }
   }
   for (const [page, m] of Object.entries(cell?.pages ?? {})) cols[`${prefix}page_${page}_ms`] = m?.dwell_ms ?? '';
   return cols;
@@ -128,10 +136,11 @@ for (const r of rows) {
   }
 }
 
-function toCsv(list) {
-  const cols = [...new Set(list.flatMap((o) => Object.keys(o)))];
-  const esc = (v) => { const s = String(v ?? ''); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  return [cols.join(','), ...list.map((o) => cols.map((c) => esc(o[c])).join(','))].join('\n');
+// Multi-select 1/0 columns: 0 for anyone who answered the question but didn't tick that option
+// (blank if they never reached it). Only options someone ticked get a column.
+for (const base of MULTI) {
+  const optCols = [...new Set(participants.flatMap((p) => Object.keys(p).filter((k) => k.startsWith(`${base}__`))))];
+  for (const p of participants) if (p[base] !== undefined) for (const c of optCols) p[c] ??= 0;
 }
 
 const dir = join('exports', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
