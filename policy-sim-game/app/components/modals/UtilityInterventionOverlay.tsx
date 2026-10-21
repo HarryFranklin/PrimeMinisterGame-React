@@ -175,6 +175,8 @@ export default function UtilityInterventionOverlay() {
 
   const [lsValue, setLsValue] = useState<number>(2.0);
   const [hasInteracted, setHasInteracted] = useState(false);
+  /** "…but where do these come from?" clicked: the answer is showing. */
+  const [askedSource, setAskedSource] = useState(false);
 
   const openedAt = useRef(Date.now());
   const hasClosedRef = useRef(false);
@@ -234,7 +236,7 @@ export default function UtilityInterventionOverlay() {
             A Shift In Perspective
           </h1>
           <p className="text-lg text-zinc-400 leading-relaxed">
-            The public no longer cares about raw numbers; they care about <strong>actual happiness</strong>.
+            The public no longer judges you on raw numbers; from now on it&apos;s about <strong>scoring what matters more</strong>.
             A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving.
             Explore the curve below, then use the slider to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
           </p>
@@ -350,10 +352,29 @@ export default function UtilityInterventionOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex justify-end pb-6"
+          className="flex flex-wrap items-end justify-end gap-4 pb-6"
         >
+          {askedSource && (
+            <motion.div
+              id="utility-source-answer"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mr-auto max-w-xl rounded-xl border border-pink-500/40 bg-pink-500/10 p-5 text-zinc-200 leading-relaxed"
+            >
+              <p className="font-black text-white mb-1">Excellent question!</p>
+              <p className="text-sm">
+                We got these values by asking citizens questions like the ones your advisers are about to bring you: a choice between a sure outcome and a gamble.
+                How much risk people will accept tells us how much each step up in life satisfaction is worth to them.
+              </p>
+            </motion.div>
+          )}
           <button
-            onClick={handleComplete}
+            onClick={() => {
+              if (askedSource) return handleComplete();
+              setAskedSource(true);
+              setTimeout(() => document.getElementById('utility-source-answer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+              track('utility_source_question_clicked', { ms_since_open: Date.now() - openedAt.current });
+            }}
             disabled={!hasInteracted}
             className={`px-8 py-4 rounded-xl font-black uppercase tracking-widest transition-all duration-300 ${
               hasInteracted
@@ -361,7 +382,7 @@ export default function UtilityInterventionOverlay() {
                 : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
             }`}
           >
-            {hasInteracted ? "I Understand, Continue \u2192" : "Drag the slider to continue"}
+            {!hasInteracted ? "Drag the slider to continue" : askedSource ? "Show me \u2192" : "I understand \u2013 but where do these come from?"}
           </button>
         </motion.div>
 

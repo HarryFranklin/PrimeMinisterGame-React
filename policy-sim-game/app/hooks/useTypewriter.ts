@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+/** Overall typing speed: every delay (per letter and the pauses after
+ * punctuation) is multiplied by this. 1 = original speed; 0.5 = twice as fast. */
+const SPEED_FACTOR = 0.5;
+
 export function useTypewriter(text: string, baseSpeed: number = 70, start: boolean = true) {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -41,14 +45,14 @@ export function useTypewriter(text: string, baseSpeed: number = 70, start: boole
         delay += Math.random() * 30; // Jitter for realism
 
         currentIndexRef.current++;
-        timeoutRef.current = setTimeout(typeNextChar, delay);
+        timeoutRef.current = setTimeout(typeNextChar, delay * SPEED_FACTOR);
       } else {
         setIsTyping(false);
         setIsComplete(true);
       }
     };
 
-    timeoutRef.current = setTimeout(typeNextChar, baseSpeed);
+    timeoutRef.current = setTimeout(typeNextChar, baseSpeed * SPEED_FACTOR);
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);

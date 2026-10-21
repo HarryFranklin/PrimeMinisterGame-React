@@ -6,7 +6,7 @@ import { WelfareMetrics } from '../utils/WelfareMetrics';
 import { IMPACT_COLORS } from '../utils/uiHelpers';
 
 /**
- * "What a +1 is worth here": one bar per LS column, drawn under the
+ * "What a +1 in Life Satisfaction is worth": one bar per LS column, drawn under the
  * population chart, showing how much lifting one person in that column by
  * one point adds to the score. Bars are scaled to the level's most valuable
  * +1, so the shape is the message:
@@ -110,10 +110,9 @@ export default function PointsStrip({ cycle, histogramData, population, color, a
 
   const tipText = (ls: number) => {
     if (ls >= 10) return { label: 'LS 10:', body: 'top of the scale, no +1 possible' };
-    const people = counts.get(ls) ?? 0;
     return {
       label: `LS ${ls} → ${ls + 1}:`,
-      body: `+${values[ls].toFixed(1)} points per person${people ? ` · ~${people} million people` : ''}`,
+      body: `+${values[ls].toFixed(1)} points per person`,
     };
   };
 
@@ -136,7 +135,7 @@ export default function PointsStrip({ cycle, histogramData, population, color, a
         className="flex flex-wrap items-baseline gap-x-2"
         style={{ paddingLeft: CARD_PADDING_PX + 4, paddingRight: CARD_PADDING_PX + CHART_MARGIN.right }}
       >
-        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">What a +1 is worth here</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">What a +1 in Life Satisfaction is worth</span>
         <span className="text-[10px] text-zinc-500">{CAPTIONS[cycle]}</span>
       </div>
 

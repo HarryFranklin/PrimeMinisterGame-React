@@ -32,13 +32,16 @@ export const PolicyRuleCard = ({
   const ruleColor = isPositive ? IMPACT_COLORS['Will improve'] : IMPACT_COLORS['Will worsen'];
   const ruleBg = isPositive ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)';
 
-  let coveragePercentage: number | null = null;
+  // Share of the population affected, written as "about 4 in 100 people"
+  // (the same "X in Y" style as the risks in the gamble questions).
+  let coverageText: string | null = null;
   if (showCoverage && population) {
     const eligible = population.filter(
       (p) => (rule.minLS === undefined || p.currentLS >= rule.minLS) && (rule.maxLS === undefined || p.currentLS <= rule.maxLS)
     ).length;
     const coverage = Math.round(eligible * rule.proportion);
-    coveragePercentage = population.length > 0 ? Math.round((coverage / population.length) * 100) : 0;
+    const per100 = population.length > 0 ? Math.round((coverage / population.length) * 100) : 0;
+    coverageText = coverage === 0 ? 'nobody right now' : per100 < 1 ? 'fewer than 1 in 100 people' : `about ${per100} in 100 people`;
   }
 
   return (
@@ -59,10 +62,10 @@ export const PolicyRuleCard = ({
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ruleColor }} />
           <span className="text-[11px] font-bold text-zinc-600">{lsRange}</span>
         </div>
-        {coveragePercentage !== null && (
+        {coverageText !== null && (
           <>
-            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Coverage</span>
-            <span className="text-[11px] font-bold text-zinc-600">~{coveragePercentage}%</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400 ml-auto">Affects</span>
+            <span className="text-[11px] font-bold text-zinc-600">{coverageText}</span>
           </>
         )}
       </div>

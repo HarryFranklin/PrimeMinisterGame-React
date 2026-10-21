@@ -19,6 +19,8 @@ export type TelemetryEvent =
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }
+  /** Utility intro: "I understand – but where do these come from?" clicked. */
+  | { event: "utility_source_question_clicked"; payload: { ms_since_open: number } }
   /** Refresh/close during the game: the browser's "Leave site?" prompt was shown. */
   | { event: "leave_warning_shown"; payload: {} }
   /** Page reloaded part-way through a term attempt (the attempt was restored). */

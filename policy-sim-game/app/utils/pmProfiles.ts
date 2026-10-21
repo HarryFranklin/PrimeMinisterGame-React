@@ -35,7 +35,7 @@ export const PM_PROFILES: PMProfile[] = [
   },
   {
     cycle: ElectionCycle.Rawlsian,
-    name: "PM Evelyn Vance",
+    name: "PM Amara Okafor",
     philosophy: "Social Justice",
     governance: "A society is judged by how it treats its most vulnerable, not its most fortunate. I will raise the floor before I ever worry about the ceiling.",
     metric: "Minimum Wellbeing Baseline",
