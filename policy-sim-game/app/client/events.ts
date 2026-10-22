@@ -19,6 +19,10 @@ export type TelemetryEvent =
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }
+  /** Utility intro: one of the four curve explanations clicked (steep / slowing / flat / compare). */
+  | { event: "utility_explanation_selected"; payload: { explanation: string } }
+  /** Utility intro: a citizen (LS 2/4/6/8) picked to see what a +1 is worth to them. */
+  | { event: "utility_citizen_selected"; payload: { ls: number } }
   /** Utility intro: "I understand – but where do these come from?" clicked. */
   | { event: "utility_source_question_clicked"; payload: { ms_since_open: number } }
   /** Refresh/close during the game: the browser's "Leave site?" prompt was shown. */

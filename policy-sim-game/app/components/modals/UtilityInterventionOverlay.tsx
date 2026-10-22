@@ -20,6 +20,9 @@ const MAX_MARGINAL_GAIN = utilityAt(3) - utilityAt(2);
 const fmt = (n: number) => n.toFixed(2);
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
+/** The citizens to choose from on the +1 page. */
+const CITIZEN_LS = [2, 4, 6, 8];
+
 const getContinuousDetails = (ls: number) => {
   if (ls <= 3) return { emoji: '😭', label: 'Massive Impact', desc: 'Heating their home, paying rent, or affording three meals a day.' };
   if (ls <= 4) return { emoji: '🙁', label: 'High Impact', desc: 'Paying off urgent debt or affording new clothes for their family.' };
@@ -85,7 +88,7 @@ function describe(mode: Mode | null): string {
     case 'compare':
       return `Both steps are ${steep.to - steep.from} points wide. Going from ${steep.from} to ${steep.to} adds ${fmt(rise(steep))} utility. Going from ${flat.from} to ${flat.to} adds only ${fmt(rise(flat))}. The first step is worth about ${Math.round(rise(steep) / rise(flat))} times as much.`;
     default:
-      return 'Utility climbs quickly at low Life Satisfaction scores and flattens out near the top. Each extra point is worth a little less than the one before it. Hover over or select a zone to see how much utility each step adds.';
+      return 'Utility climbs quickly at low Life Satisfaction scores and flattens out near the top. Each extra point is worth a little less than the one before it.';
   }
 }
 
@@ -112,46 +115,7 @@ function CurveZoneDiagram() {
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {ZONES.map((z) => {
-          const on = selected === z.id;
-          return (
-            <button
-              key={z.id}
-              type="button"
-              aria-pressed={on}
-              onClick={() => toggle(z.id)}
-              onMouseEnter={() => setHovered(z.id)}
-              onMouseLeave={() => setHovered(null)}
-              onFocus={() => setHovered(z.id)}
-              onBlur={() => setHovered(null)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
-                on ? 'text-zinc-950' : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
-              }`}
-              style={on ? { backgroundColor: z.color, borderColor: z.color } : undefined}
-            >
-              <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: on ? '#18181b' : z.color }} />
-              {z.name} <span className="opacity-70 font-semibold">({z.from} to {z.to})</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          aria-pressed={selected === 'compare'}
-          onClick={() => toggle('compare')}
-          onMouseEnter={() => setHovered('compare')}
-          onMouseLeave={() => setHovered(null)}
-          onFocus={() => setHovered('compare')}
-          onBlur={() => setHovered(null)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
-            selected === 'compare'
-              ? 'bg-violet-400 border-violet-400 text-zinc-950'
-              : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
-          }`}
-        >
-          Compare equal steps
-        </button>
-      </div>
+      <p className="mb-3 text-sm text-zinc-300 leading-relaxed">{describe(null)}</p>
 
       <UtilityCurveChart
         steps={steps}
@@ -163,7 +127,34 @@ function CurveZoneDiagram() {
         ariaLabel="Utility curve. Utility rises steeply between Life Satisfaction 2 and 4, then flattens out."
       />
 
-      <p className="mt-3 text-sm text-zinc-400 leading-relaxed min-h-[4.5rem]">{describe(mode)}</p>
+      {/* The four explanations, always readable. Hovering (or tapping) one
+          highlights that part of the curve. */}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {[...ZONES.map((z) => ({ id: z.id as Mode, title: `${z.name} (${z.from} to ${z.to})`, color: z.color })), { id: 'compare' as Mode, title: 'Compare equal steps', color: '#a78bfa' }].map((c) => {
+          const active = mode === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={selected === c.id}
+              onClick={() => { toggle(c.id); track('utility_explanation_selected', { explanation: c.id }); }}
+              onMouseEnter={() => setHovered(c.id)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(c.id)}
+              onBlur={() => setHovered(null)}
+              className={`text-left rounded-xl border p-3 transition-colors cursor-pointer ${active ? 'bg-zinc-800' : 'bg-zinc-950/60 hover:bg-zinc-800/60'}`}
+              style={{ borderColor: active ? c.color : '#3f3f46' }}
+            >
+              <span className="flex items-center gap-2 text-sm font-black" style={{ color: c.color }}>
+                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.title}
+              </span>
+              <span className="block mt-1 text-sm text-zinc-300 leading-relaxed">{describe(c.id).replace(/^[^:]+: (.)/, (_m, ch: string) => ch.toUpperCase())}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-zinc-400">Hover over or tap an explanation to see it on the curve.</p>
     </div>
   );
 }
@@ -174,7 +165,9 @@ export default function UtilityInterventionOverlay() {
     const { completeUtilityIntro } = useGame();
 
   const [lsValue, setLsValue] = useState<number>(2.0);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  /** Citizens looked at so far (by LS). Two are needed to continue. */
+  const [visited, setVisited] = useState<number[]>([]);
+  const hasInteracted = visited.length >= 2;
   /** "…but where do these come from?" clicked: the answer is showing. */
   const [askedSource, setAskedSource] = useState(false);
 
@@ -185,9 +178,10 @@ export default function UtilityInterventionOverlay() {
     track('utility_intervention_opened', { after_cycle: 'Rawlsian' });
   }, []);
 
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLsValue(parseFloat(e.target.value));
-    if (!hasInteracted) setHasInteracted(true);
+  const selectCitizen = (ls: number) => {
+    setLsValue(ls);
+    setVisited((v) => (v.includes(ls) ? v : [...v, ls]));
+    track('utility_citizen_selected', { ls });
   };
 
   const handleComplete = () => {
@@ -238,7 +232,7 @@ export default function UtilityInterventionOverlay() {
           <p className="text-lg text-zinc-400 leading-relaxed">
             The public no longer judges you on raw numbers; from now on it&apos;s about <strong>scoring what matters more</strong>.
             A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving.
-            Explore the curve below, then use the slider to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
+            Explore the curve below, then pick citizens to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
           </p>
         </motion.div>
 
@@ -259,7 +253,32 @@ export default function UtilityInterventionOverlay() {
           className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 md:p-10 flex flex-col gap-8 relative overflow-hidden"
         >
 
-          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 w-full">
+          {/* Pick a citizen: the same +1 for each, worth very different amounts */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-400">
+              Give one of these citizens a +1 boost – try at least two
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {CITIZEN_LS.map((ls) => {
+                const on = visited.length > 0 && lsValue === ls;
+                const seen = visited.includes(ls);
+                return (
+                  <button
+                    key={ls}
+                    type="button"
+                    onClick={() => selectCitizen(ls)}
+                    className={`rounded-xl border-2 p-3 flex flex-col items-center gap-1 transition-colors cursor-pointer ${on ? 'border-pink-500 bg-pink-500/10' : 'border-zinc-700 bg-zinc-950/60 hover:border-zinc-500'}`}
+                  >
+                    <span className="text-4xl">{getContinuousDetails(ls).emoji}</span>
+                    <span className="text-sm font-black text-white">LS {ls} → {ls + 1}</span>
+                    <span className="text-xs text-zinc-400">{seen ? 'Looked at ✓' : 'Tap to see'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={`flex flex-col md:flex-row items-center gap-8 md:gap-12 w-full transition-opacity ${visited.length ? 'opacity-100' : 'opacity-40'}`}>
 
             {/* Face Box */}
             <div className="flex flex-col items-center gap-3 shrink-0">
@@ -326,25 +345,6 @@ export default function UtilityInterventionOverlay() {
             </p>
           </div>
 
-          {/* The Slider Control */}
-          <div className="w-full flex flex-col gap-3 pt-4 border-t border-zinc-800">
-            <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest px-1">
-              <span>Struggling (2)</span>
-              <span>Thriving (9)</span>
-            </div>
-
-            <input
-              type="range"
-              min="2"
-              max="9"
-              step="0.1"
-              aria-label="Starting Life Satisfaction"
-              value={lsValue}
-              onChange={handleSliderChange}
-              className="w-full accent-pink-500 cursor-pointer h-3 bg-zinc-800 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
-            />
-          </div>
-
         </motion.div>
 
         {/* Continue Button */}
@@ -382,7 +382,7 @@ export default function UtilityInterventionOverlay() {
                 : 'bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed'
             }`}
           >
-            {!hasInteracted ? "Drag the slider to continue" : askedSource ? "Show me \u2192" : "I understand \u2013 but where do these come from?"}
+            {!hasInteracted ? "Look at two citizens to continue" : askedSource ? "Show me \u2192" : "I understand \u2013 but where do these come from?"}
           </button>
         </motion.div>
 
