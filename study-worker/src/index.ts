@@ -7,6 +7,8 @@
 //   GET  /state   ?pid=…&t=… → the participant's saved progress. The apps call
 //                 it on every page load and keep whichever copy is newer, so a
 //                 refresh can never put someone back to an older point.
+//   GET  /results ?pid=…&t=… → the participant's marked post-test, for their
+//                 "See my answers" page. Only after they have finished.
 //   GET  /health  Quick check that the worker and database respond.
 //
 // /start query parameters
@@ -15,6 +17,12 @@
 //   Test:             ?mode=test[&condition=game|wiki]    (new TEST_ id each visit)
 //   Add &format=json to get {pid, token, mode, condition, url} back instead of
 //   a redirect (the apps use this when opened directly during development).
+
+// Marking is shared with the export (study-kit/scoring.mjs); the answer key and
+// chart data are bundled into the worker, never sent to browsers before the end.
+import { markItem, itemMax, itemScore, measure, type ItemSpec, type Charts } from '../../study-kit/scoring.mjs';
+import KEY from '../../study-kit/answer-key.json';
+import CHARTS from '../../study-kit/src/content/charts.json';
 
 export interface Env {
   DB: D1Database;
@@ -216,6 +224,55 @@ async function handleState(request: Request, env: Env): Promise<Response> {
   });
 }
 
+/** GET /results – marks the participant's post-test (finished participants only). */
+async function handleResults(request: Request, env: Env): Promise<Response> {
+  const q = new URL(request.url).searchParams;
+  const pid = q.get('pid') ?? '';
+  const t = q.get('t') ?? '';
+  if (!ID_PATTERN.test(pid) || !t) return json({ error: 'missing pid or token' }, 400);
+  const row = await env.DB.prepare('SELECT posttest, completed_at FROM participants WHERE pid = ?1 AND token = ?2')
+    .bind(pid, t)
+    .first<{ posttest: string | null; completed_at: number | null }>();
+  if (!row) return json({ error: 'unknown participant or token' }, 404);
+  let post: { answers?: Record<string, unknown>; completed_at?: number } | null = null;
+  try {
+    post = row.posttest ? JSON.parse(row.posttest) : null;
+  } catch {
+    post = null;
+  }
+  if (!row.completed_at && !post?.completed_at) return json({ error: 'not finished yet' }, 403);
+
+  const charts = CHARTS as unknown as Charts;
+  const answers = post?.answers ?? {};
+  const items: unknown[] = [];
+  let score = 0;
+  let max = 0;
+  for (const section of Object.values((KEY as { post: Record<string, Record<string, ItemSpec>> }).post)) {
+    for (const [id, spec] of Object.entries(section)) {
+      const { marks, correct } = markItem(spec, answers[id], charts);
+      // Chart questions: the numbers behind the right answer, per society.
+      let figures: Record<string, { mean: number; floor: number; spread: number }> | undefined;
+      const opts = (spec.options && !Array.isArray(spec.options) ? spec.options : null) as Record<string, string> | null;
+      if (opts && (spec.type === 'chart' || spec.type === 'chart_grid')) {
+        figures = {};
+        for (const [opt, chartId] of Object.entries(opts)) {
+          figures[opt] = {
+            mean: +(measure(charts, chartId, 'mean') ?? 0).toFixed(2),
+            floor: measure(charts, chartId, 'floor') ?? 0,
+            spread: +(measure(charts, chartId, 'spread') ?? 0).toFixed(2),
+          };
+        }
+      }
+      const got = itemScore(marks);
+      const worth = itemMax(spec);
+      score += got;
+      max += worth;
+      items.push({ id, type: spec.type, given: answers[id] ?? null, correct, marks, score: got, max: worth, measure: spec.measure ?? spec.rows ?? null, figures, explain: spec.explain ?? null });
+    }
+  }
+  return json({ score, max, items });
+}
+
 async function handleSync(request: Request, env: Env): Promise<Response> {
   const text = await request.text();
   if (text.length > MAX_BODY_BYTES) return json({ error: 'payload too large' }, 413);
@@ -288,6 +345,7 @@ export default {
       if (pathname === '/start' && request.method === 'GET') res = await handleStart(request, env);
       else if (pathname === '/sync' && request.method === 'POST') res = await handleSync(request, env);
       else if (pathname === '/state' && request.method === 'GET') res = await handleState(request, env);
+      else if (pathname === '/results' && request.method === 'GET') res = await handleResults(request, env);
       else if (pathname === '/health') {
         await env.DB.prepare('SELECT 1').first();
         res = json({ ok: true });

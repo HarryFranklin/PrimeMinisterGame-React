@@ -13,64 +13,16 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// The marking itself lives in study-kit/scoring.mjs (shared with the worker's /results).
+import { markItem, itemMax, chartAnswer as sharedChartAnswer } from '../../study-kit/scoring.mjs';
 
 const kit = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'study-kit');
 export const KEY = JSON.parse(readFileSync(join(kit, 'answer-key.json'), 'utf8'));
 const CHARTS = JSON.parse(readFileSync(join(kit, 'src', 'content', 'charts.json'), 'utf8'));
 
-function measure(id, m) {
-  const c = CHARTS[id]?.counts;
-  if (!c) return null;
-  const n = c.reduce((a, b) => a + b, 0);
-  const mean = c.reduce((s, k, i) => s + k * i, 0) / n;
-  if (m === 'mean') return mean;
-  if (m === 'floor') return c.findIndex((k) => k > 0);
-  if (m === 'spread') return Math.sqrt(c.reduce((s, k, i) => s + k * (i - mean) ** 2, 0) / n);
-  return null;
-}
-
 /** The option whose society has the largest value of the measure (null if tied/missing). */
 export function chartAnswer(options, m) {
-  const vals = Object.entries(options).map(([opt, id]) => [opt, measure(id, m)]);
-  if (vals.some(([, v]) => v === null)) return null;
-  vals.sort((a, b) => b[1] - a[1]);
-  return vals.length > 1 && Math.abs(vals[0][1] - vals[1][1]) < 1e-9 ? null : vals[0][0];
-}
-
-function scoreItem(spec, ans) {
-  const out = {};
-  switch (spec.type) {
-    case 'single':
-      out[''] = ans === undefined ? '' : ans === spec.correct ? 1 : 0;
-      break;
-    case 'number':
-      out[''] = ans === undefined ? '' : Number(ans) === spec.correct ? 1 : 0;
-      break;
-    case 'chart': {
-      const correct = chartAnswer(spec.options, spec.measure);
-      out[''] = ans === undefined || correct === null ? '' : ans === correct ? 1 : 0;
-      break;
-    }
-    case 'grid':
-      for (const [row, correct] of Object.entries(spec.correct)) out[`_${row}`] = ans?.[row] === undefined ? '' : ans[row] === correct ? 1 : 0;
-      break;
-    case 'chart_grid':
-      for (const [row, m] of Object.entries(spec.rows)) {
-        const correct = chartAnswer(spec.options, m);
-        out[`_${row}`] = ans?.[row] === undefined || correct === null ? '' : ans[row] === correct ? 1 : 0;
-      }
-      break;
-    case 'multi': {
-      if (ans === undefined) { out[''] = ''; out['_partial'] = ''; break; }
-      const picked = new Set(Array.isArray(ans) ? ans : String(ans).split('|').filter(Boolean));
-      const right = new Set(spec.correct);
-      const ok = spec.options.filter((o) => picked.has(o) === right.has(o)).length;
-      out[''] = ok === spec.options.length ? 1 : 0;
-      out['_partial'] = +(ok / spec.options.length).toFixed(2);
-      break;
-    }
-  }
-  return out;
+  return sharedChartAnswer(CHARTS, options, m);
 }
 
 /** Score one phase's answers → { score_<item>[_row]: 0/1, <section>: total, … } */
@@ -80,7 +32,7 @@ export function scorePhase(phase, answers) {
   for (const [section, items] of Object.entries(KEY[phase] ?? {})) {
     let total = '';
     for (const [id, spec] of Object.entries(items)) {
-      for (const [suffix, v] of Object.entries(scoreItem(spec, answers[id]))) {
+      for (const [suffix, v] of Object.entries(markItem(spec, answers[id], CHARTS).marks)) {
         cols[`${phase}_score_${id}${suffix}`] = v;
         if (suffix !== '_partial' && v !== '') total = (total === '' ? 0 : total) + v;
       }
@@ -99,8 +51,7 @@ export function maxScores() {
   const max = {};
   for (const phase of ['pre', 'post'])
     for (const [section, items] of Object.entries(KEY[phase] ?? {}))
-      max[`${phase}_${section}`] = Object.values(items).reduce(
-        (s, spec) => s + (spec.type === 'grid' ? Object.keys(spec.correct).length : spec.type === 'chart_grid' ? Object.keys(spec.rows).length : 1), 0);
+      max[`${phase}_${section}`] = Object.values(items).reduce((s, spec) => s + itemMax(spec), 0);
   max.post_total = max.post_lo2 + max.post_lo3 + max.post_lo4;
   return max;
 }

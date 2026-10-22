@@ -11,6 +11,7 @@ import {
 import { InfoSheetScreen, ConsentScreen } from './InfoAndConsentScreens';
 import { Questionnaire, type RenderChart } from './Questionnaire';
 import { downloadStudyCopy } from './download';
+import { ResultsView } from './ResultsView';
 import { ACCENT, BTN_BASE, BTN_GHOST, type Accent } from './theme';
 
 const EMPTY_SNAPSHOT: StudyState = {
@@ -84,6 +85,7 @@ export function StudyGate({
   const suspended = useSyncExternalStore(subscribeStudy, isStudySuspended, () => false);
   const tooSmall = useScreenTooSmall(enforceMinScreen);
   const [noticeHidden, setNoticeHidden] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     initStudy(condition, appVersion).then(setInit);
@@ -201,12 +203,22 @@ export function StudyGate({
         )}
       </Message>
     );
+  else if (showResults)
+    screen = (
+      <ResultsView
+        condition={condition}
+        accent={accent}
+        onBack={() => setShowResults(false)}
+        prolificUrl={s.mode === 'live' ? PROLIFIC.completeUrl : undefined}
+      />
+    );
   else
     screen = (
       <Message title="Thank you for taking part">
         <p>Your answers have been saved. Thank you for your time – your contribution helps us understand how people learn about ways of making policy.</p>
         <p>If you have any questions, or want your data removed within {CONTACT.withdrawalDays} days, contact {CONTACT.name} ({CONTACT.email}) quoting your ID: <span className="font-mono text-zinc-100">{s.pid}</span></p>
         <div className="flex flex-wrap gap-3 pt-2">
+          <button type="button" className={`${BTN_BASE} ${BTN_GHOST}`} onClick={() => setShowResults(true)}>See my answers</button>
           <button type="button" className={`${BTN_BASE} ${BTN_GHOST}`} onClick={downloadCopy}>Download your information sheet and consent record</button>
           {s.mode === 'live' && (
             <a href={PROLIFIC.completeUrl} className={`${BTN_BASE} ${ACCENT[accent].button}`}>Return to Prolific to complete</a>

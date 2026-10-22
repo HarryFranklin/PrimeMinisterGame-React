@@ -1,10 +1,9 @@
 {
-  "_readme": "Societies shown in question charts. counts = number of people at life satisfaction 0,1,...,10 (100 people each). Used by questions.ts (the apps) AND by the scoring in study-worker/scripts – the answer key for 'which society has the higher mean / higher floor / larger spread' is worked out from these numbers, so if you change a chart the scoring follows automatically. Baseline (pre_*) and post-test (post_*) use different shapes to limit practice effects.",
+  "_readme": "Societies shown in question charts. counts = number of people at life satisfaction 0,1,...,10 (100 people each). Used by questions.ts (the apps) AND by the scoring in study-worker/scripts – the answer key for 'which society has the higher mean / higher floor / larger spread' is worked out from these numbers, so if you change a chart the scoring follows automatically. Baseline (pre_*) and post-test (post_*) use different shapes and a different answer pattern to limit practice effects: baseline A = higher mean + larger spread, B = higher floor; post-test 1 = higher mean + higher floor, 2 = larger spread. Mean gaps ~1 point so the average can be judged by eye.",
   "pre_A":  { "label": "Society A", "counts": [0, 0, 4, 6, 8, 10, 12, 16, 18, 14, 12] },
-  "pre_B":  { "label": "Society B", "counts": [0, 0, 0, 0, 10, 20, 30, 25, 12, 3, 0] },
-  "post_1": { "label": "Society 1", "counts": [0, 4, 6, 8, 10, 12, 14, 16, 14, 10, 6] },
-  "post_2": { "label": "Society 2", "counts": [0, 0, 0, 2, 4, 6, 12, 24, 28, 16, 8] },
-  "post_3": { "label": "Society 3", "counts": [0, 0, 0, 0, 0, 14, 30, 34, 18, 4, 0] },
+  "pre_B":  { "label": "Society B", "counts": [0, 0, 0, 0, 14, 26, 32, 20, 8, 0, 0] },
+  "post_1": { "label": "Society 1", "counts": [0, 0, 0, 0, 4, 8, 16, 26, 28, 14, 4] },
+  "post_2": { "label": "Society 2", "counts": [0, 4, 6, 8, 10, 12, 14, 14, 12, 12, 8] },
   "lo2_A":  { "label": "Society A", "counts": [0, 0, 0, 0, 0, 45, 35, 15, 5, 0, 0] },
   "lo2_B":  { "label": "Society B", "counts": [0, 4, 4, 2, 0, 0, 19, 37, 25, 9, 0] },
   "lo2_C":  { "label": "Society C", "counts": [0, 0, 0, 8, 12, 18, 20, 16, 12, 9, 5] }

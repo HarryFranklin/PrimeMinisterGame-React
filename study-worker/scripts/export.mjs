@@ -70,6 +70,9 @@ for (const r of rows) {
     questionnaire_version: pre?.version ?? post?.version ?? '',
     pre_minutes: pre?.completed_at && pre?.started_at ? ((pre.completed_at - pre.started_at) / 60000).toFixed(1) : '',
     post_minutes: post?.completed_at && post?.started_at ? ((post.completed_at - post.started_at) / 60000).toFixed(1) : '',
+    // "See my answers" page after the study (shown score is out of all 22 knowledge marks, incl. LO1)
+    results_viewed: iso(post?.results_viewed_at),
+    results_score_shown: post?.results_score ?? '',
     ls_intro_ms: act?.ls?.dwell_ms ?? act?.ls_intro?.dwell_ms ?? '',
     game_attempts: r.condition === 'game' ? (act?.attempts?.length ?? 0) : '',
     wiki_pages_completed: r.condition === 'wiki' ? Object.keys(act?.completed_pages ?? {}).length : '',
@@ -141,6 +144,12 @@ for (const r of rows) {
 for (const base of MULTI) {
   const optCols = [...new Set(participants.flatMap((p) => Object.keys(p).filter((k) => k.startsWith(`${base}__`))))];
   for (const p of participants) if (p[base] !== undefined) for (const c of optCols) p[c] ??= 0;
+}
+
+function toCsv(list) {
+  const cols = [...new Set(list.flatMap((o) => Object.keys(o)))];
+  const esc = (v) => { const s = String(v ?? ''); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  return [cols.join(','), ...list.map((o) => cols.map((c) => esc(o[c])).join(','))].join('\n');
 }
 
 const dir = join('exports', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));

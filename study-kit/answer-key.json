@@ -1,42 +1,42 @@
 {
-  "_readme": "Correct answers for scoring (used by study-worker/scripts/score.mjs during `npm run export`). Kept OUTSIDE study-kit/src so it is never shipped to participants' browsers. Option letters/values match questions.ts. 'chart' items are worked out from charts.json (highest mean / highest floor / largest spread), so they follow any chart changes automatically. CHECK every answer marked ⚠ before relying on scores.",
-  "version": "key-0.2 (21 Oct 2026, questionnaire q-0.4)",
+  "_readme": "Correct answers for scoring (used by study-worker/scripts/score.mjs during `npm run export`). Kept OUTSIDE study-kit/src so it is never shipped to participants' browsers. Option letters/values match questions.ts. 'chart' items are worked out from charts.json (highest mean / highest floor / largest spread), so they follow any chart changes automatically. CHECK every answer marked ⚠ before relying on scores. 'explain' = the short explanation shown to participants on their 'See my answers' page after the study (chart questions get their numbers worked out automatically).",
+  "version": "key-0.3 (22 Oct 2026, questionnaire q-0.5) – explanations are DRAFTS, please check",
   "pre": {
     "numeracy": {
-      "n1": { "type": "single", "correct": "c", "note": "1 in 10" },
-      "n2": { "type": "number", "correct": 10 },
-      "n3": { "type": "number", "correct": 50, "note": "10% of 100 plays x £5" }
+      "n1": {"type": "single", "correct": "c", "note": "1 in 10"},
+      "n2": {"type": "number", "correct": 10},
+      "n3": {"type": "number", "correct": 50, "note": "10% of 100 plays x £5"}
     },
     "lo1": {
-      "lo1_1": { "type": "chart", "measure": "mean", "options": { "A": "pre_A", "B": "pre_B" } },
-      "lo1_2": { "type": "chart", "measure": "floor", "options": { "A": "pre_A", "B": "pre_B" } },
-      "lo1_3": { "type": "chart", "measure": "spread", "options": { "A": "pre_A", "B": "pre_B" } }
+      "lo1_1": {"type": "chart", "measure": "mean", "options": {"A": "pre_A", "B": "pre_B"}},
+      "lo1_2": {"type": "chart", "measure": "floor", "options": {"A": "pre_A", "B": "pre_B"}},
+      "lo1_3": {"type": "chart", "measure": "spread", "options": {"A": "pre_A", "B": "pre_B"}}
     }
   },
   "post": {
     "lo1": {
-      "lo1_1": { "type": "chart", "measure": "mean", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } },
-      "lo1_2": { "type": "chart", "measure": "floor", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } },
-      "lo1_3": { "type": "chart", "measure": "spread", "options": { "1": "post_1", "2": "post_2", "3": "post_3" } }
+      "lo1_1": {"type": "chart", "measure": "mean", "options": {"1": "post_1", "2": "post_2"}, "explain": "The average (mean) is everyone's scores added up and divided by the number of people."},
+      "lo1_2": {"type": "chart", "measure": "floor", "options": {"1": "post_1", "2": "post_2"}, "explain": "The floor is the lowest score anyone has: the left-most column with people in it."},
+      "lo1_3": {"type": "chart", "measure": "spread", "options": {"1": "post_1", "2": "post_2"}, "explain": "Spread is how widely people's scores are scattered around the average. A society with people from very low to very high scores has a larger spread (more inequality)."}
     },
     "lo2": {
-      "lo2_1": { "type": "multi", "correct": ["a", "d"], "options": ["a", "b", "c", "d"], "note": "Benthamite: maximises total; can justify large losses with no floor protection" },
-      "lo2_2": { "type": "multi", "correct": ["c", "d"], "options": ["a", "b", "c", "d"], "note": "⚠ Rawlsian: ignores majority gains once floor addressed; protects lowest" },
-      "lo2_3": { "type": "chart_grid", "rows": { "benthamite": "mean", "rawlsian": "floor" }, "options": { "A": "lo2_A", "B": "lo2_B", "C": "lo2_C" } }
+      "lo2_1": {"type": "multi", "correct": ["a", "d"], "options": ["a", "b", "c", "d"], "note": "Benthamite: maximises total; can justify large losses with no floor protection", "explain": "The Benthamite approach adds up everyone's life satisfaction and picks whatever makes the total biggest. Because only the total matters, it can accept large losses for some people if others gain more, with no protection for the worst-off. Equality and protecting the lowest are not its aims."},
+      "lo2_2": {"type": "multi", "correct": ["c", "d"], "options": ["a", "b", "c", "d"], "note": "⚠ Rawlsian: ignores majority gains once floor addressed; protects lowest", "explain": "The Rawlsian approach judges a society by how its worst-off person is doing. It strongly protects the lowest life satisfaction, even at a cost elsewhere, and once the floor is dealt with it ignores bigger gains for the majority. Treating every gain the same and maximising the total are Benthamite ideas."},
+      "lo2_3": {"type": "chart_grid", "rows": {"benthamite": "mean", "rawlsian": "floor"}, "options": {"A": "lo2_A", "B": "lo2_B", "C": "lo2_C"}, "explain": "Benthamite logic picks the society with the highest average; Rawlsian logic picks the society with the highest floor (its lowest score)."}
     },
     "lo3": {
-      "lo3_1": { "type": "single", "correct": "b" },
-      "lo3_2": { "type": "grid", "correct": { "benthamite": "X", "rawlsian": "Y", "between": "Z" } },
-      "lo3_3": { "type": "single", "correct": "b" }
+      "lo3_1": {"type": "single", "correct": "b", "explain": "Utility is the value of a 1-point gain in life satisfaction, and it depends on where the person starts: lifting someone from 2 to 3 can be worth far more than lifting someone from 8 to 9."},
+      "lo3_2": {"type": "grid", "correct": {"benthamite": "X", "rawlsian": "Y", "between": "Z"}, "explain": "System X gives the same points for every step, like the Benthamite approach. System Y only rewards gains at the very bottom (there are always people at 2), like the Rawlsian approach. System Z rewards every step but values gains at the bottom more, so it sits in between."},
+      "lo3_3": {"type": "single", "correct": "b", "explain": "The utility values come from people's choices between hypothetical gambles: a sure outcome against a risky one. How much risk someone will accept shows how much each step up in life satisfaction is worth to them."}
     },
     "lo4": {
-      "lo4_1a": { "type": "single", "correct": "a", "note": "veil of ignorance" },
-      "lo4_1b_personal": { "type": "single", "correct": "d", "note": "own life, choices about own life" },
-      "lo4_1b_social": { "type": "single", "correct": "c", "note": "gains for others, choices when in charge of others" },
-      "lo4_2": { "type": "single", "correct": "c", "note": "riskier for themselves" },
-      "lo4_3": { "type": "single", "correct": "a" },
-      "lo4_4": { "type": "grid", "correct": { "personal": "A", "social": "B" }, "note": "A: 5x60=300 vs B: 100 (personal); A: 5x10=50 vs B: 100 (social)" },
-      "lo4_5": { "type": "grid", "correct": { "a": "personal", "b": "social", "c": "neither" } }
+      "lo4_1a": {"type": "single", "correct": "a", "note": "veil of ignorance", "explain": "Choosing a society without knowing who you would be in it is John Rawls's 'veil of ignorance'."},
+      "lo4_1b_personal": {"type": "single", "correct": "d", "note": "own life, choices about own life", "explain": "Personal utility is how much people value a gain in their own life, worked out from the choices they would make about their own life."},
+      "lo4_1b_social": {"type": "single", "correct": "c", "note": "gains for others, choices when in charge of others", "explain": "Social utility is how much people value gains for others, worked out from the choices they would make when they are in charge of others."},
+      "lo4_2": {"type": "single", "correct": "c", "note": "riskier for themselves", "explain": "People tend to take more risks with their own lives than they would on behalf of others, so choices about their own life tend to be riskier."},
+      "lo4_3": {"type": "single", "correct": "a", "explain": "Social utility gives more weight to the worst-off than personal utility does, so the two can recommend different policies – and a government has to decide which to follow."},
+      "lo4_4": {"type": "grid", "correct": {"personal": "A", "social": "B"}, "note": "A: 5x60=300 vs B: 100 (personal); A: 5x10=50 vs B: 100 (social)", "explain": "Personal utility: Policy A is worth 5 × 60 = 300 against Policy B's 1 × 100 = 100, so it favours A. Social utility: Policy A is worth 5 × 10 = 50 against Policy B's 100, so it favours B. They differ because social utility puts much more weight on the person starting low."},
+      "lo4_5": {"type": "grid", "correct": {"a": "personal", "b": "social", "c": "neither"}, "explain": "Respecting the choices people make for their own lives supports personal utility. Reflecting what people endorse when they are responsible for others supports social utility. Always maximising the total, whoever gains, is the Benthamite idea – neither."}
     }
   }
 }

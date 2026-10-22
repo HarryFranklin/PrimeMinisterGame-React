@@ -16,7 +16,7 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.4 (21 Oct 2026, draft)';
+export const QUESTIONNAIRE_VERSION = 'q-0.5 (22 Oct 2026, draft)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -112,10 +112,11 @@ const SOCIETIES_AB: Option[] = [
   { value: 'B', label: 'Society B' },
 ];
 const SOCIETIES_ABC: Option[] = [...SOCIETIES_AB, { value: 'C', label: 'Society C' }];
-const SOCIETIES_123: Option[] = [
+// Post-test chart questions: two societies, like the baseline, so guessing has
+// the same 50% chance before and after.
+const SOCIETIES_12: Option[] = [
   { value: '1', label: 'Society 1' },
   { value: '2', label: 'Society 2' },
-  { value: '3', label: 'Society 3' },
 ];
 
 // ============================================================================
@@ -355,10 +356,10 @@ export const POSTTEST: Page[] = [
     title: 'Reading charts',
     intro: 'Each chart shows how many people in a society have each life satisfaction score, from 0 to 10.',
     content: [
-      { type: 'charts', charts: ['post_1', 'post_2', 'post_3'] },
-      { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_123 },
-      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_123 },
-      { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_123 },
+      { type: 'charts', charts: ['post_1', 'post_2'] },
+      { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_12 },
+      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_12 },
+      { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_12 },
     ],
   },
   {

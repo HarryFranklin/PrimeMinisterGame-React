@@ -6,6 +6,7 @@ import {
 } from '../content/questions';
 import { getCell, setCell, setStage, syncStudy } from '../session';
 import { Markup } from './Markup';
+import { QuestionChart } from './QuestionChart';
 import { ACCENT, BTN_BASE, type Accent } from './theme';
 
 /** How the app draws a question chart (each app passes its own D3Chart). */
@@ -156,7 +157,7 @@ export function Questionnaire({
 /** Info, charts and tables belong to the question that follows them: they are
  * shown inside its box, under its number (so "Q6" comes first, then what Q6
  * is about, then the question itself). */
-function groupContent<T extends { id: string }>(content: (T | Block)[]): { item?: T; lead: Block[] }[] {
+export function groupContent<T extends { id: string }>(content: (T | Block)[]): { item?: T; lead: Block[] }[] {
   const groups: { item?: T; lead: Block[] }[] = [];
   let lead: Block[] = [];
   for (const c of content) {
@@ -170,7 +171,7 @@ function groupContent<T extends { id: string }>(content: (T | Block)[]): { item?
 }
 
 // ---------------------------------------------------------------------------
-function BlockView({ block, condition, renderChart }: { block: Block; condition: Condition; renderChart: RenderChart }) {
+export function BlockView({ block, condition }: { block: Block; condition: Condition; renderChart?: RenderChart }) {
   if (block.type === 'info')
     return <div className="text-sm text-zinc-200 leading-relaxed rounded-xl bg-zinc-950 border border-zinc-800 p-4"><Markup text={armText(block.text, condition)} /></div>;
   if (block.type === 'table')
@@ -192,18 +193,21 @@ function BlockView({ block, condition, renderChart }: { block: Block; condition:
   const all = block.charts.flatMap((id) => DISTRIBUTIONS[id]?.counts ?? []);
   const yMax = Math.max(20, Math.ceil(Math.max(0, ...all) / 10) * 10);
   return (
-    <div className={`grid gap-3 ${block.charts.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+    // Two charts side by side; three or more stacked full width (else too small to read).
+    <div className={`grid gap-3 ${block.charts.length >= 3 ? 'grid-cols-1' : 'grid-cols-2'}`}>
       {block.charts.map((id) => {
         const d = DISTRIBUTIONS[id];
         return (
           <div key={id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 flex flex-col">
-            <p className="text-xs font-black uppercase tracking-widest text-zinc-200 mb-2">{d?.label ?? id}</p>
-            <div className="h-56">
-              {d?.counts ? renderChart({ id, label: d.label, counts: d.counts, yMax }) : (
-                <div className="h-full flex items-center justify-center text-xs text-zinc-500 border border-dashed border-zinc-700 rounded-lg">Chart data to be added</div>
-              )}
-            </div>
-            {d?.counts && <p className="text-xs text-zinc-400 text-center mt-1">Population: {d.counts.reduce((a, b) => a + b, 0)} people</p>}
+            <p className="text-sm font-black uppercase tracking-widest text-zinc-100 mb-2">{d?.label ?? id}</p>
+            {d?.counts ? (
+              // Same built-in chart for both groups (one face = one person), so the
+              // question looks identical in the game and wiki arms.
+              <QuestionChart id={id} counts={d.counts} yMax={yMax} perRow={block.charts.length >= 3 ? 4 : 2} />
+            ) : (
+              <div className="h-56 flex items-center justify-center text-xs text-zinc-500 border border-dashed border-zinc-700 rounded-lg">Chart data to be added</div>
+            )}
+            {d?.counts && <p className="text-xs text-zinc-400 text-center mt-1">{d.counts.reduce((a, b) => a + b, 0)} people · one face = one person</p>}
           </div>
         );
       })}
