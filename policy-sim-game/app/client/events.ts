@@ -388,6 +388,8 @@ export type TelemetryEvent =
       event: "academic_debrief_first_interaction";
       payload: { cycle: string; time_to_first_ms: number };
     }
+  /** End-of-term debrief (Levels 1–2): the player's guess before the reveal. */
+  | { event: "academic_debrief_guess"; payload: { cycle: string; guess: string; correct: boolean } }
   /** One "click to reveal" (e.g. the average) on the end-of-term debrief. */
   | { event: "academic_debrief_revealed"; payload: { cycle: string; item: string; ms_since_open: number } }
   /** Continue clicked: how long after the last reveal / after Continue unlocked. */

@@ -425,6 +425,8 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
 
     academic_debrief_ms: p(academicContinue, "dwell_ms") ?? p(last("academic_debrief_closed"), "dwell_ms"),
     academic_debrief_reveals: reveals.length,
+    academic_guess: p(first("academic_debrief_guess"), "guess"),
+    academic_guess_correct: p(first("academic_debrief_guess"), "correct"),
     academic_first_reveal_ms: p(first("academic_debrief_first_interaction"), "time_to_first_ms"),
     academic_continue_after_last_reveal_ms: p(academicContinue, "ms_after_last_reveal"),
     academic_continue_after_unlock_ms: p(academicContinue, "ms_after_unlock"),

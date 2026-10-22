@@ -5,7 +5,6 @@ import { WelfareMetrics } from '../../utils/WelfareMetrics';
 import D3Chart from '../D3Chart';
 import { track } from '../../client/telemetry';
 import { useGame } from '../../context/GameStateContext';
-import { getLifeSituationLabel } from '../../utils/lifeSituationLabels';
 
 const getDummyHistogram = (distribution: Record<number, number>) =>
   Array.from({ length: 11 }, (_, i) => ({ name: i, count: distribution[i] || 0 }));
@@ -31,6 +30,42 @@ const Note = ({
   <div className={`rounded-xl border p-4 text-left ${toneClasses[tone]}`}>
     <span className="text-xs font-black uppercase tracking-widest block mb-1 opacity-80">{label}</span>
     <p className="text-base italic leading-relaxed whitespace-pre-wrap text-zinc-200">{children}</p>
+  </div>
+);
+
+/** One clear question with answer buttons; after a guess, says right / not quite. */
+const GuessQuestion = ({
+  question, options, correct, guess, onGuess, rightText, wrongText,
+}: {
+  question: string;
+  options: { value: string; label: string }[];
+  correct: string;
+  guess: string | null;
+  onGuess: (value: string, correct: boolean) => void;
+  rightText: string;
+  wrongText: string;
+}) => (
+  <div className="rounded-xl border border-pink-500/30 bg-zinc-950/60 p-4 flex flex-col gap-3">
+    <p className="text-base font-bold text-white">{question}</p>
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const chosen = guess === o.value;
+        const isRight = o.value === correct;
+        const cls = !guess
+          ? 'bg-zinc-800 border-zinc-600 text-white hover:bg-pink-600 hover:border-pink-500 cursor-pointer'
+          : isRight
+            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200'
+            : chosen
+              ? 'bg-red-600/20 border-red-500 text-red-200'
+              : 'bg-zinc-900 border-zinc-800 text-zinc-500';
+        return (
+          <button key={o.value} type="button" disabled={!!guess} onClick={() => onGuess(o.value, isRight)} className={`px-4 py-2 rounded-lg border text-sm font-bold transition-colors ${cls}`}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+    {guess && <p className={`text-sm font-bold ${guess === correct ? 'text-emerald-400' : 'text-amber-300'}`}>{guess === correct ? rightText : wrongText}</p>}
   </div>
 );
 
@@ -105,80 +140,54 @@ export default function AcademicDebriefOverlay() {
   const benthamGraphA = useMemo(() => getDummyHistogram({ 5: dummyPeak }), [dummyPeak]);
   const benthamGraphB = useMemo(() => getDummyHistogram({ 0: Math.floor(dummyPeak / 2), 10: Math.ceil(dummyPeak / 2) }), [dummyPeak]);
 
-  const contrastingCitizens = useMemo(() => {
-    if (finalPopulation.length === 0) return [];
-
-    const enriched = finalPopulation.map(p => {
-      const ledger = p.historicalLedger.find(l => l.cycle === currentCycle);
-
-      const startLS = Number((ledger?.turns[0]?.ls ?? p.currentLS).toFixed(1));
-      const endLS = Number((ledger?.turns[ledger.turns.length - 1]?.ls ?? p.currentLS).toFixed(1));
-      const lsGained = Number((endLS - startLS).toFixed(1));
-
-      const startPU = WelfareMetrics.getUtilityForPerson(startLS, p.personalUtilities);
-      const endPU = WelfareMetrics.getUtilityForPerson(endLS, p.personalUtilities);
-      const puGained = Number((endPU - startPU).toFixed(2));
-
-      return { ...p, startLS, endLS, lsGained, puGained };
-    });
-
-    // Every same-direction, non-zero-change pair is a candidate - but only
-    // if it actually illustrates diminishing returns. Individual curves
-    // vary, so it's entirely possible for a specific higher-starting
-    // citizen to gain (or lose) MORE utility than a lower-starting one on
-    // the same LS shift - that pair contradicts the point being made, so it
-    // must be excluded outright rather than just ranked lower.
-    const candidates: { pair: typeof enriched; lsDiff: number; startGap: number; puDiff: number }[] = [];
-    for (let i = 0; i < enriched.length; i++) {
-      for (let j = i + 1; j < enriched.length; j++) {
-        const p1 = enriched[i];
-        const p2 = enriched[j];
-
-        const sameDirection = Math.sign(p1.lsGained) === Math.sign(p2.lsGained) && p1.lsGained !== 0;
-        if (!sameDirection) continue;
-
-        const pair: typeof enriched = p1.startLS < p2.startLS ? [p1, p2] : [p2, p1];
-        const [lower, higher] = pair;
-        const isGain = lower.lsGained > 0;
-
-        // Diminishing returns: on a gain, the lower-starting citizen must
-        // gain MORE utility than the higher-starting one; on a loss, the
-        // lower-starting citizen must lose MORE utility (a more negative
-        // puGained). If the higher-starting citizen comes out ahead
-        // either way, this pair doesn't show what we want - skip it.
-        const illustratesDiminishingReturns = isGain
-          ? lower.puGained > higher.puGained
-          : lower.puGained < higher.puGained;
-        if (!illustratesDiminishingReturns) continue;
-
-        candidates.push({
-          pair,
-          lsDiff: Math.abs(p1.lsGained - p2.lsGained),
-          startGap: Math.abs(p1.startLS - p2.startLS),
-          puDiff: Math.abs(p1.puGained - p2.puGained),
-        });
-      }
+  // Level 2 debrief: two REAL citizens from the population, one at LS 4 and one
+  // at LS 8, each given the same +1 (4→5, 8→9). What that +1 is worth to each
+  // comes from their own personal-utility curve. Picks the most typical pair
+  // that shows the point (the +1 at 4 worth more than the +1 at 8).
+  const examplePair = useMemo(() => {
+    if (finalPopulation.length === 0) return null;
+    // On the same 0–1 scale as the Level 3 utility curve (each person's
+    // utility from LS 2 to LS 10 = 0 to 1).
+    const u = (p: any, ls: number) => WelfareMetrics.getUtilityForPerson(ls, p.personalUtilities);
+    const gainAt = (p: any, from: number) => {
+      const range = u(p, 10) - u(p, 2);
+      return range > 1e-9 ? (u(p, from + 1) - u(p, from)) / range : 0;
+    };
+    const near = (from: number) => {
+      const exact = finalPopulation.filter((p: any) => Math.round(p.currentLS) === from);
+      return exact.length > 0 ? exact : finalPopulation;
+    };
+    // Each group sorted by what the +1 is worth; the middle one = a typical citizen.
+    const byGain = (list: any[], from: number) => list.map((p) => ({ p, gain: gainAt(p, from) })).sort((x, y) => x.gain - y.gain);
+    const low = byGain(near(4), 4);
+    const high = byGain(near(8), 8);
+    if (low.length === 0 || high.length === 0) return null;
+    let a = low[Math.floor(low.length / 2)];
+    let b = high[Math.floor(high.length / 2)];
+    if (a.p.id === b.p.id || !(a.gain > b.gain)) {
+      // Fall back to the clearest pair available.
+      a = low[low.length - 1];
+      b = high.find((h) => h.p.id !== a.p.id && h.gain < a.gain) ?? high[0];
     }
+    return { low: { name: a.p.name as string, from: 4, gain: a.gain }, high: { name: b.p.name as string, from: 8, gain: b.gain } };
+  }, [finalPopulation]);
 
-    if (candidates.length === 0) return [enriched[0], enriched[1]];
-
-    // Find the tightest "counts as the same change" tolerance that still
-    // gives us at least one candidate. With a few hundred citizens this
-    // resolves at 0.05 (an exact match to 1dp) almost every time; wider
-    // tiers only kick in if a run's data genuinely has nothing closer.
-    const TOLERANCES = [0.05, 0.15, 0.3, 0.5, Infinity];
-    let pool: typeof candidates = [];
-    for (const tol of TOLERANCES) {
-      pool = candidates.filter(c => c.lsDiff <= tol);
-      if (pool.length > 0) break;
+  // Guess-then-reveal (Levels 1 and 2): one clear question instead of
+  // "click each box". The guess is tracked.
+  const [guess, setGuess] = useState<string | null>(null);
+  const makeGuess = (value: string, correct: boolean) => {
+    if (guess) return;
+    setGuess(value);
+    track('academic_debrief_guess', { cycle: ElectionCycle[currentCycle], guess: value, correct });
+    markInteraction('guess');
+    if (currentCycle === ElectionCycle.Benthamite) {
+      setRevealedBenthamA(true);
+      setRevealedBenthamB(true);
+    } else {
+      setRevealedCitizen1(true);
+      setRevealedCitizen2(true);
     }
-
-    // Within that closest-matching tier, prefer the widest starting-LS
-    // gap (the actual point of the illustration), then the biggest
-    // utility gap as a final tiebreak.
-    pool.sort((a, b) => b.startGap - a.startGap || b.puDiff - a.puDiff);
-    return pool[0].pair;
-  }, [finalPopulation, currentCycle]);
+  };
 
   const empathyCitizen = useMemo(() => {
     if (finalPopulation.length === 0) return null;
@@ -205,40 +214,11 @@ export default function AcademicDebriefOverlay() {
 
   const getDpmMessage = () => {
     switch (currentCycle) {
-      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nClick each society below to reveal its average — see if you can guess before you click.";
-      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but at a cost: only the worst-off counted, so even large gains for everyone else were worth nothing to our score.\nClick on these citizens to see how much their changes were worth to them.";
+      case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nLook at the two societies below and answer the question underneath.";
+      case ElectionCycle.Rawlsian: return "We protected the vulnerable, but at a cost: only the worst-off counted, so even large gains for everyone else were worth nothing to our score.\nHere are two real citizens from our population. Imagine each one gains exactly one point. Whose gain would matter more to them?";
       case ElectionCycle.SocietalUtility: return "This term, citizens judged the country as they would when responsible for others.\nNext, each citizen will judge only by how they value their own life.";
       case ElectionCycle.PersonalUtility: return "You governed the same policies under two lenses.\nLet's compare how your performance is judged when citizens decide for others versus for themselves.";
     }
-  };
-
-  const getRawlsianMessage = () => {
-    const ending = "Level 1 counted every point the same. Level 2 counted only the worst-off. Most people's intuitions sit somewhere between these two.";
-    if (contrastingCitizens.length < 2) return ending;
-
-    const p1 = contrastingCitizens[0]; // lower startLS
-    const p2 = contrastingCitizens[1]; // higher startLS
-    const isGain = p1.lsGained > 0;
-    const changeWord = isGain ? 'rise' : 'drop';
-    const feltPhrase = isGain ? 'value that gain' : 'felt the pain of that loss';
-
-    // Describe the match honestly - only claim "the same" if it actually
-    // is (to 1dp); otherwise say "a similar" rather than overstate it.
-    const lsDiff = Math.abs(p1.lsGained - p2.lsGained);
-    const changeDescriptor = lsDiff <= 0.05 ? 'the same' : 'a similar';
-
-    const label1 = getLifeSituationLabel(p1.startLS);
-    const label2 = getLifeSituationLabel(p2.startLS);
-
-    // Only contrast by category name if the two citizens actually landed in
-    // different categories - otherwise (e.g. both "Comfortable") fall back
-    // to the real numbers so we're never claiming a difference that isn't
-    // there.
-    const contrastClause = label1 !== label2
-      ? `because one was ${label1.toLowerCase()} and the other was ${label2.toLowerCase()}`
-      : `even starting from a similar place (${p1.startLS.toFixed(1)} vs ${p2.startLS.toFixed(1)} LS)`;
-
-    return `Both citizens experienced ${changeDescriptor} ${changeWord} in their life satisfaction. However, ${contrastClause}, they ${feltPhrase} completely differently.\n\n${ending}`;
   };
 
   return (
@@ -266,102 +246,89 @@ export default function AcademicDebriefOverlay() {
             </Note>
 
             {currentCycle === ElectionCycle.Benthamite && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div
-                  onClick={() => { setRevealedBenthamA(true); markInteraction('bentham_a'); }}
-                  className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamA ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
-                >
-                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society A</h3>
-                  <div className="relative h-[200px]">
-                    <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamA ? 'opacity-20' : 'opacity-100'}`}>
-                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphA} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[{ label: 'Society A', data: benthamGraphA }, { label: 'Society B', data: benthamGraphB }].map((soc) => (
+                    <div key={soc.label} className={`p-4 rounded-xl border flex flex-col ${guess ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40'}`}>
+                      <h3 className="text-sm font-black text-zinc-200 uppercase tracking-widest text-center mb-2">{soc.label}</h3>
+                      <div className="relative h-[200px]">
+                        <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${guess ? 'opacity-20' : 'opacity-100'}`}>
+                          <D3Chart plotType="1D" chartData={[]} histogramData={soc.data} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
+                        </div>
+                        {guess && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
+                      </div>
                     </div>
-                    {revealedBenthamA && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
-                  </div>
-                  <div className="mt-2 flex justify-center items-center h-8">
-                    {!revealedBenthamA ? (
-                      <span className="bg-zinc-900 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Calculate Average</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-pink-400/70 uppercase tracking-widest">Calculated</span>
-                    )}
-                  </div>
+                  ))}
                 </div>
 
-                <div
-                  onClick={() => { setRevealedBenthamB(true); markInteraction('bentham_b'); }}
-                  className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col cursor-pointer ${revealedBenthamB ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
-                >
-                  <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Society B</h3>
-                  <div className="relative h-[200px]">
-                    <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${revealedBenthamB ? 'opacity-20' : 'opacity-100'}`}>
-                      <D3Chart plotType="1D" chartData={[]} histogramData={benthamGraphB} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
-                    </div>
-                    {revealedBenthamB && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
-                  </div>
-                  <div className="mt-2 flex justify-center items-center h-8">
-                    {!revealedBenthamB ? (
-                      <span className="bg-zinc-900 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Calculate Average</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-pink-400/70 uppercase tracking-widest">Calculated</span>
-                    )}
-                  </div>
-                </div>
+                <GuessQuestion
+                  question="Which society has the higher average life satisfaction?"
+                  options={[{ value: 'A', label: 'Society A' }, { value: 'B', label: 'Society B' }, { value: 'same', label: 'They’re the same' }]}
+                  correct="same"
+                  guess={guess}
+                  onGuess={makeGuess}
+                  rightText="Right – both average exactly 5.0."
+                  wrongText="Not quite – both average exactly 5.0."
+                />
 
-                {revealedBenthamA && revealedBenthamB && (
-                  <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
+                {guess && (
+                  <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
                     <Note label="Mathematically Identical" tone="pink">
-                                          {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it ignores how that wellbeing is shared. The cost: a policy that makes the worst-off worse off can still win, as long as the better-off gain enough.'}
+                      {'When solely considering averages, these societies appear equally successful. Maximising the average efficiently increases total wellbeing, but it ignores how that wellbeing is shared. The cost: a policy that makes the worst-off worse off can still win, as long as the better-off gain enough.'}
                     </Note>
                   </motion.div>
                 )}
               </div>
             )}
 
-            {currentCycle === ElectionCycle.Rawlsian && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {contrastingCitizens.map((citizen, idx) => {
-                  const isRevealed = idx === 0 ? revealedCitizen1 : revealedCitizen2;
-                  const setReveal = idx === 0 ? setRevealedCitizen1 : setRevealedCitizen2;
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => { setReveal(true); markInteraction(`citizen_${idx + 1}`); }}
-                      className={`p-4 rounded-xl border transition-all text-center relative overflow-hidden group flex flex-col justify-center min-h-[160px] flex-1 cursor-pointer ${isRevealed ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-pink-500/40 hover:bg-pink-500/5'}`}
-                    >
-                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">{citizen?.name}</p>
-                      <div className="mb-1 flex justify-center items-center gap-2">
-                        <span className="text-xs text-zinc-500">Life Satisfaction Shift: </span>
-                        <span className="text-sm font-bold text-zinc-500">{citizen?.startLS.toFixed(1)}</span>
-                        <span className="text-zinc-600">→</span>
-                        <strong className="text-lg text-zinc-200">{citizen?.endLS.toFixed(1)}</strong>
-                        <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded ml-1">
-                          {citizen && citizen.lsGained > 0 ? '+' : ''}{citizen?.lsGained.toFixed(1)} LS
-                        </span>
+            {currentCycle === ElectionCycle.Rawlsian && examplePair && (() => {
+              const { low, high } = examplePair;
+              const ratio = high.gain > 0 ? low.gain / high.gain : null;
+              const maxGain = Math.max(low.gain, high.gain, 1e-6);
+              const cards = [low, high];
+              return (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {cards.map((c) => (
+                      <div key={c.name} className={`p-5 rounded-xl border flex flex-col gap-2 ${guess ? 'border-pink-500/50 bg-pink-500/10' : 'border-zinc-800 bg-zinc-950/40'}`}>
+                        <p className="text-sm font-black uppercase tracking-widest text-zinc-200">{c.name}</p>
+                        <p className="text-zinc-300">
+                          Life satisfaction <strong className="text-white text-lg">{c.from}</strong> → <strong className="text-white text-lg">{c.from + 1}</strong>
+                          <span className="ml-2 text-xs font-black bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded">+1</span>
+                        </p>
+                        {guess && (
+                          <div className="flex flex-col gap-1 animate-in fade-in duration-500">
+                            <span className="text-xs text-pink-300 font-bold uppercase tracking-widest">What this +1 is worth to them</span>
+                            <div className="h-4 w-full rounded-full bg-zinc-950 border border-zinc-800 overflow-hidden">
+                              <motion.div className="h-full bg-pink-500" initial={{ width: 0 }} animate={{ width: `${(c.gain / maxGain) * 100}%` }} transition={{ duration: 0.8 }} />
+                            </div>
+                            <strong className="text-xl text-pink-200">+{c.gain.toFixed(2)} utility</strong>
+                          </div>
+                        )}
                       </div>
+                    ))}
+                  </div>
 
-                      <div className={`transition-all duration-500 ${isRevealed ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
-                        <div className="w-full h-px bg-zinc-800 my-2" />
-                        <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest block mb-1">Subjective Value (Utility Gained)</span>
-                        <strong className="text-2xl text-pink-300">
-                          {citizen && citizen.puGained > 0 ? '+' : ''}{citizen?.puGained.toFixed(2)}
-                        </strong>
-                      </div>
+                  <GuessQuestion
+                    question={`Each gets exactly the same +1. Whose +1 is worth more to them?`}
+                    options={[{ value: 'low', label: `${low.name}'s (4 → 5)` }, { value: 'high', label: `${high.name}'s (8 → 9)` }, { value: 'same', label: 'The same' }]}
+                    correct="low"
+                    guess={guess}
+                    onGuess={makeGuess}
+                    rightText={`Right – ${low.name}'s +1 is worth more.`}
+                    wrongText={`Not quite – ${low.name}'s +1 is worth more.`}
+                  />
 
-                      {!isRevealed && <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 backdrop-blur-sm transition-opacity rounded-xl"><span className="bg-zinc-900 px-4 py-2 rounded-full text-xs font-bold shadow-sm text-pink-400 border border-pink-500/30 animate-pulse">Click to Reveal</span></div>}
-                    </div>
-                  );
-                })}
-
-                {revealedCitizen1 && revealedCitizen2 && (
-                  <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
-                    <Note label="Unequal Subjective Value" tone="pink">
-                      {getRawlsianMessage()}
-                    </Note>
-                  </motion.div>
-                )}
-              </div>
-            )}
+                  {guess && (
+                    <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="overflow-hidden">
+                      <Note label="Unequal Subjective Value" tone="pink">
+                        {`Both gain exactly one point. But ${low.name} starts lower, so that point was worth ${ratio && ratio >= 1.2 ? `about ${ratio.toFixed(1)} times as much to them` : 'more to them'} as the same point was to ${high.name}. This term's Rawlsian score would have counted neither gain unless they were the worst-off citizen.\n\nLevel 1 counted every point the same. Level 2 counted only the worst-off. Most people's intuitions sit somewhere between these two.`}
+                      </Note>
+                    </motion.div>
+                  )}
+                </div>
+              );
+            })()}
 
             {currentCycle === ElectionCycle.SocietalUtility && empathyCitizen && (
               <div className="flex flex-col gap-4">
