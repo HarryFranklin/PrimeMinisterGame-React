@@ -14,7 +14,22 @@ interface VoterSentiment {
   worstPolicy: PolicyRef | null;
 }
 
-function getVoterSentiment(citizen: any, cycle: ElectionCycle): VoterSentiment {
+/** Biggest single-policy gain and loss this citizen had this term (LS points). */
+function policySwings(citizen: any, cycle: ElectionCycle): { up: number; down: number } {
+  const turns = citizen.historicalLedger?.find((l: any) => l.cycle === cycle)?.turns ?? [];
+  let up = 0;
+  let down = 0;
+  for (let i = 1; i < turns.length; i++) {
+    const d = turns[i].ls - turns[i - 1].ls;
+    up = Math.max(up, d);
+    down = Math.max(down, -d);
+  }
+  return { up, down };
+}
+
+/** `mixed`: this voter is shown because one policy helped them and another
+ * hurt them, so their quote names both, whatever their overall change. */
+function getVoterSentiment(citizen: any, cycle: ElectionCycle, mixed = false): VoterSentiment {
   const cycleLedger = citizen.historicalLedger?.find((l: any) => l.cycle === cycle);
 
   if (!cycleLedger || cycleLedger.turns.length < 2) {
@@ -40,6 +55,12 @@ function getVoterSentiment(citizen: any, cycle: ElectionCycle): VoterSentiment {
 
   const totalDiff: number = citizen.lsDiff ?? 0;
   const hasBoth = bestPolicy && worstPolicy && Math.abs(bestTurn.delta) > 0.1 && Math.abs(worstTurn.delta) > 0.1;
+
+  if (mixed && hasBoth) {
+    if (totalDiff >= 0.1) return { emoji: '🙂', kind: 'mixed_up', bestPolicy, worstPolicy };
+    if (totalDiff <= -0.1) return { emoji: '😕', kind: 'mixed_down', bestPolicy, worstPolicy };
+    return { emoji: '🤔', kind: 'neutral_mixed', bestPolicy, worstPolicy };
+  }
 
   if (totalDiff <= -1.5) return { emoji: '😠', kind: 'very_negative', bestPolicy, worstPolicy };
   if (totalDiff < -0.1) return { emoji: '😟', kind: 'negative', bestPolicy, worstPolicy };
@@ -197,22 +218,31 @@ export default function StageElectorateFeedback({
 
     const worst = sorted[0];
     const best = sorted[sorted.length - 1];
-    let mid =
-      sorted
-        .filter(s => s.id !== worst.id && s.id !== best.id)
-        .sort((a, b) => Math.abs(a.lsDiff) - Math.abs(b.lsDiff))[0];
+    const others = sorted.filter(s => s.id !== worst.id && s.id !== best.id);
 
+    // Middle voter: the citizen with the most MIXED experience - the biggest
+    // gain from one policy AND the biggest loss from another (e.g. helped by
+    // UBI, hit by the wealth tax). Falls back to whoever changed least.
+    let mid: (typeof sorted)[number] | undefined;
+    let mixed = false;
+    let bestSplit = 0.1;
+    for (const s of others) {
+      const { up, down } = policySwings(s, currentCycle);
+      const split = Math.min(up, down);
+      if (split > bestSplit) { bestSplit = split; mid = s; mixed = true; }
+    }
+    if (!mid) mid = [...others].sort((a, b) => Math.abs(a.lsDiff) - Math.abs(b.lsDiff))[0];
     if (!mid && sorted.length > 2) mid = sorted[1];
     if (!mid) mid = worst;
 
-    return Array.from(new Set([worst, mid, best]));
-  }, [finalPopulation, initialPopulation, baselinePopulation]);
+    return Array.from(new Set([worst, mid, best])).map(v => ({ ...v, mixed: mixed && v.id === mid!.id }));
+  }, [finalPopulation, initialPopulation, baselinePopulation, currentCycle]);
 
   const voterData = useMemo(
     () =>
       voxPops.map(vp => ({
         ...vp,
-        sentiment: getVoterSentiment(vp, currentCycle),
+        sentiment: getVoterSentiment(vp, currentCycle, vp.mixed),
       })),
     [voxPops, currentCycle]
   );

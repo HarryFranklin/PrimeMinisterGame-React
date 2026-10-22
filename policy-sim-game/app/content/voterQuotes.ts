@@ -42,6 +42,10 @@ export type VoterSentimentKind =
   | 'very_negative'
   | 'negative'
   | 'neutral_mixed'
+  /** Mixed views (one policy helped a lot, another hurt a lot), better off overall. */
+  | 'mixed_up'
+  /** Mixed views, worse off overall. */
+  | 'mixed_down'
   | 'neutral'
   | 'positive'
   | 'very_positive';
@@ -118,6 +122,30 @@ export const VOTER_QUOTES: Record<VoterSentimentKind, QuoteVariants> = {
     ],
   },
 
+  mixed_up: {
+    standard: [
+      { text: "On balance I'm a bit better off, but it's been a mixed bag.\n" },
+      { policyRef: 'bestPolicy', withPolicy: "{POLICY} really helped me, " },
+      { policyRef: 'worstPolicy', withPolicy: "but {POLICY} hit me hard." },
+    ],
+    alt: [
+      { text: "{pmName} has done me some good, and some harm.\n" },
+      { policyRef: 'bestPolicy', withPolicy: "I'm grateful for {POLICY}, " },
+      { policyRef: 'worstPolicy', withPolicy: "but I was angry about {POLICY}." },
+    ],
+  },
+  mixed_down: {
+    standard: [
+      { text: "Overall I've ended up worse off, though not everything was bad.\n" },
+      { policyRef: 'bestPolicy', withPolicy: "{POLICY} helped me, " },
+      { policyRef: 'worstPolicy', withPolicy: "but {POLICY} cost me far more." },
+    ],
+    alt: [
+      { text: "It's been a mixed bag under {pmName}, and I'm a little worse off.\n" },
+      { policyRef: 'bestPolicy', withPolicy: "I liked {POLICY}, " },
+      { policyRef: 'worstPolicy', withPolicy: "but {POLICY} really hurt." },
+    ],
+  },
   neutral: {
     // No policy references at all — same two lines every time this sentiment shows.
     standard: [
