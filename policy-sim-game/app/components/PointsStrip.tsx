@@ -36,7 +36,7 @@ const CAPTIONS: Record<ElectionCycle, string> = {
 
 /** Average utility of one person at this LS, across respondents' own curves
  * (the same calculation the score uses). */
-function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Respondent[]): number {
+export function averageUtilityAt(cycle: ElectionCycle, ls: number, population: Respondent[]): number {
   if (population.length === 0) return 0;
   const allLS = new Array(population.length).fill(ls);
   return population.reduce(

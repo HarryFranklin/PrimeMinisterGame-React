@@ -3,6 +3,7 @@ import { ElectionCycle, Policy } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 import { StatBlock } from './ui';
 import { CYCLE_TEXT_COLOR_CLASS } from '../utils/uiHelpers';
+import LensCompare from './LensCompare';
 
 interface DPMCardProps {
   currentCycle: ElectionCycle;
@@ -124,6 +125,7 @@ export default function DPMCard({ currentCycle, currentTurn, isParliamentDissolv
             </span>
             <div className="flex-1 overflow-y-auto pr-1">
               <p className="text-sm text-zinc-700 italic leading-relaxed">"{getAdvisory()}"</p>
+              {currentCycle === ElectionCycle.PersonalUtility && <LensCompare />}
             </div>
           </div>
         </div>

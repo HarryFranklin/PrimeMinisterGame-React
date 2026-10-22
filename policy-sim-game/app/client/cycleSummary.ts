@@ -387,6 +387,10 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
 
     after_final_turn_ms: p(first("hold_press_conference_clicked"), "time_after_turn5_ms"),
 
+    // Level 4 "Compare with Level 3" panel
+    lens_compare_opens: all("lens_compare_opened").length,
+    lens_compare_ms: all("lens_compare_closed").reduce((s, e) => s + (num(e.payload?.dwell_ms) ?? 0), 0),
+
     press_started_at: at(first("press_conference_started")),
     press_approval_at_start: p(first("press_conference_started"), "approval_rating"),
     press_q1_answer: p(q1, "answer_given"),
