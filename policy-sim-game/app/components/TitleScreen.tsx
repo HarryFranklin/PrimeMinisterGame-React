@@ -69,7 +69,9 @@ function Choice<T extends string>({ label, value, choices, onChange }: { label: 
   );
 }
 
-export default function TitleScreen() {
+/** onStart: called after the fade to black (the page puts up its curtain and
+ * moves on to the welcome briefing). */
+export default function TitleScreen({ onStart }: { onStart?: () => void }) {
   const { setGamePhase } = useGame();
   const [panel, setPanel] = useState<'about' | 'options' | null>(null);
   const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS);
@@ -115,7 +117,7 @@ export default function TitleScreen() {
     });
     setLeaving(true);
     // Fade to black, then the welcome briefing.
-    setTimeout(() => setGamePhase(GamePhase.Intro), 900);
+    setTimeout(() => (onStart ? onStart() : setGamePhase(GamePhase.Intro)), 900);
   };
 
   return (

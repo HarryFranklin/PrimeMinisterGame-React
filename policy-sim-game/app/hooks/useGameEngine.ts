@@ -184,7 +184,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setIsCalculating(true);
     setCalcProgress(0);
 
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Let the 1-second loading bar run before the heavy difficulty calculation
+    // starts (the calculation briefly blocks the page). This wait also lets a
+    // saved game be restored first after a refresh.
+    await new Promise(resolve => setTimeout(resolve, 1000));
     if (gamePhaseRef.current !== GamePhase.Setup) {
       // A saved game was restored meanwhile.
       setupStarted.current = false;

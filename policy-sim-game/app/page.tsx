@@ -114,6 +114,28 @@ function GameApp() {
   }, []);
 
   const game = useGameEngine();
+
+  // Start menu → welcome briefing. The start menu hands over to a black
+  // curtain IN THE SAME RENDER (so not a single frame of the light game page
+  // shows). Under the curtain the game appears already darkened and blurred;
+  // the curtain then lifts, and the briefing slides in once it has lifted.
+  const [curtain, setCurtain] = useState(false);
+  const [holdIntro, setHoldIntro] = useState(false);
+  const startFromTitle = () => {
+    setCurtain(true);
+    setHoldIntro(true);
+    game.setGamePhase(GamePhase.Intro);
+  };
+  useEffect(() => {
+    if (!curtain) return;
+    const t = setTimeout(() => setCurtain(false), 400); // start lifting
+    return () => clearTimeout(t);
+  }, [curtain]);
+  useEffect(() => {
+    if (!holdIntro) return;
+    const t = setTimeout(() => setHoldIntro(false), 1400); // then the briefing slides in
+    return () => clearTimeout(t);
+  }, [holdIntro]);
   // Developer tools: only on localhost, with ?telemetryDebug=1, or for test participants.
   const [showDevTools] = useState(() => isTelemetryDebugEnabled() || isStudyTestMode());
 
@@ -150,7 +172,7 @@ function GameApp() {
               <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} calcProgress={game.calcProgress} />
             ) : game.gamePhase === GamePhase.Title ? (
               // Start menu (full screen, over a black page)
-              <TitleScreen />
+              <TitleScreen onStart={startFromTitle} />
             ) : game.gamePhase === GamePhase.GameComplete ? (
               // "Game complete!" (full screen), then the final questions
               <GameCompleteScreen />
@@ -166,9 +188,11 @@ function GameApp() {
           <AnimatePresence mode="wait">
             {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.LifeSatisfaction && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && (
               <ModalOverlay exitDelay={0.6}>
-                <AnimatePresence mode="wait">
+                {/* propagate: when the whole overlay leaves, the document inside still
+                    plays its exit (briefings slide off to the right). */}
+                <AnimatePresence mode="wait" propagate>
                   
-                  {game.gamePhase === GamePhase.Intro && (
+                  {game.gamePhase === GamePhase.Intro && !holdIntro && (
                     <IntroModal 
                       key="intro" 
                       onAcknowledge={() => game.setGamePhase(GamePhase.LevelSelect)} 
@@ -224,6 +248,20 @@ function GameApp() {
           {/* "Go full screen" if they left fullscreen during the game */}
           {game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && <FullscreenButton />}
         </GameProvider>
+
+      {/* Curtain lifting after "Start game" (see above) */}
+      <AnimatePresence>
+        {(curtain || holdIntro) && (
+          <motion.div
+            key="curtain"
+            className="fixed inset-0 z-[75] bg-black pointer-events-none"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: curtain ? 1 : 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.1, ease: 'easeInOut' }}
+          />
+        )}
+      </AnimatePresence>
       </UIProvider>
 
       {showDevTools && <DevPanel 

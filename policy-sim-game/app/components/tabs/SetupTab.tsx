@@ -15,6 +15,7 @@ export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: 
   // In the study the ID always comes from the study session, so this screen is
   // only ever the "Loading game…" screen (the form is a fallback).
   const [studyPid] = useState(() => getStudyState().session?.pid ?? null);
+
   
   useEffect(() => {
     track('setup_opened', {});
@@ -46,7 +47,11 @@ export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: 
           Prime Minister Game
         </motion.p>
         <div className="w-64 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-          <motion.div className="h-full bg-pink-600" animate={{ width: `${Math.max(8, Math.round(calcProgress * 100))}%` }} transition={{ ease: 'easeOut' }} />
+          {/* Fills at a steady rate over exactly 1 s. A CSS transform animation runs
+              on the browser's compositor, so it stays smooth even while the
+              game's set-up calculation keeps the page busy. */}
+          <style>{'@keyframes pmg-loadbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }'}</style>
+          <div className="h-full w-full bg-pink-600 origin-left" style={{ animation: 'pmg-loadbar 1s linear forwards' }} />
         </div>
         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest animate-pulse">Loading game…</p>
       </div>

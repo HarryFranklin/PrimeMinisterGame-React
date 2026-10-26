@@ -87,7 +87,8 @@ export default function LifeSatisfactionTab({ onSubmit }: LifeSatisfactionTabPro
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-zinc-950 p-6 overflow-y-auto">
+    // Full screen (no light page border around it).
+    <div className="fixed inset-0 z-[40] flex flex-col items-center justify-center bg-zinc-950 p-6 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

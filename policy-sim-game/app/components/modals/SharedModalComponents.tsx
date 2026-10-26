@@ -180,7 +180,12 @@ export const ModalContent = ({
       custom={slideEntry || slideExit}
       initial="hidden"
       animate="visible"
-      exit="exit"
+      // The exit is given directly (not as a "custom" variant): when a modal is
+      // removed together with its overlay, AnimatePresence would otherwise
+      // drop the custom value and the slide-out would turn into a fade.
+      exit={slideExit
+        ? { x: 800, opacity: 0, transition: { duration: 0.6, ease: easeIn } }
+        : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } }}
       className={`relative w-full ${maxWidth} transition-[max-width] duration-500 ease-in-out`}
     >
       <div className="absolute inset-0 z-0 pointer-events-none">
