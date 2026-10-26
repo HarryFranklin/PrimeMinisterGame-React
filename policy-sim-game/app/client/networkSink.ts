@@ -19,7 +19,9 @@
 //   loads:        [[ts, session_id, app_version], …]  each page load / refresh
 //   flow:         start and end of the game: loading_ms, title_ms (time on the start
 //                 menu), about/options opens and ms, option choices, game_started_at,
-//                 game_complete_ms (time on "Game complete!"), game_ended_at
+//                 game_complete_ms (time on "Game complete!"), game_ended_at,
+//                 fullscreen_ok (did Start game get fullscreen), fullscreen_exits,
+//                 fullscreen_nudges ("Go full screen" clicks), fullscreen_ms (total time in fullscreen)
 //   last:         last deliberate action (where people stopped)
 //   final:        { dwell_ms, ts }   final debrief closed
 // }
@@ -168,7 +170,27 @@ export function networkSink(entry: LoggedEvent) {
     case "game_complete_shown":
       if (!a.flow.game_complete_shown_at) a.flow = { ...a.flow, game_complete_shown_at: entry.ts };
       break;
+    case "fullscreen_requested":
+      if (entry.payload?.source === 'start') a.flow = { ...a.flow, fullscreen_ok: !!entry.payload?.ok };
+      else a.flow = { ...a.flow, fullscreen_nudges: ((a.flow.fullscreen_nudges as number) ?? 0) + 1 };
+      break;
+    case "fullscreen_changed":
+      if (entry.payload?.fullscreen) {
+        a.flow = { ...a.flow, fullscreen_since: entry.ts };
+      } else if (typeof a.flow.fullscreen_since === 'number') {
+        a.flow = {
+          ...a.flow,
+          fullscreen_ms: ((a.flow.fullscreen_ms as number) ?? 0) + (entry.ts - (a.flow.fullscreen_since as number)),
+          fullscreen_exits: ((a.flow.fullscreen_exits as number) ?? 0) + 1,
+          fullscreen_since: null,
+        };
+      }
+      break;
     case "game_complete_continue_clicked":
+      // Close any fullscreen period still running (fullscreen ends here).
+      if (typeof a.flow.fullscreen_since === 'number') {
+        a.flow = { ...a.flow, fullscreen_ms: ((a.flow.fullscreen_ms as number) ?? 0) + (entry.ts - (a.flow.fullscreen_since as number)), fullscreen_since: null };
+      }
       a.flow = { ...a.flow, game_complete_ms: entry.payload?.dwell_ms ?? null, game_ended_at: entry.ts };
       save(true);
       break;

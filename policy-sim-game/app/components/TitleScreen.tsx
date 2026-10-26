@@ -6,6 +6,7 @@ import { GamePhase } from '../utils/types';
 import { PM_PROFILES } from '../utils/pmProfiles';
 import { track } from '../client/telemetry';
 import { safeSetItem } from '@study';
+import { enterFullscreen } from '../client/fullscreen';
 
 /**
  * Start menu: "Prime Minister Game" with Start game / What's this game about? /
@@ -25,8 +26,8 @@ type Options = { textSpeed: 'normal' | 'fast' | 'instant'; sound: 'on' | 'off' }
 const DEFAULT_OPTIONS: Options = { textSpeed: 'normal', sound: 'on' };
 
 const TEXT = {
-  title: 'Prime Minister Game',
-  subtitle: 'Subtitle',
+  title: 'Prime Minister',
+  subtitle: 'Game',
   start: 'Start game',
   about: 'What’s this game about?',
   options: 'Options',
@@ -103,6 +104,8 @@ export default function TitleScreen() {
 
   const start = () => {
     if (leaving) return;
+    // Must happen inside the click: browsers only allow fullscreen then.
+    enterFullscreen('start');
     track('title_start_clicked', {
       ms_on_title: Date.now() - shownAt.current,
       about_opens: opened.current.about,

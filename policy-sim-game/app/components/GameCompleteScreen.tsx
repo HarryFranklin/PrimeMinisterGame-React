@@ -5,6 +5,7 @@ import { useGame } from '../context/GameStateContext';
 import { PM_PROFILES } from '../utils/pmProfiles';
 import { track } from '../client/telemetry';
 import { finishActivity, getStudyState } from '@study';
+import { exitFullscreen } from '../client/fullscreen';
 
 /**
  * "Game complete!" – after the final debrief. A short overview of the four
@@ -32,6 +33,7 @@ export default function GameCompleteScreen() {
     if (leaving) return;
     track('game_complete_continue_clicked', { dwell_ms: Date.now() - shownAt.current });
     setLeaving(true);
+    exitFullscreen(); // the questionnaire is shown in the normal window
     setTimeout(finishActivity, 1000);
   };
 

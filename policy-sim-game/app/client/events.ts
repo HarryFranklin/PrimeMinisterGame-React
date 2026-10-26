@@ -34,6 +34,9 @@ export type TelemetryEvent =
       event: "title_start_clicked";
       payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string };
     }
+  /** Fullscreen: requested by "Start game" or the "Go full screen" button; every switch in/out. */
+  | { event: "fullscreen_requested"; payload: { source: "start" | "nudge"; ok: boolean } }
+  | { event: "fullscreen_changed"; payload: { fullscreen: boolean } }
   /** "Game complete!" screen after the final debrief. */
   | { event: "game_complete_shown"; payload: {} }
   | { event: "game_complete_continue_clicked"; payload: { dwell_ms: number } }

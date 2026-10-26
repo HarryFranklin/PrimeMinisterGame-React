@@ -26,6 +26,8 @@ import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
 import UtilityElicitationOverlay from "./components/modals/UtilityElicitationOverlay";
 import TitleScreen from "./components/TitleScreen";
 import GameCompleteScreen from "./components/GameCompleteScreen";
+import FullscreenButton from "./components/FullscreenButton";
+import { trackFullscreenChanges } from "./client/fullscreen";
 
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase, AxisVariable } from "./utils/types";
@@ -72,6 +74,7 @@ function GameApp() {
     initTelemetry({ appVersion: APP_VERSION });
     startRawCapture();
     startDerivations();
+    const stopFullscreenTracking = trackFullscreenChanges();
 
     const start = Date.now();
     const onExit = () => {
@@ -93,6 +96,7 @@ function GameApp() {
     window.addEventListener("study:leave-warning", onLeaveWarning);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      stopFullscreenTracking();
       window.removeEventListener("pagehide", onExit);
       window.removeEventListener("study:leave-warning", onLeaveWarning);
       document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -217,6 +221,8 @@ function GameApp() {
               </ModalOverlay>
             )}
           </AnimatePresence>
+          {/* "Go full screen" if they left fullscreen during the game */}
+          {game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && <FullscreenButton />}
         </GameProvider>
       </UIProvider>
 
