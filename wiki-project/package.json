@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node ../study-kit/sync.mjs .study-kit --watch -- next dev",
     "prebuild": "node ../study-kit/sync.mjs .study-kit",
+    "postinstall": "node ../study-kit/sync.mjs .study-kit",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
