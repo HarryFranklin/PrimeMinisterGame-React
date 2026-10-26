@@ -5,7 +5,7 @@
 //   node ../study-kit/sync.mjs .study-kit --watch -- next dev
 //        copy, start `next dev`, and re-copy whenever a study-kit file changes
 //        (used by "dev", so study-kit edits show up without restarting)
-import { cpSync, rmSync, writeFileSync, watch } from 'node:fs';
+import { cpSync, rmSync, writeFileSync, watch, readdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -19,9 +19,22 @@ if (!target || target.startsWith('-')) {
 const src = join(dirname(fileURLToPath(import.meta.url)), 'src');
 const dest = resolve(process.cwd(), target);
 
+/** Every file under dir, as paths relative to it. */
+function listFiles(dir, base = dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? listFiles(join(dir, e.name), base) : [join(dir, e.name).slice(base.length + 1)]
+  );
+}
+
+// Copies over the existing folder rather than deleting and re-creating it:
+// deleting the folder confuses editors (VS Code then reports "Cannot find
+// module '@study'" until restarted). Files removed from study-kit/src are
+// removed from the copy too.
 function copy() {
-  rmSync(dest, { recursive: true, force: true });
-  cpSync(src, dest, { recursive: true });
+  cpSync(src, dest, { recursive: true, force: true });
+  const keep = new Set([...listFiles(src), 'DO_NOT_EDIT.md']);
+  for (const f of listFiles(dest)) if (!keep.has(f)) rmSync(join(dest, f), { force: true });
   writeFileSync(join(dest, 'DO_NOT_EDIT.md'), 'Generated copy of /study-kit/src. Edit the originals in /study-kit/src.\n');
 }
 
