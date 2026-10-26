@@ -109,6 +109,8 @@ for (const r of rows) {
       p[`game_${term}_attempts`] = all.filter((a) => a.cycle === term).length;
     }
     p.game_page_loads = act?.loads?.length ?? '';
+    // Start menu and "Game complete!" screen (loading_ms, title_ms, about/options use, option choices, …)
+    for (const [k, v] of Object.entries(act?.flow ?? {})) p[`game_${k}`] = /_at$/.test(k) ? iso(v) : flat(v);
     p.game_minutes = all.length ? ((Math.max(...all.map((a) => a.ended_at ?? 0)) - Math.min(...all.map((a) => a.started_at ?? Infinity))) / 60000).toFixed(1) : '';
 
     all.forEach((a, i) => {

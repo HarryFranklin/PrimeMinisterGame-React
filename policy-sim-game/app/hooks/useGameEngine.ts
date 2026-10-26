@@ -180,6 +180,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const handleSetupComplete = async (id: string) => {
     if (setupStarted.current) return; // React dev mode mounts twice
     setupStarted.current = true;
+    const loadStart = Date.now();
     setIsCalculating(true);
     setCalcProgress(0);
 
@@ -218,8 +219,15 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       difficulty,
     });
 
+    // The difficulty calculation doubles as the "Loading game…" screen; keep it
+    // up for at least 2.5 s so the switch from the questionnaire feels deliberate.
+    const MIN_LOADING_MS = 2500;
+    const elapsed = Date.now() - loadStart;
+    if (elapsed < MIN_LOADING_MS) await new Promise(resolve => setTimeout(resolve, MIN_LOADING_MS - elapsed));
+    track("loading_finished", { duration_ms: Date.now() - loadStart });
+
     setIsCalculating(false);
-    setGamePhase(GamePhase.Intro);
+    setGamePhase(GamePhase.Title);
   };
 
   const gameStateSnapshot = useMemo(() => ({

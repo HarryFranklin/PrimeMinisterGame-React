@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AxisVariable, ElectionCycle, Respondent } from '../../utils/types';
+import { AxisVariable, ElectionCycle, GamePhase, Respondent } from '../../utils/types';
 import { CYCLE_COLORS } from '../../utils/uiHelpers';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { getPMProfile } from '../../utils/pmProfiles';
@@ -11,7 +11,6 @@ import { ModalContent, ModalHeader, DPMMessage } from './SharedModalComponents';
 import { useGame } from '../../context/GameStateContext';
 import { track } from '../../client/telemetry';
 import { useDwellTimer } from '../../client/hooks';
-import { finishActivity } from '@study';
 
 const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
@@ -59,8 +58,8 @@ const OmniConfetti = ({ triggerKey }: { triggerKey: number }) => {
   );
 };
 
-// "Finish" moves the participant on to the post-test questions (shared study
-// screens in /study-kit), which end with the Prolific completion link.
+// "Finish" moves on to the "Game complete!" screen (GameCompleteScreen), which
+// leads to the post-test questions (shared study screens in /study-kit).
 
 const TEXT = {
   header: 'Final Debrief: Your Four Terms',
@@ -82,7 +81,7 @@ const TEXT = {
   hideMeasured: 'Hide',
   principle: 'Governing principle',
   finish: 'Finish',
-  finishing: 'Opening the next part of the study…',
+  finishing: 'Wrapping up your time in office…',
   finishedTitle: 'Thank you for playing',
   celebrate: 'Celebrate',
 };
@@ -94,7 +93,7 @@ const fmt = (n: number) => n.toFixed(2);
 const fmtPct = (n: number) => (n.toFixed(1) === '100.0' ? '100' : n.toFixed(1));
 
 export default function FinalDebriefModal() {
-  const { completedRuns } = useGame();
+  const { completedRuns, setGamePhase } = useGame();
   const [confettiKey, setConfettiKey] = useState(0);
   const [lens, setLens] = useState<ElectionCycle | null>(null);
   const [openDefs, setOpenDefs] = useState<Record<number, boolean>>({});
@@ -147,8 +146,9 @@ export default function FinalDebriefModal() {
     // This event is what marks the participant as completed on the server.
     track('final_debrief_closed', { dwell_ms: dwell.stop() });
     setFinished(true);
-    // Short pause so the player sees the confirmation, then the post-test.
-    setTimeout(finishActivity, 1500);
+    // Short pause so the player sees the confirmation, then the "Game complete!"
+    // screen (which leads on to the final questions).
+    setTimeout(() => setGamePhase(GamePhase.GameComplete), 1500);
   };
 
   const lensRule = lens !== null ? FRAMEWORK_RULES[lens] : null;

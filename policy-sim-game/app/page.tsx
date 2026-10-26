@@ -24,6 +24,8 @@ import LevelSelectTab from "./components/tabs/LevelSelectTab";
 import SetupTab from "./components/tabs/SetupTab";
 import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
 import UtilityElicitationOverlay from "./components/modals/UtilityElicitationOverlay";
+import TitleScreen from "./components/TitleScreen";
+import GameCompleteScreen from "./components/GameCompleteScreen";
 
 import { useGameEngine } from "./hooks/useGameEngine";
 import { GamePhase, AxisVariable } from "./utils/types";
@@ -142,6 +144,12 @@ function GameApp() {
           <main className="flex-1 overflow-hidden p-4 flex flex-col relative">
             {game.gamePhase === GamePhase.Setup ? (
               <SetupTab onSubmit={game.handleSetupComplete} isCalculating={game.isCalculating} calcProgress={game.calcProgress} />
+            ) : game.gamePhase === GamePhase.Title ? (
+              // Start menu (full screen, over a black page)
+              <TitleScreen />
+            ) : game.gamePhase === GamePhase.GameComplete ? (
+              // "Game complete!" (full screen), then the final questions
+              <GameCompleteScreen />
             ) : game.gamePhase === GamePhase.LifeSatisfaction ? (
               <LifeSatisfactionTab onSubmit={game.handleLifeSatisfactionSubmit} />
             ) : game.gamePhase === GamePhase.Intro || game.gamePhase === GamePhase.LevelSelect ? (
@@ -152,7 +160,7 @@ function GameApp() {
           </main>
 
           <AnimatePresence mode="wait">
-            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.LifeSatisfaction && (
+            {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.LifeSatisfaction && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && (
               <ModalOverlay exitDelay={0.6}>
                 <AnimatePresence mode="wait">
                   

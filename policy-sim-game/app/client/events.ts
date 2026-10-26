@@ -19,6 +19,24 @@ export type TelemetryEvent =
   // ---- Session ----
   | { event: "session_started"; payload?: {} }
   | { event: "session_ended"; payload: { duration_ms: number } }
+
+  // ---- Start and end of the game ----
+  /** Black "Loading game…" screen (straight after the questionnaire) finished;
+   * it started duration_ms earlier. */
+  | { event: "loading_finished"; payload: { duration_ms: number } }
+  /** Start menu (Prime Minister Game). */
+  | { event: "title_screen_shown"; payload: {} }
+  | { event: "title_panel_opened"; payload: { panel: "about" | "options" } }
+  | { event: "title_panel_closed"; payload: { panel: "about" | "options"; dwell_ms: number } }
+  /** Options are placeholders for now (saved and tracked, no effect yet). */
+  | { event: "title_option_changed"; payload: { option: string; value: string } }
+  | {
+      event: "title_start_clicked";
+      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string };
+    }
+  /** "Game complete!" screen after the final debrief. */
+  | { event: "game_complete_shown"; payload: {} }
+  | { event: "game_complete_continue_clicked"; payload: { dwell_ms: number } }
   /** Utility intro: one of the four curve explanations clicked (steep / slowing / flat / compare). */
   | { event: "utility_explanation_selected"; payload: { explanation: string } }
   /** Utility intro: a citizen (LS 2/4/6/8) picked to see what a +1 is worth to them. */

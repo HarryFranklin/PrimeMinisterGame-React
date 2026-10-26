@@ -77,6 +77,10 @@ export interface CompletedRun {
 
 export enum GamePhase {
   Setup = 'setup',
+  /** Start menu (Prime Minister Game): after loading, before the welcome briefing. */
+  Title = 'title',
+  /** "Game complete!" end screen, after the final debrief, before the final questions. */
+  GameComplete = 'gameComplete',
   LifeSatisfaction = 'lifeSatisfaction',
   Intro = 'intro',
   LevelSelect = 'levelSelect',

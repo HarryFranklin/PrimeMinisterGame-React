@@ -12,6 +12,9 @@ interface SetupTabProps {
 
 export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: SetupTabProps) {
   const [prolificId, setProlificId] = useState('');
+  // In the study the ID always comes from the study session, so this screen is
+  // only ever the "Loading game…" screen (the form is a fallback).
+  const [studyPid] = useState(() => getStudyState().session?.pid ?? null);
   
   useEffect(() => {
     track('setup_opened', {});
@@ -28,6 +31,27 @@ export default function SetupTab({ onSubmit, isCalculating, calcProgress = 0 }: 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (studyPid || isCalculating) {
+    // Straight from the questionnaire to a black "Loading game…" screen, so it
+    // is obvious the game has started.
+    return (
+      <div className="fixed inset-0 z-[80] bg-black flex flex-col items-center justify-center gap-8 select-none">
+        <motion.p
+          initial={{ opacity: 0, letterSpacing: '0.6em' }}
+          animate={{ opacity: 1, letterSpacing: '0.35em' }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="text-zinc-300 font-black uppercase text-sm"
+        >
+          Prime Minister Game
+        </motion.p>
+        <div className="w-64 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+          <motion.div className="h-full bg-pink-600" animate={{ width: `${Math.max(8, Math.round(calcProgress * 100))}%` }} transition={{ ease: 'easeOut' }} />
+        </div>
+        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest animate-pulse">Loading game…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full bg-zinc-950 p-6">

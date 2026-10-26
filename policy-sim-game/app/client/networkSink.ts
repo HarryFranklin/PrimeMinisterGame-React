@@ -17,6 +17,9 @@
 //   session:      [[ts, event, payload], …]  every deliberate action OUTSIDE a term
 //                 attempt (intro, level select, LS screen, elicitation, final debrief)
 //   loads:        [[ts, session_id, app_version], …]  each page load / refresh
+//   flow:         start and end of the game: loading_ms, title_ms (time on the start
+//                 menu), about/options opens and ms, option choices, game_started_at,
+//                 game_complete_ms (time on "Game complete!"), game_ended_at
 //   last:         last deliberate action (where people stopped)
 //   final:        { dwell_ms, ts }   final debrief closed
 // }
@@ -37,6 +40,7 @@ interface GameActivity {
   path: string[];
   session: [number, string, Json | null][];
   loads: [number, string, string][];
+  flow: Json;
   last: Json | null;
   final: Json | null;
 }
@@ -47,6 +51,7 @@ const MAX_SESSION_EVENTS = 3000;
 
 /** Session-level events worth an immediate save to the server. */
 const SYNC_ON = new Set([
+  "title_start_clicked",
   "intro_proceeded",
   "level_select_continue_clicked",
   "utility_intervention_completed",
@@ -70,6 +75,7 @@ function current(): GameActivity {
       path: saved?.path ?? [],
       session: saved?.session ?? [],
       loads: saved?.loads ?? [],
+      flow: saved?.flow ?? {},
       last: saved?.last ?? null,
       final: saved?.final ?? null,
     };
@@ -132,6 +138,40 @@ export function networkSink(entry: LoggedEvent) {
   }
 
   switch (entry.event) {
+    // ---- Start menu and "Game complete!" (summarised in `flow`) ----
+    case "loading_finished":
+      a.flow = { ...a.flow, loading_ms: entry.payload?.duration_ms ?? null };
+      break;
+    case "title_screen_shown":
+      if (!a.flow.title_shown_at) a.flow = { ...a.flow, title_shown_at: entry.ts };
+      break;
+    case "title_panel_closed": {
+      const key = `${entry.payload?.panel}_ms`;
+      a.flow = { ...a.flow, [key]: ((a.flow[key] as number) ?? 0) + ((entry.payload?.dwell_ms as number) ?? 0) };
+      break;
+    }
+    case "title_option_changed":
+      a.flow = { ...a.flow, [`option_${entry.payload?.option}`]: entry.payload?.value ?? null };
+      break;
+    case "title_start_clicked":
+      a.flow = {
+        ...a.flow,
+        title_ms: entry.payload?.ms_on_title ?? null,
+        about_opens: entry.payload?.about_opens ?? 0,
+        options_opens: entry.payload?.options_opens ?? 0,
+        option_textSpeed: entry.payload?.text_speed ?? null,
+        option_sound: entry.payload?.sound ?? null,
+        game_started_at: entry.ts,
+      };
+      save(true);
+      break;
+    case "game_complete_shown":
+      if (!a.flow.game_complete_shown_at) a.flow = { ...a.flow, game_complete_shown_at: entry.ts };
+      break;
+    case "game_complete_continue_clicked":
+      a.flow = { ...a.flow, game_complete_ms: entry.payload?.dwell_ms ?? null, game_ended_at: entry.ts };
+      save(true);
+      break;
     case "session_started":
       a.loads.push([entry.ts, entry.session_id, entry.app_version ?? "dev"]);
       break;
