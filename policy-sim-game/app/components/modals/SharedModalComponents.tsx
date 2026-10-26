@@ -136,7 +136,7 @@ export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.Reac
     key="overlay"
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
-    exit={{ opacity: 0, transition: { duration: 0.5, delay: exitDelay } }}
+    exit={{ opacity: 0, transition: { duration: 0.625, delay: exitDelay } }}
     className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-900/80 backdrop-blur-md p-2 md:p-4"
   >
     {children}
@@ -156,9 +156,16 @@ const modalVariants: Variants = {
     transition: { duration: 0.6, ease: easeOut }
   },
   exit: (isSliding: boolean) => (isSliding
-    ? { x: 800, opacity: 0, transition: { duration: 0.6, ease: easeIn } }
+    ? slideOut()
     : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } })
 };
+
+/** Slides the whole way off the right of the screen (no fade), so the
+ * briefing is gone before the overlay behind it fades back to the game. */
+const slideOut = () => ({
+  x: typeof window !== 'undefined' ? window.innerWidth : 1600,
+    transition: { duration: 0.9, ease: easeIn },
+});
 
 export const ModalContent = ({
   children,
@@ -184,7 +191,7 @@ export const ModalContent = ({
       // removed together with its overlay, AnimatePresence would otherwise
       // drop the custom value and the slide-out would turn into a fade.
       exit={slideExit
-        ? { x: 800, opacity: 0, transition: { duration: 0.6, ease: easeIn } }
+        ? slideOut()
         : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } }}
       className={`relative w-full ${maxWidth} transition-[max-width] duration-500 ease-in-out`}
     >

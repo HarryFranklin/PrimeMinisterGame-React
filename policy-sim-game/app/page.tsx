@@ -187,7 +187,7 @@ function GameApp() {
 
           <AnimatePresence mode="wait">
             {game.gamePhase !== GamePhase.Playing && game.gamePhase !== GamePhase.LevelSelect && game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.LifeSatisfaction && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && (
-              <ModalOverlay exitDelay={0.6}>
+              <ModalOverlay exitDelay={1.0}>
                 {/* propagate: when the whole overlay leaves, the document inside still
                     plays its exit (briefings slide off to the right). */}
                 <AnimatePresence mode="wait" propagate>
