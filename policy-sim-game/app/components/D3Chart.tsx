@@ -109,7 +109,7 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
     
-    const margin = { top: 25, right: 15, bottom: 40, left: 45 };
+    const margin = { top: 25, right: 15, bottom: 52, left: 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
 
@@ -465,7 +465,7 @@ export default function D3Chart({
         .text('Number of People');
 
       chart.select('.label-x')
-        .attr('x', W / 2).attr('y', H + 38)
+        .attr('x', W / 2).attr('y', H + 42)
         .attr('fill', labelFg)
         .style('text-anchor','middle').style('font-weight','bold')
         .text(getAxisLabel(xAxisType));
