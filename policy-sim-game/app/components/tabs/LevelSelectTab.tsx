@@ -93,7 +93,7 @@ export default function LevelSelectTab() {
                   </div>
                   <div className="min-w-0">
                     <h3 className={`font-black text-xl tracking-tight truncate ${isLocked ? 'text-zinc-500' : 'text-zinc-900'}`}>{profile.name}</h3>
-                    <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${isLocked ? 'text-zinc-400' : profile.colorClass}`}>{profile.philosophy}</p>
+                    <p className={`text-[12px] font-black uppercase tracking-widest mt-1 ${isLocked ? 'text-zinc-400' : profile.colorClass}`}>{profile.philosophy}</p>
                   </div>
                </div>
                
@@ -103,7 +103,7 @@ export default function LevelSelectTab() {
                   </div>
                   
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Target Metric</span>
+                    <span className="text-[12px] font-black uppercase tracking-widest text-zinc-400 block mb-1">Target Metric</span>
                     <strong className="text-sm text-zinc-800">{profile.metric}</strong>
                   </div>
 

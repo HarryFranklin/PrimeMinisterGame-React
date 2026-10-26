@@ -143,28 +143,39 @@ export const ModalOverlay = ({ children, exitDelay = 0 }: { children: React.Reac
   </motion.div>
 );
 
+/**
+ * Briefings that slide across the desk (IntroModal, BriefingModal: slideEntry /
+ * slideExit). One setting for all of them: in from fully off the left edge,
+ * slowing down as it arrives; out past the right edge, speeding up as it
+ * leaves. No fading – the paper stays solid the whole way.
+ * The two curves are mirror images (cubic ease-out / ease-in).
+ */
+const SLIDE = {
+  duration: 0.9, // seconds, both in and out
+  easeIn: [0.33, 1, 0.68, 1] as Easing, // arriving: fast start, gentle stop
+  easeOut: [0.32, 0, 0.67, 0] as Easing, // leaving: gentle start, fast finish
+};
+const screenWidth = () => (typeof window !== 'undefined' ? window.innerWidth : 1600);
+
 const modalVariants: Variants = {
-  hidden: (isSliding: boolean) => ({
-    opacity: 0,
-    x: isSliding ? -800 : 0,
-    scale: isSliding ? 1 : 0.95
-  }),
-  visible: {
+  hidden: (isSliding: boolean) => (isSliding
+    ? { opacity: 1, x: -screenWidth(), scale: 1 }
+    : { opacity: 0, x: 0, scale: 0.95 }),
+  visible: (isSliding: boolean) => ({
     opacity: 1,
     x: 0,
     scale: 1,
-    transition: { duration: 0.6, ease: easeOut }
-  },
-  exit: (isSliding: boolean) => (isSliding
-    ? slideOut()
-    : { opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: easeIn } })
+    transition: isSliding
+      ? { duration: SLIDE.duration, ease: SLIDE.easeIn }
+      : { duration: 0.6, ease: easeOut },
+  }),
 };
 
-/** Slides the whole way off the right of the screen (no fade), so the
- * briefing is gone before the overlay behind it fades back to the game. */
+/** Slides the whole way off the right of the screen, so the briefing is gone
+ * before the overlay behind it fades back to the game. */
 const slideOut = () => ({
-  x: typeof window !== 'undefined' ? window.innerWidth : 1600,
-    transition: { duration: 0.9, ease: easeIn },
+  x: screenWidth(),
+  transition: { duration: SLIDE.duration, ease: SLIDE.easeOut },
 });
 
 export const ModalContent = ({

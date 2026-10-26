@@ -214,7 +214,7 @@ export default function FinalDebriefModal() {
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-bold text-zinc-400">{TEXT.term(i + 1)}</span>
                   <h3 className="font-black text-zinc-900 leading-tight truncate">{profile.name}</h3>
-                  <span className={`text-xs font-bold ${profile.colorClass}`}>{profile.philosophy}</span>
+                  <span className={`text-sm font-bold ${profile.colorClass}`}>{profile.philosophy}</span>
                 </div>
                 <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${won ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                   {won ? TEXT.reElected : TEXT.notReElected}
