@@ -1,0 +1,24 @@
+{
+  // For the editor only: lets VS Code check study-kit/src using the game's
+  // installed packages (React etc.). The apps build from their own copies
+  // (.study-kit) with their own tsconfig, so this file doesn't affect them.
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "typeRoots": ["../policy-sim-game/node_modules/@types"],
+    "paths": {
+      "*": ["../policy-sim-game/node_modules/@types/*", "../policy-sim-game/node_modules/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "*.d.mts"]
+}
