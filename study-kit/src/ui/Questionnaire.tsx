@@ -2,9 +2,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   pagesFor, armText, DISTRIBUTIONS, QUESTIONNAIRE_VERSION,
-  type Item, type Block, type Page, type Phase, type Condition, type Option,
+  type Item, type Block, type Page, type Phase, type Condition, type Option, type GridRow,
 } from '../content/questions';
-import { getCell, setCell, setStage, syncStudy } from '../session';
+import { getCell, setCell, setStage, syncStudy, getStudyState } from '../session';
 import { Markup } from './Markup';
 import { QuestionChart } from './QuestionChart';
 import { ACCENT, BTN_BASE, type Accent } from './theme';
@@ -22,6 +22,27 @@ interface StoredPhase {
   pages: Record<string, { shown_at: number; done_at?: number; dwell_ms?: number }>;
   started_at: number;
   completed_at?: number;
+  /** Row order shown for grids with shuffleRows: { itemId: [rowValue, …] }. */
+  row_orders?: Record<string, string[]>;
+}
+
+/** Rows of a shuffled grid in a fixed random order for this participant: the
+ * same on every page load, different between participants and questions. */
+export function rowOrder(rows: GridRow[], itemId: string, pid: string): string[] {
+  let h = 2166136261;
+  for (const ch of `${pid}:${itemId}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rand = () => {
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const order = rows.map((r) => r.value);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
 }
 
 const isItem = (c: Item | Block): c is Item => 'id' in c;
@@ -60,8 +81,14 @@ export function Questionnaire({
   const shownAt = useRef(Date.now());
   const topRef = useRef<HTMLDivElement>(null);
   const page = pages[pageIndex];
+  const pid = getStudyState().session?.pid ?? 'anon';
+  const rowOrders = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const c of page.content) if ('id' in c && c.type === 'grid' && c.shuffleRows) out[c.id] = rowOrder(c.rows, c.id, pid);
+    return out;
+  }, [page, pid]);
 
-  // Record when each page is first shown.
+  // Record when each page is first shown (and the row order of any shuffled grid on it).
   useEffect(() => {
     shownAt.current = Date.now();
     const prev = getCell<StoredPhase>(cellName);
@@ -74,6 +101,7 @@ export function Questionnaire({
       page_index: pageIndex,
       pages: pagesMeta,
       started_at: prev?.started_at ?? shownAt.current,
+      ...(Object.keys(rowOrders).length ? { row_orders: { ...(prev?.row_orders ?? {}), ...rowOrders } } : {}),
     });
     topRef.current?.scrollIntoView({ block: 'start' });
     setShowErrors(false);
@@ -134,6 +162,7 @@ export function Questionnaire({
               condition={condition}
               accent={accent}
               value={answers[g.item.id]}
+              rowOrder={rowOrders[g.item.id]}
               onChange={(v) => setAnswer(g.item!.id, v)}
               error={showErrors && missing.includes(g.item)}
             />
@@ -233,7 +262,7 @@ function OptionButton({ option, selected, accent, onClick, role = 'radio' }: { o
 }
 
 function ItemView({
-  item, lead = [], renderChart, condition, accent, value, onChange, error,
+  item, lead = [], renderChart, condition, accent, value, rowOrder: order, onChange, error,
 }: {
   item: Item & { num?: number };
   /** Info/charts/tables shown under the number, before the question. */
@@ -242,6 +271,8 @@ function ItemView({
   condition: Condition;
   accent: Accent;
   value: Answer | undefined;
+  /** Grids with shuffleRows: the row values in the order to show them. */
+  rowOrder?: string[];
   onChange: (v: Answer) => void;
   error: boolean;
 }) {
@@ -333,19 +364,65 @@ function ItemView({
       break;
     case 'grid': {
       const v = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Record<string, string>;
-      body = (
+      const rows = order ? order.map((id) => item.rows.find((r) => r.value === id)!).filter(Boolean) : item.rows;
+      const pick = (row: string, opt: string) => onChange({ ...v, [row]: opt });
+      const cards = (
         <div className="flex flex-col gap-3">
-          {item.rows.map((r) => (
-            <div key={r.value} data-row={r.value} className="flex flex-col gap-2 rounded-lg bg-zinc-950 border border-zinc-800 p-3">
-              <p className="text-sm text-zinc-200">{r.label}</p>
-              <div className="flex flex-wrap gap-2">
+          {rows.map((r) => (
+            <div key={r.value} data-row={r.value} className={`flex flex-col gap-2 rounded-lg bg-zinc-950 border p-3 ${error && !v[r.value] ? 'border-red-500/70' : 'border-zinc-800'}`}>
+              <p className="text-sm text-zinc-200">{armText(r.label, condition)}</p>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={armText(r.label, condition)}>
                 {item.options.map((o) => (
-                  <OptionButton key={o.value} option={o} selected={v[r.value] === o.value} accent={accent} onClick={() => onChange({ ...v, [r.value]: o.value })} />
+                  <OptionButton key={o.value} option={o} selected={v[r.value] === o.value} accent={accent} onClick={() => pick(r.value, o.value)} />
                 ))}
               </div>
             </div>
           ))}
         </div>
+      );
+      if (item.layout !== 'matrix') {
+        body = cards;
+        break;
+      }
+      // Matrix: statements down the side, the scale across the top once. Narrow
+      // screens fall back to the cards, where the labels fit.
+      const cols = `minmax(0,1fr) repeat(${item.options.length}, ${item.options.length > 5 ? 50 : 64}px)`;
+      body = (
+        <>
+          <div className="sm:hidden">{cards}</div>
+          <div className="hidden sm:block rounded-lg border border-zinc-800 overflow-hidden">
+            <div className="grid items-end gap-x-1 px-3 py-2 bg-zinc-900 border-b border-zinc-800" style={{ gridTemplateColumns: cols }} aria-hidden>
+              <span />
+              {item.options.map((o) => (
+                <span key={o.value} className="text-[11px] leading-tight text-zinc-400 text-center">{o.label}</span>
+              ))}
+            </div>
+            {rows.map((r, ri) => {
+              const label = armText(r.label, condition);
+              const missingRow = error && !v[r.value];
+              return (
+                <div
+                  key={r.value}
+                  data-row={r.value}
+                  role="radiogroup"
+                  aria-label={label}
+                  className={`grid items-center gap-x-1 px-3 py-2.5 border-l-2 ${missingRow ? 'border-red-500 bg-red-500/10' : `border-transparent ${ri % 2 ? 'bg-zinc-950' : 'bg-zinc-900/40'}`}`}
+                  style={{ gridTemplateColumns: cols }}
+                >
+                  <p className="text-sm text-zinc-200 pr-3">{label}</p>
+                  {item.options.map((o) => {
+                    const sel = v[r.value] === o.value;
+                    return (
+                      <button key={o.value} type="button" role="radio" aria-checked={sel} aria-label={o.label} onClick={() => pick(r.value, o.value)} className="flex justify-center py-1 cursor-pointer group">
+                        <span className={`w-5 h-5 rounded-full border-2 transition-colors ${sel ? ACCENT[accent].dot : 'border-zinc-600 group-hover:border-zinc-300'}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </>
       );
       break;
     }

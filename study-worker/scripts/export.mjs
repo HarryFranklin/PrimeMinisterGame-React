@@ -6,7 +6,9 @@
 // Writes to ./exports/<date-time>/ (git-ignored):
 //   participants.csv   one row per participant: status, timings, consent,
 //                      SCORES (pre_numeracy, pre_lo1, post_lo1…post_lo4,
-//                      post_total + one score_ column per item), then every
+//                      post_total + one score_ column per item), EXPERIENCE
+//                      SCALES (post_ues_*, post_imi_*, pre/post_conf_mean,
+//                      conf_change_*; see study-kit/scales.mjs), then every
 //                      baseline (pre_*) and post-test (post_*) answer
 //   game_attempts.csv  one row per game term attempt, in the order played
 //                      (attempt_seq), incl. one still in progress (complete=false):
@@ -25,6 +27,7 @@ import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { scorePhase, maxScores, KEY } from './score.mjs';
+import { scoreScales } from '../../study-kit/scales.mjs';
 
 const remote = !process.argv.includes('--local');
 const cmd = `npx wrangler d1 execute policy-sim-telemetry ${remote ? '--remote' : '--local'} --json --command "SELECT * FROM participants ORDER BY id"`;
@@ -40,7 +43,8 @@ const flat = (v) => (v === null || v === undefined ? '' : Array.isArray(v) ? v.j
 const MULTI = new Set();
 
 /** Questionnaire answers → columns: grids become one column per row (q_row); multi-selects are a|b
- * plus one 1/0 column per option (q__option, e.g. pre_gaming_types__puzzle). */
+ * plus one 1/0 column per option (q__option, e.g. pre_gaming_types__puzzle); shuffled grids add
+ * q_order (the row order shown). */
 function answerCols(prefix, cell) {
   const cols = {};
   for (const [id, v] of Object.entries(cell?.answers ?? {})) {
@@ -51,7 +55,24 @@ function answerCols(prefix, cell) {
       for (const o of v) cols[`${prefix}${id}__${o}`] = 1;
     }
   }
+  // Shuffled grids: the row order this person saw, e.g. post_ues_order = rw2|fa1|…
+  for (const [id, order] of Object.entries(cell?.row_orders ?? {})) cols[`${prefix}${id}_order`] = order.join('|');
   for (const [page, m] of Object.entries(cell?.pages ?? {})) cols[`${prefix}page_${page}_ms`] = m?.dwell_ms ?? '';
+  return cols;
+}
+
+/** Self-rated understanding, post minus pre, per learning objective and overall. */
+function confidenceChange(pre, post) {
+  const cols = {};
+  if (!pre || !post) return cols;
+  const diffs = [];
+  for (const lo of ['lo1', 'lo2', 'lo3', 'lo4']) {
+    const a = Number(pre[lo]), b = Number(post[lo]);
+    const ok = pre[lo] !== undefined && post[lo] !== undefined;
+    cols[`conf_change_${lo}`] = ok ? b - a : '';
+    if (ok) diffs.push(b - a);
+  }
+  cols.conf_change_mean = diffs.length === 4 ? diffs.reduce((x, y) => x + y, 0) / 4 : '';
   return cols;
 }
 
@@ -81,6 +102,9 @@ for (const r of rows) {
     answer_key: KEY.version,
     ...scorePhase('pre', pre?.answers),
     ...scorePhase('post', post?.answers),
+    ...scoreScales('pre', pre?.answers),
+    ...scoreScales('post', post?.answers),
+    ...confidenceChange(pre?.answers?.conf, post?.answers?.conf),
     ...answerCols('pre_', pre),
     ...answerCols('post_', post),
   });

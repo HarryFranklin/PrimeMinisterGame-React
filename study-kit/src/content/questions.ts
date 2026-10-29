@@ -16,7 +16,7 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.5 (22 Oct 2026, draft)';
+export const QUESTIONNAIRE_VERSION = 'q-0.6 (29 Oct 2026, draft)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -26,6 +26,12 @@ export type ArmText = string | Record<Condition, string>;
 export interface Option {
   value: string;
   label: string;
+}
+
+/** A statement in a grid; its wording can differ between arms. */
+export interface GridRow {
+  value: string;
+  label: ArmText;
 }
 
 interface ItemBase {
@@ -55,7 +61,18 @@ export type Item =
       alternatives?: Option[];
     })
   | (ItemBase & { type: 'scale'; min: number; max: number; lowLabel: string; highLabel: string; alternatives?: Option[] })
-  | (ItemBase & { type: 'grid'; rows: Option[]; options: Option[] }) // one answer per row
+  | (ItemBase & {
+      type: 'grid'; // one answer per row
+      rows: GridRow[];
+      options: Option[];
+      /** 'matrix': statements down the side, the answer scale across the top
+       * once (for agree/disagree batteries). Default 'cards': each row in its
+       * own box with its own buttons (for rows whose answers are long). */
+      layout?: 'cards' | 'matrix';
+      /** Show the rows in a random order, fixed per participant. The order
+       * shown is saved with the answers (`row_orders`). */
+      shuffleRows?: boolean;
+    })
   | (ItemBase & { type: 'text'; multiline?: boolean; /** Default 200 (one line) / 1500 (multiline). */ maxLength?: number });
 
 /** Non-question content (info, charts, tables). Shown inside the box of the
@@ -117,6 +134,149 @@ const SOCIETIES_ABC: Option[] = [...SOCIETIES_AB, { value: 'C', label: 'Society 
 const SOCIETIES_12: Option[] = [
   { value: '1', label: 'Society 1' },
   { value: '2', label: 'Society 2' },
+];
+
+// ---------------------------------------------------------------------------
+// Experience questionnaire (validated scales; see the "Experience
+// questionnaire" doc). Row ids name the subscale so the export can score them
+// (study-kit/scales.mjs). Keep each scale's own response format.
+// ---------------------------------------------------------------------------
+const nums = (labels: string[], first = 1): Option[] => labels.map((label, i) => ({ value: String(first + i), label }));
+/** UES-SF: 1–5 agreement. */
+const AGREE5_UES = nums(['Strongly disagree', 'Disagree', 'Neither agree nor disagree', 'Agree', 'Strongly agree']);
+/** IMI: 1–7, not at all true – very true. */
+const TRUE7 = nums(['1 – Not at all true', '2', '3', '4 – Somewhat true', '5', '6', '7 – Very true']);
+/** miniPXI: −3 to +3 (stored as -3…3), with the PXI's own labels. */
+const PXI7 = nums(['Strongly disagree', 'Disagree', 'Slightly disagree', 'Neither agree nor disagree', 'Slightly agree', 'Agree', 'Strongly agree'], -3);
+/** Self-rated understanding: 1–5. */
+const WELL5 = nums(['1 – Not at all well', '2', '3', '4', '5 – Very well']);
+
+/** Text that names the activity: "the game" / "the guide". */
+const arm = (game: string, wiki: string) => ({ game, wiki });
+
+/** Part D: one item per learning objective, asked before and after (same id in both). */
+const CONFIDENCE_PAGE: Page = {
+  id: 'confidence',
+  title: 'How confident are you?',
+  content: [
+    {
+      id: 'conf',
+      type: 'grid',
+      layout: 'matrix',
+      prompt: 'How well could you explain or do each of these right now?',
+      help: 'There are no right or wrong answers.',
+      options: WELL5,
+      rows: [
+        { value: 'lo1', label: 'Read a chart of a society’s life satisfaction scores and say which society has the higher average, the higher floor, or more inequality' },
+        { value: 'lo2', label: 'Explain how judging a country by its average differs from judging it by how its worst-off people are doing' },
+        { value: 'lo3', label: 'Explain why a one-point rise in life satisfaction can be worth more to some people than to others' },
+        { value: 'lo4', label: 'Explain the difference between how people value their own lives and how they value other people’s lives when judging policy' },
+      ],
+    },
+  ],
+};
+
+/** Parts A–C (+ E in the game arm): asked straight after the game / wiki, before the knowledge questions. */
+const EXPERIENCE_PAGES: Page[] = [
+  {
+    // Part A – User Engagement Scale short form (O'Brien, Cairns & Hall 2018). fa = focused
+    // attention, pu = perceived usability (reverse-scored), ae = aesthetic appeal, rw = reward.
+    id: 'engagement',
+    title: 'Your experience',
+    content: [
+      {
+        id: 'ues',
+        type: 'grid',
+        layout: 'matrix',
+        shuffleRows: true,
+        prompt: arm('Thinking about the game you just played, how much do you agree with each statement?', 'Thinking about the guide you just read, how much do you agree with each statement?'),
+        options: AGREE5_UES,
+        rows: [
+          { value: 'fa1', label: 'I lost myself in this experience.' },
+          { value: 'fa2', label: arm('The time I spent using the game just slipped away.', 'The time I spent using the guide just slipped away.') },
+          { value: 'fa3', label: 'I was absorbed in this experience.' },
+          { value: 'pu1', label: arm('I felt frustrated while using the game.', 'I felt frustrated while using the guide.') },
+          { value: 'pu2', label: arm('I found the game confusing to use.', 'I found the guide confusing to use.') },
+          { value: 'pu3', label: arm('Using the game was taxing.', 'Using the guide was taxing.') },
+          { value: 'ae1', label: arm('The game was attractive.', 'The guide was attractive.') },
+          { value: 'ae2', label: arm('The game was aesthetically appealing.', 'The guide was aesthetically appealing.') },
+          { value: 'ae3', label: arm('The game appealed to my visual senses.', 'The guide appealed to my visual senses.') },
+          { value: 'rw1', label: arm('Using the game was worthwhile.', 'Using the guide was worthwhile.') },
+          { value: 'rw2', label: 'My experience was rewarding.' },
+          { value: 'rw3', label: 'I felt interested in this experience.' },
+        ],
+      },
+    ],
+  },
+  {
+    // Part B – Intrinsic Motivation Inventory subsets: ie = interest/enjoyment, pc = perceived
+    // competence (reworded to understanding the ideas), vu = value/usefulness. ie3, pc3 reversed.
+    // Part C – Paas (1992) mental effort.
+    id: 'motivation',
+    title: 'Your experience',
+    content: [
+      {
+        id: 'imi',
+        type: 'grid',
+        layout: 'matrix',
+        shuffleRows: true,
+        prompt: arm('How true is each statement for you, thinking about the game?', 'How true is each statement for you, thinking about the guide?'),
+        options: TRUE7,
+        rows: [
+          { value: 'ie1', label: arm('I enjoyed playing the game very much.', 'I enjoyed reading the guide very much.') },
+          { value: 'ie2', label: arm('Playing the game was fun to do.', 'Reading the guide was fun to do.') },
+          { value: 'ie3', label: arm('I thought the game was boring.', 'I thought the guide was boring.') },
+          { value: 'ie4', label: arm('I would describe the game as very interesting.', 'I would describe the guide as very interesting.') },
+          { value: 'pc1', label: arm('After working through the game for a while, I felt pretty competent with its ideas.', 'After working through the guide for a while, I felt pretty competent with its ideas.') },
+          { value: 'pc2', label: arm('I am satisfied with how well I understood the ideas in the game.', 'I am satisfied with how well I understood the ideas in the guide.') },
+          { value: 'pc3', label: arm('I couldn’t follow the ideas in the game very well.', 'I couldn’t follow the ideas in the guide very well.') },
+          { value: 'vu1', label: arm('I believe the game could be of some value to me.', 'I believe the guide could be of some value to me.') },
+          { value: 'vu2', label: arm('I think the game is useful for understanding how a government could judge whether its policies are working.', 'I think the guide is useful for understanding how a government could judge whether its policies are working.') },
+          { value: 'vu3', label: arm('I think the game could help me think critically about how policies affect different groups in society.', 'I think the guide could help me think critically about how policies affect different groups in society.') },
+        ],
+      },
+      {
+        id: 'effort',
+        type: 'scale',
+        min: 1,
+        max: 9,
+        lowLabel: 'Very, very low mental effort',
+        highLabel: 'Very, very high mental effort',
+        prompt: arm('How much mental effort did you invest in the game?', 'How much mental effort did you invest in the guide?'),
+      },
+    ],
+  },
+  {
+    // Part E – miniPXI (Haider et al. 2022), one item per construct, + the custom impact item.
+    id: 'about_game',
+    title: 'About the game',
+    onlyFor: 'game',
+    content: [
+      {
+        id: 'pxi',
+        type: 'grid',
+        unnumbered: true, // game arm only: unnumbered so shared questions keep the same numbers in both arms
+        layout: 'matrix',
+        shuffleRows: true,
+        prompt: 'How much do you agree with each statement about the game?',
+        options: PXI7,
+        rows: [
+          { value: 'aa', label: 'I liked the look and feel of the game.' },
+          { value: 'ch', label: 'The game was not too easy and not too hard to play.' },
+          { value: 'ec', label: 'It was easy to know how to perform actions in the game.' },
+          { value: 'gr', label: 'The goals of the game were clear to me.' },
+          { value: 'pf', label: 'The game gave clear feedback on my progress towards the goals.' },
+          { value: 'aut', label: 'I felt free to play the game in my own way.' },
+          { value: 'cur', label: 'I wanted to explore how the game evolved.' },
+          { value: 'imm', label: 'I was fully focused on the game.' },
+          { value: 'mas', label: 'I felt I was good at playing this game.' },
+          { value: 'mea', label: 'Playing the game was meaningful to me.' },
+          { value: 'enj', label: 'I had a good time playing this game.' },
+        ],
+      },
+      { id: 'exp_impact', type: 'single', unnumbered: true, options: AGREE5, prompt: 'I felt that my decisions had a meaningful impact on the outcomes in the game.' },
+    ],
+  },
 ];
 
 // ============================================================================
@@ -299,6 +459,7 @@ export const PRETEST: Page[] = [
       },
     ],
   },
+  CONFIDENCE_PAGE,
   {
     // Game group only, and last, so it never shifts other question numbers.
     id: 'gaming',
@@ -351,6 +512,7 @@ export const PRETEST: Page[] = [
 // POST-TEST
 // ============================================================================
 export const POSTTEST: Page[] = [
+  ...EXPERIENCE_PAGES,
   {
     id: 'charts_post',
     title: 'Reading charts',
@@ -542,6 +704,7 @@ export const POSTTEST: Page[] = [
       },
     ],
   },
+  CONFIDENCE_PAGE,
   {
     id: 'your_views',
     title: 'Your views',
@@ -576,81 +739,6 @@ export const POSTTEST: Page[] = [
         required: false,
         prompt: 'If so, which, and why?',
         help: 'Examples: NHS funding, education, civil rights, national defence spending, welfare and public health spending, environmental policy.',
-      },
-    ],
-  },
-  {
-    id: 'experience',
-    title: 'Your experience',
-    intro: 'How much do you agree with each statement?',
-    content: [
-      { id: 'exp_control', type: 'single', options: AGREE5, prompt: 'I felt in control of my learning experience.' },
-      {
-        id: 'exp_enjoy',
-        type: 'single',
-        options: AGREE5,
-        prompt: 'I found the learning material to be enjoyable.',
-      },
-      {
-        id: 'exp_free_time',
-        type: 'single',
-        options: AGREE5,
-        prompt: { game: 'I would play a game like this in my own free time.', wiki: 'I would read a guide like this in my own free time.' },
-      },
-      {
-        id: 'exp_attention',
-        type: 'single',
-        options: AGREE5,
-        prompt: {
-          game: 'The game held my attention better than a more traditional method of education would have.',
-          wiki: 'The guide held my attention well.',
-        },
-      },
-      {
-        id: 'exp_critical',
-        type: 'single',
-        options: AGREE5,
-        prompt: {
-          game: 'The game made me think critically about how policies affect different groups in society.',
-          wiki: 'The guide made me think critically about how policies affect different groups in society.',
-        },
-      },
-      {
-        id: 'exp_relevant',
-        type: 'single',
-        options: AGREE5,
-        prompt: {
-          game: 'The scenarios presented in the game felt relevant to real-world issues.',
-          wiki: 'The examples presented in the guide felt relevant to real-world issues.',
-        },
-      },
-      {
-        id: 'exp_thought',
-        type: 'single',
-        options: AGREE5,
-        prompt: 'I found the experience thought-provoking, even if it was not always ‘fun’.',
-      },
-      {
-        id: 'exp_clear',
-        type: 'single',
-        options: AGREE5,
-        prompt: {
-          game: 'The game’s rules and feedback were clear and easy to understand.',
-          wiki: 'The guide’s explanations were clear and easy to understand.',
-        },
-      },
-      {
-        id: 'exp_overwhelm',
-        type: 'single',
-        options: AGREE5,
-        prompt: 'I did not feel overwhelmed by the amount of information presented on screen at one time.',
-      },
-      {
-        id: 'exp_impact',
-        type: 'single',
-        options: AGREE5,
-        onlyFor: 'game',
-        prompt: 'I felt that my decisions had a meaningful impact on the outcomes in the game.',
       },
     ],
   },

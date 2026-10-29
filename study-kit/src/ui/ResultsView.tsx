@@ -114,7 +114,7 @@ function MarkedItem({ item, result, lead, condition, accent }: { item: Item & { 
           const ok = given[r.value] !== undefined && given[r.value] === correct[r.value];
           return (
             <div key={r.value} className="rounded-lg bg-zinc-950 border border-zinc-800 p-3 text-sm flex flex-col gap-1">
-              <p className="text-zinc-200">{r.label}</p>
+              <p className="text-zinc-200">{armText(r.label, condition)}</p>
               <p className="text-zinc-300">
                 <Tick ok={ok} /> Your answer: <span className="font-semibold text-zinc-100">{label(given[r.value])}</span>
                 {!ok && <> · Correct answer: <span className="font-semibold text-emerald-400">{label(correct[r.value])}</span></>}

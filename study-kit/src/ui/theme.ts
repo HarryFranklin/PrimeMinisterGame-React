@@ -8,6 +8,7 @@ export const ACCENT = {
     check: 'accent-pink-600',
     text: 'text-pink-400',
     chip: 'bg-pink-600 border-pink-500 text-white',
+    dot: 'bg-pink-600 border-pink-600 ring-2 ring-pink-600/30',
   },
   indigo: {
     button: 'bg-indigo-600 hover:bg-indigo-700 text-white',
@@ -15,6 +16,7 @@ export const ACCENT = {
     check: 'accent-indigo-600',
     text: 'text-indigo-400',
     chip: 'bg-indigo-600 border-indigo-500 text-white',
+    dot: 'bg-indigo-600 border-indigo-600 ring-2 ring-indigo-600/30',
   },
 } as const;
 
