@@ -4,6 +4,8 @@ import { CYCLE_COLORS, CYCLE_TEXT_COLOR_CLASS } from './uiHelpers';
 export interface PMProfile {
   cycle: ElectionCycle;
   name: string;
+  /** Campaign slogan: says in a few words what this PM is judged on. */
+  slogan: string;
   philosophy: string;
   governance: string;
   metric: string;
@@ -25,7 +27,8 @@ export interface PMProfile {
 export const PM_PROFILES: PMProfile[] = [
   {
     cycle: ElectionCycle.Benthamite,
-    name: "PM Victoria Sterling",
+    name: "PM Avery Ridge",
+    slogan: "Lift the average",
     philosophy: "Utilitarian Growth",
     governance: "I will govern for the majority. A rising tide lifts all boats — my job is to maximise total national happiness, even if some are left behind.",
     metric: "National Average Life Satisfaction",
@@ -35,7 +38,8 @@ export const PM_PROFILES: PMProfile[] = [
   },
   {
     cycle: ElectionCycle.Rawlsian,
-    name: "PM Amara Okafor",
+    name: "PM Amara Lowe",
+    slogan: "Raise the floor",
     philosophy: "Social Justice",
     governance: "A society is judged by how it treats its most vulnerable, not its most fortunate. I will raise the floor before I ever worry about the ceiling.",
     metric: "Minimum Wellbeing Baseline",
@@ -45,7 +49,8 @@ export const PM_PROFILES: PMProfile[] = [
   },
   {
     cycle: ElectionCycle.SocietalUtility,
-    name: "PM Eleanor Croft",
+    name: "PM Eleanor Shepherd",
+    slogan: "Others first",
     philosophy: "Social Cohesion",
     governance: "When you're responsible for others, you protect them first. I'll govern by the values people hold when deciding for their fellow citizens: lift the worst-off before adding to the comfortable.",
     metric: "National Fairness Index",
@@ -55,7 +60,8 @@ export const PM_PROFILES: PMProfile[] = [
   },
   {
     cycle: ElectionCycle.PersonalUtility,
-    name: "PM Julian Thorne",
+    name: "PM Owen Way",
+    slogan: "Your life, your way",
     philosophy: "Individual Liberty",
     governance: "Nobody knows your life better than you do. I'll govern by how people value their own lives, and respect the choices they'd make for themselves.",
     metric: "National Personal Satisfaction",
