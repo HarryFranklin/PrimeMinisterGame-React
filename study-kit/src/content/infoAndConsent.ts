@@ -26,7 +26,7 @@ export interface InfoSheet {
 export interface ConsentForm {
   version: string;
   projectTitle: string;
-  srecReference: string; // fill in once ethics approves
+  srecReference: 'COMSC/Ethics/2026/051',
   leadResearcher: string;
   /** One tick box per statement; all must be ticked to continue. Keep ids
    * stable (c1, c2, …) – they're the keys stored in the consent record. */
@@ -36,7 +36,7 @@ export interface ConsentForm {
 export type StudyMode = 'live' | 'pilot' | 'test';
 
 const LIVE_SHEET: InfoSheet = {
-  version: 'main-1.0 (13 Oct 2026)',
+  version: 'main-1.1 (2 Nov 2026)',
   title: "Participant Information Sheet",
   subtitle: "Using Serious Games to Improve Public Comprehension of Utility Frameworks (Main Study)",
   intro: [
@@ -77,7 +77,7 @@ const LIVE_SHEET: InfoSheet = {
       },
       {
         "kind": "p",
-        "text": "If you close your browser before finishing, any responses you have already given may still be used in the study unless you ask us to remove them. You can ask for your data to be removed within [14] days of taking part by contacting the Lead Researcher with your Platform ID. After that, the link between your Platform ID and your responses is deleted, so your data can no longer be identified or withdrawn."
+        "text": "If you close your browser before finishing, any responses you have already given may still be used in the study unless you ask us to remove them. You can ask for your data to be removed within 14 days of taking part by contacting the Lead Researcher with your Platform ID. After that, the link between your Platform ID and your responses is deleted, so your data can no longer be identified or withdrawn."
       }
     ]
   },
@@ -94,7 +94,18 @@ const LIVE_SHEET: InfoSheet = {
       },
       {
         "kind": "p",
-        "text": "**Main task (about 35–50 minutes):** you will be randomly assigned (like flipping a coin) to either play an interactive web-based policy game or read a short online guide covering the same topics. Some people take longer than others, particularly with the game, which is fine – please work at your own pace. Afterwards, you will answer questions about the topics and your experience."
+        "text": "**Main task (about 35–50 minutes):** you will be randomly assigned (like flipping a coin) to one of two activities:"
+      },
+      {
+        "kind": "ul",
+        "items": [
+          "**The game:** you play a newly elected Prime Minister across four short levels. In each level you choose policies and see how they change the life satisfaction of a simulated population, shown through charts and comments from individual citizens. Each level asks you to govern with a different goal, for example raising average life satisfaction or protecting the people who are worst off. At the end of each term you review what happened, and a short “press conference” asks you about your goals and decisions. Before the last two levels, you will also make six short either/or choices between a safe option and a risky one: three on behalf of a group of citizens, and three about an imaginary situation in your own life.",
+          "**The guide:** you read a short online guide (a wiki) that explains the same ideas using text and charts."
+        ]
+      },
+      {
+        "kind": "p",
+        "text": "Both run in your web browser and nothing needs to be installed. Some people take longer than others, particularly with the game, which is fine – please work at your own pace. Afterwards, you will answer questions about the topics and your experience. At the end, you can choose to see which of your answers were correct."
       },
       {
         "kind": "p",
@@ -107,7 +118,7 @@ const LIVE_SHEET: InfoSheet = {
     "blocks": [
       {
         "kind": "p",
-        "text": "Yes. You will receive at least £10 for completing the study, paid via the recruitment platform or as an electronic voucher. Everyone is paid the same, whichever group you are in and however long the task takes you."
+        "text": "Yes. You will receive £12 for completing the study, paid through Prolific. Everyone is paid the same, whichever group you are in and however long the task takes you."
       }
     ]
   },
@@ -143,7 +154,7 @@ const LIVE_SHEET: InfoSheet = {
     "blocks": [
       {
         "kind": "p",
-        "text": "By participating, you will provide your Platform ID, demographic data (age, income, occupation, sex/gender, political leaning) and your self-reported life satisfaction. If you are paid by electronic voucher, we will also ask for your email address, solely to send it. Your email address will be stored separately from your responses and deleted once the voucher has been sent. All personal data will be anonymised."
+        "text": "By participating, you will provide your Platform ID, demographic data (age, income, occupation, sex/gender, political leaning) and your self-reported life satisfaction. All personal data will be anonymised."
       },
       {
         "kind": "p",
@@ -171,7 +182,7 @@ const LIVE_SHEET: InfoSheet = {
       },
       {
         "kind": "p",
-        "text": "Cardiff University will share your Platform ID with the recruitment platform, solely to verify task completion and process your payment. If you are paid by electronic voucher, your email address may be shared with the voucher provider, solely to send your voucher. No other Personal Data will be shared with any third party, except where required as part of a research integrity investigation (for example, to verify that study data has not been fabricated)."
+        "text": "Cardiff University will share your Platform ID with the recruitment platform, solely to verify task completion and process your payment. No other Personal Data will be shared with any third party, except where required as part of a research integrity investigation (for example, to verify that study data has not been fabricated)."
       },
       {
         "kind": "p",
@@ -209,7 +220,7 @@ const LIVE_SHEET: InfoSheet = {
     "blocks": [
       {
         "kind": "p",
-        "text": "If you have any concerns or complaints, please contact Harry Franklin in the first instance. If your concern is not managed to your satisfaction, please contact the Cardiff University School of Computational and Mathematical Sciences Research Ethics Committee (comat-ethics@cardiff.ac.uk)"
+        "text": "If you have any concerns or complaints, please contact Harry Franklin (FranklinH@cardiff.ac.uk) in the first instance. If your concern is not managed to your satisfaction, please contact the Cardiff University School of Computational and Mathematical Sciences Research Ethics Committee (comat-ethics@cardiff.ac.uk)"
       },
       {
         "kind": "p",
@@ -264,7 +275,7 @@ const LIVE_SHEET: InfoSheet = {
 };
 
 const PILOT_SHEET: InfoSheet = {
-  version: 'pilot-1.0 (13 Oct 2026)',
+  version: 'pilot-1.1 (2 Nov 2026)',
   title: "Participant Information Sheet",
   subtitle: "Using Serious Games to Improve Public Comprehension of Utility Frameworks (Usability, Playtesting & Instrument Piloting)",
   intro: [
@@ -321,14 +332,14 @@ const PILOT_SHEET: InfoSheet = {
     "blocks": [
       {
         "kind": "p",
-        "text": "Taking part involves one one-to-one session with the researcher, either in person at Cardiff University or online via Microsoft Teams, whichever suits you."
+        "text": "Taking part involves one one-to-one session with the researcher, either in person at Cardiff University or online via Microsoft Teams, whichever suits you. If you take part online, you will need a desktop or laptop computer, as the game does not work on mobile phones or tablets."
       },
       {
         "kind": "ul",
         "items": [
-          "**Pilot the game and/or reading materials:** play a prototype of the game, read the text-based guide used for the study’s comparison group, or both, and point out anything confusing or hard to use.",
+		"**Pilot the game and/or reading materials:** play a prototype of a game in which you are Prime Minister, choosing policies across four short levels and seeing how they change the life satisfaction of a simulated population; read the text-based guide used for the study’s comparison group, which explains the same ideas in text and charts; or both. Point out anything confusing or hard to use.",
           "**Pilot the questionnaires:** complete draft versions of the baseline and post-task questions and comment on their wording, clarity and length. Your answers are used only to improve the questions and are not analysed as study data.",
-          "**Give feedback:** a short informal chat about what did and didn’t work."
+          "**Give feedback:** a short informal discussion (about 10–15 minutes) about your experience. Topics include your first impressions; anything that was confusing or hard to use; whether the instructions, charts and feedback were clear; how difficult and how long the activity felt; what you think the game or guide was trying to teach; whether any questions were unclear, ambiguous or too long; and any technical problems. The researcher will take written notes; the discussion will not be audio or video recorded."
         ]
       },
       {
@@ -419,7 +430,7 @@ const PILOT_SHEET: InfoSheet = {
       },
       {
         "kind": "p",
-        "text": "All de-identified data and information will be kept for a minimum of 5 years after the end of the project or publication of findings arising from it, whichever is later, in accordance with the University's Research Records Retention Schedule. We intend to release this anonymised data into the public domain (for example, via an open-access data repository), where it may be retained indefinitely and used for purposes beyond this project."
+        "text": "Your anonymised feedback and notes will be kept securely by the research team for a minimum of 5 years after the end of the project or publication of findings arising from it, whichever is later, in accordance with the University's Research Records Retention Schedule. Because the pilot is only used to test and improve the study materials, this data will not be released as a dataset or placed in a data repository."
       },
       {
         "kind": "p",
@@ -427,11 +438,7 @@ const PILOT_SHEET: InfoSheet = {
       },
       {
         "kind": "p",
-        "text": "Participants will not be identified in any write-up, report, publication or presentation arising from this project."
-      },
-      {
-        "kind": "p",
-        "text": "It is intended that verbatim quotes from participants will be used in any subsequent write-up, report or publication, though participants will not be identifiable from such."
+        "text": "Anonymous quotes from your feedback may be used in the write-up, but you will not be identifiable from them."
       }
     ]
   },
@@ -440,7 +447,7 @@ const PILOT_SHEET: InfoSheet = {
     "blocks": [
       {
         "kind": "p",
-        "text": "If you have any concerns or complaints, please contact Harry Franklin in the first instance. If your concern is not managed to your satisfaction, please contact the Cardiff University School of Computational and Mathematical Sciences Research Ethics Committee (comat-ethics@cardiff.ac.uk)"
+        "text": "If you have any concerns or complaints, please contact Harry Franklin (FranklinH@cardiff.ac.uk) in the first instance. If your concern is not managed to your satisfaction, please contact the Cardiff University School of Computational and Mathematical Sciences Research Ethics Committee (comat-ethics@cardiff.ac.uk)"
       },
       {
         "kind": "p",
@@ -495,22 +502,22 @@ const PILOT_SHEET: InfoSheet = {
 };
 
 const LIVE_CONSENT: ConsentForm = {
-  version: 'main-1.0 (13 Oct 2026)',
+  version: 'main-1.1 (2 Nov 2026)',
   projectTitle: 'Using Serious Games to Improve Public Comprehension of Utility Frameworks',
   srecReference: '',
   leadResearcher: 'Harry Franklin',
   statements: [
   {
     "id": "c1",
-    "text": "I confirm that I have read the information sheet dated 13th October 2026 version 1.0 for the above research project."
+    "text": "I confirm that I have read the information sheet dated 2nd November 2026 version 1.1 for the above research project."
   },
   {
     "id": "c2",
-    "text": "I confirm that I have understood the information sheet dated 13th October 2026 version 1.0 for the above research project and that I have had the opportunity to ask questions and that these have been answered satisfactorily."
+    "text": "I confirm that I have understood the information sheet dated 2nd November 2026 version 1.1 for the above research project and that I have had the opportunity to ask questions and that these have been answered satisfactorily."
   },
   {
     "id": "c3",
-    "text": "I understand that my participation is voluntary and I am free to withdraw at any time without giving a reason and without any adverse consequences. I understand that responses I have already given may still be used unless I ask for them to be removed within [14] days of taking part."
+    "text": "I understand that my participation is voluntary and I am free to withdraw at any time without giving a reason and without any adverse consequences. I understand that responses I have already given may still be used unless I ask for them to be removed within 14 days of taking part."
   },
   {
     "id": "c4",
@@ -518,7 +525,7 @@ const LIVE_CONSENT: ConsentForm = {
   },
   {
     "id": "c5",
-    "text": "I understand that my personal information (demographic data, i.e. income, occupation, age, sex/gender, political leaning and self-reported life satisfaction, and my email address if I am paid by electronic voucher) will be processed for the purposes explained to me, as set out in the information sheet. I understand that such information will be held in accordance with all applicable data protection legislation and in strict confidence, unless disclosure is required by law or professional obligation. I have been informed of my rights under data protection legislation and how I can raise any concerns."
+    "text": "I understand that my personal information (demographic data, i.e. income, occupation, age, sex/gender, political leaning and self-reported life satisfaction) will be processed for the purposes explained to me, as set out in the information sheet. I understand that such information will be held in accordance with all applicable data protection legislation and in strict confidence, unless disclosure is required by law or professional obligation. I have been informed of my rights under data protection legislation and how I can raise any concerns."
   },
   {
     "id": "c6",
@@ -534,7 +541,7 @@ const LIVE_CONSENT: ConsentForm = {
   },
   {
     "id": "c9",
-    "text": "I understand that I will be randomly assigned to play a game or read a guide, and that I will receive at least £10 for completing the study."
+    "text": "I understand that I will be randomly assigned to play a game or read a guide, and that I will receive £12 for completing the study."
   },
   {
     "id": "c10",
@@ -548,18 +555,18 @@ const LIVE_CONSENT: ConsentForm = {
 };
 
 const PILOT_CONSENT: ConsentForm = {
-  version: 'pilot-1.0 (13 Oct 2026)',
+  version: 'pilot-1.1 (2 Nov 2026)',
   projectTitle: 'Using Serious Games to Improve Public Comprehension of Utility Frameworks',
   srecReference: '',
   leadResearcher: 'Harry Franklin',
   statements: [
   {
     "id": "c1",
-    "text": "I confirm that I have read the information sheet dated 13th October 2026 version 1.0 for the above research project."
+    "text": "I confirm that I have read the information sheet dated 2nd November 2026 version 1.1 for the above research project."
   },
   {
     "id": "c2",
-    "text": "I confirm that I have understood the information sheet dated 13th October 2026 version 1.0 for the above research project and that I have had the opportunity to ask questions and that these have been answered satisfactorily."
+    "text": "I confirm that I have understood the information sheet dated 2nd November 2026 version 1.1 for the above research project and that I have had the opportunity to ask questions and that these have been answered satisfactorily."
   },
   {
     "id": "c3",
