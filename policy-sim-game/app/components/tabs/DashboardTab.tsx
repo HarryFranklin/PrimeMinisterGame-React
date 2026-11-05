@@ -13,6 +13,7 @@ import DeskTopBar, { ContinueState } from "../desk/DeskTopBar";
 import DailyReturn from "../desk/DailyReturn";
 import InTray from "../desk/InTray";
 import BillPaper, { SIGN_SEQUENCE_MS } from "../desk/BillPaper";
+import DayCalendar from "../desk/DayCalendar";
 import { PM_TONES, termStatus } from "../desk/deskTheme";
 import { track, startTimer, stopTimer } from "../../client/telemetry";
 import { useTooltipTelemetry } from "../../client/hooks";
@@ -57,7 +58,7 @@ export default function DashboardTab() {
   const signTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // New-day card: a calendar page that drops onto the desk after Continue.
-  const [dayCard, setDayCard] = useState<{ day: number | null; key: number } | null>(null);
+  const [dayCard, setDayCard] = useState<{ from: number; to: number | null; key: number } | null>(null);
   const dayTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => {
     if (signTimer.current) clearTimeout(signTimer.current);
@@ -149,8 +150,9 @@ export default function DashboardTab() {
       // country updates and the new files are dealt. `day: null` = polling day.
       const next = currentTurn < TURNS_PER_CYCLE ? currentTurn + 1 : null;
       const key = Date.now();
-      dayTimers.current.push(setTimeout(() => setDayCard({ day: next, key }), 450));
-      dayTimers.current.push(setTimeout(() => setDayCard((c) => (c?.key === key ? null : c)), 2300));
+      const from = currentTurn;
+      dayTimers.current.push(setTimeout(() => setDayCard({ from, to: next, key }), 400));
+      dayTimers.current.push(setTimeout(() => setDayCard((c) => (c?.key === key ? null : c)), 2700));
     }
   };
 
@@ -290,6 +292,7 @@ export default function DashboardTab() {
           ) : (
             <InTray
               deck={currentDeck}
+              population={population}
               selectedId={selectedPolicy?.id ?? null}
               signedId={signedId ?? signingId}
               locked={!isAgendaUnlocked || isEnacting || !!signingId || !!signedId}
@@ -299,7 +302,7 @@ export default function DashboardTab() {
         </div>
       </div>
 
-      {/* A new day: tomorrow's calendar page drops onto the desk, then lifts away */}
+      {/* A new day: the desk calendar drops in, today's page is torn off, then it lifts away */}
       <AnimatePresence>
         {dayCard && (
           <motion.div
@@ -309,24 +312,7 @@ export default function DashboardTab() {
             animate={{ backgroundColor: "rgba(20,12,6,.28)" }}
             exit={{ backgroundColor: "rgba(20,12,6,0)", transition: { duration: 0.4 } }}
           >
-            <motion.div
-              className="w-[190px] rounded-lg overflow-hidden bg-[#fafaf9] shadow-[0_24px_50px_rgba(0,0,0,.55)] text-center"
-              initial={{ y: -90, rotate: -6, opacity: 0 }}
-              animate={{ y: 0, rotate: -2, opacity: 1, transition: { type: "spring", stiffness: 260, damping: 20 } }}
-              exit={{ y: -60, rotate: 4, opacity: 0, transition: { duration: 0.35, ease: [0.4, 0, 1, 1] } }}
-            >
-              <div className="py-1.5 text-[12px] font-black tracking-[.14em] text-white" style={{ backgroundColor: tone.dark }}>
-                {dayCard.day === null ? "POLLING DAY" : "DAY"}
-              </div>
-              <div className="font-display font-black text-[86px] leading-none py-3 text-stone-900">
-                {dayCard.day === null ? "✓" : dayCard.day}
-              </div>
-              <div className="pb-3 text-[12px] font-extrabold text-stone-600">
-                {dayCard.day === null
-                  ? "The term is over"
-                  : `Election in ${TURNS_PER_CYCLE + 1 - dayCard.day} ${TURNS_PER_CYCLE + 1 - dayCard.day === 1 ? "day" : "days"}`}
-              </div>
-            </motion.div>
+            <DayCalendar from={dayCard.from} to={dayCard.to} turns={TURNS_PER_CYCLE} color={tone.dark} />
           </motion.div>
         )}
       </AnimatePresence>

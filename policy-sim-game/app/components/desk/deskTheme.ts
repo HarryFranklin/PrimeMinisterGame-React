@@ -1,4 +1,5 @@
-import { ElectionCycle, PolicyRule } from '../../utils/types';
+import { ElectionCycle, Policy, PolicyRule, Respondent } from '../../utils/types';
+import { PolicyEngine } from '../../utils/PolicyEngine';
 import { CYCLE_COLORS } from '../../utils/uiHelpers';
 
 /**
@@ -42,10 +43,32 @@ export function ruleBins(rule: PolicyRule): number[] {
   return out;
 }
 
-/** Net direction of a policy in each LS column: 1 lifts, -1 pushes down, 0 untouched/even. */
-export function overallByBin(rules: PolicyRule[]): (1 | -1 | 0)[] {
+export type Direction = 1 | -1 | 0;
+
+/** Expected change for someone in column `i` from the rules alone: each rule's
+ * impact weighted by the share of people in range it actually reaches. */
+function expectedChange(rules: PolicyRule[], i: number): number {
+  return rules.reduce((t, r) => t + (ruleBins(r).includes(i) ? r.impact * (r.affectEveryone ? 1 : r.proportion) : 0), 0);
+}
+
+/**
+ * Overall direction of a bill in each LS column: 1 lifts people there on
+ * average, -1 pushes them down, 0 no real change. Worked out from what the
+ * bill actually does to the people in each column (the same calculation as
+ * the preview), so the bar always agrees with the chart. Empty columns fall
+ * back to the rules' expected change.
+ */
+export function overallByBin(policy: Policy, population: Respondent[]): Direction[] {
+  const after = PolicyEngine.applyPolicy(population, policy);
+  const sum = new Array(11).fill(0);
+  const n = new Array(11).fill(0);
+  population.forEach((r, idx) => {
+    const b = Math.min(10, Math.max(0, Math.round(r.currentLS)));
+    sum[b] += after[idx].currentLS - r.currentLS;
+    n[b] += 1;
+  });
   return Array.from({ length: 11 }, (_, i) => {
-    const net = rules.reduce((t, r) => t + (ruleBins(r).includes(i) ? r.impact : 0), 0);
-    return net > 1e-6 ? 1 : net < -1e-6 ? -1 : 0;
+    const change = n[i] > 0 ? sum[i] / n[i] : expectedChange(policy.specificRules, i);
+    return change > 0.02 ? 1 : change < -0.02 ? -1 : 0;
   });
 }

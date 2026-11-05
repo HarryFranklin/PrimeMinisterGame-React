@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Policy } from '../../utils/types';
+import { Policy, Respondent } from '../../utils/types';
 import { OverallBar } from './PolicyBars';
+import { overallByBin } from './deskTheme';
 
 const TABS = ['#ecdcb0', '#e8d6a6', '#e4d09d', '#eadaab'];
 const TILT = [-1.5, 1, -1, 1.5];
 
 interface InTrayProps {
   deck: Policy[];
+  population: Respondent[];
   selectedId: string | null;
   signedId: string | null;
   /** No picking while a bill is being signed or enacted, or after the term. */
@@ -21,8 +23,13 @@ interface InTrayProps {
  * Clicking a file pulls its paper onto the folder; clicking it again puts it back.
  * On a new day, yesterday's files slide away and the new ones are dealt in.
  */
-export default function InTray({ deck, selectedId, signedId, locked, onPick }: InTrayProps) {
+export default function InTray({ deck, population, selectedId, signedId, locked, onPick }: InTrayProps) {
   const files = deck.slice(0, 4);
+  const directions = useMemo(
+    () => Object.fromEntries(files.map((p) => [p.id, overallByBin(p, population)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deck, population],
+  );
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
       <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#f5e9d6]">
@@ -79,7 +86,7 @@ export default function InTray({ deck, selectedId, signedId, locked, onPick }: I
                 >
                   <span className="font-display font-black text-[clamp(14px,1.15vw,17px)] leading-tight text-[#2a1f0e] line-clamp-2">{policy.policyName}</span>
                   <span className="text-[10px] font-extrabold text-[#7c5a1d]">{status}</span>
-                  <OverallBar rules={policy.specificRules} height={11} className="mt-auto" />
+                  <OverallBar directions={directions[policy.id]} height={11} className="mt-auto" />
                 </span>
               </button>
             </motion.div>

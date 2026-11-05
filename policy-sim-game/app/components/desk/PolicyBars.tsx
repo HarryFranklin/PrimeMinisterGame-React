@@ -1,7 +1,7 @@
 import React from 'react';
 import { PolicyRule } from '../../utils/types';
 import { IMPACT_COLORS } from '../../utils/uiHelpers';
-import { overallByBin, ruleBins } from './deskTheme';
+import { Direction, ruleBins } from './deskTheme';
 
 const UP = IMPACT_COLORS['Will improve'];
 const DOWN = IMPACT_COLORS['Will worsen'];
@@ -13,12 +13,13 @@ export const CHART_MARGIN = { left: 45, right: 15 };
 
 /**
  * A policy's overall effect on one 0–10 bar: blue where it lifts people,
- * hatched orange where it pushes them down. Shown on closed files and the bill.
+ * hatched orange where it pushes them down, on average, for the people in each
+ * column (see overallByBin). Shown on closed files and the bill.
  */
-export function OverallBar({ rules, height = 11, className = '' }: { rules: PolicyRule[]; height?: number; className?: string }) {
+export function OverallBar({ directions, height = 11, className = '' }: { directions: Direction[]; height?: number; className?: string }) {
   return (
     <div className={`flex gap-[2px] ${className}`} aria-hidden="true">
-      {overallByBin(rules).map((d, i) => (
+      {directions.map((d, i) => (
         <span
           key={i}
           className={`flex-1 rounded-[2px] ${d < 0 ? 'desk-hatch' : ''}`}

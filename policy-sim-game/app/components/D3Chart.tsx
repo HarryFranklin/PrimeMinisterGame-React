@@ -18,6 +18,9 @@ interface HistogramEntry {
   name: string | number;
   count: number;
   segments?: { label: string; value: number; color: string }[];
+  /** Ghost only: people leaving this column for a higher / lower one. */
+  movedUp?: number;
+  movedDown?: number;
 }
 
 interface D3ChartProps {
@@ -457,6 +460,11 @@ export default function D3Chart({
           const nG = units(g.count);
           const delta = g.count - d.count;
           const x = getX(d.name) + xOff;
+          // Which way this column's leavers go: right (up the scale) or left (down).
+          const up = g.movedUp ?? 0;
+          const down = g.movedDown ?? 0;
+          const goingUp = up >= down;
+          const leaveColour = goingUp ? '#1d4ed8' : '#b45309';
           if (nG > nC) {
             // Would arrive: faded faces with a dashed outline, stacked on top.
             ghostLayer.append('rect')
@@ -468,19 +476,23 @@ export default function D3Chart({
               .attr('y', H - nG * fs).attr('height', (nG - nC) * fs)
               .attr('fill', 'none').attr('stroke', '#1c1917').attr('stroke-width', 1.5).attr('stroke-dasharray', '5,3');
           } else if (nG < nC) {
-            // Would move away: the top faces fade out behind a dotted outline.
+            // Would move away: the top faces fade out behind a dotted outline,
+            // coloured by where they go (blue: up the scale, orange: down).
             ghostLayer.append('rect')
               .attr('x', x).attr('width', Math.max(0, rectW - 0.5))
               .attr('y', H - nC * fs).attr('height', (nC - nG) * fs)
-              .attr('fill', 'rgba(255,255,255,0.72)').attr('stroke', '#1c1917').attr('stroke-width', 1.5).attr('stroke-dasharray', '2,3');
+              .attr('fill', 'rgba(255,255,255,0.72)').attr('stroke', leaveColour).attr('stroke-width', 2).attr('stroke-dasharray', '2,3');
           }
           if (delta !== 0) {
+            // Arrivals: "+5". Leavers: "5→" (moving up the scale) or "←5" (moving down),
+            // so a smaller column never reads as people getting worse off.
+            const n = Math.abs(delta);
             ghostLayer.append('text')
               .attr('x', x + rectW / 2).attr('y', H - Math.max(nC, nG) * fs - 6)
               .attr('text-anchor', 'middle').attr('font-size', '12px').attr('font-weight', '900')
               .attr('stroke', 'white').attr('stroke-width', 3).style('paint-order', 'stroke')
-              .attr('fill', delta > 0 ? '#1d4ed8' : '#b45309')
-              .text(`${delta > 0 ? '+' : '−'}${Math.abs(delta)}`);
+              .attr('fill', delta > 0 ? '#1c1917' : leaveColour)
+              .text(delta > 0 ? `+${n}` : goingUp ? `${n}→` : `←${n}`);
           }
         });
         ghostLayer.attr('opacity', 0).transition().duration(250).attr('opacity', 1);

@@ -18,7 +18,24 @@ export interface HistogramBin {
   name: number;
   count: number;
   segments?: HistogramSegment[];
+  /** Ghost only: people leaving this column for a higher / lower one. */
+  movedUp?: number;
+  movedDown?: number;
 }
+
+/** Counts after a change, plus, for each column, how many of its people move
+ * up or down the scale (so the chart can say which way they went). */
+const ghostBins = (before: number[], after: number[]): HistogramBin[] => {
+  const bins: HistogramBin[] = Array.from({ length: 11 }, (_, i) => ({ name: i, count: 0, movedUp: 0, movedDown: 0 }));
+  before.forEach((b, idx) => {
+    const from = bucket(b);
+    const to = bucket(after[idx]);
+    bins[to].count += 1;
+    if (to > from) bins[from].movedUp! += 1;
+    else if (to < from) bins[from].movedDown! += 1;
+  });
+  return bins;
+};
 
 interface UseDashboardHistogramsArgs {
   population: Respondent[];
@@ -127,20 +144,18 @@ export function useDashboardHistograms({
   const ghostHistogramData = useMemo((): HistogramBin[] | null => {
     if (isParliamentDissolved) {
       if (hoveredHistoryTurn === null) return null;
-      return Array.from({ length: 11 }, (_, i) => ({
-        name: i,
-        count: population.filter((r) => {
-          const ledger = r.historicalLedger.find((l) => l.cycle === currentCycle);
-          const turnData = ledger?.turns.find((t) => t.turn === hoveredHistoryTurn);
-          return !!turnData && bucket(turnData.ls) === i;
-        }).length,
-      }));
+      const before: number[] = [];
+      const after: number[] = [];
+      population.forEach((r) => {
+        const turns = r.historicalLedger.find((l) => l.cycle === currentCycle)?.turns;
+        const b = turns?.find((t) => t.turn === hoveredHistoryTurn - 1);
+        const a = turns?.find((t) => t.turn === hoveredHistoryTurn);
+        if (b && a) { before.push(b.ls); after.push(a.ls); }
+      });
+      return ghostBins(before, after);
     }
     if (!selectedPolicy) return null;
-    return Array.from({ length: 11 }, (_, i) => ({
-      name: i,
-      count: previewPopulation.filter((r) => bucket(r.currentLS) === i).length,
-    }));
+    return ghostBins(population.map((r) => r.currentLS), previewPopulation.map((r) => r.currentLS));
   }, [isParliamentDissolved, hoveredHistoryTurn, population, currentCycle, selectedPolicy, previewPopulation]);
 
   const enactedLegislation = useMemo(() => {

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Policy, Respondent } from '../../utils/types';
 import { ruleCoverageText } from '../PolicyRuleCard';
 import { OverallBar } from './PolicyBars';
+import { overallByBin } from './deskTheme';
 
 /** Must match .desk-ink / .desk-nib in globals.css. */
 const SIGNATURE_PATH =
@@ -32,6 +33,7 @@ interface BillPaperProps {
  * (Mount inside <AnimatePresence> so putting it back can play.)
  */
 export default function BillPaper({ policy, billNumber, population, pmName, signing, onSign, onPutBack }: BillPaperProps) {
+  const directions = useMemo(() => overallByBin(policy, population), [policy, population]);
   return (
     <motion.div
       initial={FROM_TRAY}
@@ -63,7 +65,7 @@ export default function BillPaper({ policy, billNumber, population, pmName, sign
 
       <div className="flex flex-col gap-1">
         <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">Overall</span>
-        <OverallBar rules={policy.specificRules} height={14} />
+        <OverallBar directions={directions} height={14} />
         <div className="flex justify-between text-[10px] font-bold text-stone-500"><span>0</span><span>5</span><span>10</span></div>
       </div>
 

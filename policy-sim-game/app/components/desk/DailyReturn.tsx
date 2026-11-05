@@ -45,7 +45,10 @@ export default function DailyReturn({
       <div className="flex justify-between items-baseline gap-3">
         <span className="font-display font-black text-[clamp(18px,1.7vw,24px)] text-[#2a1f0e]">{title}</span>
         {ghostHistogramData && (
-          <span className="text-[11px] text-stone-600 text-right">Faded: would move away · Dashed: would arrive</span>
+          <span className="text-[11px] text-stone-600 text-right leading-snug">
+            Dashed: would arrive · Faded: would leave,{' '}
+            <strong className="text-[#1d4ed8]">up →</strong> or <strong className="text-[#b45309]">← down</strong>
+          </span>
         )}
       </div>
 
