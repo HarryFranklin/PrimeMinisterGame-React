@@ -15,6 +15,17 @@ import { IMPACT_COLORS } from '../utils/uiHelpers';
  * difference between the two call sites an explicit, intentional prop
  * instead of an accident of copy-pasting.
  */
+/** Share of the population a rule currently reaches, written as "about 4 in 100 people"
+ * (the same "X in Y" style as the risks in the gamble questions). */
+export function ruleCoverageText(rule: PolicyRule, population: Respondent[]): string {
+  const eligible = population.filter(
+    (p) => (rule.minLS === undefined || p.currentLS >= rule.minLS) && (rule.maxLS === undefined || p.currentLS <= rule.maxLS)
+  ).length;
+  const coverage = Math.round(eligible * rule.proportion);
+  const per100 = population.length > 0 ? Math.round((coverage / population.length) * 100) : 0;
+  return coverage === 0 ? 'nobody right now' : per100 < 1 ? 'fewer than 1 in 100 people' : `about ${per100} in 100 people`;
+}
+
 export const PolicyRuleCard = ({
   rule,
   population,
@@ -32,17 +43,7 @@ export const PolicyRuleCard = ({
   const ruleColor = isPositive ? IMPACT_COLORS['Will improve'] : IMPACT_COLORS['Will worsen'];
   const ruleBg = isPositive ? 'rgba(59,130,246,0.04)' : 'rgba(245,158,11,0.04)';
 
-  // Share of the population affected, written as "about 4 in 100 people"
-  // (the same "X in Y" style as the risks in the gamble questions).
-  let coverageText: string | null = null;
-  if (showCoverage && population) {
-    const eligible = population.filter(
-      (p) => (rule.minLS === undefined || p.currentLS >= rule.minLS) && (rule.maxLS === undefined || p.currentLS <= rule.maxLS)
-    ).length;
-    const coverage = Math.round(eligible * rule.proportion);
-    const per100 = population.length > 0 ? Math.round((coverage / population.length) * 100) : 0;
-    coverageText = coverage === 0 ? 'nobody right now' : per100 < 1 ? 'fewer than 1 in 100 people' : `about ${per100} in 100 people`;
-  }
+  const coverageText = showCoverage && population ? ruleCoverageText(rule, population) : null;
 
   return (
     <div

@@ -2,48 +2,65 @@
 import { useState, useEffect, useRef } from "react";
 import { useGame } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
-import { ElectionCycle } from "../../utils/types";
+import { ElectionCycle, Policy } from "../../utils/types";
 import { availablePolicies } from "../../data/policies";
+import { PM_PROFILES } from "../../utils/pmProfiles";
+import { dpmAdvisory } from "../../utils/dpmAdvisory";
 import { useDashboardHistograms } from "../../hooks/useDashboardHistograms";
-import DPMCard from "../DPMCard";
-import ApprovalCard from "../ApprovalCard";
-import PopulationPanel from "./PopulationPanel";
-import AgendaPanel from "./AgendaPanel";
 import TurnSummaryToast from "../TurnSummaryToast";
+import EnactedLegislationHistory from "../EnactedLegislationHistory";
+import LensCompare from "../LensCompare";
+import DeskTopBar, { ContinueState } from "../desk/DeskTopBar";
+import DailyReturn from "../desk/DailyReturn";
+import InTray from "../desk/InTray";
+import BillPaper, { SIGN_SEQUENCE_MS } from "../desk/BillPaper";
+import { PM_TONES, termStatus } from "../desk/deskTheme";
 import { track, startTimer, stopTimer } from "../../client/telemetry";
 import { useTooltipTelemetry } from "../../client/hooks";
 
 /**
- * Orchestrates the main game screen: wires game state + the derived
- * histogram/history data (useDashboardHistograms) into three presentational
- * panels (PopulationPanel, DPMCard + ApprovalCard, AgendaPanel).
+ * The main game screen: the PM's desk.
+ *  - Top bar: who you are, what you're judged on and how it's going, approval,
+ *    the countdown to the vote, and Continue.
+ *  - An open case folder: the country on graph paper on the left flap; the
+ *    open bill (or the Deputy PM's note) on the right flap.
+ *  - The in-tray: today's four bills as files, each with its paper sticking out.
+ * A turn: pull a bill's paper out (its effect is ghosted on the chart) → Sign
+ * (pen writes the signature, the paper slides away) → Continue (enacts it).
  */
 export default function DashboardTab() {
   const {
-    currentCycle, currentTurn, currentChartData, currentHistogramData,
+    currentCycle, currentTurn, currentHistogramData,
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy,
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate,
-    lastTurnSummary, clearLastTurnSummary
+    lastTurnSummary, clearLastTurnSummary, TURNS_PER_CYCLE,
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
+  const tone = PM_TONES[currentCycle];
+  const profile = PM_PROFILES.find((p) => p.cycle === currentCycle);
   const targetScore = cycleMAO * rule.winThresholdScalar;
+  const startScore = history.find((h) => h.turn === 1)?.metricScore ?? turnMetricScore;
   const isUtilityCycle = currentCycle === ElectionCycle.PersonalUtility || currentCycle === ElectionCycle.SocietalUtility;
 
   const [hoveredEnactedId, setHoveredEnactedId] = useState<string | null>(null);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const { trackHover } = useTooltipTelemetry();
 
-  useEffect(() => {
-    setDetailsOpen(false);
-  }, [selectedPolicy]);
+  // Signing: `signingId` while the pen writes and the paper slides away;
+  // `signedId` once it has gone (Continue then enacts it).
+  // Both belong to one day only: a new day (or term) starts with a clear desk.
+  const dayKey = `${currentCycle}-${currentTurn}`;
+  const [sign, setSign] = useState<{ day: string; signing: string | null; signed: string | null }>({ day: "", signing: null, signed: null });
+  const signingId = sign.day === dayKey ? sign.signing : null;
+  const signedId = sign.day === dayKey ? sign.signed : null;
+  const signTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (signTimer.current) clearTimeout(signTimer.current); }, []);
 
-  // "Did they click View Details, and for how long, and what did they do
-  // right after" - works no matter which UI path opened/closed it (picking
-  // a different policy, toggling the panel, etc), since it just watches the
-  // (detailsOpen, selectedPolicy) pair rather than a specific click handler.
+  // Reading a bill = its details are open (kept so the view_details_* events,
+  // and their dwell times, mean the same as before: time spent on a bill's details).
+  const detailsOpen = !!selectedPolicy && !isParliamentDissolved;
   const prevDetailsPolicyId = useRef<string | null>(null);
   useEffect(() => {
     const openPolicyId = detailsOpen && selectedPolicy ? selectedPolicy.id : null;
@@ -67,27 +84,22 @@ export default function DashboardTab() {
   const activeMarkers = isParliamentDissolved && hoveredHistoryTurn !== null
     ? []
     : [
-        { value: turnMetricScore, label: `CURRENT ${rule.targetMetricAbbreviation}`, color: rule.graphColor, dashed: false },
-        { value: targetScore, label: `TARGET ${rule.targetMetricAbbreviation}`, color: "#3f3f46", dashed: true }
+        { value: turnMetricScore, label: `CURRENT ${rule.targetMetricAbbreviation}`, color: tone.dark, dashed: false },
+        { value: targetScore, label: `TARGET ${rule.targetMetricAbbreviation}`, color: "#3f3f46", dashed: true },
       ];
 
-  const { topHistogramData, bottomHistogramData, enactedLegislation } = useDashboardHistograms({
+  const { topHistogramData, ghostHistogramData, enactedLegislation } = useDashboardHistograms({
     population,
     previewPopulation,
     currentCycle,
     currentHistogramData,
     isParliamentDissolved,
     hoveredHistoryTurn,
-    selectedPolicy,
+    selectedPolicy: signingId || signedId ? null : selectedPolicy,
     history,
     availablePolicies,
     detailsOpen,
   });
-
-  const hoveredPolicyDetails = hoveredEnactedId ? availablePolicies.find(p => p.id === hoveredEnactedId) : null;
-  const bottomChartTitle = isParliamentDissolved
-    ? (hoveredPolicyDetails ? `Historical Policy Impact (${hoveredPolicyDetails.policyName})` : "Historical Policy Impact")
-    : "Projected Population";
 
   const handleHoverEnacted = (policyId: string | null, turn: number | null) => {
     setHoveredEnactedId(policyId);
@@ -95,96 +107,186 @@ export default function DashboardTab() {
     if (policyId) trackHover("enacted_legislation", policyId, currentTurn);
   };
 
+  const pickPolicy = (policy: Policy | null) => {
+    track("policy_card_selected", {
+      turn: currentTurn,
+      level_id: ElectionCycle[currentCycle],
+      policy_id: policy?.id ?? null,
+      action: policy ? "picked" : "deselected",
+    });
+    setSelectedPolicy(policy);
+  };
+
+  const signBill = () => {
+    if (!selectedPolicy || signingId || signedId) return;
+    const id = selectedPolicy.id;
+    const day = dayKey;
+    setSign({ day, signing: id, signed: null });
+    signTimer.current = setTimeout(() => {
+      setSign((s) => (s.day === day ? { day, signing: null, signed: id } : s));
+    }, SIGN_SEQUENCE_MS);
+  };
+
+  const continueState: ContinueState = isParliamentDissolved
+    ? "press"
+    : isEnacting
+      ? "busy"
+      : signedId && selectedPolicy?.id === signedId && isAgendaUnlocked
+        ? "ready"
+        : "locked";
+
+  const onContinue = () => {
+    if (continueState === "press") handleFaceElectorate();
+    else if (continueState === "ready") handleApplyPolicy();
+  };
+
+  const status = termStatus(turnMetricScore, startScore, targetScore, currentTurn, TURNS_PER_CYCLE);
+  const deckIndex = selectedPolicy ? currentDeck.slice(0, 4).findIndex((p) => p.id === selectedPolicy.id) : -1;
+  const billOpen = !!selectedPolicy && !isParliamentDissolved && !signedId;
+  const hoveredEnacted = hoveredEnactedId ? availablePolicies.find((p) => p.id === hoveredEnactedId) : null;
+  const chartTitle = isParliamentDissolved
+    ? hoveredHistoryTurn !== null
+      ? `Before and after: ${hoveredEnacted?.policyName ?? "this bill"}`
+      : "The country on polling day"
+    : "The country today";
+
   return (
-    <div className="flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden animate-in fade-in duration-300 relative">
-      <TurnSummaryToast
-        summary={lastTurnSummary}
-        accentColor={rule.graphColor}
-        metricAbbreviation={rule.targetMetricAbbreviation}
-        onDismiss={clearLastTurnSummary}
-        onInteract={(type) => {
-          if (lastTurnSummary) {
-            track('policy_impact_popup_interacted', {
-              policy_id: selectedPolicy?.id ?? lastTurnSummary.policyName,
-              turn: lastTurnSummary.turn,
-              interaction_type: type,
-            });
-          }
-        }}
-      />
-      <div className="grid grid-cols-12 gap-3 lg:gap-4 flex-1 min-h-0 overflow-hidden">
-
-        {/* LEFT COLUMN: Stacked Graphs OR Utility Table */}
-        <div
-          className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden"
-          onMouseEnter={() => track('graph_hovered', { chart_context: 'dashboard', turn: currentTurn })}
-        >
-          <PopulationPanel
-            isUtilityCycle={isUtilityCycle}
-            isParliamentDissolved={isParliamentDissolved}
-            hoveredHistoryTurn={hoveredHistoryTurn}
-            bottomChartTitle={bottomChartTitle}
-            rule={rule}
-            currentChartData={currentChartData}
-            topHistogramData={topHistogramData}
-            bottomHistogramData={bottomHistogramData}
-            yAxisMax={yAxisMax}
-            detailsOpen={detailsOpen}
-            selectedPolicy={selectedPolicy}
-            population={population}
-            previewPopulation={selectedPolicy && !isParliamentDissolved ? previewPopulation : null}
-            currentCycle={currentCycle}
-            metricName={rule.targetMetricName}
-            activeMarkers={activeMarkers}
-          />
-        </div>
-
-        {/* MIDDLE COLUMN: DPM & Approval */}
-        <div className="col-span-4 flex flex-col gap-4 lg:gap-6 h-full min-h-0 overflow-hidden">
-          <DPMCard
-            currentCycle={currentCycle}
-            currentTurn={currentTurn}
-            isParliamentDissolved={isParliamentDissolved}
-            selectedPolicy={selectedPolicy}
-            cycleMAO={cycleMAO}
-            currentMetricScore={turnMetricScore}
-          />
-
-          <ApprovalCard
-            approvalRating={approvalRating}
-            isParliamentDissolved={isParliamentDissolved}
-            accentColor={rule.graphColor}
-          />
-        </div>
-
-        {/* RIGHT COLUMN: Legislative Agenda OR Enacted History */}
-        <AgendaPanel
-          isParliamentDissolved={isParliamentDissolved}
-          currentDeck={currentDeck}
-          selectedPolicy={selectedPolicy}
-          onSelectPolicy={(policy) => {
-            track("policy_card_selected", {
-              turn: currentTurn,
-              level_id: ElectionCycle[currentCycle],
-              policy_id: policy?.id ?? null,
-              action: policy ? "picked" : "deselected",
-            });
-            setSelectedPolicy(policy);
-            setDetailsOpen(false);
+    <div className="desk-wood -m-4 h-[calc(100%+2rem)] flex flex-col relative overflow-hidden">
+      {/* Just under the top bar, so it never covers it */}
+      <div className="absolute left-0 right-0 top-[78px] z-[80] pointer-events-none">
+        <TurnSummaryToast
+          summary={lastTurnSummary}
+          accentColor={rule.graphColor}
+          metricAbbreviation={rule.targetMetricAbbreviation}
+          onDismiss={clearLastTurnSummary}
+          onInteract={(type) => {
+            if (lastTurnSummary) {
+              track("policy_impact_popup_interacted", {
+                policy_id: selectedPolicy?.id ?? lastTurnSummary.policyName,
+                turn: lastTurnSummary.turn,
+                interaction_type: type,
+              });
+            }
           }}
-          population={population}
-          detailsOpen={detailsOpen}
-          onToggleDetails={setDetailsOpen}
-          enactedLegislation={enactedLegislation}
-          availablePolicies={availablePolicies}
-          hoveredEnactedId={hoveredEnactedId}
-          onHoverEnacted={handleHoverEnacted}
-          isAgendaUnlocked={isAgendaUnlocked}
-          isEnacting={isEnacting}
-          onApplyPolicy={handleApplyPolicy}
-          onFaceElectorate={handleFaceElectorate}
         />
+      </div>
 
+      <DeskTopBar
+        cycle={currentCycle}
+        turn={currentTurn}
+        turnsPerCycle={TURNS_PER_CYCLE}
+        approval={approvalRating}
+        isDissolved={isParliamentDissolved}
+        score={turnMetricScore}
+        target={targetScore}
+        status={status}
+        continueState={continueState}
+        onContinue={onContinue}
+      />
+
+      <div className="flex-1 min-h-0 flex gap-5 p-5">
+        {/* The open case folder */}
+        <div className="relative flex-1 min-w-0">
+          <div className="absolute inset-0 rounded-[6px_14px_14px_6px] shadow-[0_24px_46px_rgba(0,0,0,.55)] bg-[linear-gradient(90deg,#eadbb2_0%,#f2e6c4_47%,#cdb98a_50%,#f2e6c4_53%,#eadbb2_100%)]" />
+          <div className="absolute left-12 -top-3.5 h-[26px] px-3 pt-1.5 rounded-t-[10px] bg-[#eadbb2] text-[11px] font-black tracking-[.1em] text-[#5c4214]">
+            CABINET · {isParliamentDissolved ? "END OF TERM" : `DAY ${currentTurn}`}
+          </div>
+
+          <div className="absolute inset-0 grid grid-cols-2 gap-[4%] p-[22px]">
+            {/* Left flap: the country */}
+            <div className="relative min-h-0 min-w-0" onMouseEnter={() => track("graph_hovered", { chart_context: "dashboard", turn: currentTurn })}>
+              <DailyReturn
+                cycle={currentCycle}
+                rule={rule}
+                title={chartTitle}
+                histogramData={topHistogramData}
+                ghostHistogramData={ghostHistogramData}
+                markers={activeMarkers}
+                yAxisMax={yAxisMax}
+                population={population}
+                isUtilityCycle={isUtilityCycle}
+                activeRules={billOpen ? selectedPolicy!.specificRules : isParliamentDissolved && hoveredEnacted ? hoveredEnacted.specificRules : null}
+                emptyHint={
+                  isParliamentDissolved
+                    ? "Hover over a bill on the right to see what it did."
+                    : "Pull a bill from the in-tray: who it moves appears here, lined up under the people it touches."
+                }
+              />
+            </div>
+
+            {/* Right flap: the bill, the Deputy PM's note, or the term's bills */}
+            <div className="relative min-h-0 min-w-0">
+              {isParliamentDissolved ? (
+                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3">
+                  <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">Parliament is dissolved</span>
+                  <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">The bills you signed this term</span>
+                  <span className="text-[13px] text-stone-600">Hover over a bill to see what it did. Then face the press.</span>
+                  <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-visible relative z-[60]">
+                    <EnactedLegislationHistory
+                      enactedLegislation={enactedLegislation}
+                      availablePolicies={availablePolicies}
+                      hoveredEnactedId={hoveredEnactedId}
+                      onHover={handleHoverEnacted}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Underneath: the Deputy PM's note, or "sent" once signed */}
+                  {signedId ? (
+                    <div className="absolute inset-0 border-[3px] border-dashed border-[rgba(92,66,20,.35)] flex flex-col items-center justify-center gap-2 text-center px-10 text-[#5c4214]">
+                      <span className="font-display font-black text-[28px]">Sent to Parliament ✓</span>
+                      <span className="text-[14px] leading-relaxed">It becomes law when you press Continue. Its effects show tomorrow.</span>
+                    </div>
+                  ) : (
+                    <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-auto" data-telemetry-id="dpm_note" data-telemetry-type="panel">
+                      <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Note from your Deputy PM</span>
+                      <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Four bills in the tray, Prime Minister</span>
+                      <p className="text-[15px] leading-relaxed text-stone-700 italic m-0">
+                        “{dpmAdvisory({ currentCycle, currentTurn, selectedPolicy: false, cycleMAO, currentMetricScore: turnMetricScore })}”
+                      </p>
+                      {currentCycle === ElectionCycle.PersonalUtility && <LensCompare />}
+                      <p className="text-[13px] text-stone-500 mt-auto m-0">Pull one out to read it. Its effect shows on the country to the left.</p>
+                    </div>
+                  )}
+
+                  {selectedPolicy && !signedId && (
+                    <BillPaper
+                      key={selectedPolicy.id}
+                      policy={selectedPolicy}
+                      billNumber={deckIndex + 1}
+                      population={population}
+                      pmName={(profile?.name ?? "").replace(/^PM\s+/, "").toUpperCase()}
+                      signing={signingId === selectedPolicy.id}
+                      onSign={signBill}
+                      onPutBack={() => pickPolicy(null)}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* The in-tray */}
+        <div className="w-[clamp(200px,18vw,270px)] shrink-0 min-h-0">
+          {isParliamentDissolved ? (
+            <div className="h-full flex flex-col gap-3">
+              <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#f5e9d6]">In-tray · empty</span>
+              <div className="flex-1 border-[3px] border-dashed border-[rgba(245,233,214,.35)] rounded-xl flex items-center justify-center text-center px-6 text-[13px] text-[#f5e9d6]">
+                No more bills this term. The country goes to the polls.
+              </div>
+            </div>
+          ) : (
+            <InTray
+              deck={currentDeck}
+              selectedId={selectedPolicy?.id ?? null}
+              signedId={signedId ?? signingId}
+              locked={!isAgendaUnlocked || isEnacting || !!signingId || !!signedId}
+              onPick={(p) => pickPolicy(selectedPolicy?.id === p.id ? null : p)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

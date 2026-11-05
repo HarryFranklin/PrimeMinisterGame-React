@@ -35,6 +35,12 @@ interface D3ChartProps {
   theme?: 'light' | 'dark';
   /** If set, hovering a histogram bin (≥250 ms) is tracked as chart_bin_hovered with this chart id. */
   hoverTrackId?: string;
+  /** Preview: the counts if a policy were signed. Drawn over the faces – people who would
+   * move away fade out (dotted), people who would arrive appear as dashed faces – with the
+   * change above each column. Faces style only. */
+  ghostHistogramData?: HistogramEntry[] | null;
+  /** Alternate shaded column bands behind the faces (off on the desk's graph paper). */
+  bands?: boolean;
 }
 
 const COLOUR_IMPROVE = IMPACT_COLORS['Will improve'];
@@ -71,7 +77,7 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light', hoverTrackId,
+  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true,
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const binHover = useRef<{ bin: string | number; count: number; at: number } | null>(null);
@@ -105,6 +111,7 @@ export default function D3Chart({
 
   const markersJson = JSON.stringify(markers);
   const rulesJson   = JSON.stringify(activePolicyRules);
+  const ghostJson   = JSON.stringify(ghostHistogramData);
 
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
@@ -227,6 +234,7 @@ export default function D3Chart({
             if (net < 0) return 'rgba(245, 158, 11, 0.22)';
             return 'rgba(212,212,216,0.3)';
           }
+          if (!bands) return 'transparent';
           return d % 2 === 0 ? (theme === 'dark' ? 'rgba(255,255,255,0.04)' : '#f4f4f5') : 'transparent';
         });
 
@@ -426,6 +434,58 @@ export default function D3Chart({
           .attr('height', (d: any) => d.h);
       }
 
+      // --- Ghost preview (see ghostHistogramData) ---
+      let ghostLayer = chart.select<SVGGElement>('.ghost-layer');
+      if (ghostLayer.empty()) ghostLayer = chart.insert<SVGGElement>('g', '.annotation-layer').attr('class', 'ghost-layer');
+      ghostLayer.selectAll('*').remove();
+      ghostLayer.style('pointer-events', 'none');
+      if (visualStyle === 'faces' && ghostHistogramData && ghostHistogramData.length > 0) {
+        const fs    = calcFaceSize(bw, faceCols);
+        const rectW = faceCols * fs;
+        const xOff  = (bw - rectW) / 2;
+        // Same rounding to half-faces as the bars above.
+        const units = (count: number) => {
+          const c = Math.min(count, yAxisMax);
+          let n = Math.round(((H - yScale(c)) / fs) * 2) / 2;
+          if (c > 0 && n === 0) n = 0.5;
+          return n;
+        };
+        histogramData.forEach((d) => {
+          const g = ghostHistogramData.find((x) => Number(x.name) === Number(d.name));
+          if (!g) return;
+          const nC = units(d.count);
+          const nG = units(g.count);
+          const delta = g.count - d.count;
+          const x = getX(d.name) + xOff;
+          if (nG > nC) {
+            // Would arrive: faded faces with a dashed outline, stacked on top.
+            ghostLayer.append('rect')
+              .attr('x', x).attr('width', Math.max(0, rectW - 0.5))
+              .attr('y', H - nG * fs).attr('height', (nG - nC) * fs)
+              .attr('fill', `url(#face-${d.name}-${chartId})`).attr('opacity', 0.5);
+            ghostLayer.append('rect')
+              .attr('x', x).attr('width', Math.max(0, rectW - 0.5))
+              .attr('y', H - nG * fs).attr('height', (nG - nC) * fs)
+              .attr('fill', 'none').attr('stroke', '#1c1917').attr('stroke-width', 1.5).attr('stroke-dasharray', '5,3');
+          } else if (nG < nC) {
+            // Would move away: the top faces fade out behind a dotted outline.
+            ghostLayer.append('rect')
+              .attr('x', x).attr('width', Math.max(0, rectW - 0.5))
+              .attr('y', H - nC * fs).attr('height', (nC - nG) * fs)
+              .attr('fill', 'rgba(255,255,255,0.72)').attr('stroke', '#1c1917').attr('stroke-width', 1.5).attr('stroke-dasharray', '2,3');
+          }
+          if (delta !== 0) {
+            ghostLayer.append('text')
+              .attr('x', x + rectW / 2).attr('y', H - Math.max(nC, nG) * fs - 6)
+              .attr('text-anchor', 'middle').attr('font-size', '12px').attr('font-weight', '900')
+              .attr('stroke', 'white').attr('stroke-width', 3).style('paint-order', 'stroke')
+              .attr('fill', delta > 0 ? '#1d4ed8' : '#b45309')
+              .text(`${delta > 0 ? '+' : '−'}${Math.abs(delta)}`);
+          }
+        });
+        ghostLayer.attr('opacity', 0).transition().duration(250).attr('opacity', 1);
+      }
+
       // Add Overflow Plus Indicators
       cols.selectAll('text.overflow-plus').remove();
       cols.append('text')
@@ -510,7 +570,7 @@ export default function D3Chart({
         .attr('cy', (d: any) => yScale(d.y))
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols, theme]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, ghostJson, bands, visualStyle, dims, faceCols, theme]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }

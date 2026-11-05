@@ -12,6 +12,56 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-hand: var(--font-caveat), cursive;
+}
+
+/* ---------- The PM's desk (main game screen) ---------- */
+.desk-wood {
+  background:
+    repeating-linear-gradient(92deg, rgba(0,0,0,.06) 0 3px, transparent 3px 22px),
+    linear-gradient(180deg, #6b4423, #4a2e17);
+}
+/* Cream graph paper for the country's "daily return" */
+.desk-graph {
+  background-color: #f6f0e1;
+  background-image:
+    linear-gradient(rgba(120,95,50,.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120,95,50,.09) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+/* A bill: cream paper with a ruled margin */
+.desk-paper {
+  background-color: #faf6ec;
+  background-image: linear-gradient(90deg, transparent 38px, rgba(190,24,93,.18) 38px, rgba(190,24,93,.18) 39px, transparent 39px);
+}
+/* Losses are hatched as well as orange, so they read without colour */
+.desk-hatch { background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.55) 0 3px, transparent 3px 7px); }
+
+/* In-tray files: lift on hover, and the sheet inside rises a little */
+.desk-file { transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+.desk-file:not(:disabled):hover { transform: translateX(-6px); }
+.desk-peek { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.desk-file:not(:disabled):hover .desk-peek { transform: translateY(-8px); }
+
+/* Signing: the ink follows the same path as the pen nib */
+.desk-ink { stroke-dasharray: 405; stroke-dashoffset: 405; animation: desk-ink .85s cubic-bezier(.4,.1,.6,.9) .1s forwards; }
+@keyframes desk-ink { to { stroke-dashoffset: 0; } }
+.desk-nib {
+  offset-path: path('M8 52 C 18 30 26 8 34 22 C 40 34 30 48 22 44 C 14 40 30 30 46 34 C 60 38 58 54 70 46 C 82 38 84 20 92 26 C 100 32 92 52 104 48 C 116 44 118 30 126 34 C 134 38 128 52 140 48 C 152 44 156 28 166 32 C 176 36 170 52 184 46 C 198 40 206 30 222 36 C 238 42 250 44 270 30');
+  offset-rotate: 0deg;
+  offset-anchor: 50% 100%;
+  animation: desk-nib .85s cubic-bezier(.4,.1,.6,.9) .1s both;
+}
+@keyframes desk-nib { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+.desk-nib-out { animation: desk-pen-away .3s ease-in .95s forwards; }
+@keyframes desk-pen-away { to { opacity: 0; transform: translate(30px, -40px); } }
+/* ...then the signed bill slides off the folder */
+.desk-slide-off { transform-origin: 0 0; animation: desk-slide-off .6s cubic-bezier(.55,0,.8,.3) 1.25s both; }
+@keyframes desk-slide-off { from { transform: rotate(.5deg); opacity: 1; } to { transform: translateX(110%) translateY(60px) rotate(14deg); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-ink, .desk-nib, .desk-nib-out, .desk-slide-off { animation-duration: .01s; animation-delay: 0s; }
 }
 
 @media (prefers-color-scheme: dark) {

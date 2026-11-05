@@ -122,6 +122,27 @@ export function useDashboardHistograms({
     });
   }, [population, hoveredHistoryTurn, isParliamentDissolved, currentCycle, selectedPolicy, previewPopulation]);
 
+  /** The counts to ghost over the main chart: the preview while a bill is open, or (after
+   * the term) the population just after the enacted bill being hovered. */
+  const ghostHistogramData = useMemo((): HistogramBin[] | null => {
+    if (isParliamentDissolved) {
+      if (hoveredHistoryTurn === null) return null;
+      return Array.from({ length: 11 }, (_, i) => ({
+        name: i,
+        count: population.filter((r) => {
+          const ledger = r.historicalLedger.find((l) => l.cycle === currentCycle);
+          const turnData = ledger?.turns.find((t) => t.turn === hoveredHistoryTurn);
+          return !!turnData && bucket(turnData.ls) === i;
+        }).length,
+      }));
+    }
+    if (!selectedPolicy) return null;
+    return Array.from({ length: 11 }, (_, i) => ({
+      name: i,
+      count: previewPopulation.filter((r) => bucket(r.currentLS) === i).length,
+    }));
+  }, [isParliamentDissolved, hoveredHistoryTurn, population, currentCycle, selectedPolicy, previewPopulation]);
+
   const enactedLegislation = useMemo(() => {
     return history
       .filter((h) => h.turn > 1)
@@ -144,5 +165,5 @@ export function useDashboardHistograms({
     return Array.from(bins);
   }, [selectedPolicy, detailsOpen, isParliamentDissolved]);
 
-  return { topHistogramData, bottomHistogramData, enactedLegislation, highlightedBins };
+  return { topHistogramData, bottomHistogramData, ghostHistogramData, enactedLegislation, highlightedBins };
 }
