@@ -72,6 +72,7 @@ export default function DailyReturn({
           yAxisMax={yAxisMax}
           faceCols={2}
           bands={false}
+          markerLabels="axis"
         />
       </div>
 

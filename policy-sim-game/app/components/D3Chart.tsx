@@ -44,6 +44,9 @@ interface D3ChartProps {
   ghostHistogramData?: HistogramEntry[] | null;
   /** Alternate shaded column bands behind the faces (off on the desk's graph paper). */
   bands?: boolean;
+  /** Where marker names go: 'top' (default: above the plot) or 'axis' (tags under the
+   * x-axis, so they never clash with the columns or the preview counts). */
+  markerLabels?: 'top' | 'axis';
 }
 
 const COLOUR_IMPROVE = IMPACT_COLORS['Will improve'];
@@ -80,7 +83,7 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true,
+  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true, markerLabels = 'top',
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const binHover = useRef<{ bin: string | number; count: number; at: number } | null>(null);
@@ -119,7 +122,8 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
     
-    const margin = { top: 25, right: 15, bottom: 52, left: 45 };
+    // 'axis' marker tags need a row under the tick labels.
+    const margin = { top: 25, right: 15, bottom: markerLabels === 'axis' ? 74 : 52, left: 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
 
@@ -537,13 +541,56 @@ export default function D3Chart({
         .text('Number of People');
 
       chart.select('.label-x')
-        .attr('x', W / 2).attr('y', H + 42)
+        .attr('x', W / 2).attr('y', markerLabels === 'axis' ? H + 66 : H + 42)
         .attr('fill', labelFg)
         .style('text-anchor','middle').style('font-weight','bold')
         .text(getAxisLabel(xAxisType));
 
       annoLayer.selectAll('*').remove();
-      (markers ?? []).forEach((m, i) => {
+      // Only fade markers in when they actually change, so they don't flicker
+      // (or look blurry) every time the chart redraws for a preview.
+      const fadeIn = (sel: d3.Selection<any, unknown, null, undefined>) =>
+        markerAnimSpeed > 0 ? sel.style('opacity', 0).transition().duration(markerAnimSpeed).style('opacity', 1) : sel.style('opacity', 1);
+
+      if (markerLabels === 'axis') {
+        // Thin lines through the plot; names as tags under the axis. Pairs sit on
+        // opposite sides of their lines (the lower value's tag to the left), so
+        // they never overlap each other.
+        const list = markers ?? [];
+        const lowest = list.length ? Math.min(...list.map((m) => m.value)) : 0;
+        list.forEach((m) => {
+          const mx = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
+          const mc = m.color ?? '#3f3f46';
+          const left = list.length > 1 && m.value === lowest;
+          const g = annoLayer.append('g');
+          g.append('line')
+            .attr('x1', mx).attr('x2', mx).attr('y1', 0).attr('y2', H + 6)
+            .attr('stroke', mc).attr('stroke-width', 2)
+            .attr('stroke-dasharray', m.dashed ? '6,4' : 'none');
+          g.append('path')
+            .attr('d', `M ${mx - 5} ${H + 30} L ${mx + 5} ${H + 30} L ${mx} ${H + 24} Z`)
+            .attr('fill', mc);
+          const text = g.append('text')
+            .attr('y', H + 43).attr('font-size', '11px').attr('font-weight', '900')
+            .attr('fill', m.dashed ? mc : '#ffffff')
+            .attr('text-anchor', left ? 'end' : 'start')
+            .text(m.label);
+          const tw = (text.node() as SVGTextElement | null)?.getComputedTextLength() ?? 60;
+          // Keep the tag inside the chart.
+          let tx = left ? mx + 4 : mx - 4;
+          if (left) tx = Math.max(tw + 6, tx); else tx = Math.min(W - tw - 6, tx);
+          text.attr('x', left ? tx - 3 : tx + 3);
+          g.insert('rect', 'text')
+            .attr('x', left ? tx - tw - 9 : tx).attr('y', H + 31)
+            .attr('width', tw + 12).attr('height', 17).attr('rx', 4)
+            .attr('fill', m.dashed ? '#ffffff' : mc)
+            .attr('stroke', mc).attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', m.dashed ? '4,2' : 'none');
+          fadeIn(g);
+        });
+      }
+
+      if (markerLabels === 'top') (markers ?? []).forEach((m, i) => {
         // Markers now evaluate mathematically directly onto the grid
         const mx    = xScale(Math.max(-0.5, Math.min(10.5, m.value)));
         const mc    = m.color ?? '#3f3f46';
@@ -553,14 +600,14 @@ export default function D3Chart({
           .attr('x1',mx).attr('x2',mx).attr('y1',0).attr('y2',H)
           .attr('stroke',mc).attr('stroke-width',2)
           .attr('stroke-dasharray', m.dashed ? '6,4' : 'none')
-          .style('opacity',0).transition().duration(markerAnimSpeed).style('opacity',1);
+          .call(fadeIn);
 
         annoLayer.append('text')
           .attr('y',yPos).attr('x',mx - 6)
           .attr('fill',mc).attr('font-size','12px').attr('font-weight','900')
           .attr('stroke','white').attr('stroke-width',4).style('paint-order','stroke')
           .attr('text-anchor','end').text(m.label)
-          .style('opacity',0).transition().duration(markerAnimSpeed).style('opacity',1);
+          .call(fadeIn);
       });
 
     } else if (plotType === '2D') {
@@ -582,7 +629,7 @@ export default function D3Chart({
         .attr('cy', (d: any) => yScale(d.y))
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, ghostJson, bands, visualStyle, dims, faceCols, theme]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, ghostJson, bands, markerLabels, visualStyle, dims, faceCols, theme]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }

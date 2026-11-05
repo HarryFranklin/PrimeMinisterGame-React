@@ -91,8 +91,8 @@ export default function DashboardTab() {
   const activeMarkers = isParliamentDissolved && hoveredHistoryTurn !== null
     ? []
     : [
-        { value: turnMetricScore, label: `CURRENT ${rule.targetMetricAbbreviation}`, color: tone.dark, dashed: false },
-        { value: targetScore, label: `TARGET ${rule.targetMetricAbbreviation}`, color: "#3f3f46", dashed: true },
+        { value: turnMetricScore, label: `${rule.targetMetricAbbreviation} now ${turnMetricScore.toFixed(2)}`, color: tone.dark, dashed: false },
+        { value: targetScore, label: `Target ${targetScore.toFixed(2)}`, color: "#3f3f46", dashed: true },
       ];
 
   const { topHistogramData, ghostHistogramData, enactedLegislation } = useDashboardHistograms({
