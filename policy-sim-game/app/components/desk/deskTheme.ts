@@ -72,3 +72,18 @@ export function overallByBin(policy: Policy, population: Respondent[]): Directio
     return change > 0.02 ? 1 : change < -0.02 ? -1 : 0;
   });
 }
+
+/** Same as overallByBin, but from a recorded before/after (an enacted bill). */
+export function directionsFromChange(before: number[], after: number[]): Direction[] {
+  const sum = new Array(11).fill(0);
+  const n = new Array(11).fill(0);
+  before.forEach((b, idx) => {
+    const bin = Math.min(10, Math.max(0, Math.round(b)));
+    sum[bin] += after[idx] - b;
+    n[bin] += 1;
+  });
+  return Array.from({ length: 11 }, (_, i) => {
+    const change = n[i] > 0 ? sum[i] / n[i] : 0;
+    return change > 0.02 ? 1 : change < -0.02 ? -1 : 0;
+  });
+}

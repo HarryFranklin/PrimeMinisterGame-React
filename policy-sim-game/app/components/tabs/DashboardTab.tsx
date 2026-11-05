@@ -1,5 +1,5 @@
 // components/tabs/DashboardTab.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGame } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
@@ -8,13 +8,13 @@ import { availablePolicies } from "../../data/policies";
 import { PM_PROFILES } from "../../utils/pmProfiles";
 import { useDashboardHistograms } from "../../hooks/useDashboardHistograms";
 import TurnSummaryToast from "../TurnSummaryToast";
-import EnactedLegislationHistory from "../EnactedLegislationHistory";
+import SignedBills, { SignedBill } from "../desk/SignedBills";
 import DeskTopBar, { ContinueState } from "../desk/DeskTopBar";
 import DailyReturn from "../desk/DailyReturn";
 import InTray from "../desk/InTray";
 import BillPaper, { SIGN_SEQUENCE_MS } from "../desk/BillPaper";
 import DayCalendar from "../desk/DayCalendar";
-import { PM_TONES, termStatus } from "../desk/deskTheme";
+import { PM_TONES, termStatus, directionsFromChange } from "../desk/deskTheme";
 import { track, startTimer, stopTimer } from "../../client/telemetry";
 import { useTooltipTelemetry } from "../../client/hooks";
 
@@ -107,6 +107,31 @@ export default function DashboardTab() {
     availablePolicies,
     detailsOpen,
   });
+
+  // End of term: each signed bill with that day's change in the measure, and its
+  // overall bar from what it actually did (citizens' recorded before/after).
+  const signedBills: SignedBill[] = useMemo(() => {
+    if (!isParliamentDissolved) return [];
+    return enactedLegislation.map((leg) => {
+      const prev = history.find((h) => h.turn === leg.turn - 1)?.metricScore ?? leg.metricScore ?? 0;
+      const before: number[] = [];
+      const after: number[] = [];
+      population.forEach((r) => {
+        const turns = r.historicalLedger.find((l) => l.cycle === currentCycle)?.turns;
+        const b = turns?.find((x) => x.turn === leg.turn - 1);
+        const a = turns?.find((x) => x.turn === leg.turn);
+        if (b && a) { before.push(b.ls); after.push(a.ls); }
+      });
+      return {
+        turn: leg.turn,
+        policyId: leg.enactedPolicyId,
+        name: leg.enactedPolicyName ?? "",
+        description: leg.description,
+        scoreChange: (leg.metricScore ?? prev) - prev,
+        directions: directionsFromChange(before, after),
+      };
+    });
+  }, [isParliamentDissolved, enactedLegislation, history, population, currentCycle]);
 
   const handleHoverEnacted = (policyId: string | null, turn: number | null) => {
     setHoveredEnactedId(policyId);
@@ -233,18 +258,21 @@ export default function DashboardTab() {
             {/* Right flap: the bill, the Deputy PM's note, or the term's bills */}
             <div className="relative min-h-0 min-w-0">
               {isParliamentDissolved ? (
-                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3">
-                  <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">Parliament is dissolved</span>
-                  <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">The bills you signed this term</span>
-                  <span className="text-[13px] text-stone-600">Hover over a bill to see what it did. Then face the press.</span>
-                  <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-visible relative z-[60]">
-                    <EnactedLegislationHistory
-                      enactedLegislation={enactedLegislation}
-                      availablePolicies={availablePolicies}
-                      hoveredEnactedId={hoveredEnactedId}
-                      onHover={handleHoverEnacted}
-                    />
-                  </div>
+                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-auto rotate-[.4deg]">
+                  <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Parliament is dissolved</span>
+                  <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Signed into law this term</span>
+                  <span className="text-[13px] text-stone-600">
+                    {hoveredHistoryTurn !== null
+                      ? `Showing day ${hoveredHistoryTurn - 1} on the country: who it moved, and which way.`
+                      : "Hover over a bill to see what it did to the country. Then face the press."}
+                  </span>
+                  <SignedBills
+                    bills={signedBills}
+                    hoveredId={hoveredEnactedId}
+                    metricAbbreviation={rule.targetMetricAbbreviation}
+                    color={tone.dark}
+                    onHover={handleHoverEnacted}
+                  />
                 </div>
               ) : (
                 <>

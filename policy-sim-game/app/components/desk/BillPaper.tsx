@@ -6,7 +6,7 @@ import { OverallBar } from './PolicyBars';
 import { overallByBin } from './deskTheme';
 
 /** Must match .desk-ink / .desk-nib in globals.css. */
-const SIGNATURE_PATH =
+export const SIGNATURE_PATH =
   'M8 52 C 18 30 26 8 34 22 C 40 34 30 48 22 44 C 14 40 30 30 46 34 C 60 38 58 54 70 46 C 82 38 84 20 92 26 C 100 32 92 52 104 48 C 116 44 118 30 126 34 C 134 38 128 52 140 48 C 152 44 156 28 166 32 C 176 36 170 52 184 46 C 198 40 206 30 222 36 C 238 42 250 44 270 30';
 
 /** Signature (~1 s), pen lifts away, then the paper slides off (done by ~1.9 s). */
