@@ -3,14 +3,16 @@ import { motion } from 'framer-motion';
 import { Policy, Respondent } from '../../utils/types';
 import { ruleCoverageText } from '../PolicyRuleCard';
 import { OverallBar } from './PolicyBars';
-import { paperLayoutId } from './InTray';
 
 /** Must match .desk-ink / .desk-nib in globals.css. */
 const SIGNATURE_PATH =
   'M8 52 C 18 30 26 8 34 22 C 40 34 30 48 22 44 C 14 40 30 30 46 34 C 60 38 58 54 70 46 C 82 38 84 20 92 26 C 100 32 92 52 104 48 C 116 44 118 30 126 34 C 134 38 128 52 140 48 C 152 44 156 28 166 32 C 176 36 170 52 184 46 C 198 40 206 30 222 36 C 238 42 250 44 270 30';
 
-/** Signature (~0.95 s), pen away, then the paper slides off (ends ~1.85 s). */
-export const SIGN_SEQUENCE_MS = 1900;
+/** Signature (~1 s), pen lifts away, then the paper slides off (done by ~1.9 s). */
+export const SIGN_SEQUENCE_MS = 1950;
+
+/** Where the paper comes from and goes back to: the in-tray, to the right. */
+const FROM_TRAY = { x: '60%', y: -20, scale: 0.55, rotate: 4, opacity: 0 };
 
 interface BillPaperProps {
   policy: Policy;
@@ -25,14 +27,22 @@ interface BillPaperProps {
 
 /**
  * The bill, pulled out of its file onto the right flap of the folder.
- * Signing draws the PM's signature with a moving pen, then the paper slides away.
+ * It glides in from the in-tray and back again when put back. Signing draws
+ * the PM's signature with a moving pen, then the paper slides off the folder.
+ * (Mount inside <AnimatePresence> so putting it back can play.)
  */
 export default function BillPaper({ policy, billNumber, population, pmName, signing, onSign, onPutBack }: BillPaperProps) {
   return (
     <motion.div
-      layoutId={paperLayoutId(policy.id)}
-      transition={{ duration: 0.42, ease: [0.2, 0.75, 0.25, 1] }}
-      className={`desk-paper absolute inset-0 shadow-[0_8px_18px_rgba(60,40,10,.3)] pl-14 pr-7 py-5 flex flex-col gap-3 z-10 overflow-hidden ${signing ? 'desk-slide-off' : ''}`}
+      initial={FROM_TRAY}
+      animate={
+        signing
+          ? { x: '115%', y: 60, rotate: 14, scale: 1, opacity: 0, transition: { delay: 1.25, duration: 0.6, ease: [0.55, 0, 0.8, 0.3] } }
+          : { x: 0, y: 0, rotate: 0.5, scale: 1, opacity: 1, transition: { duration: 0.38, ease: [0.2, 0.75, 0.25, 1] } }
+      }
+      exit={signing ? { opacity: 0, transition: { duration: 0 } } : { ...FROM_TRAY, transition: { duration: 0.28, ease: [0.4, 0, 1, 1] } }}
+      style={{ transformOrigin: '100% 0%' }}
+      className="desk-paper absolute inset-0 shadow-[0_8px_18px_rgba(60,40,10,.3)] pl-14 pr-7 py-5 flex flex-col gap-3 z-10 overflow-hidden"
       data-telemetry-id="bill_paper"
       data-telemetry-type="panel"
     >

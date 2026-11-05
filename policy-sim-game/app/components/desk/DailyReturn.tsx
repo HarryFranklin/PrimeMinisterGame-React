@@ -49,8 +49,9 @@ export default function DailyReturn({
         )}
       </div>
 
+      {/* Fixed height: the chart never moves, however many rules the open bill has */}
       <div
-        className="flex-1 min-h-[180px] p-2 relative"
+        className="h-[54%] shrink-0 min-h-[180px] p-2 relative"
         data-telemetry-id="population_graph_current"
         data-telemetry-type="graph"
       >
@@ -81,11 +82,11 @@ export default function DailyReturn({
         />
       )}
 
-      <div className="shrink-0 min-h-[64px] flex flex-col justify-end">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col pt-1">
         {activeRules ? (
           <PolicyStrips rules={activeRules} padX={CHART_PAD} />
         ) : (
-          <div className="border-2 border-dashed border-[rgba(92,66,20,.3)] rounded-lg px-4 py-3 text-[13px] text-stone-500 text-center">
+          <div className="flex-1 border-2 border-dashed border-[rgba(92,66,20,.3)] rounded-lg px-4 py-3 text-[13px] text-stone-500 text-center flex items-center justify-center">
             {emptyHint}
           </div>
         )}

@@ -1,15 +1,14 @@
 // components/tabs/DashboardTab.tsx
 import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useGame } from "../../context/GameStateContext";
 import { FRAMEWORK_RULES } from "../../utils/frameworkRules";
 import { ElectionCycle, Policy } from "../../utils/types";
 import { availablePolicies } from "../../data/policies";
 import { PM_PROFILES } from "../../utils/pmProfiles";
-import { dpmAdvisory } from "../../utils/dpmAdvisory";
 import { useDashboardHistograms } from "../../hooks/useDashboardHistograms";
 import TurnSummaryToast from "../TurnSummaryToast";
 import EnactedLegislationHistory from "../EnactedLegislationHistory";
-import LensCompare from "../LensCompare";
 import DeskTopBar, { ContinueState } from "../desk/DeskTopBar";
 import DailyReturn from "../desk/DailyReturn";
 import InTray from "../desk/InTray";
@@ -56,7 +55,14 @@ export default function DashboardTab() {
   const signingId = sign.day === dayKey ? sign.signing : null;
   const signedId = sign.day === dayKey ? sign.signed : null;
   const signTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (signTimer.current) clearTimeout(signTimer.current); }, []);
+
+  // New-day card: a calendar page that drops onto the desk after Continue.
+  const [dayCard, setDayCard] = useState<{ day: number | null; key: number } | null>(null);
+  const dayTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => {
+    if (signTimer.current) clearTimeout(signTimer.current);
+    dayTimers.current.forEach(clearTimeout);
+  }, []);
 
   // Reading a bill = its details are open (kept so the view_details_* events,
   // and their dwell times, mean the same as before: time spent on a bill's details).
@@ -137,7 +143,15 @@ export default function DashboardTab() {
 
   const onContinue = () => {
     if (continueState === "press") handleFaceElectorate();
-    else if (continueState === "ready") handleApplyPolicy();
+    else if (continueState === "ready") {
+      handleApplyPolicy();
+      // The bill becomes law (~0.8 s), then tomorrow's page drops in while the
+      // country updates and the new files are dealt. `day: null` = polling day.
+      const next = currentTurn < TURNS_PER_CYCLE ? currentTurn + 1 : null;
+      const key = Date.now();
+      dayTimers.current.push(setTimeout(() => setDayCard({ day: next, key }), 450));
+      dayTimers.current.push(setTimeout(() => setDayCard((c) => (c?.key === key ? null : c)), 2300));
+    }
   };
 
   const status = termStatus(turnMetricScore, startScore, targetScore, currentTurn, TURNS_PER_CYCLE);
@@ -232,36 +246,32 @@ export default function DashboardTab() {
                 </div>
               ) : (
                 <>
-                  {/* Underneath: the Deputy PM's note, or "sent" once signed */}
-                  {signedId ? (
-                    <div className="absolute inset-0 border-[3px] border-dashed border-[rgba(92,66,20,.35)] flex flex-col items-center justify-center gap-2 text-center px-10 text-[#5c4214]">
-                      <span className="font-display font-black text-[28px]">Sent to Parliament ✓</span>
-                      <span className="text-[14px] leading-relaxed">It becomes law when you press Continue. Its effects show tomorrow.</span>
-                    </div>
-                  ) : (
-                    <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-auto" data-telemetry-id="dpm_note" data-telemetry-type="panel">
-                      <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Note from your Deputy PM</span>
-                      <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Four bills in the tray, Prime Minister</span>
-                      <p className="text-[15px] leading-relaxed text-stone-700 italic m-0">
-                        “{dpmAdvisory({ currentCycle, currentTurn, selectedPolicy: false, cycleMAO, currentMetricScore: turnMetricScore })}”
-                      </p>
-                      {currentCycle === ElectionCycle.PersonalUtility && <LensCompare />}
-                      <p className="text-[13px] text-stone-500 mt-auto m-0">Pull one out to read it. Its effect shows on the country to the left.</p>
-                    </div>
-                  )}
+                  {/* Underneath the paper: an empty flap, or "sent" once signed */}
+                  <div className="absolute inset-0 border-[3px] border-dashed border-[rgba(92,66,20,.35)] flex flex-col items-center justify-center gap-2 text-center px-10 text-[#5c4214]">
+                    <span className="font-display font-black text-[clamp(22px,2vw,28px)]">
+                      {signedId ? "Sent to Parliament ✓" : "Four bills in the tray"}
+                    </span>
+                    <span className="text-[14px] leading-relaxed">
+                      {signedId
+                        ? "It becomes law when you press Continue. Its effects show tomorrow."
+                        : "Pull one out to read it. It lands here, and its effect shows on the country."}
+                    </span>
+                  </div>
 
-                  {selectedPolicy && !signedId && (
-                    <BillPaper
-                      key={selectedPolicy.id}
-                      policy={selectedPolicy}
-                      billNumber={deckIndex + 1}
-                      population={population}
-                      pmName={(profile?.name ?? "").replace(/^PM\s+/, "").toUpperCase()}
-                      signing={signingId === selectedPolicy.id}
-                      onSign={signBill}
-                      onPutBack={() => pickPolicy(null)}
-                    />
-                  )}
+                  <AnimatePresence>
+                    {selectedPolicy && !signedId && (
+                      <BillPaper
+                        key={selectedPolicy.id}
+                        policy={selectedPolicy}
+                        billNumber={deckIndex + 1}
+                        population={population}
+                        pmName={(profile?.name ?? "").replace(/^PM\s+/, "").toUpperCase()}
+                        signing={signingId === selectedPolicy.id}
+                        onSign={signBill}
+                        onPutBack={() => pickPolicy(null)}
+                      />
+                    )}
+                  </AnimatePresence>
                 </>
               )}
             </div>
@@ -288,6 +298,38 @@ export default function DashboardTab() {
           )}
         </div>
       </div>
+
+      {/* A new day: tomorrow's calendar page drops onto the desk, then lifts away */}
+      <AnimatePresence>
+        {dayCard && (
+          <motion.div
+            key={dayCard.key}
+            className="absolute inset-0 top-[78px] z-[70] flex items-center justify-center pointer-events-none"
+            initial={{ backgroundColor: "rgba(20,12,6,0)" }}
+            animate={{ backgroundColor: "rgba(20,12,6,.28)" }}
+            exit={{ backgroundColor: "rgba(20,12,6,0)", transition: { duration: 0.4 } }}
+          >
+            <motion.div
+              className="w-[190px] rounded-lg overflow-hidden bg-[#fafaf9] shadow-[0_24px_50px_rgba(0,0,0,.55)] text-center"
+              initial={{ y: -90, rotate: -6, opacity: 0 }}
+              animate={{ y: 0, rotate: -2, opacity: 1, transition: { type: "spring", stiffness: 260, damping: 20 } }}
+              exit={{ y: -60, rotate: 4, opacity: 0, transition: { duration: 0.35, ease: [0.4, 0, 1, 1] } }}
+            >
+              <div className="py-1.5 text-[12px] font-black tracking-[.14em] text-white" style={{ backgroundColor: tone.dark }}>
+                {dayCard.day === null ? "POLLING DAY" : "DAY"}
+              </div>
+              <div className="font-display font-black text-[86px] leading-none py-3 text-stone-900">
+                {dayCard.day === null ? "✓" : dayCard.day}
+              </div>
+              <div className="pb-3 text-[12px] font-extrabold text-stone-600">
+                {dayCard.day === null
+                  ? "The term is over"
+                  : `Election in ${TURNS_PER_CYCLE + 1 - dayCard.day} ${TURNS_PER_CYCLE + 1 - dayCard.day === 1 ? "day" : "days"}`}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

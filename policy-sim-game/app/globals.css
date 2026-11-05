@@ -56,13 +56,6 @@
 @keyframes desk-nib { from { offset-distance: 0%; } to { offset-distance: 100%; } }
 .desk-nib-out { animation: desk-pen-away .3s ease-in .95s forwards; }
 @keyframes desk-pen-away { to { opacity: 0; transform: translate(30px, -40px); } }
-/* ...then the signed bill slides off the folder */
-.desk-slide-off { transform-origin: 0 0; animation: desk-slide-off .6s cubic-bezier(.55,0,.8,.3) 1.25s both; }
-@keyframes desk-slide-off { from { transform: rotate(.5deg); opacity: 1; } to { transform: translateX(110%) translateY(60px) rotate(14deg); opacity: 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .desk-ink, .desk-nib, .desk-nib-out, .desk-slide-off { animation-duration: .01s; animation-delay: 0s; }
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
