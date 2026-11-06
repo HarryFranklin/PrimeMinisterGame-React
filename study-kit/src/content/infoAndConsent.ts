@@ -26,7 +26,7 @@ export interface InfoSheet {
 export interface ConsentForm {
   version: string;
   projectTitle: string;
-  srecReference: 'COMSC/Ethics/2026/051',
+  srecReference: string;
   leadResearcher: string;
   /** One tick box per statement; all must be ticked to continue. Keep ids
    * stable (c1, c2, …) – they're the keys stored in the consent record. */
@@ -504,7 +504,7 @@ const PILOT_SHEET: InfoSheet = {
 const LIVE_CONSENT: ConsentForm = {
   version: 'main-1.1 (2 Nov 2026)',
   projectTitle: 'Using Serious Games to Improve Public Comprehension of Utility Frameworks',
-  srecReference: '',
+  srecReference: 'COMSC/Ethics/2026/051',
   leadResearcher: 'Harry Franklin',
   statements: [
   {
@@ -557,7 +557,7 @@ const LIVE_CONSENT: ConsentForm = {
 const PILOT_CONSENT: ConsentForm = {
   version: 'pilot-1.1 (2 Nov 2026)',
   projectTitle: 'Using Serious Games to Improve Public Comprehension of Utility Frameworks',
-  srecReference: '',
+  srecReference: 'COMSC/Ethics/2026/051',
   leadResearcher: 'Harry Franklin',
   statements: [
   {
