@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ElectionCycle, TurnHistory } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
 import { useTypewriter } from '../../../hooks/useTypewriter';
 import { useAnimatedNumber } from '../../../hooks/useAnimatedNumber';
-import { getRandomPressPerson, buildMetricQuestion } from '../../../utils/pressConferenceData';
+import { getPressPair, buildMetricQuestion } from '../../../utils/pressConferenceData';
+import { getPMProfile } from '../../../utils/pmProfiles';
 import { track } from '../../../client/telemetry';
-import { useTypewriterTelemetry, useDwellTimer } from '../../../client/hooks';
+import { useTypewriterTelemetry } from '../../../client/hooks';
+import PressScene, { STAGE_W, STAGE_H, ASKER_LEFT, ASKER_RIGHT, CROWD_SPOTS, crowdHeadCentre } from './PressScene';
 
 interface StagePressConferenceProps {
   currentCycle: ElectionCycle;
@@ -14,6 +16,10 @@ interface StagePressConferenceProps {
   history: TurnHistory[];
   onAnswerQuestion: (delta: number) => void;
   onReady: () => void;
+  /** Moves the election sequence on to the Term Summary. */
+  onContinue: () => void;
+  /** True when coming Back to this stage: the conference already happened, so don't hold it again. */
+  alreadyHeld?: boolean;
 }
 
 const SCORE_DELTA = 5;
@@ -92,8 +98,8 @@ const Q1_OPENERS: Record<ApprovalTier, string> = {
 };
 
 const Q2_OPENERS = {
-  afterCorrect: "Good—glad we've cleared that up. Now, of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
-  afterWrong: "Hm. Not quite, but let's move on. Of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
+  afterCorrect: "Prime Minister, over here! Of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
+  afterWrong: "That's not how I remember it, Prime Minister. But of everything you enacted this term, which policy do you think was most impactful for ordinary people?",
 };
 
 const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {
@@ -102,7 +108,7 @@ const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {
     if (correctCount === 1) return "A bit of a mixed bag today, Prime Minister, but frankly, with our current polling, we can afford a minor slip-up.";
     return "Well, that wasn't your best performance. Luckily, our ratings are strong enough to absorb the hit, but let's not make a habit of it.";
   }
-  
+
   if (tier === 'contested') {
     if (correctCount === 2) return "Nice work out there, Prime Minister. You smashed it — that should give our ratings a real boost right when we need it to secure this election.";
     if (correctCount === 1) return "You held your own out there, just about. It's still a tight race, so let's hope the electorate focuses on the positives.";
@@ -118,20 +124,48 @@ const getClosingLine = (correctCount: number, tier: ApprovalTier): string => {
 // The closing reaction reads as an internal aide debriefing the PM after the
 // cameras stop rolling, not the journalist — the "our ratings" framing only
 // makes sense coming from someone on the PM's own team.
-const AIDE_REACTION = { name: "Chief of Staff", outlet: "Backstage, Off the Record", emoji: "🧑‍💼" };
+const AIDE_REACTION = { name: "Chief of Staff", outlet: "Backstage, Off the Record" };
 
 type Phase = 'q1' | 'q2' | 'summary';
 
-export default function StagePressConference({ currentCycle, approvalRating, history, onAnswerQuestion, onReady }: StagePressConferenceProps) {
-  const [pressPerson] = useState(getRandomPressPerson);
-  const [introSequence, setIntroSequence] = useState(0); 
-  // 0 = Fade to black, 1 = Journalist appears & typing starts
-  
+// Window size, for scaling the 1440 × 900 scene to cover the screen.
+const subscribeResize = (cb: () => void) => {
+  window.addEventListener('resize', cb);
+  return () => window.removeEventListener('resize', cb);
+};
+const getViewW = () => window.innerWidth;
+const getViewH = () => window.innerHeight;
+
+/** Coming Back to this stage: the conference already happened, so it isn't held (or scored) again. */
+function PressConferenceHeld({ onReady }: { onReady: () => void }) {
+  useEffect(() => { onReady(); }, [onReady]);
+  return (
+    <div className="flex flex-col items-center justify-center py-10 animate-in fade-in duration-300 text-center">
+      <h3 className="text-xl font-black text-zinc-900 mb-2">Press Conference Concluded</h3>
+      <p className="text-zinc-500 font-medium max-w-md">Your answers are on the record.</p>
+    </div>
+  );
+}
+
+export default function StagePressConference(props: StagePressConferenceProps) {
+  if (props.alreadyHeld) return <PressConferenceHeld onReady={props.onReady} />;
+  return <PressConferenceLive {...props} />;
+}
+
+function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQuestion, onReady, onContinue }: StagePressConferenceProps) {
+  const [pressPair] = useState(getPressPair);
+  const [introSequence, setIntroSequence] = useState(0);
+  // 0 = Fade in from black, 1 = Journalist appears & typing starts
+
   const [phase, setPhase] = useState<Phase>('q1');
   const [q1Selected, setQ1Selected] = useState<number | null>(null);
   const [q2Selected, setQ2Selected] = useState<number | null>(null);
-  const [correctCount, setCorrectCount] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [concluded, setConcluded] = useState(false);
+  // The PM reads the chosen answer out loud; only then is it marked, approval
+  // moves, and (if it was wrong) the press react.
+  const [said, setSaid] = useState<{ text: string; correct: boolean; next: Phase } | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const nextPhaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const readyFiredRef = useRef(false);
   const finalCorrectCountRef = useRef(0);
@@ -142,9 +176,12 @@ export default function StagePressConference({ currentCycle, approvalRating, his
 
   const displayScore = useAnimatedNumber(approvalRating, 900);
 
+  const viewW = useSyncExternalStore(subscribeResize, getViewW, () => STAGE_W);
+  const viewH = useSyncExternalStore(subscribeResize, getViewH, () => STAGE_H);
+
   // Cinematic Choreography Timer
   useEffect(() => {
-    const t1 = setTimeout(() => setIntroSequence(1), 1200); 
+    const t1 = setTimeout(() => setIntroSequence(1), 1200);
     return () => clearTimeout(t1);
   }, []);
 
@@ -174,12 +211,31 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     }
   }, [isComplete]);
 
+  const pmSpeech = useTypewriter(said?.text ?? '', 18, said !== null);
+
+  // Once the PM has finished speaking: mark the answer, move approval, then
+  // the next question (same 1.5 s to register the tick / cross as before).
+  useEffect(() => {
+    if (said === null || !pmSpeech.isComplete || revealed) return;
+    const t = setTimeout(() => {
+      setRevealed(true);
+      onAnswerQuestion(said.correct ? SCORE_DELTA : -SCORE_DELTA);
+      nextPhaseTimer.current = setTimeout(() => {
+        setSaid(null);
+        setRevealed(false);
+        setPhase(said.next);
+      }, said.correct ? 1500 : 2200); // a little longer to take in the press reaction
+    }, 450);
+    return () => clearTimeout(t);
+  }, [said, pmSpeech.isComplete, revealed, onAnswerQuestion]);
+
+  useEffect(() => () => { if (nextPhaseTimer.current) clearTimeout(nextPhaseTimer.current); }, []);
+
   const handleAnswerQ1 = (index: number) => {
     if (q1Selected !== null) return;
     setQ1Selected(index);
     const isCorrect = index === q1.correctIndex;
     if (isCorrect) {
-      setCorrectCount(c => c + 1);
       finalCorrectCountRef.current += 1;
     }
     const skipInfo = tw.getSkipInfo();
@@ -190,12 +246,8 @@ export default function StagePressConference({ currentCycle, approvalRating, his
       time_to_answer_ms: questionReadyAt.current ? Date.now() - questionReadyAt.current : 0,
       text_was_skipped: skipInfo.was_skipped,
     });
-    onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
-    
-    // Slowed down transition so the user can register the green check / red cross
-    setTimeout(() => {
-      setPhase(q2 ? 'q2' : 'summary');
-    }, 1500);
+    // The PM says it out loud first; the mark, approval change and next question follow
+    setSaid({ text: q1.options[index].text, correct: isCorrect, next: q2 ? 'q2' : 'summary' });
   };
 
   const handleAnswerQ2 = (index: number) => {
@@ -203,7 +255,6 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     setQ2Selected(index);
     const isCorrect = index === q2.correctIndex;
     if (isCorrect) {
-      setCorrectCount(c => c + 1);
       finalCorrectCountRef.current += 1;
     }
     const skipInfo = tw.getSkipInfo();
@@ -212,7 +263,7 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     const chosenOption = q2.options[index];
     const chosenPolicy = availablePolicies.find(p => p.policyName === chosenOption.text);
     const pickedUnenacted = chosenPolicy ? !enactedIds.has(chosenPolicy.id) : false;
-    
+
     track('press_q2_answered', {
       cycle: ElectionCycle[currentCycle],
       answer_given: chosenOption.text ?? '',
@@ -221,21 +272,17 @@ export default function StagePressConference({ currentCycle, approvalRating, his
       text_was_skipped: skipInfo.was_skipped,
       picked_unenacted_policy: pickedUnenacted,
     });
-    onAnswerQuestion(isCorrect ? SCORE_DELTA : -SCORE_DELTA);
-
-    // Transition to the summary phase with the same visual delay
-    setTimeout(() => {
-      setPhase('summary');
-    }, 1500);
+    setSaid({ text: chosenOption.text, correct: isCorrect, next: 'summary' });
   };
 
-  // Gracefully transition back to the normal Modal flow
+  // Backstage, the Chief of Staff has their say; 4 s later the conference is
+  // concluded and Continue unlocks (same timing as before).
   useEffect(() => {
     if (phase === 'summary' && !readyFiredRef.current) {
       readyFiredRef.current = true;
       const t1 = setTimeout(() => {
-        setIsFullscreen(false); 
-        onReady(); 
+        setConcluded(true);
+        onReady();
       }, 4000);
       return () => clearTimeout(t1);
     }
@@ -248,131 +295,228 @@ export default function StagePressConference({ currentCycle, approvalRating, his
     });
   }, []);
 
-  const renderOptions = (options: AnswerOption[], selected: number | null, onSelect: (i: number) => void) => (
-    <div className="flex flex-col gap-3 w-full">
+  // ── Layout: the scene covers the screen; text and buttons sit on top at real size ──
+  const scale = Math.max(viewW / STAGE_W, viewH / STAGE_H);
+  const offX = (viewW - STAGE_W * scale) / 2;
+  const offY = (viewH - STAGE_H * scale) / 2;
+
+  const backstage = phase === 'summary';
+  const asking = phase === 'q2' ? pressPair.second : pressPair.first;
+  const askOnLeft = phase === 'q2' ? !pressPair.firstOnLeft : pressPair.firstOnLeft;
+  const askerIndex = backstage ? null : askOnLeft ? ASKER_LEFT : ASKER_RIGHT;
+  const speaker = backstage ? AIDE_REACTION : asking;
+
+  // Keep the bubble clear of the PM in the middle of the screen
+  const margin = Math.max(24, viewW * 0.04);
+  const bubbleW = Math.min(600, viewW / 2 - 80 - margin);
+  const bubbleX = backstage ? (viewW - bubbleW) / 2 : askOnLeft ? margin : viewW - bubbleW - margin;
+  const bubbleY = viewH * 0.3; // backstage
+  // Questions come from low down, just above whoever is asking
+  const askerTagTop = askerIndex === null ? 0 : offY + (CROWD_SPOTS[askerIndex][1] - 34) * scale;
+  const bubbleBottom = viewH - askerTagTop + 26;
+  // The PM's answer, just above their head
+  const pmBubbleW = Math.min(460, viewW * 0.36);
+  const pmBubbleX = offX + (STAGE_W / 2) * scale - pmBubbleW / 2;
+  const pmBubbleBottom = viewH - (offY + 290 * scale) + 18;
+  // A wrong answer: the press aren't convinced
+  const HUH = ['?', 'Huh??', '?!?', 'Eh?'];
+  const reactors = (phase === 'q2' ? [3, 5, 8, 10] : [1, 4, 7, 9]).filter(i => i !== askerIndex);
+  const reactions = revealed && said && !said.correct
+    ? reactors.map((i, n) => {
+        const [, y, k, fd] = CROWD_SPOTS[i];
+        return {
+          key: i, text: HUH[n % HUH.length], delay: n * 0.15, rot: [-8, 6, -4, 9][n % 4],
+          left: Math.min(viewW - 50, Math.max(50, offX + crowdHeadCentre(i).x * scale)),
+          top: offY + (y - (fd > 0 ? 125 * k : 40)) * scale - 24,
+        };
+      })
+    : [];
+  const askerHeadX = askerIndex === null ? 0 : offX + crowdHeadCentre(askerIndex).x * scale;
+  const tailX = Math.min(bubbleW - 56, Math.max(28, askerHeadX - bubbleX - 14));
+
+  const tone = getPMProfile(currentCycle);
+  const pmName = tone.name.replace(/^PM\s+/, '').toUpperCase();
+  const approvalColour = approvalRating >= 51 ? '#34d399' : '#fb7185';
+
+  const renderOptions = (options: AnswerOption[], selected: number | null, onSelect: (i: number) => void, big: boolean) => (
+    <div className="grid grid-cols-3 gap-4 items-end">
       {options.map((opt, i) => {
-        const isSelected = selected === i;
-        const isCorrectOption = opt.correct;
-        const revealed = selected !== null;
-
-        let stateClasses = 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 hover:border-zinc-500 cursor-pointer';
-        
-        if (revealed) {
-          if (isCorrectOption) stateClasses = 'border-emerald-500 bg-emerald-500/20 text-emerald-50';
-          else if (isSelected) stateClasses = 'border-rose-500 bg-rose-500/20 text-rose-50';
-          else stateClasses = 'border-zinc-800 bg-zinc-800/40 opacity-40';
-        }
-
+        const picked = selected !== null;
+        const shown = picked && revealed; // marked once the PM has said it
+        const mine = selected === i;
+        const tag = !shown ? `Option ${'ABC'[i]}` : opt.correct ? (mine ? '✓ Correct · +5 approval' : '✓ The right answer') : mine ? '✗ Not quite · −5 approval' : '';
+        const tagColour = !shown ? '#78716c' : opt.correct ? '#15803d' : '#b91c1c';
+        const ring = !shown ? (mine ? '#fde68a' : 'transparent') : opt.correct ? '#22c55e' : mine ? '#f43f5e' : 'transparent';
+        const fade = !shown ? (picked && !mine ? 0.5 : 1) : (!opt.correct && !mine ? 0.4 : 1);
         return (
-          <button
-            key={i}
-            onClick={() => onSelect(i)}
-            disabled={revealed}
-            className={`w-full text-left px-5 py-4 rounded-xl border-2 transition-all duration-300 text-sm font-medium text-zinc-200 disabled:cursor-default flex items-center justify-between gap-3 ${stateClasses}`}
-          >
-            <span>{opt.text}</span>
-            {revealed && isCorrectOption && <span className="text-emerald-400 text-xl shrink-0">✔️</span>}
-            {revealed && isSelected && !isCorrectOption && <span className="text-rose-400 text-xl shrink-0">❌</span>}
-          </button>
+          <div key={i} style={{ rotate: `${[-1.2, 0.6, -0.5][i]}deg` }}>
+            <button
+              type="button"
+              onClick={() => onSelect(i)}
+              disabled={picked}
+              className="w-full text-left bg-[#fbfaf6] text-stone-900 rounded-[10px] px-[18px] py-4 flex flex-col gap-2 transition-[translate,opacity] duration-200 enabled:hover:-translate-y-1.5 enabled:cursor-pointer disabled:cursor-default"
+              style={{ boxShadow: `0 0 0 4px ${ring}, 0 16px 32px rgba(0,0,0,.55)`, opacity: fade }}
+            >
+              <span className="text-[10px] font-extrabold tracking-[.14em] uppercase min-h-[14px]" style={{ color: tagColour }}>{tag}</span>
+              <span className={`font-semibold leading-snug ${big ? 'text-xl' : 'text-base'}`}>“{opt.text}”</span>
+            </button>
+          </div>
         );
       })}
     </div>
   );
 
   return (
-    <>
-      <AnimatePresence>
-        {isFullscreen && (
+    <AnimatePresence>
+      <motion.div
+        key="fullscreen-press"
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[9999] bg-black overflow-hidden text-slate-50"
+      >
+        {/* The scene, fading in from black */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="absolute left-0 top-0 origin-top-left"
+          style={{ transform: `translate(${offX}px, ${offY}px) scale(${scale})` }}
+        >
+          <PressScene cycle={currentCycle} askerIndex={askerIndex} askerName={asking.name} />
+        </motion.div>
+
+        {/* Backstage: the lights go down */}
+        <div className="absolute inset-0 bg-[rgba(5,5,8,.78)] pointer-events-none transition-opacity duration-700" style={{ opacity: backstage ? 1 : 0 }} />
+
+        {/* Who you are */}
+        <div className="absolute left-7 top-[22px] rounded-md px-3.5 py-2 flex flex-col bg-[linear-gradient(180deg,#e3c27a,#b38a3e)] shadow-[inset_0_1px_0_rgba(255,255,255,.5),0_6px_14px_rgba(0,0,0,.4)]">
+          <span className="font-black text-[15px] tracking-[.08em] text-[#2a1a08]">{pmName}</span>
+          <span className="text-[11px] italic text-[#4a3210]">Press conference · Downing Street</span>
+        </div>
+
+        {/* Live approval, separate from the journalist's box */}
+        <div className="absolute right-8 top-5 w-[260px] flex flex-col items-end gap-1">
+          <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-400">Your live approval</span>
+          <span className="text-[52px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: approvalColour }}>
+            {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
+          </span>
+          <div className="relative w-full h-2 bg-white/15 rounded mt-1.5">
+            <div className="absolute left-0 top-0 bottom-0 rounded transition-[width] duration-700" style={{ width: `${Math.max(0, Math.min(100, displayScore))}%`, backgroundColor: approvalColour }} />
+            <div className="absolute left-[51%] -top-[5px] -bottom-[5px] border-l-2 border-slate-50" />
+          </div>
+          <span className="text-[11px] text-zinc-400">51% needed on polling day</span>
+        </div>
+
+        {/* The journalist asking, then the Chief of Staff backstage */}
+        {introSequence >= 1 && (
           <motion.div
-            key="fullscreen-press"
-            // CHANGED: instantly snaps to black on load to hide the white modal below
-            initial={{ opacity: 1 }} 
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            // CHANGED: Speeds up the exit transition so you don't stare at ghosting
-            transition={{ duration: 0.2 }} 
-            className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col p-6 md:p-12 overflow-y-auto"
+            key={phase}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+            className={`absolute bg-[#fffdf7] text-stone-900 rounded-[18px] px-[22px] pt-[18px] pb-5 shadow-[0_18px_40px_rgba(0,0,0,.55)] ${isTyping ? 'cursor-pointer' : ''}`}
+            style={{ left: bubbleX, width: bubbleW, ...(backstage ? { top: bubbleY } : { bottom: bubbleBottom }) }}
+            onClick={() => { if (isTyping) { skip(); tw.onSkip(); questionReadyAt.current = Date.now(); } }}
           >
-            {/* Live Approval - Explicitly separated from the journalist's box */}
-            <div className="absolute top-6 right-6 md:top-10 md:right-12 z-20 flex flex-col items-end">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-1">Your Live Approval</span>
-              <span
-                className="text-4xl md:text-5xl font-black tabular-nums transition-colors duration-500"
-                style={{ color: approvalRating >= 51 ? '#34d399' : '#fb7185' }}
-              >
-                {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
-              </span>
+            <div className="flex flex-col border-b border-stone-200 pb-2.5 mb-2.5">
+              <span className="text-[13px] font-black tracking-[.1em] uppercase" style={{ color: tone.color }}>{speaker.name}</span>
+              <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-stone-500">{speaker.outlet}</span>
             </div>
-
-            {/* Journalist Dialogue & Answer Flow */}
-            <div className="flex-1 flex flex-col justify-center gap-6 max-w-2xl mx-auto w-full mt-16 md:mt-24">
-              
-              {introSequence >= 1 && (() => {
-                const speaker = phase === 'summary' ? AIDE_REACTION : pressPerson;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-2xl relative"
-                  >
-                    {/* Decorative speech bubble tail */}
-                    <div className="absolute top-full left-10 -mt-px border-[12px] border-transparent border-t-zinc-900 z-10" />
-                    <div className="absolute top-full left-[39px] -mt-px border-[13px] border-transparent border-t-zinc-800 z-0" />
-
-                    <div className="flex items-center gap-4 mb-4 border-b border-zinc-800 pb-4">
-                      <span className="text-3xl bg-zinc-800 border border-zinc-700 w-14 h-14 flex items-center justify-center rounded-full shadow-inner shrink-0">
-                        {speaker.emoji}
-                      </span>
-                      <div>
-                        <span className="text-sm font-black uppercase tracking-widest text-pink-500 leading-tight block mb-0.5">
-                          {speaker.name}
-                        </span>
-                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{speaker.outlet}</span>
-                      </div>
-                    </div>
-                    <div
-                      className={`text-zinc-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap min-h-[4em] ${isTyping ? 'cursor-pointer' : ''}`}
-                      onClick={() => { if (isTyping) { skip(); tw.onSkip(); questionReadyAt.current = Date.now(); } }}
-                    >
-                      {displayedText}
-                      {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-500 animate-pulse translate-y-1" />}
-                    </div>
-                  </motion.div>
-                );
-              })()}
-
-              {/* Answer Options - only appear once typing is fully complete */}
-              <AnimatePresence mode="wait">
-                {introSequence >= 1 && isComplete && phase === 'q1' && (
-                  <motion.div key="q1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-                    {renderOptions(q1.options.map(o => ({ text: o.text, correct: o.cycle === currentCycle })), q1Selected, handleAnswerQ1)}
-                  </motion.div>
-                )}
-
-                {introSequence >= 1 && isComplete && phase === 'q2' && q2 && (
-                  <motion.div key="q2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-                    {renderOptions(q2.options, q2Selected, handleAnswerQ2)}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
+            <div className={`whitespace-pre-wrap min-h-[4em] leading-[1.45] ${backstage ? 'font-hand text-[30px] text-[#1e3a8a]' : 'text-[19px]'}`}>
+              {displayedText}
+              {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-400 animate-pulse translate-y-1" />}
             </div>
+            {!backstage && (
+              <div
+                className="absolute -bottom-[18px] w-0 h-0 border-x-[14px] border-x-transparent border-t-[20px] border-t-[#fffdf7]"
+                style={{ left: tailX }}
+              />
+            )}
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* 
-        LAYER 2: The standard Modal placeholder 
-        This is what the user is safely returned to once the fullscreen effect ends.
-      */}
-      {!isFullscreen && (
-        <div className="flex flex-col items-center justify-center py-10 animate-in fade-in duration-300 text-center">
-          <span className="text-4xl mb-4">🎤</span>
-          <h3 className="text-xl font-black text-zinc-900 mb-2">Press Conference Concluded</h3>
-          <p className="text-zinc-500 font-medium max-w-md mb-2">The Chief of Staff has concluded your debrief.</p>
+        {/* The PM reads the chosen answer out */}
+        <AnimatePresence>
+          {said && !backstage && (
+            <motion.div
+              key={`pm-${phase}`}
+              initial={{ opacity: 0, y: 10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute bg-white text-stone-900 rounded-[18px] px-5 pt-3.5 pb-4 shadow-[0_18px_40px_rgba(0,0,0,.55)]"
+              style={{ left: pmBubbleX, bottom: pmBubbleBottom, width: pmBubbleW }}
+            >
+              <span className="block text-[11px] font-black tracking-[.12em] uppercase mb-1" style={{ color: tone.color }}>{pmName} · Prime Minister</span>
+              <p className="m-0 font-semibold text-[18px] leading-snug">“{pmSpeech.displayedText}{pmSpeech.isComplete ? '”' : ''}</p>
+              <div className="absolute -bottom-[18px] left-1/2 -ml-[14px] w-0 h-0 border-x-[14px] border-x-transparent border-t-[20px] border-t-white" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Your answers - only once the question has been asked in full */}
+        <div className="absolute left-[2.5vw] right-[2.5vw] bottom-[3vh]">
+          <AnimatePresence mode="wait">
+            {introSequence >= 1 && isComplete && phase === 'q1' && (
+              <motion.div key="q1" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+                {renderOptions(q1.options.map(o => ({ text: o.text, correct: o.cycle === currentCycle })), q1Selected, handleAnswerQ1, false)}
+              </motion.div>
+            )}
+
+            {introSequence >= 1 && isComplete && phase === 'q2' && q2 && (
+              <motion.div key="q2" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+                {renderOptions(q2.options, q2Selected, handleAnswerQ2, true)}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
-    </>
+
+        {/* The press aren't convinced */}
+        {reactions.map(r => (
+          <motion.span
+            key={`${phase}-${r.key}`}
+            initial={{ opacity: 0, scale: 0.4, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: r.delay, duration: 0.3, ease: [0.2, 0.8, 0.3, 1.4] }}
+            className="absolute -translate-x-1/2 bg-white text-stone-900 font-black text-[22px] leading-none px-3 py-2 rounded-2xl shadow-[0_8px_18px_rgba(0,0,0,.45)] pointer-events-none"
+            style={{ left: r.left, top: r.top, rotate: `${r.rot}deg` }}
+          >
+            {r.text}
+          </motion.span>
+        ))}
+
+        {/* Concluded */}
+        {concluded && (
+          <div className="absolute left-0 right-0 bottom-[8vh] flex flex-col items-center gap-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 1.4, rotate: -4, y: -16 }}
+              animate={{ opacity: 1, scale: 1, rotate: -6, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.2, 0.8, 0.3, 1.3] }}
+              className="border-[5px] px-[22px] py-2.5 font-black text-[30px] tracking-[.14em] uppercase"
+              style={{ borderColor: PM_LIGHT[currentCycle], color: PM_LIGHT[currentCycle] }}
+            >
+              Press conference concluded
+            </motion.div>
+            <button
+              type="button"
+              onClick={onContinue}
+              className="font-black text-[15px] bg-[#d6b25e] text-stone-900 rounded-[10px] px-6 py-3.5 cursor-pointer hover:bg-[#e3c27a]"
+            >
+              Continue to Term Summary ▶
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
   );
 }
+
+/** Light tint of each PM's colour, readable on the dark backstage. */
+const PM_LIGHT: Record<ElectionCycle, string> = {
+  [ElectionCycle.Benthamite]: '#f9a8d4',
+  [ElectionCycle.Rawlsian]: '#93c5fd',
+  [ElectionCycle.SocietalUtility]: '#6ee7b7',
+  [ElectionCycle.PersonalUtility]: '#c4b5fd',
+};

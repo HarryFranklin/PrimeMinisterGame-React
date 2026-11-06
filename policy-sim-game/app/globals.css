@@ -98,3 +98,17 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #d4d4d8 transparent;
 }
+
+/* ── Press conference outside No. 10 ── */
+.press-brick {
+  background:
+    repeating-linear-gradient(0deg, rgba(10,6,4,.55) 0 2px, transparent 2px 28px),
+    repeating-linear-gradient(90deg, rgba(10,6,4,.4) 0 2px, transparent 2px 64px),
+    linear-gradient(180deg, #2a201b, #3b2b23 70%, #2a201b);
+}
+.press-flash { opacity: 0; animation: press-flash 3.4s linear infinite; }
+@keyframes press-flash { 0%, 84%, 100% { opacity: 0; } 86% { opacity: 1; } 90% { opacity: .25; } 93% { opacity: 0; } }
+.press-wash { opacity: 0; animation: press-wash 3.4s linear infinite; }
+@keyframes press-wash { 0%, 84%, 100% { opacity: 0; } 86% { opacity: .16; } 92% { opacity: 0; } }
+.press-bob { animation: press-bob 2.4s ease-in-out infinite; }
+@keyframes press-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }

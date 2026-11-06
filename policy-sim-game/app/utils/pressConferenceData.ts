@@ -24,6 +24,23 @@ export const PRESS_PEOPLE: PressPerson[] = [
 export const getRandomPressPerson = (): PressPerson =>
   PRESS_PEOPLE[Math.floor(Math.random() * PRESS_PEOPLE.length)];
 
+/**
+ * Two different journalists for the two questions: one asks from the left of
+ * the scrum and the other from the right, and which side goes first is random.
+ */
+export interface PressPair {
+  first: PressPerson;
+  second: PressPerson;
+  firstOnLeft: boolean;
+}
+
+export const getPressPair = (): PressPair => {
+  const a = Math.floor(Math.random() * PRESS_PEOPLE.length);
+  let b = Math.floor(Math.random() * (PRESS_PEOPLE.length - 1));
+  if (b >= a) b += 1;
+  return { first: PRESS_PEOPLE[a], second: PRESS_PEOPLE[b], firstOnLeft: Math.random() < 0.5 };
+};
+
 interface MetricQuestionOption {
   text: string;
   /** Which cycle this phrasing actually describes — the option is correct iff this matches the current cycle. */

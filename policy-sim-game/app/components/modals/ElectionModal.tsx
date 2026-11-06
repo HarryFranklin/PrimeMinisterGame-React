@@ -30,6 +30,8 @@ export default function ElectionModal(props: ElectionModalProps) {
   const { currentCycle, approvalRating, cycleAttempts, onReset, onRequestDebrief, onAnswerPressQuestion } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
+  // Once you leave the press conference it has been held: coming Back must not hold (and score) it again.
+  const [pressHeld, setPressHeld] = useState(false);
 
   // Stable across every ElectionModal re-render (unlike an inline arrow
   // function would be) - several stage components use onReady inside a
@@ -107,6 +109,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       ms_on_stage: now - stageShownAt.current,
       ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
     });
+    if (page === 0) setPressHeld(true);
     setPageReady(false);
     setPage(to);
   };
@@ -167,7 +170,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} />}
         {page === 1 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
         {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={handlePageReady} />}
         {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
