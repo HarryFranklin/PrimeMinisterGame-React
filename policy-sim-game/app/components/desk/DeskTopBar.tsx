@@ -46,8 +46,11 @@ export default function DeskTopBar({
   const tone = PM_TONES[cycle];
   const displayApproval = useAnimatedNumber(approval);
   const poll = makePoll(displayApproval, pollHalfWidth(turn, isDissolved), pollError);
-  const bandLeft = pollBarPercent(poll.low);
-  const bandWidth = pollBarPercent(poll.high) - bandLeft;
+  // The band is drawn from the real target values so its move and its narrowing
+  // happen together in one CSS transition (the counting number would lag the width).
+  const bandPoll = makePoll(approval, pollHalfWidth(turn, isDissolved), pollError);
+  const bandLeft = pollBarPercent(bandPoll.low);
+  const bandWidth = pollBarPercent(bandPoll.high) - bandLeft;
   const moved = previousApproval === null ? null : approval - previousApproval;
   const move =
     moved === null ? { text: 'First poll', colour: '#d6c7aa' }

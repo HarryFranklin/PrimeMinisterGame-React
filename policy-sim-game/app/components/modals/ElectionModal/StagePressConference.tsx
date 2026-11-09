@@ -320,6 +320,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   // Backstage: the final poll slip, handed over on the right
   const slipW = Math.min(520, viewW / 2 - 40 - margin);
   const pollNow = makePoll(displayScore, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
+  const pollNowBand = makePoll(approvalRating, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const pollThisMorning = makePoll(startApproval, POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const finalPoll = makePoll(approvalRating, POLL_HALF_WIDTH_FINAL, pollError);
   const correctSoFar = (q1Selected === q1.correctIndex ? 1 : 0) + (q2 && q2Selected === q2.correctIndex ? 1 : 0);
@@ -413,7 +414,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
           <span className="text-[44px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>
             {formatPollRange(pollNow)}
           </span>
-          <PollBar poll={pollNow} className="w-full h-2.5 mt-1.5 bg-white/15" band="#f472b6" line="#f8fafc" />
+          <PollBar poll={pollNowBand} className="w-full h-2.5 mt-1.5 bg-white/15" band="#f472b6" line="#f8fafc" />
           <span className="text-[12px] font-extrabold" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>{pollNow.status}</span>
         </div>
 
@@ -515,7 +516,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
               <span className="text-[18px] font-black text-right" style={{ color: POLL_STATUS_COLOURS[finalPoll.status].onLight }}>{finalPoll.status}</span>
             </div>
             <PollBar poll={finalPoll} before={pollThisMorning} className="w-full h-[22px] bg-[#e7dfcb]" band="#be185d" line="#1c1917" />
-            <div className="flex justify-between text-[11px] font-bold text-stone-500"><span>20%</span><span>{WIN_THRESHOLD}% to win</span><span>80%</span></div>
+            <div className="flex justify-between text-[11px] font-bold text-stone-500"><span>0%</span><span>{WIN_THRESHOLD}% to win</span><span>100%</span></div>
             <div className="grid grid-cols-2 gap-3 border-t border-stone-300 pt-2.5">
               <div className="flex flex-col gap-0.5 text-stone-500">
                 <span className="text-[10px] font-extrabold tracking-[.14em] uppercase">This morning</span>

@@ -74,8 +74,8 @@ export function formatPollRange(poll: Poll): string {
 }
 
 /** The part of the 0–100 scale a poll bar shows (polls never sit at the extremes). */
-export const POLL_SCALE_MIN = 20;
-export const POLL_SCALE_MAX = 80;
+export const POLL_SCALE_MIN = 0;
+export const POLL_SCALE_MAX = 100;
 
 /** Position on a poll bar, as a percentage of its width. */
 export function pollBarPercent(value: number): number {

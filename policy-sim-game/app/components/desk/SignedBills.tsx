@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { track } from '../../client/telemetry';
 import { OverallBar } from './PolicyBars';
@@ -7,6 +7,9 @@ import { SIGNATURE_PATH } from './BillPaper';
 
 /** Hovers shorter than this are ignored (mouse passing through). */
 const HOVER_MIN_MS = 250;
+/** Moving from one slip to the next crosses a small gap; wait this long before
+ * going back to "the country on polling day", so the chart doesn't flick. */
+const CLEAR_DELAY_MS = 180;
 
 type HoverStart = { index: number; policyId: string | null; turn: number; at: number } | null;
 
@@ -41,14 +44,18 @@ interface SignedBillsProps {
 
 /**
  * End of term: the bills signed into law, as signed slips on the right flap.
- * Hovering one shows its before/after on the chart and its rules under it.
+ * The slips share the flap's height equally. Hovering one shows its
+ * before/after on the chart and its rules under it.
  * Tracks enacted_policy_hovered exactly as the old list did.
  */
 export default function SignedBills({ bills, hoveredId, metricAbbreviation, color, onHover }: SignedBillsProps) {
   const hoverStart = useRef<HoverStart>(null);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (clearTimer.current) clearTimeout(clearTimer.current); }, []);
 
   return (
-    <div className="flex flex-col gap-2.5 min-h-0">
+    <div className="flex-1 flex flex-col gap-2.5 min-h-0">
       {bills.map((bill, index) => {
         const on = hoveredId !== null && hoveredId === bill.policyId;
         const dim = hoveredId !== null && !on;
@@ -59,11 +66,15 @@ export default function SignedBills({ bills, hoveredId, metricAbbreviation, colo
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: dim ? 0.55 : 1, x: on ? -6 : 0, transition: { duration: 0.25, delay: hoveredId === null ? index * 0.06 : 0 } }}
             onMouseEnter={() => {
+              if (clearTimer.current) { clearTimeout(clearTimer.current); clearTimer.current = null; }
               onHover(bill.policyId, bill.turn);
               hoverStart.current = { index, policyId: bill.policyId, turn: bill.turn, at: Date.now() };
             }}
-            onMouseLeave={() => { finishHover(hoverStart); onHover(null, null); }}
-            className="relative grid grid-cols-[52px_1fr_auto] gap-3 items-center bg-[#fffdf7] rounded-[3px] px-3 py-2.5 cursor-default border-l-4 shadow-[0_2px_6px_rgba(60,40,10,.15)]"
+            onMouseLeave={() => {
+              finishHover(hoverStart);
+              clearTimer.current = setTimeout(() => { clearTimer.current = null; onHover(null, null); }, CLEAR_DELAY_MS);
+            }}
+            className="relative flex-1 min-h-[88px] grid grid-cols-[52px_1fr_auto] gap-3 items-center bg-[#fffdf7] rounded-[3px] px-3 py-2.5 cursor-default border-l-4 shadow-[0_2px_6px_rgba(60,40,10,.15)]"
             style={{ borderLeftColor: on ? color : '#e7dcc0' }}
           >
             {/* Little calendar page: the day it was signed */}
@@ -74,7 +85,7 @@ export default function SignedBills({ bills, hoveredId, metricAbbreviation, colo
 
             <div className="min-w-0 flex flex-col gap-1">
               <span className="font-display font-black text-[16px] leading-tight text-[#2a1f0e] truncate">{bill.name}</span>
-              {bill.description && <span className="text-[11.5px] leading-snug text-stone-600 line-clamp-2">{bill.description}</span>}
+              {bill.description && <span className="text-[11.5px] leading-snug text-stone-600 line-clamp-4">{bill.description}</span>}
               <OverallBar directions={bill.directions} height={8} />
             </div>
 
