@@ -362,7 +362,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   const bubbleX = backstage ? margin : askOnLeft ? margin : viewW - bubbleW - margin;
   const bubbleY = Math.max(140, viewH * 0.17); // backstage
   // Backstage: the final poll slip, handed over on the right
-  const slipW = Math.min(520, viewW / 2 - 40 - margin);
+  const slipW = Math.min(580, viewW / 2 - 40 - margin);
   const pollNow = makePoll(displayScore, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
   // Drawn from the real values so the band shifts and narrows in one movement
   const pollNowBand = makePoll(shownApproval, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
@@ -515,7 +515,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
               <span className="text-[13px] font-black tracking-[.1em] uppercase" style={{ color: tone.color }}>{speaker.name}</span>
               <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-stone-500">{speaker.outlet}</span>
             </div>
-            <div className={`whitespace-pre-wrap min-h-[4em] leading-[1.45] ${backstage ? 'font-hand text-[30px] text-[#1e3a8a]' : 'text-[19px]'}`}>
+            <div className={`whitespace-pre-wrap min-h-[4em] leading-[1.45] ${backstage ? 'font-hand text-[30px] text-[#1e3a8a]' : 'font-text text-[21px]'}`}>
               {displayedText}
               {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-zinc-400 animate-pulse translate-y-1" />}
             </div>
@@ -541,7 +541,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
               style={{ left: pmBubbleX, bottom: pmBubbleBottom, width: pmBubbleW }}
             >
               <span className="block text-[11px] font-black tracking-[.12em] uppercase mb-1" style={{ color: tone.color }}>{pmName} · Prime Minister</span>
-              <p className="m-0 font-semibold text-[18px] leading-snug">“{pmSpeech.displayedText}{pmSpeech.isComplete ? '”' : ''}</p>
+              <p className="m-0 font-text font-semibold text-[20px] leading-snug">“{pmSpeech.displayedText}{pmSpeech.isComplete ? '”' : ''}</p>
               <div className="absolute -bottom-[18px] left-1/2 -ml-[14px] w-0 h-0 border-x-[14px] border-x-transparent border-t-[20px] border-t-white" />
             </motion.div>
           )}
@@ -589,7 +589,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
           >
             {/* Staple */}
             <div className="absolute left-[22px] -top-3.5 w-[18px] h-[50px] border-[3px] border-zinc-400 rounded-[10px]" />
-            <div className="flex justify-between gap-3 border-b-2 border-stone-900 pb-1.5 ml-[30px] text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">
+            <div className="flex justify-between gap-3 border-b-2 border-stone-900 pb-1.5 ml-[30px] text-[12px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">
               <span>Party pollster · final poll</span>
               <span>Polling day, 6pm</span>
             </div>
@@ -598,19 +598,22 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
               <span className="text-[18px] font-black text-right" style={{ color: POLL_STATUS_COLOURS[finalPoll.status].onLight }}>{finalPoll.status}</span>
             </div>
             <PollBar poll={finalPoll} before={pollThisMorning} className="w-full h-[22px] bg-[#e7dfcb]" band="#be185d" line="#1c1917" />
-            <div className="flex justify-between text-[11px] font-bold text-stone-500"><span>0%</span><span>{WIN_THRESHOLD}% to win</span><span>100%</span></div>
+            <div className="flex justify-between text-[13px] font-bold text-stone-500"><span>0%</span><span>{WIN_THRESHOLD}% to win</span><span>100%</span></div>
             <div className="grid grid-cols-2 gap-3 border-t border-stone-300 pt-2.5">
               <div className="flex flex-col gap-0.5 text-stone-500">
-                <span className="text-[10px] font-extrabold tracking-[.14em] uppercase">This morning</span>
-                <span className="text-[18px] font-black tabular-nums">{formatPollRange(pollThisMorning)}</span>
-                <span className="text-[11px]">hatched on the bar</span>
+                <span className="flex items-center gap-1.5 text-[12px] font-extrabold tracking-[.14em] uppercase">
+                  {/* The same hatching as this morning's band on the bar */}
+                  <span className="inline-block w-4 h-3 border border-stone-400 bg-[repeating-linear-gradient(-45deg,rgba(120,113,108,.6)_0_2px,transparent_2px_5px)]" />
+                  This morning
+                </span>
+                <span className="text-[21px] font-black tabular-nums">{formatPollRange(pollThisMorning)}</span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-stone-500">Your press answers</span>
-                <span className="text-[18px] font-black">{correctSoFar} of {q2 ? 2 : 1} correct</span>
+                <span className="text-[12px] font-extrabold tracking-[.14em] uppercase text-stone-500">Your press answers</span>
+                <span className="text-[21px] font-black">{correctSoFar} of {q2 ? 2 : 1} correct</span>
               </div>
             </div>
-            <span className="font-hand text-[24px] text-[#1e3a8a] -rotate-[1.5deg]">{SCRIBBLE[finalPoll.status]}</span>
+            <span className="font-hand text-[28px] text-[#1e3a8a] -rotate-[1.5deg]">{SCRIBBLE[finalPoll.status]}</span>
           </motion.div>
         )}
 

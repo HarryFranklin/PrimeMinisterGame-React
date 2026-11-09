@@ -271,7 +271,11 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
     : correctCount === asked ? (asked === 1 ? 'got the question right' : 'got both questions right')
     : correctCount === 0 ? (asked === 1 ? 'got the question wrong' : 'got both questions wrong')
     : `got ${correctCount} of ${asked} questions right`;
-  const swingText = pressSwing > 0.05 ? `The answers were worth ${pressSwing.toFixed(1)} points.` : pressSwing < -0.05 ? `The answers cost ${Math.abs(pressSwing).toFixed(1)} points.` : 'The answers left the vote where it was.';
+  const atCeiling = pressSwing <= 0.05 && correctCount > 0 && pressStart >= 99.95;
+  const atFloor = pressSwing >= -0.05 && correctCount < asked && pressStart <= 0.05;
+  const swingText = atCeiling ? 'There was no room left to climb: the polls were already as high as they go.'
+    : atFloor ? 'There was no further to fall.'
+    : pressSwing > 0.05 ? `The answers were worth ${pressSwing.toFixed(1)} points.` : pressSwing < -0.05 ? `The answers cost ${Math.abs(pressSwing).toFixed(1)} points.` : 'The answers left the vote where it was.';
   const pressStory = morningPoll
     ? `${surname} polled at ${formatPollRange(morningPoll)} moments before the final press conference outside 10 Downing Street, and ${answered}. ${swingText} The last poll before the count put ${surname} on ${formatPollRange(finalPoll)}.${swungIt ? ` Without those answers, ${surname} would have lost.` : costIt ? ` Before them, ${surname} was on course to win.` : ''}`
     : '';
@@ -322,9 +326,16 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                   {pressSummary && (
                     <div className="flex flex-col gap-1 pt-1">
                       <span className="font-display font-black text-[19px] leading-tight">{pressHeadline}</span>
-                      <p className="m-0 text-[13.5px] leading-snug text-stone-800">{pressStory}</p>
+                      <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory}</p>
                     </div>
                   )}
+                  {/* What's inside: bottom of the left column */}
+                  <div className="mt-auto flex flex-col gap-1 border-t-4 border-double border-stone-900 pt-1.5">
+                    <span className="paper-cap">Inside</span>
+                    {[['How the country moved', 2], ['Who won and who lost', 3], ['What the voters say', 4], ['Next up', 5]].map(([t, n]) => (
+                      <div key={t} className="flex justify-between items-baseline gap-2"><span className="font-display font-bold text-[14px] leading-tight">{t}</span><span className="paper-cap">p{n}</span></div>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2.5 border-l border-stone-900 pl-3.5 min-h-0">
                   {pressSummary && pressSummary.questions.length > 0 && (
@@ -332,24 +343,23 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                       <span className="paper-cap" style={{ color: tone.dark }}>{surname} faces the press</span>
                       {pressSummary.questions.map((q, i) => (
                         <div key={i} className="flex flex-col gap-0.5 border-b border-stone-300 pb-2">
-                          <span className="text-[11.5px] text-stone-600"><strong>{q.who}, {q.outlet},</strong> asked {q.ask}</span>
-                          <span className="text-[13.5px] font-bold leading-snug">“{q.said}”</span>
-                          <span className="text-[11.5px] font-extrabold" style={{ color: q.correct ? '#15803d' : '#b91c1c' }}>{q.correct ? '✓ Right · polls up' : '✗ Wrong · polls down'}</span>
+                          <span className="text-[13.5px] leading-snug text-stone-700"><strong className="text-stone-900">{q.who}, {q.outlet},</strong> asked {q.ask}</span>
+                          <span className="text-[15.5px] font-bold leading-snug">“{q.said}”</span>
+                          <span className="text-[13px] font-bold" style={{ color: q.correct ? '#15803d' : '#b91c1c' }}>{q.correct ? '✓ Correct · polls up' : '✗ Wrong · polls down'}</span>
                         </div>
                       ))}
                     </>
                   )}
                   <div className="border-2 border-stone-900 px-2.5 py-2 flex flex-col gap-0.5">
                     <span className="paper-cap">The measure</span>
-                    <span className="text-[13px] font-bold leading-snug">{rule.targetMetricName}</span>
-                    <span className="text-[13px] leading-snug"><span className="whitespace-nowrap">{startMetric.toFixed(2)} → {endMetric.toFixed(2)}</span> over the term</span>
-                    <span className="text-[13px] leading-snug">Target: <strong>{targetScore.toFixed(2)}</strong> <span className="font-black" style={{ color: endMetric >= targetScore ? '#15803d' : '#b91c1c' }}>{endMetric >= targetScore ? '✓' : '✗'}</span></span>
+                    <span className="text-[14.5px] font-bold leading-snug">{rule.targetMetricName}</span>
+                    <span className="text-[14.5px] leading-snug"><span className="whitespace-nowrap">{startMetric.toFixed(2)} → {endMetric.toFixed(2)}</span> over the term</span>
+                    <span className="text-[14.5px] leading-snug">Target: <strong>{targetScore.toFixed(2)}</strong> <span className="font-bold" style={{ color: endMetric >= targetScore ? '#15803d' : '#b91c1c' }}>{endMetric >= targetScore ? '✓' : '✗'}</span></span>
                   </div>
-                  <div className="mt-auto flex flex-col gap-1 border-t-4 border-double border-stone-900 pt-1.5">
-                    <span className="paper-cap">Inside</span>
-                    {[['How the country moved', 2], ['Who won and who lost', 3], ['What the voters say', 4], ['Next up', 5]].map(([t, n]) => (
-                      <div key={t} className="flex justify-between items-baseline gap-2"><span className="font-display font-bold text-[14px] leading-tight">{t}</span><span className="paper-cap">p{n}</span></div>
-                    ))}
+                  {/* The measure bill by bill, against the target */}
+                  <div className="border-2 border-stone-900 px-2.5 pt-2 pb-1.5 flex flex-col gap-1">
+                    <span className="paper-cap">{rule.targetMetricAbbreviation}, bill by bill</span>
+                    <MeasureChart scores={timelineData.map((d) => d.score)} target={targetScore} colour={tone.dark} />
                   </div>
                 </div>
               </div>
@@ -470,14 +480,16 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
               <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
                 {voters.map((vp, idx) => {
                   const d = vp.finalLS - vp.baselineLS;
-                  const c = d > 0.1 ? '#1d4ed8' : d < -0.1 ? '#b45309' : '#57534e';
+                  // Same groups and colours as page 3: Improved / Unchanged / Declined (±0.5 LS)
+                  const moved = d > CHANGE_THRESHOLD ? 'Improved' : d < -CHANGE_THRESHOLD ? 'Declined' : 'Unchanged';
+                  const c = moved === 'Improved' ? '#1d4ed8' : moved === 'Declined' ? '#b45309' : '#57534e';
                   return (
-                    <div key={idx} className="grid grid-cols-[1fr_auto] gap-3.5 border-t-2 border-stone-900 pt-3 pb-3.5">
+                    <div key={idx} className="grid grid-cols-[1fr_auto] gap-3.5 border-t-2 border-stone-900 pt-2.5 pb-2.5">
                       <div className="flex flex-col gap-1.5 min-w-0">
-                        <span className="font-display font-bold text-[16px] leading-snug whitespace-pre-wrap">
+                        <span className="font-semibold text-[17.5px] leading-snug whitespace-pre-wrap">
                           “{renderVoterQuote(vp.sentiment, pmSurname, idx % 2 === 0, () => {}, () => {}, () => {}, true)}”
                         </span>
-                        <span className="text-[12.5px] font-extrabold">{vp.name}</span>
+                        <span className="text-[13.5px] font-bold">{vp.name}</span>
                         {quotedPolicies(vp.sentiment, idx % 2 === 0).map((b) => (
                           <span key={b.id} className="text-[12.5px] leading-snug text-stone-700 border-l-[3px] pl-2" style={{ borderColor: tone.dark }}>
                             <strong className="text-stone-900">{b.name}:</strong> {b.description}
@@ -487,7 +499,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                       <div className="flex flex-col items-end gap-0.5 min-w-[96px]">
                         <span className="paper-cap text-stone-500">Life satisfaction</span>
                         <span className="text-[16px] font-black tabular-nums" style={{ color: c }}>{vp.baselineLS.toFixed(1)} → {vp.finalLS.toFixed(1)}</span>
-                        <span className="text-[12px] font-extrabold" style={{ color: c }}>{d >= 0 ? '+' : '−'}{Math.abs(d).toFixed(1)}</span>
+                        <span className="text-[13px] font-bold" style={{ color: c }}>{d >= 0 ? '+' : '−'}{Math.abs(d).toFixed(1)} · {moved}</span>
                       </div>
                     </div>
                   );
@@ -645,5 +657,34 @@ function ExitPicture({ cycle }: { cycle: ElectionCycle }) {
         <div key={i} style={abs({ left: -40 + i * 180, top: 720 + (i % 2) * 30, width: 150, height: 300, borderRadius: '75px 75px 0 0', background: '#0a0a0a' })} />
       ))}
     </div>
+  );
+}
+
+/** A small line chart of the term's measure, start then after each bill, with the target dashed. */
+function MeasureChart({ scores, target, colour }: { scores: number[]; target: number; colour: string }) {
+  const W = 260, H = 116, L = 34, R = 8, T = 10, B = 20;
+  if (scores.length < 2) return null;
+  const lo = Math.min(...scores, target), hi = Math.max(...scores, target);
+  const pad = Math.max(0.05, (hi - lo) * 0.15);
+  const y0 = lo - pad, y1 = hi + pad;
+  const x = (i: number) => L + (i / (scores.length - 1)) * (W - L - R);
+  const y = (v: number) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
+  const pts = scores.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  const met = scores[scores.length - 1] >= target;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="The measure after each bill, against the target">
+      <line x1={L} x2={W - R} y1={H - B} y2={H - B} stroke="#1c1917" strokeWidth={1} />
+      <line x1={L} x2={W - R} y1={y(target)} y2={y(target)} stroke="#1c1917" strokeWidth={1.5} strokeDasharray="5 4" />
+      <text x={L - 4} y={y(target) + 4} textAnchor="end" fontSize={11} fontWeight={700} fill="#1c1917">{target.toFixed(2)}</text>
+      <text x={W - R} y={y(target) - 5} textAnchor="end" fontSize={10.5} fontWeight={700} fill="#44403c">Target</text>
+      <polyline points={pts} fill="none" stroke={colour} strokeWidth={2.5} strokeLinejoin="round" />
+      {scores.map((v, i) => (
+        <circle key={i} cx={x(i)} cy={y(v)} r={i === scores.length - 1 ? 4.5 : 3} fill={i === scores.length - 1 ? (met ? '#15803d' : '#b91c1c') : colour} stroke="#efe7d3" strokeWidth={1.5} />
+      ))}
+      <text x={L - 4} y={y(scores[0]) + 4} textAnchor="end" fontSize={11} fill="#44403c">{scores[0].toFixed(2)}</text>
+      {scores.map((_, i) => (
+        <text key={i} x={x(i)} y={H - 5} textAnchor="middle" fontSize={11} fill="#44403c">{i === 0 ? 'Start' : i}</text>
+      ))}
+    </svg>
   );
 }

@@ -14,6 +14,7 @@
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-playfair), Georgia, serif;
   --font-hand: var(--font-caveat), cursive;
+  --font-text: var(--font-source-serif), Georgia, serif;
 }
 
 /* ---------- The PM's desk (main game screen) ---------- */
@@ -130,6 +131,7 @@ body {
   position: absolute; top: 0; width: 640px; height: 830px;
   display: flex; flex-direction: column; gap: 12px; padding: 26px 30px 30px;
   overflow: hidden; color: #1c1917; backface-visibility: hidden;
+  font-family: var(--font-source-serif), Georgia, serif;
   background-color: #efe7d3;
   background-image:
     radial-gradient(rgba(92,66,20,.10) 1px, transparent 1.2px),
@@ -142,8 +144,8 @@ body {
 }
 .paper-pl { transform-origin: 100% 50%; box-shadow: inset -26px 0 30px -18px rgba(60,40,10,.45), 0 24px 50px rgba(0,0,0,.45); }
 .paper-pr { transform-origin: 0 50%; box-shadow: inset 26px 0 30px -18px rgba(60,40,10,.45), 0 24px 50px rgba(0,0,0,.45); }
-.paper-dim { position: absolute; inset: 0; background: #1c1917; pointer-events: none; transition: opacity .6s ease; }
-.paper-cap { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.paper-dim { position: absolute; inset: 0; background: #1c1917; pointer-events: none; transition: opacity 1.6s ease-in-out; }
+.paper-cap { font-family: var(--font-geist-sans), Arial, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .paper-link { font: inherit; font-weight: 800; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 .paper-link:hover { text-decoration-style: solid; }
 .paper-hatch { background-image: repeating-linear-gradient(-45deg, rgba(180,83,9,.35) 0 3px, transparent 3px 7px); }
@@ -152,3 +154,10 @@ body {
 .paper-leafB { animation: paper-leaf-b .8s .8s cubic-bezier(.15,.4,.55,1) both; }
 @keyframes paper-leaf-f { from { transform: rotateY(0deg); } to { transform: rotateY(-90deg); } }
 @keyframes paper-leaf-b { from { transform: rotateY(90deg); } to { transform: rotateY(0deg); } }
+
+/* Anything you can click shows the hand (Tailwind's reset leaves buttons on the arrow).
+   In the base layer, so a cursor-* class on an element still wins. */
+@layer base {
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], select, summary, label[for], input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="range"]:not(:disabled) { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
