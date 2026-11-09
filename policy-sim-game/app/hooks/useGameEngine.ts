@@ -6,6 +6,7 @@ import { PolicyEngine } from '../utils/PolicyEngine';
 import { MAOEngine } from '../utils/MAOEngine';
 import { availablePolicies } from '../data/policies';
 import { MetricsEngine } from '../utils/MetricsEngine';
+import { pollError } from '../utils/polls';
 import { useSaveGame } from './useSaveGame';
 import { DifficultyEngine } from '../utils/DifficultyEngine'; 
 import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
@@ -286,6 +287,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     const base = WelfareMetrics.calculateApprovalRating(score, cycleMAO, winScalars[currentCycle]);
     return Math.round(Math.max(0, Math.min(100, base + pressConferenceModifier)) * 10) / 10;
   };
+
+    /** This term's poll error (see utils/polls.ts): fixed for the term, new when it's played again. */
+  const termPollError = useMemo(
+    () => pollError(`${currentCycle}-${cycleAttempts}-${cycleMAO.toFixed(4)}`),
+    [currentCycle, cycleAttempts, cycleMAO],
+  );
 
   /** What each of the offered policies would do to this term's metric, so the
    * export can tell whether the player picked the best one available. */
@@ -634,6 +641,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     wipeSave,
     lastTurnSummary, clearLastTurnSummary: () => setLastTurnSummary(null),
     applyPressConferenceDelta,
+    termPollError, approvalForScore: approvalFor,
     setHasSeenUtilityIntervention, startCycle,
     requestAcademicDebrief, resolveAcademicDebrief,
     isCalculating, calcProgress,

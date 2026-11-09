@@ -34,7 +34,7 @@ export default function DashboardTab() {
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy,
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate,
-    lastTurnSummary, clearLastTurnSummary, TURNS_PER_CYCLE,
+    lastTurnSummary, clearLastTurnSummary, TURNS_PER_CYCLE, termPollError, approvalForScore,
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -182,6 +182,11 @@ export default function DashboardTab() {
   };
 
   const status = termStatus(turnMetricScore, startScore, targetScore, currentTurn, TURNS_PER_CYCLE);
+  
+  // Yesterday's approval, for the poll's "up / down since yesterday" note
+  const yesterday = history.find((h) => h.turn === currentTurn - 1);
+  const previousApproval = yesterday ? approvalForScore(yesterday.metricScore ?? yesterday.lsAverage) : null;
+
   const deckIndex = selectedPolicy ? currentDeck.slice(0, 4).findIndex((p) => p.id === selectedPolicy.id) : -1;
   const billOpen = !!selectedPolicy && !isParliamentDissolved && !signedId;
   const hoveredEnacted = hoveredEnactedId ? availablePolicies.find((p) => p.id === hoveredEnactedId) : null;
@@ -217,6 +222,8 @@ export default function DashboardTab() {
         turn={currentTurn}
         turnsPerCycle={TURNS_PER_CYCLE}
         approval={approvalRating}
+        previousApproval={previousApproval}
+        pollError={termPollError}
         isDissolved={isParliamentDissolved}
         score={turnMetricScore}
         target={targetScore}

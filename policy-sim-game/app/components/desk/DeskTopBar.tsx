@@ -4,6 +4,7 @@ import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { PM_PROFILES } from '../../utils/pmProfiles';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { PM_TONES, SHOW_EXACT_SCORE, TermStatus } from './deskTheme';
+import { makePoll, pollHalfWidth, formatPollRange, pollBarPercent, POLL_STATUS_COLOURS, WIN_THRESHOLD } from '../../utils/polls';
 
 export type ContinueState = 'locked' | 'ready' | 'busy' | 'press';
 
@@ -11,7 +12,12 @@ interface DeskTopBarProps {
   cycle: ElectionCycle;
   turn: number;
   turnsPerCycle: number;
+  /** The real approval. Never shown: the player sees a poll around it. */
   approval: number;
+  /** Approval at the end of the day before, for the "up / down since yesterday" note (null on day 1). */
+  previousApproval: number | null;
+  /** This term's poll error (utils/polls.ts). */
+  pollError: number;
   isDissolved: boolean;
   score: number;
   target: number;
@@ -33,12 +39,21 @@ const CONTINUE_TEXT: Record<ContinueState, { label: string; sub: string }> = {
  * Continue. Everything but the brass nameplate takes the PM's colour.
  */
 export default function DeskTopBar({
-  cycle, turn, turnsPerCycle, approval, isDissolved, score, target, status, continueState, onContinue,
+  cycle, turn, turnsPerCycle, approval, previousApproval, pollError, isDissolved, score, target, status, continueState, onContinue,
 }: DeskTopBarProps) {
   const rule = FRAMEWORK_RULES[cycle];
   const profile = PM_PROFILES.find((p) => p.cycle === cycle);
   const tone = PM_TONES[cycle];
   const displayApproval = useAnimatedNumber(approval);
+  const poll = makePoll(displayApproval, pollHalfWidth(turn, isDissolved), pollError);
+  const bandLeft = pollBarPercent(poll.low);
+  const bandWidth = pollBarPercent(poll.high) - bandLeft;
+  const moved = previousApproval === null ? null : approval - previousApproval;
+  const move =
+    moved === null ? { text: 'First poll', colour: '#d6c7aa' }
+    : moved > 0.4 ? { text: '▲ Up since yesterday', colour: '#86efac' }
+    : moved < -0.4 ? { text: '▼ Down since yesterday', colour: '#fca5a5' }
+    : { text: 'Steady', colour: '#d6c7aa' };
   const daysLeft = turnsPerCycle + 1 - turn;
   const name = (profile?.name ?? '').toUpperCase();
   const enabled = continueState === 'ready' || continueState === 'press';
@@ -77,18 +92,23 @@ export default function DeskTopBar({
         )}
       </div>
 
-      {/* Approval */}
-      <div className="flex flex-col gap-1 shrink-0">
-        <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.light }}>Approval</span>
-        <div className="relative w-[140px] h-2.5 rounded-full bg-white/15">
-          {!isDissolved && (
-            <div className="absolute left-0 top-0 bottom-0 rounded-full transition-[width] duration-500" style={{ width: `${Math.max(0, Math.min(100, displayApproval))}%`, backgroundColor: tone.light }} />
-          )}
-          <div className="absolute left-[51%] -top-1 -bottom-1 w-0.5 bg-white" />
+      {/* Polls: a range around the real approval, never the exact number */}
+      <div className="flex flex-col gap-1 shrink-0 w-[clamp(190px,17vw,260px)]">
+        <div className="flex justify-between items-baseline gap-3">
+          <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.light }}>Polls</span>
+          <span className="text-[12px] font-black whitespace-nowrap" style={{ color: POLL_STATUS_COLOURS[poll.status].onDark }}>{poll.status}</span>
         </div>
-        <span className="text-[11px] font-extrabold">
-          {isDissolved ? 'Unclear until the vote' : `${displayApproval.toFixed(1)}% · 51% to win`}
-        </span>
+        <div className="relative h-2.5 rounded-full bg-white/15 overflow-hidden">
+          <div
+            className="absolute top-0 bottom-0 transition-[left,width] duration-700 ease-out"
+            style={{ left: `${bandLeft}%`, width: `${bandWidth}%`, background: `linear-gradient(90deg, transparent, ${tone.light} 22%, ${tone.light} 78%, transparent)` }}
+          />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-white" style={{ left: `${pollBarPercent(WIN_THRESHOLD)}%` }} />
+        </div>
+        <div className="flex justify-between gap-2 text-[11px] font-extrabold whitespace-nowrap">
+          <span>{formatPollRange(poll)} · {WIN_THRESHOLD}% to win</span>
+          <span style={{ color: move.colour }}>{move.text}</span>
+        </div>
       </div>
 
       {/* Countdown to the vote */}

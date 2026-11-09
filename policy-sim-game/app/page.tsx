@@ -213,6 +213,7 @@ function GameApp() {
                       currentMetricScore={game.turnMetricScore}
                       currentCycle={game.currentCycle}
                       approvalRating={game.turnApprovalRating}
+                      pollError={game.termPollError}
                       cycleAttempts={game.cycleAttempts}
                       initialPopulation={game.initialPopulation}
                       baselinePopulation={game.baselinePopulation}

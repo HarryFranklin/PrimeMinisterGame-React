@@ -15,6 +15,8 @@ interface ElectionModalProps {
   currentMetricScore: number;
   currentCycle: ElectionCycle;
   approvalRating: number;
+  /** This term's poll error (utils/polls.ts). */
+  pollError: number;
   cycleAttempts: number;
   initialPopulation: Respondent[];
   baselinePopulation: Respondent[];
@@ -170,7 +172,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} />}
         {page === 1 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
         {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={handlePageReady} />}
         {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}

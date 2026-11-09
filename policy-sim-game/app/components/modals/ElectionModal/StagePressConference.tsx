@@ -8,11 +8,15 @@ import { getPressPair, buildMetricQuestion } from '../../../utils/pressConferenc
 import { getPMProfile } from '../../../utils/pmProfiles';
 import { track } from '../../../client/telemetry';
 import { useTypewriterTelemetry } from '../../../client/hooks';
+import { makePoll, formatPollRange, pollBarPercent, POLL_STATUS_COLOURS, POLL_HALF_WIDTH_POLLING_DAY, POLL_HALF_WIDTH_FINAL, WIN_THRESHOLD, Poll, PollStatus } from '../../../utils/polls';
 import PressScene, { STAGE_W, STAGE_H, ASKER_LEFT, ASKER_RIGHT, CROWD_SPOTS, crowdHeadCentre } from './PressScene';
 
 interface StagePressConferenceProps {
   currentCycle: ElectionCycle;
+  /** The real approval. Never shown: the player sees a poll around it. */
   approvalRating: number;
+  /** This term's poll error (utils/polls.ts). */
+  pollError: number;
   history: TurnHistory[];
   onAnswerQuestion: (delta: number) => void;
   onReady: () => void;
@@ -152,8 +156,10 @@ export default function StagePressConference(props: StagePressConferenceProps) {
   return <PressConferenceLive {...props} />;
 }
 
-function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQuestion, onReady, onContinue }: StagePressConferenceProps) {
+function PressConferenceLive({ currentCycle, approvalRating, pollError, history, onAnswerQuestion, onReady, onContinue }: StagePressConferenceProps) {
   const [pressPair] = useState(getPressPair);
+  // Approval as the press conference began, for the final poll's "this morning"
+  const [startApproval] = useState(approvalRating);
   const [introSequence, setIntroSequence] = useState(0);
   // 0 = Fade in from black, 1 = Journalist appears & typing starts
 
@@ -309,8 +315,14 @@ function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQu
   // Keep the bubble clear of the PM in the middle of the screen
   const margin = Math.max(24, viewW * 0.04);
   const bubbleW = Math.min(600, viewW / 2 - 80 - margin);
-  const bubbleX = backstage ? (viewW - bubbleW) / 2 : askOnLeft ? margin : viewW - bubbleW - margin;
-  const bubbleY = viewH * 0.3; // backstage
+  const bubbleX = backstage ? margin : askOnLeft ? margin : viewW - bubbleW - margin;
+  const bubbleY = Math.max(140, viewH * 0.17); // backstage
+  // Backstage: the final poll slip, handed over on the right
+  const slipW = Math.min(520, viewW / 2 - 40 - margin);
+  const pollNow = makePoll(displayScore, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
+  const pollThisMorning = makePoll(startApproval, POLL_HALF_WIDTH_POLLING_DAY, pollError);
+  const finalPoll = makePoll(approvalRating, POLL_HALF_WIDTH_FINAL, pollError);
+  const correctSoFar = (q1Selected === q1.correctIndex ? 1 : 0) + (q2 && q2Selected === q2.correctIndex ? 1 : 0);
   // Questions come from low down, just above whoever is asking
   const askerTagTop = askerIndex === null ? 0 : offY + (CROWD_SPOTS[askerIndex][1] - 34) * scale;
   const bubbleBottom = viewH - askerTagTop + 26;
@@ -336,7 +348,6 @@ function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQu
 
   const tone = getPMProfile(currentCycle);
   const pmName = tone.name.replace(/^PM\s+/, '').toUpperCase();
-  const approvalColour = approvalRating >= 51 ? '#34d399' : '#fb7185';
 
   const renderOptions = (options: AnswerOption[], selected: number | null, onSelect: (i: number) => void, big: boolean) => (
     <div className="grid grid-cols-3 gap-4 items-end">
@@ -396,17 +407,14 @@ function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQu
           <span className="text-[11px] italic text-[#4a3210]">Press conference · Downing Street</span>
         </div>
 
-        {/* Live approval, separate from the journalist's box */}
+        {/* The polls (never the exact approval), separate from the journalist's box */}
         <div className="absolute right-8 top-5 w-[260px] flex flex-col items-end gap-1">
-          <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-400">Your live approval</span>
-          <span className="text-[52px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: approvalColour }}>
-            {displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1)}%
+          <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-400">Polls</span>
+          <span className="text-[44px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>
+            {formatPollRange(pollNow)}
           </span>
-          <div className="relative w-full h-2 bg-white/15 rounded mt-1.5">
-            <div className="absolute left-0 top-0 bottom-0 rounded transition-[width] duration-700" style={{ width: `${Math.max(0, Math.min(100, displayScore))}%`, backgroundColor: approvalColour }} />
-            <div className="absolute left-[51%] -top-[5px] -bottom-[5px] border-l-2 border-slate-50" />
-          </div>
-          <span className="text-[11px] text-zinc-400">51% needed on polling day</span>
+          <PollBar poll={pollNow} className="w-full h-2.5 mt-1.5 bg-white/15" band="#f472b6" line="#f8fafc" />
+          <span className="text-[12px] font-extrabold" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>{pollNow.status}</span>
         </div>
 
         {/* The journalist asking, then the Chief of Staff backstage */}
@@ -487,14 +495,50 @@ function PressConferenceLive({ currentCycle, approvalRating, history, onAnswerQu
           </motion.span>
         ))}
 
+        {/* Backstage: the Chief of Staff hands over the final poll */}
+        {backstage && (
+          <motion.div
+            initial={{ opacity: 0, x: 260, y: 420, rotate: 18 }}
+            animate={{ opacity: 1, x: 0, y: 0, rotate: -2 }}
+            transition={{ delay: 0.9, duration: 0.9, ease: [0.2, 0.8, 0.25, 1] }}
+            className="absolute bg-[#faf6ec] text-stone-900 px-[26px] pt-[22px] pb-6 shadow-[0_24px_50px_rgba(0,0,0,.6)] flex flex-col gap-3"
+            style={{ right: margin, top: bubbleY, width: slipW }}
+          >
+            {/* Staple */}
+            <div className="absolute left-[22px] -top-3.5 w-[18px] h-[50px] border-[3px] border-zinc-400 rounded-[10px]" />
+            <div className="flex justify-between gap-3 border-b-2 border-stone-900 pb-1.5 ml-[30px] text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">
+              <span>Party pollster · final poll</span>
+              <span>Polling day, 6pm</span>
+            </div>
+            <div className="flex justify-between items-end gap-3">
+              <span className="font-display font-black text-[clamp(40px,4.4vw,64px)] leading-[.9] tabular-nums">{formatPollRange(finalPoll)}</span>
+              <span className="text-[18px] font-black text-right" style={{ color: POLL_STATUS_COLOURS[finalPoll.status].onLight }}>{finalPoll.status}</span>
+            </div>
+            <PollBar poll={finalPoll} before={pollThisMorning} className="w-full h-[22px] bg-[#e7dfcb]" band="#be185d" line="#1c1917" />
+            <div className="flex justify-between text-[11px] font-bold text-stone-500"><span>20%</span><span>{WIN_THRESHOLD}% to win</span><span>80%</span></div>
+            <div className="grid grid-cols-2 gap-3 border-t border-stone-300 pt-2.5">
+              <div className="flex flex-col gap-0.5 text-stone-500">
+                <span className="text-[10px] font-extrabold tracking-[.14em] uppercase">This morning</span>
+                <span className="text-[18px] font-black tabular-nums">{formatPollRange(pollThisMorning)}</span>
+                <span className="text-[11px]">hatched on the bar</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-stone-500">Your press answers</span>
+                <span className="text-[18px] font-black">{correctSoFar} of {q2 ? 2 : 1} correct</span>
+              </div>
+            </div>
+            <span className="font-hand text-[24px] text-[#1e3a8a] -rotate-[1.5deg]">{SCRIBBLE[finalPoll.status]}</span>
+          </motion.div>
+        )}
+
         {/* Concluded */}
         {concluded && (
-          <div className="absolute left-0 right-0 bottom-[8vh] flex flex-col items-center gap-8">
+          <div className="absolute bottom-[8vh] flex flex-col items-center gap-8" style={{ left: margin, width: bubbleW }}>
             <motion.div
               initial={{ opacity: 0, scale: 1.4, rotate: -4, y: -16 }}
               animate={{ opacity: 1, scale: 1, rotate: -6, y: 0 }}
               transition={{ duration: 0.35, ease: [0.2, 0.8, 0.3, 1.3] }}
-              className="border-[5px] px-[22px] py-2.5 font-black text-[30px] tracking-[.14em] uppercase"
+              className="border-[5px] px-[22px] py-2.5 font-black text-[clamp(18px,2vw,30px)] tracking-[.14em] uppercase whitespace-nowrap"
               style={{ borderColor: PM_LIGHT[currentCycle], color: PM_LIGHT[currentCycle] }}
             >
               Press conference concluded
@@ -520,3 +564,32 @@ const PM_LIGHT: Record<ElectionCycle, string> = {
   [ElectionCycle.SocietalUtility]: '#6ee7b7',
   [ElectionCycle.PersonalUtility]: '#c4b5fd',
 };
+
+/** The Chief of Staff's note on the final poll. */
+const SCRIBBLE: Record<PollStatus, string> = {
+  'Comfortable lead': 'Pop the champagne. Quietly.',
+  Ahead: 'Should be fine. Should.',
+  'Too close to call': 'Coin toss. Get some sleep.',
+  Behind: 'Start drafting a speech. Either kind.',
+};
+
+/** A poll as a soft band on a 20–80% bar, with the 51% line; optionally an earlier poll hatched behind it. */
+function PollBar({ poll, before, className, band, line }: { poll: Poll; before?: Poll; className: string; band: string; line: string }) {
+  const left = pollBarPercent(poll.low);
+  const width = pollBarPercent(poll.high) - left;
+  return (
+    <div className={`relative rounded-full overflow-hidden ${className}`}>
+      {before && (
+        <div
+          className="absolute top-0 bottom-0 bg-[repeating-linear-gradient(-45deg,rgba(120,113,108,.45)_0_4px,transparent_4px_8px)]"
+          style={{ left: `${pollBarPercent(before.low)}%`, width: `${pollBarPercent(before.high) - pollBarPercent(before.low)}%` }}
+        />
+      )}
+      <div
+        className="absolute top-0 bottom-0 transition-[left,width] duration-700 ease-out"
+        style={{ left: `${left}%`, width: `${width}%`, background: `linear-gradient(90deg, transparent, ${band} 22%, ${band} 78%, transparent)` }}
+      />
+      <div className="absolute top-0 bottom-0 w-0.5" style={{ left: `${pollBarPercent(WIN_THRESHOLD)}%`, backgroundColor: line }} />
+    </div>
+  );
+}
