@@ -110,6 +110,8 @@ body {
 .press-flash { opacity: 0; animation: press-flash 3.4s linear infinite; }
 @keyframes press-flash { 0%, 84%, 100% { opacity: 0; } 86% { opacity: 1; } 90% { opacity: .25; } 93% { opacity: 0; } }
 .press-wash { opacity: 0; animation: press-wash 3.4s linear infinite; }
+/* Camera flashes turned off (title screen option, or reduced motion) */
+html[data-flashes="off"] .press-flash, html[data-flashes="off"] .press-wash { display: none; }
 @keyframes press-wash { 0%, 84%, 100% { opacity: 0; } 86% { opacity: .16; } 92% { opacity: 0; } }
 .press-bob { animation: press-bob 2.4s ease-in-out infinite; }
 @keyframes press-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
@@ -161,3 +163,7 @@ body {
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], select, summary, label[for], input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="range"]:not(:disabled) { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
 }
+
+/* Press conference → election night: a camera flash going off */
+.election-flash { opacity: 0; animation: election-flash .34s ease-out both; }
+@keyframes election-flash { 0% { opacity: 0; transform: scale(.5); } 35% { opacity: .45; } 100% { opacity: 0; transform: scale(1.1); } }

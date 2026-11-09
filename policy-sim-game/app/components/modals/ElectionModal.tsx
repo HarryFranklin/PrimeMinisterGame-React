@@ -7,6 +7,8 @@ import { track } from '../../client/telemetry';
 import StageVerdict from './ElectionModal/StageVerdict';
 import StagePressConference, { type PressSummary } from './ElectionModal/StagePressConference';
 import StageMorningPaper, { type PaperExit } from './ElectionModal/StageMorningPaper';
+import ElectionNightTransition, { type NightTransitionKind } from './ElectionModal/ElectionNightTransition';
+import { flashesAllowed, applyFlashSetting } from '../../utils/gameOptions';
 import PMIdentityBanner from '../PMIdentityBanner';
 
 interface ElectionModalProps {
@@ -104,7 +106,8 @@ export default function ElectionModal(props: ElectionModalProps) {
   useEffect(() => {
     if (pageReady && stageReadyAt.current === null) stageReadyAt.current = Date.now();
   }, [pageReady]);
-  const goToPage = (to: number) => {
+  // switchLater: log the move now, but let a transition change the page when the screen is covered
+  const goToPage = (to: number, switchLater = false) => {
     const now = Date.now();
     track('election_stage_navigated', {
       cycle: ElectionCycle[currentCycle],
@@ -114,11 +117,21 @@ export default function ElectionModal(props: ElectionModalProps) {
       ms_on_stage: now - stageShownAt.current,
       ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
     });
+    if (switchLater) return; // the rest happens when the transition covers the screen
     if (page === 0) setPressHeld(true);
     if (page === 1) setVerdictSeen(true);
     setPaperFromRally(page === 1 && to === 2 && won);
     setPageReady(false);
     setPage(to);
+  };
+
+  // Press conference → election night: camera flashes, or the time skip if flashes are off
+  const [nightTransition, setNightTransition] = useState<NightTransitionKind | null>(null);
+  useEffect(() => { applyFlashSetting(); }, []);
+  const startElectionNight = () => {
+    if (nightTransition) return;
+    goToPage(1, true);
+    setNightTransition(flashesAllowed() ? 'flash' : 'timeskip');
   };
 
   // A page turn inside the paper, logged like a move between stages
@@ -162,7 +175,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} onSummary={setPressSummary} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={startElectionNight} alreadyHeld={pressHeld} onSummary={setPressSummary} />}
         {page === 1 && (
           <StageVerdict
             approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts}
@@ -170,6 +183,13 @@ export default function ElectionModal(props: ElectionModalProps) {
             startScore={props.history[0]?.metricScore ?? props.history[0]?.lsAverage ?? props.currentMetricScore}
             endScore={props.currentMetricScore}
             onReady={handlePageReady} onContinue={() => goToPage(2)} alreadySeen={verdictSeen}
+          />
+        )}
+        {nightTransition && (
+          <ElectionNightTransition
+            kind={nightTransition}
+            onMidpoint={() => { setPressHeld(true); setPageReady(false); setPage(1); }}
+            onDone={() => setNightTransition(null)}
           />
         )}
         {page === 2 && (
@@ -195,7 +215,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
         {page < totalPages - 1 ? (
           <button 
-            onClick={() => goToPage(page + 1)} 
+            onClick={() => (page === 0 ? startElectionNight() : goToPage(page + 1))} 
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >

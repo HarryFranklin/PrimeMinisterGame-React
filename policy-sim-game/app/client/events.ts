@@ -32,7 +32,7 @@ export type TelemetryEvent =
   | { event: "title_option_changed"; payload: { option: string; value: string } }
   | {
       event: "title_start_clicked";
-      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string };
+      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string };
     }
   /** Fullscreen: requested by "Start game" or the "Go full screen" button; every switch in/out. */
   | { event: "fullscreen_requested"; payload: { source: "start" | "nudge"; ok: boolean } }

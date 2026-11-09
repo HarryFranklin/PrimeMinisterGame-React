@@ -11,7 +11,7 @@ import { makePoll, formatPollRange, POLL_HALF_WIDTH_FINAL, POLL_HALF_WIDTH_POLLI
 import D3Chart from '../../D3Chart';
 import PMFigure from './PMFigure';
 import { buildTermTimeline, ANALYSIS_MESSAGES, MARKER_LABELS } from './StageTermSummary';
-import { computeCohortBreakdown, CHANGE_THRESHOLD, DISPLAY_LIMIT } from './StagePopulationChange';
+import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
 import { pickVoters, renderVoterQuote, quotedPolicies } from './StageElectorateFeedback';
 import type { PressSummary } from './StagePressConference';
 
@@ -225,6 +225,8 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
     { key: 'declined' as const, label: 'Declined', colour: '#b45309' },
   ];
   const totalPop = finalPopulation.length || 1;
+  // Starting life situations, as on the old Wellbeing Changes screen
+  const SITUATIONS: [string, string][] = [['Struggling', '0–3'], ['Just Getting By', '3–5'], ['Comfortable', '5–8'], ['Thriving', '8–10']];
 
   // ── p4: what the voters say ──
   const voters = useMemo(
@@ -245,7 +247,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
       tag: isNow ? `Term ${i + 1} · just finished` : isNext ? `Next up · term ${i + 1}` : i < levelIndex ? `Term ${i + 1} · played` : `Term ${i + 1}`,
       status: isNow
         ? (won ? `Re-elected on ${approvalRating.toFixed(1)}% · ${r.targetMetricAbbreviation} ${endMetric.toFixed(2)} vs target ${targetScore.toFixed(2)}` : `Voted out on ${approvalRating.toFixed(1)}%, short of the 51% needed`)
-        : isNext ? `Judged on ${r.targetMetricName}. Inherits the country as ${surname} left it.` : i < levelIndex ? 'Term played' : 'Still campaigning',
+        : isNext ? `Judged on ${r.targetMetricName}. Starts from the same country as every PM.` : i < levelIndex ? 'Term played' : 'Still campaigning',
       isNow, isNext, faded: !isNow && !isNext,
     };
   });
@@ -329,22 +331,15 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                       <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory}</p>
                     </div>
                   )}
-                  {/* What's inside: bottom of the left column */}
-                  <div className="mt-auto flex flex-col gap-1 border-t-4 border-double border-stone-900 pt-1.5">
-                    <span className="paper-cap">Inside</span>
-                    {[['How the country moved', 2], ['Who won and who lost', 3], ['What the voters say', 4], ['Next up', 5]].map(([t, n]) => (
-                      <div key={t} className="flex justify-between items-baseline gap-2"><span className="font-display font-bold text-[14px] leading-tight">{t}</span><span className="paper-cap">p{n}</span></div>
-                    ))}
-                  </div>
                 </div>
-                <div className="flex flex-col gap-2.5 border-l border-stone-900 pl-3.5 min-h-0">
+                <div className="flex flex-col gap-2 border-l border-stone-900 pl-3.5 min-h-0">
                   {pressSummary && pressSummary.questions.length > 0 && (
                     <>
                       <span className="paper-cap" style={{ color: tone.dark }}>{surname} faces the press</span>
                       {pressSummary.questions.map((q, i) => (
                         <div key={i} className="flex flex-col gap-0.5 border-b border-stone-300 pb-2">
-                          <span className="text-[13.5px] leading-snug text-stone-700"><strong className="text-stone-900">{q.who}, {q.outlet},</strong> asked {q.ask}</span>
-                          <span className="text-[15.5px] font-bold leading-snug">“{q.said}”</span>
+                          <span className="text-[13.5px] leading-snug text-stone-700"><strong className="text-stone-900">{q.who}, {q.outlet},</strong> asked {q.ask.replace('the Prime Minister', surname)}</span>
+                          <span className="text-[15px] font-bold leading-snug">“{q.said}”</span>
                           <span className="text-[13px] font-bold" style={{ color: q.correct ? '#15803d' : '#b91c1c' }}>{q.correct ? '✓ Correct · polls up' : '✗ Wrong · polls down'}</span>
                         </div>
                       ))}
@@ -355,13 +350,18 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                     <span className="text-[14.5px] font-bold leading-snug">{rule.targetMetricName}</span>
                     <span className="text-[14.5px] leading-snug"><span className="whitespace-nowrap">{startMetric.toFixed(2)} → {endMetric.toFixed(2)}</span> over the term</span>
                     <span className="text-[14.5px] leading-snug">Target: <strong>{targetScore.toFixed(2)}</strong> <span className="font-bold" style={{ color: endMetric >= targetScore ? '#15803d' : '#b91c1c' }}>{endMetric >= targetScore ? '✓' : '✗'}</span></span>
-                  </div>
-                  {/* The measure bill by bill, against the target */}
-                  <div className="border-2 border-stone-900 px-2.5 pt-2 pb-1.5 flex flex-col gap-1">
-                    <span className="paper-cap">{rule.targetMetricAbbreviation}, bill by bill</span>
+                    {/* The measure bill by bill, against the target (same box) */}
+                    <span className="paper-cap mt-1.5 pt-1.5 border-t border-stone-400">{rule.targetMetricAbbreviation}, bill by bill</span>
                     <MeasureChart scores={timelineData.map((d) => d.score)} target={targetScore} colour={tone.dark} />
                   </div>
                 </div>
+              </div>
+              {/* What's inside: a strip along the foot of the page */}
+              <div className="shrink-0 flex justify-between items-baseline gap-3 whitespace-nowrap border-t-4 border-double border-stone-900 pt-1.5">
+                <span className="paper-cap">Inside</span>
+                {[['The country moved', 2], ['Winners and losers', 3], ['Letters', 4], ['Next up', 5]].map(([t, n]) => (
+                  <span key={t} className="font-display font-bold text-[13px] leading-tight">{t} <span className="paper-cap">p{n}</span></span>
+                ))}
               </div>
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
@@ -436,37 +436,54 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
               <p className="m-0 text-[15px] leading-relaxed">
                 We’ve grouped the electorate by their life satisfaction when the term began, to see exactly who won and who lost under {surname}.
               </p>
-              <div className="grid grid-cols-3 gap-3 flex-1 min-h-0">
-                {COHORTS.map(({ key, label, colour }) => {
-                  const c = cohorts[key];
-                  return (
-                    <div key={key} className="flex flex-col gap-2 pt-2 border-t-4 min-h-0" style={{ borderColor: colour }}>
-                      <div className="flex items-baseline gap-2"><span className="font-display font-black text-[32px] leading-none" style={{ color: colour }}>{c.percentage}</span><span className="paper-cap">{label}</span></div>
-                      <div className="h-2.5" style={{ background: colour, width: `${(c.totalCount / totalPop) * 100}%` }} />
-                      {c.groups.length === 0 ? (
-                        <span className="text-[12px] italic text-stone-500">No significant groups here.</span>
-                      ) : (
-                        c.groups.slice(0, DISPLAY_LIMIT).map((g) => {
-                          const d = g.avgEndLS - g.avgStartLS;
-                          return (
-                            <div key={g.label} className="grid grid-cols-[42px_1fr_auto] gap-1.5 items-baseline border-b border-stone-300 pb-1.5">
-                              <span className="text-[13px] font-black">{g.pctString}</span>
-                              <span className="text-[13px] font-bold">{g.label}</span>
-                              <span className="text-[12.5px] font-black" style={{ color: colour }}>{d > 0 ? '+' : ''}{d.toFixed(1)} LS</span>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  );
-                })}
+              {/* The three headline figures */}
+              <div className="grid grid-cols-3 gap-3">
+                {COHORTS.map(({ key, label, colour }) => (
+                  <div key={key} className="flex flex-col gap-1.5 pt-2 border-t-4" style={{ borderColor: colour }}>
+                    <div className="flex items-baseline gap-2"><span className="font-display font-black text-[32px] leading-none" style={{ color: colour }}>{cohorts[key].percentage}</span><span className="paper-cap">{label}</span></div>
+                    <div className="h-2.5" style={{ background: colour, width: `${(cohorts[key].totalCount / totalPop) * 100}%` }} />
+                  </div>
+                ))}
               </div>
+              {/* Who: by where they started, a table with gridlines */}
+              <table className="w-full border-collapse text-[14px] tabular-nums">
+                <thead>
+                  <tr className="border-b-2 border-stone-900">
+                    <th className="paper-cap text-left font-extrabold py-1.5 pr-2">Started the term</th>
+                    {COHORTS.map(({ key, label, colour }) => (
+                      <th key={key} className="paper-cap text-right font-extrabold py-1.5 px-2 border-l border-stone-400" style={{ color: colour }}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SITUATIONS.map(([name, band]) => (
+                    <tr key={name} className="border-b border-stone-400">
+                      <td className="py-2 pr-2"><span className="font-bold">{name}</span> <span className="text-[12px] text-stone-600">LS {band}</span></td>
+                      {COHORTS.map(({ key, colour }) => {
+                        const g = cohorts[key].groups.find((x) => x.label === name);
+                        const d = g ? g.avgEndLS - g.avgStartLS : 0;
+                        return (
+                          <td key={key} className="py-2 px-2 text-right border-l border-stone-400">
+                            {g ? (
+                              <>
+                                <span className="font-bold">{g.pctString}</span>{' '}
+                                <span className="text-[12.5px] font-bold" style={{ color: colour }}>{d > 0 ? '+' : d < 0 ? '−' : ''}{Math.abs(d).toFixed(1)} LS</span>
+                              </>
+                            ) : (
+                              <span className="text-stone-400">–</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               {/* How to read it: always printed (was a "What counts as a change?" pop-up) */}
-              <div className="border-2 px-3.5 py-2.5 text-[13px] leading-normal grid grid-cols-2 gap-4" style={{ borderColor: tone.dark }}>
-                <div><span className="paper-cap" style={{ color: tone.dark }}>What counts as a change?</span><br />“Improved” means life satisfaction rose by more than {CHANGE_THRESHOLD} points; “Declined”, fell by more than {CHANGE_THRESHOLD}. Smaller movements count as “Unchanged”.</div>
-                <div><span className="paper-cap" style={{ color: tone.dark }}>Starting life situations</span><br />Struggling: 0 to 3<br />Just Getting By: 3 to 5<br />Comfortable: 5 to 8<br />Thriving: 8 to 10</div>
+              <div className="mt-auto border-2 px-3.5 py-2.5 text-[13px] leading-normal" style={{ borderColor: tone.dark }}>
+                <span className="paper-cap" style={{ color: tone.dark }}>What counts as a change?</span><br />“Improved” means life satisfaction rose by more than {CHANGE_THRESHOLD} points over the term; “Declined”, fell by more than {CHANGE_THRESHOLD}. Smaller movements count as “Unchanged”.
               </div>
-              <span className="text-[12.5px] text-stone-700">Percentages are shares of the whole population. LS: average change in life satisfaction for that group.</span>
+              <span className="text-[12.5px] text-stone-700">Percentages are shares of the whole population. LS: life satisfaction (0–10); the coloured figure is that group’s average change.</span>
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
           ); })()}
@@ -662,26 +679,34 @@ function ExitPicture({ cycle }: { cycle: ElectionCycle }) {
 
 /** A small line chart of the term's measure, start then after each bill, with the target dashed. */
 function MeasureChart({ scores, target, colour }: { scores: number[]; target: number; colour: string }) {
-  const W = 260, H = 116, L = 34, R = 8, T = 10, B = 20;
+  const W = 260, H = 112, L = 34, R = 8, T = 10, B = 20;
   if (scores.length < 2) return null;
+  // Regular gridlines: a round step giving about four bands over start-to-finish or start-to-target, whichever is wider
   const lo = Math.min(...scores, target), hi = Math.max(...scores, target);
-  const pad = Math.max(0.05, (hi - lo) * 0.15);
-  const y0 = lo - pad, y1 = hi + pad;
+  const span = Math.max(hi - lo, 0.1) * 1.08;
+  const step = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10].find((st) => span / st <= 5) ?? 10;
+  const y0 = Math.floor((lo - span * 0.04) / step) * step, y1 = Math.ceil((hi + span * 0.04) / step) * step;
+  const ticks: number[] = [];
+  for (let v = y0; v <= y1 + step / 2; v += step) ticks.push(Math.round(v * 1000) / 1000);
+  const dp = step < 0.1 ? 2 : step < 1 ? (step === 0.25 ? 2 : 1) : 0;
   const x = (i: number) => L + (i / (scores.length - 1)) * (W - L - R);
   const y = (v: number) => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
   const pts = scores.map((v, i) => `${x(i)},${y(v)}`).join(' ');
   const met = scores[scores.length - 1] >= target;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="The measure after each bill, against the target">
-      <line x1={L} x2={W - R} y1={H - B} y2={H - B} stroke="#1c1917" strokeWidth={1} />
+      {ticks.map((v) => (
+        <g key={v}>
+          <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke={v === y0 ? '#1c1917' : 'rgba(28,25,23,.18)'} strokeWidth={1} />
+          <text x={L - 5} y={y(v) + 3.5} textAnchor="end" fontSize={10.5} fill="#44403c">{v.toFixed(dp)}</text>
+        </g>
+      ))}
       <line x1={L} x2={W - R} y1={y(target)} y2={y(target)} stroke="#1c1917" strokeWidth={1.5} strokeDasharray="5 4" />
-      <text x={L - 4} y={y(target) + 4} textAnchor="end" fontSize={11} fontWeight={700} fill="#1c1917">{target.toFixed(2)}</text>
-      <text x={W - R} y={y(target) - 5} textAnchor="end" fontSize={10.5} fontWeight={700} fill="#44403c">Target</text>
+      <text x={W - R} y={y(target) - 5} textAnchor="end" fontSize={10.5} fontWeight={700} fill="#1c1917">Target {target.toFixed(2)}</text>
       <polyline points={pts} fill="none" stroke={colour} strokeWidth={2.5} strokeLinejoin="round" />
       {scores.map((v, i) => (
         <circle key={i} cx={x(i)} cy={y(v)} r={i === scores.length - 1 ? 4.5 : 3} fill={i === scores.length - 1 ? (met ? '#15803d' : '#b91c1c') : colour} stroke="#efe7d3" strokeWidth={1.5} />
       ))}
-      <text x={L - 4} y={y(scores[0]) + 4} textAnchor="end" fontSize={11} fill="#44403c">{scores[0].toFixed(2)}</text>
       {scores.map((_, i) => (
         <text key={i} x={x(i)} y={H - 5} textAnchor="middle" fontSize={11} fill="#44403c">{i === 0 ? 'Start' : i}</text>
       ))}

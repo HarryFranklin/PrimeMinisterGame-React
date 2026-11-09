@@ -385,7 +385,8 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
         const [, y, k, fd] = CROWD_SPOTS[i];
         return {
           key: i, text: (said.correct ? NOD : HUH)[n % 4], colour: said.correct ? '#15803d' : '#1c1917', delay: n * 0.15, rot: [-8, 6, -4, 9][n % 4],
-          left: Math.min(viewW - 50, Math.max(50, offX + crowdHeadCentre(i).x * scale)),
+          // Kept on screen: half the bubble's rough width from either edge
+          left: (() => { const hw = ((said.correct ? NOD : HUH)[n % 4].length * 13 + 24) / 2 + 12; return Math.min(viewW - hw, Math.max(hw, offX + crowdHeadCentre(i).x * scale)); })(),
           top: offY + (y - (fd > 0 ? 125 * k : 40)) * scale - 24,
         };
       })

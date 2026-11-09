@@ -7,6 +7,7 @@ import { PM_PROFILES } from '../utils/pmProfiles';
 import { track } from '../client/telemetry';
 import { safeSetItem } from '@study';
 import { enterFullscreen } from '../client/fullscreen';
+import { OPTIONS_KEY, DEFAULT_OPTIONS, loadOptions, applyFlashSetting, type Options } from '../utils/gameOptions';
 
 /**
  * Start menu: "Prime Minister Game" with Start game / What's this game about? /
@@ -17,13 +18,10 @@ import { enterFullscreen } from '../client/fullscreen';
  *   title_screen_shown, title_panel_opened / title_panel_closed {panel, dwell_ms},
  *   title_option_changed {option, value}, title_start_clicked {ms_on_title, …}
  *
- * Options are placeholders for now: they are saved and tracked but do not yet
- * change the game.
+ * Options are saved and tracked (utils/gameOptions.ts). Text speed and sound are
+ * placeholders for now; "Camera flashes" turns off the press conference flashes
+ * and the flash into election night (also off if the device asks for reduced motion).
  */
-
-const OPTIONS_KEY = 'game_options_v1';
-type Options = { textSpeed: 'normal' | 'fast' | 'instant'; sound: 'on' | 'off' };
-const DEFAULT_OPTIONS: Options = { textSpeed: 'normal', sound: 'on' };
 
 const TEXT = {
   title: 'Prime Minister',
@@ -40,14 +38,6 @@ const TEXT = {
   ],
   close: 'Close',
 };
-
-function loadOptions(): Options {
-  try {
-    return { ...DEFAULT_OPTIONS, ...JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}') };
-  } catch {
-    return DEFAULT_OPTIONS;
-  }
-}
 
 function Choice<T extends string>({ label, value, choices, onChange }: { label: string; value: T; choices: { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
@@ -83,6 +73,7 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
   useEffect(() => {
     shownAt.current = Date.now();
     setOptions(loadOptions());
+    applyFlashSetting();
     track('title_screen_shown', {});
   }, []);
 
@@ -101,6 +92,7 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
     const next = { ...options, [key]: value };
     setOptions(next);
     safeSetItem(OPTIONS_KEY, JSON.stringify(next));
+    applyFlashSetting();
     track('title_option_changed', { option: key, value });
   };
 
@@ -114,6 +106,7 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
       options_opens: opened.current.options,
       text_speed: options.textSpeed,
       sound: options.sound,
+      flashes: options.flashes,
     });
     setLeaving(true);
     // Fade to black, then the welcome briefing.
@@ -229,6 +222,13 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
                     choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}
                     onChange={(v) => changeOption('sound', v)}
                   />
+                  <Choice
+                    label="Camera flashes"
+                    value={options.flashes}
+                    choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}
+                    onChange={(v) => changeOption('flashes', v)}
+                  />
+                  <p className="m-0 -mt-2 text-xs text-zinc-400">Turn off if flashing lights affect you. Off also swaps the flashes before election night for a time skip.</p>
                 </>
               )}
               <button type="button" onClick={closePanel} className="self-end px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-bold cursor-pointer">

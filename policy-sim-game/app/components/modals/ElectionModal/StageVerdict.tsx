@@ -110,12 +110,12 @@ export default function StageVerdict({
     });
   }, []);
 
-  // The count: same timing as before (2 s pause, 4 s count, Continue 2 s later)
+  // The count: 2 s pause, 4 s count, Continue 2 s later
   useEffect(() => {
     if (alreadySeen) return;
     let start = 0;
     const DURATION = 4000;
-    const DELAY = 2500;
+    const DELAY = 2000;
     let rafId: number;
     const timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -250,7 +250,7 @@ export default function StageVerdict({
                   <div style={abs({ left: 0, top: 0, bottom: 0, width: `${Math.min(100, displayScore)}%`, background: !isDone ? tone.color : won ? '#10b981' : '#71717a' })} />
                   {/* The final poll's range, dashed */}
                   <div style={abs({ left: `${finalPoll.low}%`, width: `${finalPoll.high - finalPoll.low}%`, top: -8, bottom: -8, border: '2px dashed #fbbf24', boxSizing: 'border-box', background: 'rgba(251,191,36,.12)' })} />
-                  <span style={abs({ left: `${finalPoll.low}%`, top: -30, whiteSpace: 'nowrap', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#fbbf24' })}>Final poll {pollRange}</span>
+                  <span style={abs({ ...(finalPoll.low > 60 ? { left: `${finalPoll.high}%`, transform: 'translateX(-100%)' } : { left: `${finalPoll.low}%` }), top: -30, whiteSpace: 'nowrap', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#fbbf24' })}>Final poll {pollRange}</span>
                   <div style={abs({ left: `${WIN_THRESHOLD}%`, top: -10, bottom: -10, borderLeft: '4px solid #f8fafc' })} />
                   <span style={abs({ left: `${WIN_THRESHOLD}%`, top: 54, transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase' })}>Required: 51.0%</span>
                 </div>
@@ -359,8 +359,8 @@ export default function StageVerdict({
 
             </div>
 
-            {/* The cut: a camera flash */}
-            <motion.div initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} style={abs({ inset: 0, background: '#ffffff', pointerEvents: 'none' })} />
+            {/* The cut: a quick fade up from dark (no white flash: too harsh) */}
+            <motion.div initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} style={abs({ inset: 0, background: '#05070f', pointerEvents: 'none' })} />
 
             <div style={abs({ left: 28, top: 40, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,.6)', borderRadius: 6, padding: '7px 12px' })}>
               <span className="tv-blink" style={{ width: 9, height: 9, borderRadius: '50%', background: '#ef4444' }} />
