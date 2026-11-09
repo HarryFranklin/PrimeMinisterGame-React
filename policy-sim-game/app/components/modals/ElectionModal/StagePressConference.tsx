@@ -369,7 +369,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
               className="w-full text-left bg-[#fbfaf6] text-stone-900 rounded-[10px] px-[18px] py-4 flex flex-col gap-2 transition-[translate,opacity] duration-200 enabled:hover:-translate-y-1.5 enabled:cursor-pointer disabled:cursor-default"
               style={{ boxShadow: `0 0 0 4px ${ring}, 0 16px 32px rgba(0,0,0,.55)`, opacity: fade }}
             >
-              <span className="text-[10px] font-extrabold tracking-[.14em] uppercase min-h-[14px]" style={{ color: tagColour }}>{tag}</span>
+              <span className="text-[13px] font-extrabold tracking-[.12em] uppercase min-h-[18px]" style={{ color: tagColour }}>{tag}</span>
               <span className={`font-semibold leading-snug ${big ? 'text-xl' : 'text-base'}`}>“{opt.text}”</span>
             </button>
           </div>
@@ -404,8 +404,8 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
 
         {/* Who you are */}
         <div className="absolute left-7 top-[22px] rounded-md px-3.5 py-2 flex flex-col bg-[linear-gradient(180deg,#e3c27a,#b38a3e)] shadow-[inset_0_1px_0_rgba(255,255,255,.5),0_6px_14px_rgba(0,0,0,.4)]">
-          <span className="font-black text-[15px] tracking-[.08em] text-[#2a1a08]">{pmName}</span>
-          <span className="text-[11px] italic text-[#4a3210]">Press conference · Downing Street</span>
+          <span className="text-[13px] font-extrabold tracking-[.12em] uppercase text-[#4a3210]">Press conference · Downing Street</span>
+          <span className="font-black text-[17px] tracking-[.08em] text-[#2a1a08]">{pmName}</span>
         </div>
 
         {/* The polls (never the exact approval), separate from the journalist's box */}
