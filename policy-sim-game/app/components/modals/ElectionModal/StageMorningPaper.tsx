@@ -345,7 +345,8 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                       ))}
                     </>
                   )}
-                  <div className="border-2 border-stone-900 px-2.5 py-2 flex flex-col gap-0.5">
+                  {/* Fills the rest of the column; the chart takes whatever height is left */}
+                  <div className="flex-1 min-h-0 border-2 border-stone-900 px-2.5 py-2 flex flex-col gap-0.5">
                     <span className="paper-cap">The measure</span>
                     <span className="text-[14.5px] font-bold leading-snug">{rule.targetMetricName}</span>
                     <span className="text-[14.5px] leading-snug"><span className="whitespace-nowrap">{startMetric.toFixed(2)} → {endMetric.toFixed(2)}</span> over the term</span>
@@ -677,9 +678,22 @@ function ExitPicture({ cycle }: { cycle: ElectionCycle }) {
   );
 }
 
-/** A small line chart of the term's measure, start then after each bill, with the target dashed. */
+/** A small line chart of the term's measure, start then after each bill, with the target dashed.
+ * Drawn to the space it is given (measured), so it never spills out of its box. */
 function MeasureChart({ scores, target, colour }: { scores: number[]; target: number; colour: string }) {
-  const W = 260, H = 112, L = 34, R = 8, T = 10, B = 20;
+  const box = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 260, h: 100 });
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    // offsetWidth/Height are unscaled layout sizes, so this works inside the scaled stage
+    const measure = () => setSize({ w: el.offsetWidth, h: el.offsetHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const W = Math.max(120, size.w), H = Math.max(60, size.h), L = 34, R = 8, T = 10, B = 20;
   if (scores.length < 2) return null;
   // Regular gridlines: a round step giving about four bands over start-to-finish or start-to-target, whichever is wider
   const lo = Math.min(...scores, target), hi = Math.max(...scores, target);
@@ -694,7 +708,8 @@ function MeasureChart({ scores, target, colour }: { scores: number[]; target: nu
   const pts = scores.map((v, i) => `${x(i)},${y(v)}`).join(' ');
   const met = scores[scores.length - 1] >= target;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="The measure after each bill, against the target">
+    <div ref={box} className="relative flex-1 min-h-[60px]">
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="absolute inset-0" role="img" aria-label="The measure after each bill, against the target">
       {ticks.map((v) => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke={v === y0 ? '#1c1917' : 'rgba(28,25,23,.18)'} strokeWidth={1} />
@@ -711,5 +726,6 @@ function MeasureChart({ scores, target, colour }: { scores: number[]; target: nu
         <text key={i} x={x(i)} y={H - 5} textAnchor="middle" fontSize={11} fill="#44403c">{i === 0 ? 'Start' : i}</text>
       ))}
     </svg>
+    </div>
   );
 }
