@@ -6,6 +6,9 @@ import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { PM_TONES, SHOW_EXACT_SCORE, TermStatus } from './deskTheme';
 import { makePoll, pollHalfWidth, formatPollRange, pollBarPercent, POLL_STATUS_COLOURS, WIN_THRESHOLD } from '../../utils/polls';
 
+/** How long the poll takes to move to a new day's figure. */
+const POLL_MOVE_MS = 2200;
+
 export type ContinueState = 'locked' | 'ready' | 'busy' | 'press';
 
 interface DeskTopBarProps {
@@ -44,7 +47,10 @@ export default function DeskTopBar({
   const rule = FRAMEWORK_RULES[cycle];
   const profile = PM_PROFILES.find((p) => p.cycle === cycle);
   const tone = PM_TONES[cycle];
-  const displayApproval = useAnimatedNumber(approval);
+  // The poll moves slowly, and goes red while falling (green while rising), so a change is easy to spot
+  const displayApproval = useAnimatedNumber(approval, POLL_MOVE_MS);
+  const trend = approval < displayApproval - 0.05 ? 'down' : approval > displayApproval + 0.05 ? 'up' : null;
+  const trendColour = trend === 'down' ? '#f87171' : trend === 'up' ? '#4ade80' : null;
   const poll = makePoll(displayApproval, pollHalfWidth(turn, isDissolved), pollError);
   // The band is drawn from the real target values so its move and its narrowing
   // happen together in one CSS transition (the counting number would lag the width).
@@ -103,13 +109,15 @@ export default function DeskTopBar({
         </div>
         <div className="relative h-2.5 rounded-full bg-white/15 overflow-hidden">
           <div
-            className="absolute top-0 bottom-0 transition-[left,width] duration-700 ease-out"
-            style={{ left: `${bandLeft}%`, width: `${bandWidth}%`, background: `linear-gradient(90deg, transparent, ${tone.light} 22%, ${tone.light} 78%, transparent)` }}
+            className="absolute top-0 bottom-0 transition-[left,width] ease-out"
+            style={{ left: `${bandLeft}%`, width: `${bandWidth}%`, transitionDuration: `${POLL_MOVE_MS}ms`, background: `linear-gradient(90deg, transparent, ${trendColour ?? tone.light} 22%, ${trendColour ?? tone.light} 78%, transparent)` }}
           />
           <div className="absolute top-0 bottom-0 w-0.5 bg-white" style={{ left: `${pollBarPercent(WIN_THRESHOLD)}%` }} />
         </div>
         <div className="flex justify-between gap-2 text-[11px] font-extrabold whitespace-nowrap">
-          <span>{formatPollRange(poll)} · {WIN_THRESHOLD}% to win</span>
+          <span>
+            <span className="transition-colors duration-300" style={{ color: trendColour ?? undefined }}>{formatPollRange(poll)}</span> · {WIN_THRESHOLD}% to win
+          </span>
           <span style={{ color: move.colour }}>{move.text}</span>
         </div>
       </div>

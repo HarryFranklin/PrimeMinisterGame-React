@@ -27,7 +27,7 @@ const COATS = ['#141418', '#1b1d24', '#16181d', '#1f1c1a', '#111317'];
 const HAIRS = ['#0c0a09', '#1c1917', '#3f2a1d', '#27272a', '#57534e', '#2a1a10'];
 
 /** How each PM is drawn (skin and hair), matching their emoji on the level select. */
-const PM_LOOKS: Record<ElectionCycle, { skin: string; hair: string; style: 'long' | 'bun' | 'short' }> = {
+export const PM_LOOKS: Record<ElectionCycle, { skin: string; hair: string; style: 'long' | 'bun' | 'short' }> = {
   [ElectionCycle.Benthamite]: { skin: '#f3d2b8', hair: '#d6b25e', style: 'long' },
   [ElectionCycle.Rawlsian]: { skin: '#8d5524', hair: '#1c1917', style: 'bun' },
   [ElectionCycle.SocietalUtility]: { skin: '#c68642', hair: '#3f2a1d', style: 'long' },

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ElectionCycle, TurnHistory } from '../../../utils/types';
 import { availablePolicies } from '../../../data/policies';
@@ -180,7 +181,10 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   const q1 = useMemo(() => buildMetricQuestion(currentCycle), [currentCycle]);
   const q2 = useMemo(() => buildPolicyQuestion(history), [history]);
 
-  const displayScore = useAnimatedNumber(approvalRating, 900);
+  // The poll moves slowly, and goes red while falling (green while rising), so a change is easy to spot
+  const displayScore = useAnimatedNumber(approvalRating, 2200);
+  const pollTrend = approvalRating < displayScore - 0.05 ? 'down' : approvalRating > displayScore + 0.05 ? 'up' : null;
+  const pollTrendColour = pollTrend === 'down' ? '#f87171' : pollTrend === 'up' ? '#4ade80' : null;
 
   const viewW = useSyncExternalStore(subscribeResize, getViewW, () => STAGE_W);
   const viewH = useSyncExternalStore(subscribeResize, getViewH, () => STAGE_H);
@@ -320,6 +324,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   // Backstage: the final poll slip, handed over on the right
   const slipW = Math.min(520, viewW / 2 - 40 - margin);
   const pollNow = makePoll(displayScore, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
+  // Drawn from the real values so the band shifts and narrows in one movement
   const pollNowBand = makePoll(approvalRating, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const pollThisMorning = makePoll(startApproval, POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const finalPoll = makePoll(approvalRating, POLL_HALF_WIDTH_FINAL, pollError);
@@ -378,7 +383,9 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
     </div>
   );
 
-  return (
+  // Drawn straight onto the page: inside the election window, which scales in
+  // as it opens, a full-screen layer would be trapped in that window's box.
+  return createPortal(
     <AnimatePresence>
       <motion.div
         key="fullscreen-press"
@@ -403,18 +410,18 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
         <div className="absolute inset-0 bg-[rgba(5,5,8,.78)] pointer-events-none transition-opacity duration-700" style={{ opacity: backstage ? 1 : 0 }} />
 
         {/* Who you are */}
-        <div className="absolute left-7 top-[22px] rounded-md px-3.5 py-2 flex flex-col bg-[linear-gradient(180deg,#e3c27a,#b38a3e)] shadow-[inset_0_1px_0_rgba(255,255,255,.5),0_6px_14px_rgba(0,0,0,.4)]">
+        <div className="absolute left-7 top-[22px] rounded-md px-3.5 py-2 flex flex-col bg-[linear-gradient(180deg,#e3c27a,#b38a3e)] shadow-[inset_0_1px_0_rgba(255,255,255,.5),0_6px_14px_rgba(0,0,0,.4)] transition-opacity duration-500" style={{ opacity: backstage ? 0 : 1 }}>
           <span className="text-[13px] font-extrabold tracking-[.12em] uppercase text-[#4a3210]">Press conference · Downing Street</span>
           <span className="font-black text-[17px] tracking-[.08em] text-[#2a1a08]">{pmName}</span>
         </div>
 
         {/* The polls (never the exact approval), separate from the journalist's box */}
-        <div className="absolute right-8 top-5 w-[260px] flex flex-col items-end gap-1">
+        <div className="absolute right-8 top-5 w-[260px] flex flex-col items-end gap-1 transition-opacity duration-500" style={{ opacity: backstage ? 0 : 1 }}>
           <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-400">Polls</span>
-          <span className="text-[44px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>
+          <span className="text-[44px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: pollTrendColour ?? POLL_STATUS_COLOURS[pollNow.status].onDark }}>
             {formatPollRange(pollNow)}
           </span>
-          <PollBar poll={pollNowBand} className="w-full h-2.5 mt-1.5 bg-white/15" band="#f472b6" line="#f8fafc" />
+          <PollBar poll={pollNowBand} className="w-full h-2.5 mt-1.5 bg-white/15" band={pollTrendColour ?? '#f472b6'} line="#f8fafc" />
           <span className="text-[12px] font-extrabold" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>{pollNow.status}</span>
         </div>
 
@@ -534,27 +541,36 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
 
         {/* Concluded */}
         {concluded && (
-          <div className="absolute bottom-[8vh] flex flex-col items-center gap-8" style={{ left: margin, width: bubbleW }}>
+          <>
+          {/* The stamp, bottom centre */}
+            <div className="absolute left-0 right-0 bottom-[14vh] flex justify-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 1.4, rotate: -4, y: -16 }}
-              animate={{ opacity: 1, scale: 1, rotate: -6, y: 0 }}
+              animate={{ opacity: 1, scale: 1, rotate: -5, y: 0 }}
               transition={{ duration: 0.35, ease: [0.2, 0.8, 0.3, 1.3] }}
-              className="border-[5px] px-[22px] py-2.5 font-black text-[clamp(18px,2vw,30px)] tracking-[.14em] uppercase whitespace-nowrap"
+              className="border-[5px] px-[22px] py-2.5 font-black text-[clamp(16px,1.7vw,26px)] tracking-[.14em] uppercase whitespace-nowrap"
               style={{ borderColor: PM_LIGHT[currentCycle], color: PM_LIGHT[currentCycle] }}
             >
               Press conference concluded
             </motion.div>
-            <button
+            </div>
+            {/* On to election night, bottom right */}
+            <motion.button
               type="button"
               onClick={onContinue}
-              className="font-black text-[15px] bg-[#d6b25e] text-stone-900 rounded-[10px] px-6 py-3.5 cursor-pointer hover:bg-[#e3c27a]"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.3 }}
+              className="absolute bottom-[5vh] font-black text-[17px] bg-[#d6b25e] text-stone-900 rounded-[10px] px-7 py-4 shadow-[0_14px_30px_rgba(0,0,0,.5)] cursor-pointer hover:bg-[#e3c27a]"
+              style={{ right: margin }}
             >
-              Continue to Term Summary ▶
-            </button>
-          </div>
+              Election night ▶
+            </motion.button>
+          </>
         )}
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
@@ -587,7 +603,7 @@ function PollBar({ poll, before, className, band, line }: { poll: Poll; before?:
         />
       )}
       <div
-        className="absolute top-0 bottom-0 transition-[left,width] duration-700 ease-out"
+        className="absolute top-0 bottom-0 transition-[left,width] duration-[2200ms] ease-out"
         style={{ left: `${left}%`, width: `${width}%`, background: `linear-gradient(90deg, transparent, ${band} 22%, ${band} 78%, transparent)` }}
       />
       <div className="absolute top-0 bottom-0 w-0.5" style={{ left: `${pollBarPercent(WIN_THRESHOLD)}%`, backgroundColor: line }} />

@@ -34,6 +34,8 @@ export default function ElectionModal(props: ElectionModalProps) {
   const [pageReady, setPageReady] = useState(false);
   // Once you leave the press conference it has been held: coming Back must not hold (and score) it again.
   const [pressHeld, setPressHeld] = useState(false);
+  // Likewise the count: coming Back to the verdict shows the result, it isn't counted (or logged) again.
+  const [verdictSeen, setVerdictSeen] = useState(false);
 
   // Stable across every ElectionModal re-render (unlike an inline arrow
   // function would be) - several stage components use onReady inside a
@@ -91,7 +93,8 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   // Telemetry: every Continue/Back between the five stages, with time on the stage
   // (from when it appeared) and time since its Continue button unlocked.
-  const STAGES = ['press_conference', 'term_summary', 'verdict', 'wellbeing_changes', 'electorate_feedback'];
+  // Election night comes straight after the press conference, then the term is reviewed.
+  const STAGES = ['press_conference', 'verdict', 'term_summary', 'wellbeing_changes', 'electorate_feedback'];
   const stageShownAt = useRef(Date.now());
   const stageReadyAt = useRef<number | null>(null);
   useEffect(() => {
@@ -112,6 +115,7 @@ export default function ElectionModal(props: ElectionModalProps) {
       ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
     });
     if (page === 0) setPressHeld(true);
+    if (page === 1) setVerdictSeen(true);
     setPageReady(false);
     setPage(to);
   };
@@ -128,8 +132,8 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   const getModalTitle = () => {
     if (page === 0) return "Press Conference";
-    if (page === 1) return "Term Summary";
-    if (page === 2) return "Election Verdict";
+    if (page === 1) return "Election Verdict";
+    if (page === 2) return "Term Summary";
     if (page === 3) return "Wellbeing Changes";
     if (page === 4) return "Electorate Feedback";
     return "Election Sequence";
@@ -137,7 +141,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   const getModalWidth = () => {
     if (page === 0) return "max-w-2xl";
-    if (page === 2) return "max-w-xl";
+    if (page === 1) return "max-w-xl";
     if (page === 3) return "max-w-[880px]";
     if (page === 4) return "max-w-2xl";
     return "max-w-3xl";
@@ -173,8 +177,16 @@ export default function ElectionModal(props: ElectionModalProps) {
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
         {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} />}
-        {page === 1 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
-        {page === 2 && <StageVerdict approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts} onReady={handlePageReady} />}
+        {page === 1 && (
+          <StageVerdict
+            approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts}
+            pollError={props.pollError}
+            startScore={props.history[0]?.metricScore ?? props.history[0]?.lsAverage ?? props.currentMetricScore}
+            endScore={props.currentMetricScore}
+            onReady={handlePageReady} onContinue={() => goToPage(2)} alreadySeen={verdictSeen}
+          />
+        )}
+        {page === 2 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
         {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
         {page === 4 && <StageElectorateFeedback {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
       </motion.div>
@@ -195,7 +207,7 @@ export default function ElectionModal(props: ElectionModalProps) {
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Continue to Term Summary \u2192" : page === 1 ? "Continue to Verdict \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : "Electorate Feedback \u2192"}
+            {page === 0 ? "Election night \u2192" : page === 1 ? "Continue to Term Summary \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : "Electorate Feedback \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">

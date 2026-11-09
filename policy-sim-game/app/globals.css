@@ -112,3 +112,15 @@ body {
 @keyframes press-wash { 0%, 84%, 100% { opacity: 0; } 86% { opacity: .16; } 92% { opacity: 0; } }
 .press-bob { animation: press-bob 2.4s ease-in-out infinite; }
 @keyframes press-bob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
+
+/* ── Election night: the count on TV, the victory rally ── */
+.tv-blink { animation: tv-blink 1.2s steps(1) infinite; }
+@keyframes tv-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: .25; } }
+.tv-ticker { animation: tv-ticker 26s linear infinite; }
+@keyframes tv-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.rally-jump { animation: rally-jump .6s ease-in-out infinite; }
+@keyframes rally-jump { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-40px); } }
+.rally-wave { animation: rally-wave .9s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes rally-wave { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(12deg); } }
+.rally-confetti { animation-name: rally-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes rally-fall { from { transform: translateY(-80px) rotate(0deg); } to { transform: translateY(980px) rotate(600deg); } }
