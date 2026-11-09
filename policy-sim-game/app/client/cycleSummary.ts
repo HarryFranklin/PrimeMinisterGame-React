@@ -341,15 +341,18 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
 
   // Election stages: time on each (summed over visits, via Back) and time
   // between the Continue button unlocking and the click.
+  // The exit buttons are on the last stage reached: the morning paper's back page
+  // ("paper_back"), or "electorate_feedback" in the older flow.
   const nav = all("election_stage_navigated");
   const exit = last("election_exit_clicked");
+  const exitStage = String(nav[nav.length - 1]?.payload?.to_stage ?? "electorate_feedback");
   const stageMs = (stage: string) => {
     const xs = nav.filter((e) => e.payload?.from_stage === stage).map((e) => num(e.payload?.ms_on_stage) ?? 0);
-    if (stage === "electorate_feedback" && exit) xs.push(num(exit.payload?.ms_on_stage) ?? 0);
+    if (stage === exitStage && exit) xs.push(num(exit.payload?.ms_on_stage) ?? 0);
     return xs.length ? sum(xs) : null;
   };
   const afterUnlock = (stage: string) => {
-    const e = stage === "electorate_feedback" ? exit : nav.find((n) => n.payload?.from_stage === stage && n.payload?.direction === "continue");
+    const e = stage === exitStage ? exit : nav.find((n) => n.payload?.from_stage === stage && n.payload?.direction === "continue");
     return num(e?.payload?.ms_after_unlock);
   };
 
@@ -424,6 +427,8 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
     electorate_feedback_ms: stageMs("electorate_feedback") ?? p(last("electorate_feedback_closed"), "dwell_ms"),
     electorate_policies_clicked: feedbackPolicies.length,
     electorate_policies_clicked_ids: feedbackPolicies.join(" "),
+    paper_front_ms: stageMs("paper_front"),
+    paper_back_ms: stageMs("paper_back"),
     election_back_clicks: nav.filter((e) => e.payload?.direction === "back").length,
     election_exit_action: p(exit, "action"),
 

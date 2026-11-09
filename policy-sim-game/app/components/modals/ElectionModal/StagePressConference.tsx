@@ -25,6 +25,15 @@ interface StagePressConferenceProps {
   onContinue: () => void;
   /** True when coming Back to this stage: the conference already happened, so don't hold it again. */
   alreadyHeld?: boolean;
+  /** Called once the questions are over, so the morning paper can report them. */
+  onSummary?: (summary: PressSummary) => void;
+}
+
+/** What happened at the press conference, for the morning paper. */
+export interface PressSummary {
+  questions: { who: string; outlet: string; ask: string; said: string; correct: boolean }[];
+  /** Approval as the press conference began. */
+  startApproval: number;
 }
 
 const SCORE_DELTA = 5;
@@ -157,7 +166,10 @@ export default function StagePressConference(props: StagePressConferenceProps) {
   return <PressConferenceLive {...props} />;
 }
 
-function PressConferenceLive({ currentCycle, approvalRating, pollError, history, onAnswerQuestion, onReady, onContinue }: StagePressConferenceProps) {
+/** How long the "Polls up / down" chip takes to reach the polls box; the poll moves when it lands. */
+const POLL_LAND_MS = 1400;
+
+function PressConferenceLive({ currentCycle, approvalRating, pollError, history, onAnswerQuestion, onReady, onContinue, onSummary }: StagePressConferenceProps) {
   const [pressPair] = useState(getPressPair);
   // Approval as the press conference began, for the final poll's "this morning"
   const [startApproval] = useState(approvalRating);
@@ -181,9 +193,21 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   const q1 = useMemo(() => buildMetricQuestion(currentCycle), [currentCycle]);
   const q2 = useMemo(() => buildPolicyQuestion(history), [history]);
 
-  // The poll moves slowly, and goes red while falling (green while rising), so a change is easy to spot
-  const displayScore = useAnimatedNumber(approvalRating, 2200);
-  const pollTrend = approvalRating < displayScore - 0.05 ? 'down' : approvalRating > displayScore + 0.05 ? 'up' : null;
+  // After an answer, a "Polls up / down" chip flies from the PM to the polls box; when it lands
+  // the box pulses and the poll moves (slowly, red while falling, green while rising).
+  const [chip, setChip] = useState<{ key: number; up: boolean } | null>(null);
+  const [moved, setMoved] = useState<{ key: number; up: boolean } | null>(null);
+  const [shownApproval, setShownApproval] = useState(approvalRating);
+  useEffect(() => {
+    if (approvalRating === shownApproval) return;
+    const t = setTimeout(() => {
+      setShownApproval(approvalRating);
+      setMoved({ key: Date.now(), up: approvalRating > shownApproval });
+    }, POLL_LAND_MS);
+    return () => clearTimeout(t);
+  }, [approvalRating, shownApproval]);
+  const displayScore = useAnimatedNumber(shownApproval, 2200);
+  const pollTrend = shownApproval < displayScore - 0.05 ? 'down' : shownApproval > displayScore + 0.05 ? 'up' : null;
   const pollTrendColour = pollTrend === 'down' ? '#f87171' : pollTrend === 'up' ? '#4ade80' : null;
 
   const viewW = useSyncExternalStore(subscribeResize, getViewW, () => STAGE_W);
@@ -229,17 +253,33 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
     if (said === null || !pmSpeech.isComplete || revealed) return;
     const t = setTimeout(() => {
       setRevealed(true);
+      setChip({ key: Date.now(), up: said.correct });
       onAnswerQuestion(said.correct ? SCORE_DELTA : -SCORE_DELTA);
       nextPhaseTimer.current = setTimeout(() => {
         setSaid(null);
         setRevealed(false);
         setPhase(said.next);
-      }, said.correct ? 1500 : 2200); // a little longer to take in the press reaction
+      }, said.correct ? 3000 : 3400); // long enough to watch the polls move (a little longer after a wrong answer)
     }, 450);
     return () => clearTimeout(t);
   }, [said, pmSpeech.isComplete, revealed, onAnswerQuestion]);
 
   useEffect(() => () => { if (nextPhaseTimer.current) clearTimeout(nextPhaseTimer.current); }, []);
+
+  // Once the questions are over, hand what was said to the morning paper
+  const summarySent = useRef(false);
+  useEffect(() => {
+    if (phase !== 'summary' || summarySent.current || !onSummary) return;
+    summarySent.current = true;
+    const questions: PressSummary['questions'] = [];
+    if (q1Selected !== null) {
+      questions.push({ who: pressPair.first.name, outlet: pressPair.first.outlet, ask: 'what the Prime Minister was really judged on', said: q1.options[q1Selected].text, correct: q1Selected === q1.correctIndex });
+    }
+    if (q2 && q2Selected !== null) {
+      questions.push({ who: pressPair.second.name, outlet: pressPair.second.outlet, ask: 'which bill did the most for ordinary people', said: q2.options[q2Selected].text, correct: q2Selected === q2.correctIndex });
+    }
+    onSummary({ questions, startApproval });
+  }, [phase]);
 
   const handleAnswerQ1 = (index: number) => {
     if (q1Selected !== null) return;
@@ -325,7 +365,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   const slipW = Math.min(520, viewW / 2 - 40 - margin);
   const pollNow = makePoll(displayScore, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
   // Drawn from the real values so the band shifts and narrows in one movement
-  const pollNowBand = makePoll(approvalRating, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
+  const pollNowBand = makePoll(shownApproval, backstage ? POLL_HALF_WIDTH_FINAL : POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const pollThisMorning = makePoll(startApproval, POLL_HALF_WIDTH_POLLING_DAY, pollError);
   const finalPoll = makePoll(approvalRating, POLL_HALF_WIDTH_FINAL, pollError);
   const correctSoFar = (q1Selected === q1.correctIndex ? 1 : 0) + (q2 && q2Selected === q2.correctIndex ? 1 : 0);
@@ -336,14 +376,15 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
   const pmBubbleW = Math.min(460, viewW * 0.36);
   const pmBubbleX = offX + (STAGE_W / 2) * scale - pmBubbleW / 2;
   const pmBubbleBottom = viewH - (offY + 290 * scale) + 18;
-  // A wrong answer: the press aren't convinced
+  // The press react: confused by a wrong answer, nodding along to a right one
   const HUH = ['?', 'Huh??', '?!?', 'Eh?'];
+  const NOD = ['Fair point', 'Good answer', 'Hear, hear', '✓'];
   const reactors = (phase === 'q2' ? [3, 5, 8, 10] : [1, 4, 7, 9]).filter(i => i !== askerIndex);
-  const reactions = revealed && said && !said.correct
+  const reactions = revealed && said
     ? reactors.map((i, n) => {
         const [, y, k, fd] = CROWD_SPOTS[i];
         return {
-          key: i, text: HUH[n % HUH.length], delay: n * 0.15, rot: [-8, 6, -4, 9][n % 4],
+          key: i, text: (said.correct ? NOD : HUH)[n % 4], colour: said.correct ? '#15803d' : '#1c1917', delay: n * 0.15, rot: [-8, 6, -4, 9][n % 4],
           left: Math.min(viewW - 50, Math.max(50, offX + crowdHeadCentre(i).x * scale)),
           top: offY + (y - (fd > 0 ? 125 * k : 40)) * scale - 24,
         };
@@ -416,14 +457,48 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
         </div>
 
         {/* The polls (never the exact approval), separate from the journalist's box */}
-        <div className="absolute right-8 top-5 w-[260px] flex flex-col items-end gap-1 transition-opacity duration-500" style={{ opacity: backstage ? 0 : 1 }}>
-          <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-400">Polls</span>
+        <motion.div
+          key={moved?.key ?? 0}
+          initial={{ scale: 1 }}
+          animate={{ scale: moved ? [1, 1.16, 1] : 1 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
+          className="absolute right-6 top-4 w-[280px] flex flex-col items-end gap-1 rounded-xl bg-black/45 px-4 py-3 origin-top-right transition-[opacity,box-shadow] duration-500"
+          style={{ opacity: backstage ? 0 : 1, boxShadow: pollTrendColour ? `0 0 0 3px ${pollTrendColour}, 0 0 34px ${pollTrendColour}88` : '0 0 0 1px rgba(255,255,255,.12)' }}
+        >
+          <span className="text-[11px] font-extrabold tracking-[.14em] uppercase text-zinc-300">Polls</span>
           <span className="text-[44px] font-black leading-none tabular-nums transition-colors duration-500" style={{ color: pollTrendColour ?? POLL_STATUS_COLOURS[pollNow.status].onDark }}>
             {formatPollRange(pollNow)}
           </span>
           <PollBar poll={pollNowBand} className="w-full h-2.5 mt-1.5 bg-white/15" band={pollTrendColour ?? '#f472b6'} line="#f8fafc" />
           <span className="text-[12px] font-extrabold" style={{ color: POLL_STATUS_COLOURS[pollNow.status].onDark }}>{pollNow.status}</span>
-        </div>
+          {moved && (
+            <span className="text-[15px] font-black" style={{ color: moved.up ? '#4ade80' : '#f87171' }}>
+              {moved.up ? '▲ Up after that answer' : '▼ Down after that answer'}
+            </span>
+          )}
+        </motion.div>
+
+        {/* "Polls up / down": from the PM to the polls box */}
+        {chip && !backstage && (() => {
+          const sx = offX + (STAGE_W / 2 + 230) * scale, sy = offY + 330 * scale; // beside the PM
+          const ex = viewW - 24 - 140, ey = 60;
+          return (
+            <motion.div
+              key={chip.key}
+              initial={{ x: sx, y: sy + 20, scale: 0.5, opacity: 0 }}
+              animate={{ x: [sx, sx, sx, ex], y: [sy + 20, sy - 20, sy - 20, ey], scale: [0.5, 1.2, 1.1, 0.5], opacity: [0, 1, 1, 0] }}
+              transition={{ duration: POLL_LAND_MS / 1000, times: [0, 0.25, 0.55, 1], ease: 'easeInOut' }}
+              className="absolute left-0 top-0 pointer-events-none z-[30]"
+            >
+              <span
+                className="block -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-6 py-3 text-[30px] font-black text-white shadow-[0_14px_30px_rgba(0,0,0,.55)]"
+                style={{ background: chip.up ? '#16a34a' : '#dc2626' }}
+              >
+                {chip.up ? '▲ Polls up' : '▼ Polls down'}
+              </span>
+            </motion.div>
+          );
+        })()}
 
         {/* The journalist asking, then the Chief of Staff backstage */}
         {introSequence >= 1 && (
@@ -496,8 +571,8 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
             initial={{ opacity: 0, scale: 0.4, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay: r.delay, duration: 0.3, ease: [0.2, 0.8, 0.3, 1.4] }}
-            className="absolute -translate-x-1/2 bg-white text-stone-900 font-black text-[22px] leading-none px-3 py-2 rounded-2xl shadow-[0_8px_18px_rgba(0,0,0,.45)] pointer-events-none"
-            style={{ left: r.left, top: r.top, rotate: `${r.rot}deg` }}
+            className="absolute -translate-x-1/2 bg-white font-black text-[22px] leading-none px-3 py-2 rounded-2xl shadow-[0_8px_18px_rgba(0,0,0,.45)] pointer-events-none whitespace-nowrap"
+            style={{ left: r.left, top: r.top, rotate: `${r.rot}deg`, color: r.colour }}
           >
             {r.text}
           </motion.span>
@@ -542,7 +617,7 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
         {/* Concluded */}
         {concluded && (
           <>
-          {/* The stamp, bottom centre */}
+            {/* The stamp, bottom centre */}
             <div className="absolute left-0 right-0 bottom-[14vh] flex justify-center pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 1.4, rotate: -4, y: -16 }}

@@ -124,3 +124,31 @@ body {
 @keyframes rally-wave { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(12deg); } }
 .rally-confetti { animation-name: rally-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
 @keyframes rally-fall { from { transform: translateY(-80px) rotate(0deg); } to { transform: translateY(980px) rotate(600deg); } }
+
+/* ---------- The morning paper (after election night) ---------- */
+.paper-page {
+  position: absolute; top: 0; width: 640px; height: 830px;
+  display: flex; flex-direction: column; gap: 12px; padding: 26px 30px 30px;
+  overflow: hidden; color: #1c1917; backface-visibility: hidden;
+  background-color: #efe7d3;
+  background-image:
+    radial-gradient(rgba(92,66,20,.10) 1px, transparent 1.2px),
+    radial-gradient(rgba(92,66,20,.07) 1px, transparent 1.2px),
+    repeating-linear-gradient(0deg, rgba(92,66,20,.025) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, rgba(255,255,255,.35), rgba(160,120,60,.12));
+  background-size: 7px 7px, 11px 11px, auto, auto;
+  background-position: 0 0, 3px 5px, 0 0, 0 0;
+  box-shadow: 0 24px 50px rgba(0,0,0,.45);
+}
+.paper-pl { transform-origin: 100% 50%; box-shadow: inset -26px 0 30px -18px rgba(60,40,10,.45), 0 24px 50px rgba(0,0,0,.45); }
+.paper-pr { transform-origin: 0 50%; box-shadow: inset 26px 0 30px -18px rgba(60,40,10,.45), 0 24px 50px rgba(0,0,0,.45); }
+.paper-dim { position: absolute; inset: 0; background: #1c1917; pointer-events: none; transition: opacity .6s ease; }
+.paper-cap { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.paper-link { font: inherit; font-weight: 800; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+.paper-link:hover { text-decoration-style: solid; }
+.paper-hatch { background-image: repeating-linear-gradient(-45deg, rgba(180,83,9,.35) 0 3px, transparent 3px 7px); }
+/* Turning forward: the old right page folds over the spine, then the new left page lands */
+.paper-leafF { animation: paper-leaf-f .8s cubic-bezier(.45,0,.85,.6) both; }
+.paper-leafB { animation: paper-leaf-b .8s .8s cubic-bezier(.15,.4,.55,1) both; }
+@keyframes paper-leaf-f { from { transform: rotateY(0deg); } to { transform: rotateY(-90deg); } }
+@keyframes paper-leaf-b { from { transform: rotateY(90deg); } to { transform: rotateY(0deg); } }

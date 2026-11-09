@@ -263,7 +263,7 @@ export default function StageVerdict({
                   className="cursor-pointer hover:brightness-110"
                   style={{ marginTop: 'auto', alignSelf: 'flex-end', font: 'inherit', fontWeight: 900, fontSize: 16, background: '#d6b25e', color: '#1c1917', border: 0, borderRadius: 10, padding: '16px 24px' }}
                 >
-                  Continue ▶
+                  Tomorrow’s paper ▶
                 </button>
               )}
             </div>
@@ -398,7 +398,7 @@ export default function StageVerdict({
                   className="cursor-pointer hover:brightness-110"
                   style={{ font: 'inherit', fontWeight: 900, fontSize: 16, background: '#ffffff', color: '#0f172a', border: 0, borderRadius: 10, padding: '16px 22px', boxShadow: '0 14px 30px rgba(0,0,0,.5)' }}
                 >
-                  Continue ▶
+                  Tomorrow’s paper ▶
                 </button>
               )}
             </div>

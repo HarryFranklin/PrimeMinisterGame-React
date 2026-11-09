@@ -15,14 +15,14 @@ interface StageTermSummaryProps {
   onDefinitionToggle: (title: string, desc: string) => void;
 }
 
-const MARKER_LABELS: Record<ElectionCycle, string> = {
+export const MARKER_LABELS: Record<ElectionCycle, string> = {
   [ElectionCycle.Benthamite]: 'Average',
   [ElectionCycle.Rawlsian]: 'Baseline',
   [ElectionCycle.PersonalUtility]: 'Satisfaction',
   [ElectionCycle.SocietalUtility]: 'Fairness',
 };
 
-const ANALYSIS_MESSAGES: Record<ElectionCycle, (start: number, end: number, diff: number) => string> = {
+export const ANALYSIS_MESSAGES: Record<ElectionCycle, (start: number, end: number, diff: number) => string> = {
   [ElectionCycle.Benthamite]: (s, e, d) =>
     `The National Average Life Satisfaction has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, a net ${d >= 0 ? 'gain' : 'loss'} of ${Math.abs(d).toFixed(2)} points.`,
   [ElectionCycle.Rawlsian]: (s, e, d) =>
@@ -32,6 +32,49 @@ const ANALYSIS_MESSAGES: Record<ElectionCycle, (start: number, end: number, diff
   [ElectionCycle.SocietalUtility]: (s, e, d) =>
     `The National Fairness Index has ${d >= 0 ? 'increased' : 'decreased'} from ${s.toFixed(2)} to ${e.toFixed(2)}, reflecting shifting views on equality.`,
 };
+
+export interface TermTimelineEntry {
+  turn: number;
+  policyName: string;
+  histogram: { name: number; count: number }[];
+  score: number;
+}
+
+/** The term turn by turn: who sat where on the 0–10 scale, and the measure, after each bill. */
+export function buildTermTimeline(finalPopulation: Respondent[], currentCycle: ElectionCycle): TermTimelineEntry[] {
+  if (!finalPopulation || finalPopulation.length === 0) return [];
+
+  const ledger = finalPopulation[0].historicalLedger.find(l => l.cycle === currentCycle);
+  if (!ledger || ledger.turns.length === 0) return [];
+
+  return ledger.turns.map((turnInfo, t) => {
+    const hist = Array.from({ length: 11 }, (_, i) => ({
+      name: i,
+      count: finalPopulation.filter(p => {
+        const pLedger = p.historicalLedger.find(l => l.cycle === currentCycle);
+        return pLedger && Math.round(pLedger.turns[t].ls) === i;
+      }).length,
+    }));
+
+    let score = 0;
+    if (currentCycle === ElectionCycle.Benthamite) {
+      score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].ls, 0) / finalPopulation.length;
+    } else if (currentCycle === ElectionCycle.Rawlsian) {
+      score = Math.min(...finalPopulation.map(p => p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].ls));
+    } else if (currentCycle === ElectionCycle.PersonalUtility) {
+      score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].personalUtility, 0) / finalPopulation.length;
+    } else if (currentCycle === ElectionCycle.SocietalUtility) {
+      score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].societalUtility, 0) / finalPopulation.length;
+    }
+
+    return {
+      turn: t,
+      policyName: turnInfo.policyName || (t === 0 ? 'Took Office' : 'Unknown Policy'),
+      histogram: hist,
+      score
+    };
+  });
+}
 
 export default function StageTermSummary({
   currentCycle,
@@ -45,40 +88,7 @@ export default function StageTermSummary({
   const [activeTurn, setActiveTurn] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const timelineData = useMemo(() => {
-    if (!finalPopulation || finalPopulation.length === 0) return [];
-    
-    const ledger = finalPopulation[0].historicalLedger.find(l => l.cycle === currentCycle);
-    if (!ledger || ledger.turns.length === 0) return [];
-
-    return ledger.turns.map((turnInfo, t) => {
-      const hist = Array.from({ length: 11 }, (_, i) => ({
-        name: i,
-        count: finalPopulation.filter(p => {
-          const pLedger = p.historicalLedger.find(l => l.cycle === currentCycle);
-          return pLedger && Math.round(pLedger.turns[t].ls) === i;
-        }).length,
-      }));
-
-      let score = 0;
-      if (currentCycle === ElectionCycle.Benthamite) {
-        score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].ls, 0) / finalPopulation.length;
-      } else if (currentCycle === ElectionCycle.Rawlsian) {
-        score = Math.min(...finalPopulation.map(p => p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].ls));
-      } else if (currentCycle === ElectionCycle.PersonalUtility) {
-        score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].personalUtility, 0) / finalPopulation.length;
-      } else if (currentCycle === ElectionCycle.SocietalUtility) {
-        score = finalPopulation.reduce((s, p) => s + p.historicalLedger.find(l => l.cycle === currentCycle)!.turns[t].societalUtility, 0) / finalPopulation.length;
-      }
-
-      return {
-        turn: t,
-        policyName: turnInfo.policyName || (t === 0 ? 'Took Office' : 'Unknown Policy'),
-        histogram: hist,
-        score
-      };
-    });
-  }, [finalPopulation, currentCycle]);
+  const timelineData = useMemo(() => buildTermTimeline(finalPopulation, currentCycle), [finalPopulation, currentCycle]);
 
   const safeYAxisMax = useMemo(() => {
     let maxCount = 0;

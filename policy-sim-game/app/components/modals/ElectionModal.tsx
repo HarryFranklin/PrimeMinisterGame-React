@@ -4,11 +4,9 @@ import { ElectionCycle, Respondent, TurnHistory } from '../../utils/types';
 import { ModalContent, ModalHeader } from './SharedModalComponents'; 
 import { track } from '../../client/telemetry';
 
-import StageTermSummary from './ElectionModal/StageTermSummary';
 import StageVerdict from './ElectionModal/StageVerdict';
-import StagePopulationChange from './ElectionModal/StagePopulationChange';
-import StageElectorateFeedback from './ElectionModal/StageElectorateFeedback';
-import StagePressConference from './ElectionModal/StagePressConference';
+import StagePressConference, { type PressSummary } from './ElectionModal/StagePressConference';
+import StageMorningPaper, { type PaperExit } from './ElectionModal/StageMorningPaper';
 import PMIdentityBanner from '../PMIdentityBanner';
 
 interface ElectionModalProps {
@@ -36,6 +34,10 @@ export default function ElectionModal(props: ElectionModalProps) {
   const [pressHeld, setPressHeld] = useState(false);
   // Likewise the count: coming Back to the verdict shows the result, it isn't counted (or logged) again.
   const [verdictSeen, setVerdictSeen] = useState(false);
+  // What happened at the press conference, for the front page of the morning paper
+  const [pressSummary, setPressSummary] = useState<PressSummary | null>(null);
+  // Arriving at the paper straight from the victory rally (the rally shrinks into the front-page photo)
+  const [paperFromRally, setPaperFromRally] = useState(false);
 
   // Stable across every ElectionModal re-render (unlike an inline arrow
   // function would be) - several stage components use onReady inside a
@@ -44,57 +46,55 @@ export default function ElectionModal(props: ElectionModalProps) {
   // cleanup without rescheduling it, silently hard-locking the stage.
   const handlePageReady = useCallback(() => setPageReady(true), []);
 
-  const [definitions, setDefinitions] = useState<{title: string, desc: string}[]>([]);
   
   const won = approvalRating >= 51.0;
   
   const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
   
   let canProceed = won || cycleAttempts >= 3;
-  const totalPages = 5;
+  const totalPages = 3;
 
   // We removed all track('cycle_ended', ...) calls from these handlers.
   // The cycle isn't truly over until the Academic Debrief finishes.
-  const trackExit = (action: string) => {
+  // The paper passes its own page timings (its pages are the old stages).
+  const trackExit = (action: string, timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
     const now = Date.now();
     track('election_exit_clicked', {
       cycle: ElectionCycle[currentCycle],
       action,
       won,
       attempt_number: cycleAttempts,
-      ms_on_stage: now - stageShownAt.current,
-      ms_after_unlock: stageReadyAt.current ? now - stageReadyAt.current : null,
+      ms_on_stage: timing ? timing.msOnStage : now - stageShownAt.current,
+      ms_after_unlock: timing ? timing.msAfterUnlock : (stageReadyAt.current ? now - stageReadyAt.current : null),
     });
   };
 
-  const handleRestartTerm = () => {
-    trackExit('restart');
+  const handleRestartTerm = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
+    trackExit('restart', timing);
     onRequestDebrief('restart', won ? "win" : "lose");
   };
 
-  const handleProceedNextTerm = () => {
-    trackExit('next_term');
+  const handleProceedNextTerm = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
+    trackExit('next_term', timing);
     onRequestDebrief('complete', 'win');
   };
 
-  const handleFinishGame = () => {
-    trackExit('finish_game');
+  const handleFinishGame = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
+    trackExit('finish_game', timing);
     onRequestDebrief('complete', 'win');
   };
 
-  const handleLostFinal = () => {
-    trackExit('lost_restart');
+  const handleLostFinal = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
+    trackExit('lost_restart', timing);
     onReset("lose");
   };
 
-  useEffect(() => {
-    setDefinitions([]);
-  }, [page]);
-
-  // Telemetry: every Continue/Back between the five stages, with time on the stage
+  // Telemetry: every Continue/Back between the stages, with time on the stage
   // (from when it appeared) and time since its Continue button unlocked.
-  // Election night comes straight after the press conference, then the term is reviewed.
-  const STAGES = ['press_conference', 'verdict', 'term_summary', 'wellbeing_changes', 'electorate_feedback'];
+  // Election night comes straight after the press conference, then the morning paper
+  // reviews the term. The paper's pages keep the old stage names (term_summary,
+  // wellbeing_changes, electorate_feedback) and log their own page turns.
+  const STAGES = ['press_conference', 'verdict', 'paper_front'];
   const stageShownAt = useRef(Date.now());
   const stageReadyAt = useRef<number | null>(null);
   useEffect(() => {
@@ -116,67 +116,53 @@ export default function ElectionModal(props: ElectionModalProps) {
     });
     if (page === 0) setPressHeld(true);
     if (page === 1) setVerdictSeen(true);
+    setPaperFromRally(page === 1 && to === 2 && won);
     setPageReady(false);
     setPage(to);
   };
 
-  const handleToggle = (title: string, desc: string) => {
-    setDefinitions(prev => {
-      const exists = prev.some(d => d.title === title);
-      if (exists) {
-        return prev.filter(d => d.title !== title);
-      }
-      return [...prev, { title, desc }];
+  // A page turn inside the paper, logged like a move between stages
+  const handlePaperNavigate = (from: string, to: string, direction: 'continue' | 'back', msOnStage: number, msAfterUnlock: number | null) => {
+    track('election_stage_navigated', {
+      cycle: ElectionCycle[currentCycle],
+      from_stage: from,
+      to_stage: to,
+      direction,
+      ms_on_stage: msOnStage,
+      ms_after_unlock: msAfterUnlock,
     });
+  };
+
+  const handlePaperExit = (action: PaperExit, msOnStage: number, msAfterUnlock: number | null) => {
+    const timing = { msOnStage, msAfterUnlock };
+    if (action === 'lost_restart') handleLostFinal(timing);
+    else if (action === 'restart') handleRestartTerm(timing);
+    else if (action === 'finish_game') handleFinishGame(timing);
+    else handleProceedNextTerm(timing);
   };
 
   const getModalTitle = () => {
     if (page === 0) return "Press Conference";
     if (page === 1) return "Election Verdict";
-    if (page === 2) return "Term Summary";
-    if (page === 3) return "Wellbeing Changes";
-    if (page === 4) return "Electorate Feedback";
+    if (page === 2) return "The Morning Paper";
     return "Election Sequence";
   };
 
   const getModalWidth = () => {
     if (page === 0) return "max-w-2xl";
     if (page === 1) return "max-w-xl";
-    if (page === 3) return "max-w-[880px]";
-    if (page === 4) return "max-w-2xl";
     return "max-w-3xl";
   };
 
   return (
     <ModalContent 
       maxWidth={getModalWidth()}
-      floatingPanel={
-        definitions.length > 0 ? (
-          <div className="absolute inset-y-0 right-0 translate-x-[105%] flex items-center pointer-events-none z-[100] py-4">
-            <div className="flex flex-col gap-4 w-72 max-h-[100%] overflow-y-auto pointer-events-auto pr-3 pl-1 pb-2 overscroll-contain">
-              {definitions.map((def) => (
-                <div 
-                  key={def.title} 
-                  className="bg-white/95 backdrop-blur-md border border-pink-300 shadow-2xl rounded-xl p-4 shrink-0 relative animate-in fade-in zoom-in-95 duration-200"
-                >
-                  <span className="text-sm font-black uppercase tracking-widest text-pink-500 block mb-2">
-                    {def.title}
-                  </span>
-                  <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
-                    {def.desc}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : undefined
-      }
     >
       <ModalHeader title={getModalTitle()} />
       <PMIdentityBanner cycle={currentCycle} className="-mt-2 shrink-0" />
       
       <motion.div className="flex-1 min-h-0 overflow-y-auto pr-1 w-full flex flex-col gap-4">
-        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} />}
+        {page === 0 && <StagePressConference currentCycle={currentCycle} approvalRating={approvalRating} pollError={props.pollError} history={props.history} onAnswerQuestion={onAnswerPressQuestion} onReady={handlePageReady} onContinue={() => goToPage(1)} alreadyHeld={pressHeld} onSummary={setPressSummary} />}
         {page === 1 && (
           <StageVerdict
             approvalRating={approvalRating} won={won} currentCycle={currentCycle} attemptNumber={cycleAttempts}
@@ -186,9 +172,15 @@ export default function ElectionModal(props: ElectionModalProps) {
             onReady={handlePageReady} onContinue={() => goToPage(2)} alreadySeen={verdictSeen}
           />
         )}
-        {page === 2 && <StageTermSummary {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
-        {page === 3 && <StagePopulationChange finalPopulation={props.finalPopulation} currentCycle={currentCycle} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
-        {page === 4 && <StageElectorateFeedback {...props} onReady={handlePageReady} onDefinitionToggle={handleToggle} />}
+        {page === 2 && (
+          <StageMorningPaper
+            currentCycle={currentCycle} won={won} canProceed={canProceed} isFinalCycle={isFinalCycle}
+            approvalRating={approvalRating} pollError={props.pollError}
+            initialPopulation={props.initialPopulation} baselinePopulation={props.baselinePopulation} finalPopulation={props.finalPopulation}
+            yAxisMax={props.yAxisMax} pressSummary={pressSummary} fromRally={paperFromRally}
+            onBack={() => goToPage(1)} onNavigate={handlePaperNavigate} onExit={handlePaperExit}
+          />
+        )}
       </motion.div>
 
       <div className="flex justify-between items-center mt-auto pt-3 border-t border-zinc-100 shrink-0 h-16">
@@ -207,19 +199,19 @@ export default function ElectionModal(props: ElectionModalProps) {
             disabled={!pageReady}
             className={`px-6 py-3 rounded-lg text-sm font-bold shadow-md transition-all duration-500 ${pageReady ? 'bg-zinc-900 text-white hover:bg-black opacity-100 cursor-pointer' : 'bg-zinc-200 text-zinc-400 opacity-50 cursor-not-allowed'}`}
           >
-            {page === 0 ? "Election night \u2192" : page === 1 ? "Continue to Term Summary \u2192" : page === 2 ? "View Wellbeing Changes \u2192" : "Electorate Feedback \u2192"}
+            {page === 0 ? "Election night \u2192" : "Tomorrow\u2019s paper \u2192"}
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
             {!canProceed ? (
-              <button onClick={handleLostFinal} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
+              <button onClick={() => handleLostFinal()} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
             ) : (
               <>
-                <button onClick={handleRestartTerm} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
+                <button onClick={() => handleRestartTerm()} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
                 
                 {!isFinalCycle && (
                   <button 
-                    onClick={handleProceedNextTerm} 
+                    onClick={() => handleProceedNextTerm()} 
                     disabled={!pageReady}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
                   >
@@ -229,7 +221,7 @@ export default function ElectionModal(props: ElectionModalProps) {
                 
                 {isFinalCycle && (
                   <button 
-                    onClick={handleFinishGame} 
+                    onClick={() => handleFinishGame()} 
                     disabled={!pageReady}
                     className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-md transition-all ${pageReady ? 'bg-pink-600 text-white hover:bg-pink-700 cursor-pointer' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed opacity-50'}`}
                   >

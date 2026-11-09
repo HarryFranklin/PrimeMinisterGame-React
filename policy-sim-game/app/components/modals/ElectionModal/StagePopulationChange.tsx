@@ -11,7 +11,7 @@ interface StagePopulationChangeProps {
   onDefinitionToggle: (title: string, desc: string) => void;
 }
 
-interface CohortGroup {
+export interface CohortGroup {
   label: string;        
   avgStartLS: number;   
   avgEndLS: number;     
@@ -19,20 +19,20 @@ interface CohortGroup {
   pctString: string; 
 }
 
-interface Cohort {
+export interface Cohort {
   totalCount: number;
   percentage: string;
   groups: CohortGroup[]; 
 }
 
-interface CohortBreakdown {
+export interface CohortBreakdown {
   improved: Cohort;
   stable: Cohort;
   declined: Cohort;
 }
 
-const CHANGE_THRESHOLD = 0.5;
-const DISPLAY_LIMIT = 4;
+export const CHANGE_THRESHOLD = 0.5;
+export const DISPLAY_LIMIT = 4;
 
 function getLifeSituationLabel(ls: number): string {
   if (ls <= 3) return "Struggling";
@@ -41,7 +41,7 @@ function getLifeSituationLabel(ls: number): string {
   return "Thriving";
 }
 
-function computeCohortBreakdown(finalPopulation: Respondent[], currentCycle: ElectionCycle): CohortBreakdown {
+export function computeCohortBreakdown(finalPopulation: Respondent[], currentCycle: ElectionCycle): CohortBreakdown {
   const improvedMap = new Map<string, { sumStart: number; sumEnd: number; count: number }>();
   const stableMap = new Map<string, { sumStart: number; sumEnd: number; count: number }>();
   const declinedMap = new Map<string, { sumStart: number; sumEnd: number; count: number }>();

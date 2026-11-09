@@ -7,7 +7,7 @@ import { PM_PROFILES } from '../../../utils/pmProfiles';
 import { VOTER_QUOTES, VoterSentimentKind, PolicyRef } from '../../../content/voterQuotes';
 import { track } from '../../../client/telemetry';
 
-interface VoterSentiment {
+export interface VoterSentiment {
   emoji: string;
   kind: VoterSentimentKind;
   bestPolicy: PolicyRef | null;
@@ -29,7 +29,7 @@ function policySwings(citizen: any, cycle: ElectionCycle): { up: number; down: n
 
 /** `mixed`: this voter is shown because one policy helped them and another
  * hurt them, so their quote names both, whatever their overall change. */
-function getVoterSentiment(citizen: any, cycle: ElectionCycle, mixed = false): VoterSentiment {
+export function getVoterSentiment(citizen: any, cycle: ElectionCycle, mixed = false): VoterSentiment {
   const cycleLedger = citizen.historicalLedger?.find((l: any) => l.cycle === cycle);
 
   if (!cycleLedger || cycleLedger.turns.length < 2) {
@@ -98,13 +98,28 @@ function PolicySpan({
   );
 }
 
-function renderVoterQuote(
+/** The bills a voter's quote names, with what each one does. */
+export function quotedPolicies(sentiment: VoterSentiment, altFormat: boolean): { id: string; name: string; description: string }[] {
+  const out: { id: string; name: string; description: string }[] = [];
+  for (const segment of VOTER_QUOTES[sentiment.kind][altFormat ? 'alt' : 'standard']) {
+    if (!segment.policyRef || !segment.withPolicy) continue;
+    const policy = sentiment[segment.policyRef];
+    if (!policy || out.some((o) => o.id === policy.id)) continue;
+    const full = availablePolicies.find((p) => p.id === policy.id);
+    if (full) out.push({ id: policy.id, name: full.policyName, description: full.description });
+  }
+  return out;
+}
+
+export function renderVoterQuote(
   sentiment: VoterSentiment,
   pmName: string,
   altFormat: boolean,
   onHoverPolicy: (id: string | null) => void,
   onDefinitionToggle: (title: string, desc: string) => void,
-  onPolicyClicked: (policyId: string) => void
+  onPolicyClicked: (policyId: string) => void,
+  /** Bill names in bold, not as links (the morning paper explains them under the letter). */
+  plain = false
 ): React.ReactNode {
   const segments = VOTER_QUOTES[sentiment.kind][altFormat ? 'alt' : 'standard'];
   const interpolate = (s: string) => s.replace(/\{pmName\}/g, pmName);
@@ -118,12 +133,16 @@ function renderVoterQuote(
         return (
           <React.Fragment key={i}>
             {before}
-            <PolicySpan
-              policy={policy}
-              onHoverPolicy={onHoverPolicy}
-              onDefinitionToggle={onDefinitionToggle}
-              onPolicyClicked={onPolicyClicked}
-            />
+            {plain ? (
+              <strong className="font-black">{policy.name}</strong>
+            ) : (
+              <PolicySpan
+                policy={policy}
+                onHoverPolicy={onHoverPolicy}
+                onDefinitionToggle={onDefinitionToggle}
+                onPolicyClicked={onPolicyClicked}
+              />
+            )}
             {after}
           </React.Fragment>
         );
@@ -135,6 +154,62 @@ function renderVoterQuote(
     }
     return <React.Fragment key={i}>{interpolate(segment.text || '')}</React.Fragment>;
   });
+}
+
+/**
+ * The three voters shown: the one who lost most, the one with the most mixed
+ * experience (helped by one bill, hurt by another), and the one who gained most.
+ */
+export function pickVoters(
+  finalPopulation: Respondent[],
+  initialPopulation: Respondent[],
+  baselinePopulation: Respondent[],
+  currentCycle: ElectionCycle,
+) {
+  const enriched = finalPopulation.map((p, i) => {
+    const baseline = baselinePopulation.find(b => b.id === p.id) ?? initialPopulation[i];
+    return {
+      ...p,
+      baselineLS: baseline.currentLS,
+      finalLS: p.currentLS,
+      lsDiff: p.currentLS - baseline.currentLS,
+    };
+  });
+
+  const uniquePool: typeof enriched = [];
+  const seen = new Set<string>();
+  for (const p of enriched) {
+    const key = `${p.baselineLS.toFixed(1)}_${p.finalLS.toFixed(1)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniquePool.push(p);
+    }
+  }
+
+  const poolToUse = uniquePool.length >= 3 ? uniquePool : enriched;
+  const sorted = [...poolToUse].sort((a, b) => a.lsDiff - b.lsDiff);
+
+  const worst = sorted[0];
+  const best = sorted[sorted.length - 1];
+  const others = sorted.filter(s => s.id !== worst.id && s.id !== best.id);
+
+  // Middle voter: the citizen with the most MIXED experience - the biggest
+  // gain from one policy AND the biggest loss from another (e.g. helped by
+  // UBI, hit by the wealth tax). Falls back to whoever changed least.
+  let mid: (typeof sorted)[number] | undefined;
+  let mixed = false;
+  let bestSplit = 0.1;
+  for (const s of others) {
+    const { up, down } = policySwings(s, currentCycle);
+    const split = Math.min(up, down);
+    if (split > bestSplit) { bestSplit = split; mid = s; mixed = true; }
+  }
+  if (!mid) mid = [...others].sort((a, b) => Math.abs(a.lsDiff) - Math.abs(b.lsDiff))[0];
+  if (!mid && sorted.length > 2) mid = sorted[1];
+  if (!mid) mid = worst;
+
+  const voters = Array.from(new Set([worst, mid, best])).map(v => ({ ...v, mixed: mixed && v.id === mid!.id }));
+  return voters.map(vp => ({ ...vp, sentiment: getVoterSentiment(vp, currentCycle, vp.mixed) }));
 }
 
 interface StageElectorateFeedbackProps {
