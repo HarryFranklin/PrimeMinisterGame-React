@@ -20,8 +20,10 @@
 //   flow:         start and end of the game: loading_ms, title_ms (time on the start
 //                 menu), about/options opens and ms, option choices, game_started_at,
 //                 game_complete_ms (time on "Game complete!"), game_ended_at,
-//                 fullscreen_ok (did Start game get fullscreen), fullscreen_exits,
-//                 fullscreen_nudges ("Go full screen" clicks), fullscreen_ms (total time in fullscreen)
+//                 fullscreen_title_clicks (title screen "Go full screen" clicks),
+//                 fullscreen_at_start (already fullscreen when Start game was clicked),
+//                 fullscreen_ok (in fullscreen when the game started, either way), fullscreen_exits,
+//                 fullscreen_nudges (in-game "Go full screen" clicks), fullscreen_ms (total time in fullscreen)
 //   last:         last deliberate action (where people stopped)
 //   final:        { dwell_ms, ts }   final debrief closed
 // }
@@ -161,6 +163,10 @@ export function networkSink(entry: LoggedEvent) {
         title_ms: entry.payload?.ms_on_title ?? null,
         about_opens: entry.payload?.about_opens ?? 0,
         options_opens: entry.payload?.options_opens ?? 0,
+        fullscreen_at_start: entry.payload?.already_fullscreen ?? null,
+        // If they were already fullscreen, Start game makes no request, so this is the answer;
+        // otherwise the 'start' request (logged just after this) sets it.
+        ...(entry.payload?.already_fullscreen ? { fullscreen_ok: true } : {}),
         option_textSpeed: entry.payload?.text_speed ?? null,
         option_sound: entry.payload?.sound ?? null,
         option_flashes: entry.payload?.flashes ?? null,
@@ -173,6 +179,7 @@ export function networkSink(entry: LoggedEvent) {
       break;
     case "fullscreen_requested":
       if (entry.payload?.source === 'start') a.flow = { ...a.flow, fullscreen_ok: !!entry.payload?.ok };
+      else if (entry.payload?.source === 'title') a.flow = { ...a.flow, fullscreen_title_clicks: ((a.flow.fullscreen_title_clicks as number) ?? 0) + 1 };
       else a.flow = { ...a.flow, fullscreen_nudges: ((a.flow.fullscreen_nudges as number) ?? 0) + 1 };
       break;
     case "fullscreen_changed":

@@ -6,7 +6,8 @@ import { GamePhase } from '../utils/types';
 import { PM_PROFILES } from '../utils/pmProfiles';
 import { track } from '../client/telemetry';
 import { safeSetItem } from '@study';
-import { enterFullscreen } from '../client/fullscreen';
+import { enterFullscreen, isFullscreen } from '../client/fullscreen';
+import FullscreenButton from './FullscreenButton';
 import { OPTIONS_KEY, DEFAULT_OPTIONS, loadOptions, applyFlashSetting, type Options } from '../utils/gameOptions';
 import PMFigure from './modals/ElectionModal/PMFigure';
 import { PM_TONES } from './desk/deskTheme';
@@ -116,7 +117,10 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
 
   const start = () => {
     if (leaving) return;
+    // Before the request below (which is async): did they already go full screen here?
+    const alreadyFullscreen = isFullscreen();
     // Must happen inside the click: browsers only allow fullscreen then.
+    // Does nothing (and logs nothing) if they're already in fullscreen.
     enterFullscreen('start');
     track('title_start_clicked', {
       ms_on_title: Date.now() - shownAt.current,
@@ -125,6 +129,7 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
       text_speed: options.textSpeed,
       sound: options.sound,
       flashes: options.flashes,
+      already_fullscreen: alreadyFullscreen,
     });
     setLeaving(true);
     // Turn the paper over, fade to black, then the welcome briefing (on the back cover).
@@ -255,6 +260,8 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
 
       {/* Fade to black once the paper has turned */}
       <motion.div className="absolute inset-0 bg-black pointer-events-none" initial={{ opacity: 0 }} animate={{ opacity: leaving ? 1 : 0 }} transition={{ duration: 0.6, delay: leaving ? 0.55 : 0 }} />
+      {/* Same "Go full screen" button as in the game, so they can switch on a still screen */}
+      {!leaving && <FullscreenButton source="title" />}
     </div>
   );
 }

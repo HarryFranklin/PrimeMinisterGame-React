@@ -1,8 +1,9 @@
 // Fullscreen for the game.
 // Browsers only allow fullscreen straight after a click, and the player can
-// always leave it (Esc). So: "Start game" switches to fullscreen, a small
-// button offers to go back if they leave it, and "Continue to the final
-// questions" leaves it again.
+// always leave it (Esc). So: the title screen offers a "Go full screen" button
+// (so the switch happens on a still screen), "Start game" switches to fullscreen
+// if they haven't, a small button offers to go back if they leave it, and
+// "Continue to the final questions" leaves it again.
 //
 // Telemetry: fullscreen_requested {source, ok}, fullscreen_changed {fullscreen}
 // (summarised in activity.flow by networkSink.ts).
@@ -18,7 +19,7 @@ export function isFullscreen(): boolean {
 }
 
 /** Call from a click handler. Never throws; records whether it worked. */
-export function enterFullscreen(source: 'start' | 'nudge' | 'resume'): void {
+export function enterFullscreen(source: 'title' | 'start' | 'nudge' | 'resume'): void {
   if (typeof document === 'undefined' || isFullscreen()) return;
   const el = document.documentElement as FsElement;
   const request = el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el);

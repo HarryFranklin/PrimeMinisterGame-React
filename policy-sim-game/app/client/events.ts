@@ -37,10 +37,12 @@ export type TelemetryEvent =
   | {
 
       event: "title_start_clicked";
-      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string };
+      /** already_fullscreen: they used the title screen's "Go full screen" before Start game */
+      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string; already_fullscreen: boolean };
     }
-  /** Fullscreen: requested by "Start game" or the "Go full screen" button; every switch in/out. */
-  | { event: "fullscreen_requested"; payload: { source: "start" | "nudge" | "resume"; ok: boolean } }
+  /** Fullscreen: requested by the title screen's "Go full screen" (title), "Start game" (start, only
+  *  if not already fullscreen), the in-game "Go full screen" (nudge) or Resume (resume); every switch in/out. */
+  | { event: "fullscreen_requested"; payload: { source: "title" | "start" | "nudge" | "resume"; ok: boolean } }
   | { event: "fullscreen_changed"; payload: { fullscreen: boolean } }
   /** "Game complete!" screen after the final debrief. */
   | { event: "game_complete_shown"; payload: {} }
