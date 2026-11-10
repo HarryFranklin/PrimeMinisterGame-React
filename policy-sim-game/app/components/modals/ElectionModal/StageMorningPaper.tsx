@@ -274,7 +274,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
     : atFloor ? 'There was no further to fall.'
     : pressSwing > 0.05 ? `The answers were worth ${pressSwing.toFixed(1)} points.` : pressSwing < -0.05 ? `The answers cost ${Math.abs(pressSwing).toFixed(1)} points.` : 'The answers left the vote where it was.';
   const pressStory = morningPoll
-    ? `${surname} polled at ${formatPollRange(morningPoll)} moments before the final press conference outside 10 Downing Street, and ${answered}. ${swingText} The last poll before the count put ${surname} on ${formatPollRange(finalPoll)}.${swungIt ? ` Without those answers, ${surname} would have lost.` : costIt ? ` Before them, ${surname} was on course to win.` : ''}`
+    ? `${surname} polled at ${formatPollRange(morningPoll)} moments before the press conference, and ${answered}. ${swingText} The final poll put ${surname} on ${formatPollRange(finalPoll)}.${swungIt ? ` Without those answers, ${surname} would have lost.` : costIt ? ` Before them, ${surname} was on course to win.` : ''}`
     : '';
 
   // Measure the photo once the paper is laid out (the stage is scaled, so undo that)
@@ -323,7 +323,8 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                   {pressSummary && (
                     <div className="flex flex-col gap-1 pt-1">
                       <span className="font-display font-black text-[19px] leading-tight">{pressHeadline}</span>
-                      <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory} <strong>The answers, explained: p5.</strong></p>
+                      <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory} </p> 
+                      <p> <strong>The answers, explained: p5.</strong></p>
                     </div>
                   )}
                 </div>
