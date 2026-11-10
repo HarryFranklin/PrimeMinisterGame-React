@@ -176,3 +176,10 @@ html[data-flashes="off"] .press-flash, html[data-flashes="off"] .press-wash { di
 /* Paper buttons: black with white text on hover */
 .paper-btn { transition: background .15s, color .15s; }
 .paper-btn:not(:disabled):hover { background: #1c1917 !important; color: #f4efe3 !important; }
+
+/* Title page boxes: outlined; black with white text when hovered (Start is black already) */
+.title-box { border: 2px solid #1c1917; color: #1c1917; transition: background .15s, color .15s; }
+.title-box .title-box-sub { color: #57534e; transition: color .15s; }
+.title-box:hover, .title-box-start { background: #1c1917; color: #f4efe3; }
+.title-box:hover .title-box-sub, .title-box-start .title-box-sub { color: #d6d3d1; }
+.title-box-start:hover { background: #292524; }
