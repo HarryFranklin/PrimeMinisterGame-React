@@ -363,7 +363,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                       colour={tone.dark}
                     />
                     <span className="text-[12px] font-bold tabular-nums" style={{ color: i === 0 ? '#57534e' : d.score - timelineData[i - 1].score > 0.005 ? '#1d4ed8' : d.score - timelineData[i - 1].score < -0.005 ? '#b45309' : '#57534e' }}>
-                      {i === 0 ? `${rule.targetMetricAbbreviation} at the start` : `${d.score - timelineData[i - 1].score >= 0 ? '▲ +' : '▼ −'}${Math.abs(d.score - timelineData[i - 1].score).toFixed(2)} ${rule.targetMetricAbbreviation}`}
+                      {i === 0 ? `${rule.targetMetricAbbreviation} at the start` : Math.abs(d.score - timelineData[i - 1].score) < 0.005 ? `No change in ${rule.targetMetricAbbreviation}` : `${d.score - timelineData[i - 1].score > 0 ? '▲ +' : '▼ −'}${Math.abs(d.score - timelineData[i - 1].score).toFixed(2)} ${rule.targetMetricAbbreviation}`}
                     </span>
                   </div>
                 ))}
