@@ -18,7 +18,7 @@ export function isFullscreen(): boolean {
 }
 
 /** Call from a click handler. Never throws; records whether it worked. */
-export function enterFullscreen(source: 'start' | 'nudge'): void {
+export function enterFullscreen(source: 'start' | 'nudge' | 'resume'): void {
   if (typeof document === 'undefined' || isFullscreen()) return;
   const el = document.documentElement as FsElement;
   const request = el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el);

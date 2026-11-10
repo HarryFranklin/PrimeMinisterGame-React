@@ -25,6 +25,7 @@ import SetupTab from "./components/tabs/SetupTab";
 import LifeSatisfactionTab from "./components/tabs/LifeSatisfactionTab";
 import UtilityElicitationOverlay from "./components/modals/UtilityElicitationOverlay";
 import TitleScreen from "./components/TitleScreen";
+import PauseMenu from "./components/PauseMenu";
 import GameCompleteScreen from "./components/GameCompleteScreen";
 import FullscreenButton from "./components/FullscreenButton";
 import { trackFullscreenChanges } from "./client/fullscreen";
@@ -248,6 +249,8 @@ function GameApp() {
           </AnimatePresence>
           {/* "Go full screen" if they left fullscreen during the game */}
           {game.gamePhase !== GamePhase.Setup && game.gamePhase !== GamePhase.Title && game.gamePhase !== GamePhase.GameComplete && <FullscreenButton />}
+          {/* Esc during a term: Parliament in recess */}
+          <PauseMenu />
         </GameProvider>
 
       {/* Curtain lifting after "Start game" (see above) */}

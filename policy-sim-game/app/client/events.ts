@@ -30,12 +30,17 @@ export type TelemetryEvent =
   | { event: "title_panel_closed"; payload: { panel: "about" | "options"; dwell_ms: number } }
   /** Options are placeholders for now (saved and tracked, no effect yet). */
   | { event: "title_option_changed"; payload: { option: string; value: string } }
+  // ---- Pause menu (Esc during a term: "Parliament in recess") ----
+  | { event: "pause_opened"; payload: { cycle: string; turn: number; via: string } }
+  | { event: "pause_closed"; payload: { cycle: string; turn: number; dwell_ms: number; via: string; tab: string } }
+  | { event: "pause_option_changed"; payload: { option: string; value: string } }
   | {
+
       event: "title_start_clicked";
       payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string };
     }
   /** Fullscreen: requested by "Start game" or the "Go full screen" button; every switch in/out. */
-  | { event: "fullscreen_requested"; payload: { source: "start" | "nudge"; ok: boolean } }
+  | { event: "fullscreen_requested"; payload: { source: "start" | "nudge" | "resume"; ok: boolean } }
   | { event: "fullscreen_changed"; payload: { fullscreen: boolean } }
   /** "Game complete!" screen after the final debrief. */
   | { event: "game_complete_shown"; payload: {} }

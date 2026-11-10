@@ -26,7 +26,7 @@ export interface RunnerEntry {
 }
 
 /** What each measure means, in a sentence or two. */
-const JUDGED: Record<ElectionCycle, { on: string; blurb: string }> = {
+export const JUDGED: Record<ElectionCycle, { on: string; blurb: string }> = {
   [ElectionCycle.Benthamite]: { on: 'the national average', blurb: 'Adds up everyone’s life satisfaction and divides by the number of people. A point for someone thriving counts the same as a point for someone struggling.' },
   [ElectionCycle.Rawlsian]: { on: 'the single worst-off person', blurb: 'Only the lowest score in the country counts. Make everyone else happier and, if the bottom doesn’t move, her number won’t either.' },
   [ElectionCycle.SocietalUtility]: { on: 'fairness for others', blurb: 'Scores the country on how citizens judge its whole spread of life satisfaction when deciding for others.' },
