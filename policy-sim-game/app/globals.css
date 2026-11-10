@@ -172,3 +172,7 @@ html[data-flashes="off"] .press-flash, html[data-flashes="off"] .press-wash { di
 .paper-tease { transition: background .15s, color .15s; }
 .paper-tease:hover { background: #1c1917; color: #f4efe3; }
 .paper-tease:hover .paper-tease-sub { color: #d6d3d1 !important; }
+
+/* Paper buttons: black with white text on hover */
+.paper-btn { transition: background .15s, color .15s; }
+.paper-btn:not(:disabled):hover { background: #1c1917 !important; color: #f4efe3 !important; }

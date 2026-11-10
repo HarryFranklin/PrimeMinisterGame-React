@@ -9,6 +9,9 @@ import { useGame } from '../../../context/GameStateContext';
 import { PM_TONES } from '../../desk/deskTheme';
 import { makePoll, formatPollRange, POLL_HALF_WIDTH_FINAL, POLL_HALF_WIDTH_POLLING_DAY, WIN_THRESHOLD } from '../../../utils/polls';
 import PMFigure from './PMFigure';
+import MiniHistogram from '../../paper/MiniHistogram';
+import RunnersAndRiders, { type RunnerEntry } from '../../paper/RunnersAndRiders';
+import { setPendingStart } from '../../../utils/pendingStart';
 import { buildTermTimeline, ANALYSIS_MESSAGES } from './StageTermSummary';
 import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
 import { pickVoters, renderVoterQuote, quotedPolicies } from './StageElectorateFeedback';
@@ -73,7 +76,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
   const cycleName = ElectionCycle[currentCycle];
   const rule = FRAMEWORK_RULES[currentCycle];
   // The term's target, worked out as the desk shows it
-  const { cycleMAO } = useGame();
+  const { cycleMAO, completedRuns } = useGame();
   const targetScore = cycleMAO * rule.winThresholdScalar;
   const profile = getPMProfile(currentCycle);
   const tone = PM_TONES[currentCycle];
@@ -217,19 +220,31 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
     { st: 3, kicker: 'Letters', head: 'What the voters say', dek: `Three voters on what ${surname}’s bills did to their lives.` },
     { st: 4, kicker: 'Explainer', head: `How ${surname} was judged`, dek: `What ${rule.targetMetricAbbreviation} rewards, what it misses, and the press conference answers explained.` },
   ];
-  const field = PM_PROFILES.map((p, i) => {
-    const t = PM_TONES[p.cycle];
+  // The back cover: Runners and riders (the level select), with this term's result on it
+  const runners: RunnerEntry[] = PM_PROFILES.map((p, i) => {
     const r = FRAMEWORK_RULES[p.cycle];
-    const isNow = i === levelIndex;
-    const isNext = won && canProceed && i === levelIndex + 1;
-    return {
-      cycle: p.cycle, name: p.name.replace(/^PM\s+/, ''), slogan: p.slogan, colour: t.color, dark: t.dark,
-      tag: isNow ? `Term ${i + 1} · just finished` : isNext ? `Next up · term ${i + 1}` : i < levelIndex ? `Term ${i + 1} · played` : `Term ${i + 1}`,
-      status: isNow
-        ? (won ? `Re-elected on ${approvalRating.toFixed(1)}% · ${r.targetMetricAbbreviation} ${endMetric.toFixed(2)} vs target ${targetScore.toFixed(2)}` : `Voted out on ${approvalRating.toFixed(1)}%, short of the 51% needed`)
-        : isNext ? `Judged on ${r.targetMetricName}. Starts from the same country as every PM.` : i < levelIndex ? 'Term played' : 'Still campaigning',
-      isNow, isNext, faded: !isNow && !isNext,
-    };
+    if (i < levelIndex) {
+      const run = completedRuns.find((c) => c.cycle === p.cycle);
+      const runWon = (run?.approvalRating ?? 0) >= WIN_THRESHOLD;
+      return {
+        cycle: p.cycle, status: runWon ? 'won' : 'lost', population: run?.finalPopulation,
+        result: run ? `${runWon ? 'Won' : 'Lost'} · ${r.targetMetricAbbreviation} ${run.finalScore.toFixed(2)} vs target ${run.targetScore.toFixed(2)}` : 'Played',
+      };
+    }
+    if (i === levelIndex) {
+      if (!canProceed) return { cycle: p.cycle, status: 'retry', action: { label: 'Try the term again ↺', onClick: () => exit('lost_restart') } };
+      return {
+        cycle: p.cycle, status: won ? 'won' : 'lost', population: finalPopulation, onReplay: () => exit('restart'),
+        result: won ? `Re-elected on ${approvalRating.toFixed(1)}% · ${r.targetMetricAbbreviation} ${endMetric.toFixed(2)} vs target ${targetScore.toFixed(2)}` : `Voted out on ${approvalRating.toFixed(1)}%`,
+      };
+    }
+    if (i === levelIndex + 1 && canProceed) {
+      return {
+        cycle: p.cycle, status: 'next',
+        action: { label: `Start term ${i + 1} ▶`, disabled: !ready, onClick: () => { setPendingStart(p.cycle); exit('next_term'); } },
+      };
+    }
+    return { cycle: p.cycle, status: 'locked' };
   });
 
   // ── Scale the stage to fit ──
@@ -558,57 +573,23 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
             </div>
           ); })()}
 
-          {/* ── Back page: next up, and the way out ── */}
+          {/* ── Back cover: Runners and riders (the level select) ── */}
           {(() => { const p = page(6); return (
             <div key={p.key} className={p.className} style={p.style}>
-              <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">What’s next</span><span className="paper-cap">Back page</span></div>
-              <span className="font-display font-black text-[40px] leading-[.95]">
-                {!canProceed ? `${surname}’s term, again` : isFinalCycle ? 'The final term is over' : won ? `Next up: ${field[levelIndex + 1]?.name ?? ''}` : 'On to the next term'}
-              </span>
-              <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-                {field.map((c) => (
-                  <div key={c.name} className="relative grid grid-cols-[76px_1fr] gap-3.5 border-t border-stone-900 pt-3 pb-1 px-2" style={{ background: c.isNext ? 'rgba(59,130,246,.10)' : 'transparent', opacity: c.faded ? 0.6 : 1 }}>
-                    <div className="relative w-[76px] h-[90px] overflow-hidden" style={{ background: c.colour, filter: c.isNow || c.isNext ? 'saturate(.75)' : 'saturate(.3) sepia(.25)' }}>
-                      <div style={abs({ left: (76 - 90 * 0.8) / 2, top: 10 })}><PMFigure cycle={c.cycle} scale={0.8} /></div>
-                    </div>
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="paper-cap" style={{ color: c.dark }}>{c.tag}</span>
-                      <span className="font-display font-black text-[21px] leading-tight">{c.name}</span>
-                      <span className="text-[12.5px] font-extrabold" style={{ color: c.dark }}>“{c.slogan}”</span>
-                      <span className="text-[12.5px] text-stone-600 leading-snug">{c.status}</span>
-                    </div>
-                    {c.isNow && (
-                      <div
-                        className="absolute right-2.5 top-4 -rotate-[9deg] border-4 px-2.5 py-0.5 font-black text-[14px] tracking-[.14em] leading-tight text-center uppercase mix-blend-multiply"
-                        style={{ borderColor: won ? 'rgba(21,128,61,.85)' : 'rgba(185,28,28,.85)', color: won ? 'rgba(21,128,61,.85)' : 'rgba(185,28,28,.85)', outline: `2px solid ${won ? 'rgba(21,128,61,.85)' : 'rgba(185,28,28,.85)'}`, outlineOffset: 3 }}
-                      >
-                        {won ? <>Level<br />complete</> : <>Voted<br />out</>}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="bg-stone-900 text-[#f4efe3] px-3.5 py-3 flex gap-2.5 items-center">
-                {!canProceed ? (
-                  <>
-                    <span className="text-[13px] text-stone-300 flex-1">{surname} lost the vote. Try the term again.</span>
-                    <button type="button" onClick={() => exit('lost_restart')} className="bg-[#b91c1c] text-white px-4 py-3 font-black text-[13px] tracking-[.06em] uppercase cursor-pointer hover:brightness-110">Try the term again ↺</button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => exit('restart')} className="border border-[rgba(244,239,227,.4)] px-4 py-3 font-extrabold text-[13px] cursor-pointer hover:bg-white/10">Restart term</button>
-                    <span className="flex-1" />
-                    <button
-                      type="button"
-                      onClick={() => exit(isFinalCycle ? 'finish_game' : 'next_term')}
-                      disabled={!ready}
-                      className="bg-[#d6b25e] text-stone-900 px-4 py-3 font-black text-[13px] tracking-[.06em] uppercase cursor-pointer hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isFinalCycle ? 'Finish game ▶' : 'Back to level select ▶'}
-                    </button>
-                  </>
-                )}
-              </div>
+              <RunnersAndRiders
+                entries={runners}
+                resultsSoFar={levelIndex + (canProceed ? 1 : 0)}
+                footer={isFinalCycle && canProceed ? (
+                  <button
+                    type="button"
+                    onClick={() => exit('finish_game')}
+                    disabled={!ready}
+                    className="paper-btn shrink-0 bg-[#d6b25e] text-stone-900 py-3 font-black text-[14px] tracking-[.06em] uppercase disabled:opacity-50"
+                  >
+                    All four terms played · Finish game ▶
+                  </button>
+                ) : undefined}
+              />
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
           ); })()}
@@ -685,26 +666,6 @@ const CAMPAIGN_QUOTES: Record<ElectionCycle, string> = {
   [ElectionCycle.SocietalUtility]: 'It’s not just about you, it’s about all of us.',
   [ElectionCycle.PersonalUtility]: 'Only you know what a good life looks like for you.',
 };
-
-/** A small newspaper-style bar chart: citizens at each LS score, the start of term as a faint outline. */
-function MiniHistogram({ counts, ghost, max, colour }: { counts: number[]; ghost: number[] | null; max: number; colour: string }) {
-  const W = 180, H = 112, B = 13, bw = W / counts.length;
-  const h = (c: number) => (c / max) * (H - B - 2);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Citizens at each life satisfaction score">
-      {counts.map((c, i) => (
-        <rect key={i} x={i * bw + 1.5} y={H - B - h(c)} width={bw - 3} height={h(c)} fill={colour} opacity={0.85} />
-      ))}
-      {ghost && ghost.map((c, i) => (
-        <rect key={`g${i}`} x={i * bw + 1.5} y={H - B - h(c)} width={bw - 3} height={h(c)} fill="none" stroke="#1c1917" strokeOpacity={0.45} strokeWidth={1} strokeDasharray="2 2" />
-      ))}
-      <line x1={0} x2={W} y1={H - B} y2={H - B} stroke="#1c1917" strokeWidth={1} />
-      {[0, 5, 10].map((v) => (
-        <text key={v} x={v * bw + bw / 2} y={H - 2} textAnchor="middle" fontSize={9} fill="#44403c">{v}</text>
-      ))}
-    </svg>
-  );
-}
 
 /** The victory rally as a still picture (the front-page photo), drawn at 1440 × 900. */
 function RallyPicture({ cycle, surname, slogan }: { cycle: ElectionCycle; surname: string; slogan: string }) {
