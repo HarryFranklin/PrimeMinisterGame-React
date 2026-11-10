@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ElectionCycle } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { getPMProfile, PM_PROFILES } from '../../utils/pmProfiles';
@@ -138,8 +138,8 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
         className="absolute left-1/2 top-1/2 pointer-events-auto"
         style={{ width: STAGE_W, height: STAGE_H, transform: `translate(-50%, -50%) scale(${scale})` }}
       >
-        <AnimatePresence propagate>
-          {/* ── The memo, passed across the desk ── */}
+          {/* ── The memo, passed across the desk ──
+            (no AnimatePresence of its own: page.tsx's one plays its exit) */}
             <motion.div
               key="memo"
               role="button"
@@ -204,7 +204,6 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
                 <span className="paper-cap text-stone-500">{!open || isTyping ? 'Click to finish reading' : 'Click to begin the term ▸'}</span>
               </div>
             </motion.div>
-        </AnimatePresence>
       </div>
     </motion.div>
   );
