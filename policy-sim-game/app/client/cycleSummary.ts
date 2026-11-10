@@ -428,6 +428,7 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
     electorate_policies_clicked: feedbackPolicies.length,
     electorate_policies_clicked_ids: feedbackPolicies.join(" "),
     paper_front_ms: stageMs("paper_front"),
+    measure_explainer_ms: stageMs("measure_explainer") ?? p(last("measure_explainer_closed"), "dwell_ms"),
     paper_back_ms: stageMs("paper_back"),
     election_back_clicks: nav.filter((e) => e.payload?.direction === "back").length,
     election_exit_action: p(exit, "action"),

@@ -197,7 +197,7 @@ export default function ElectionModal(props: ElectionModalProps) {
             currentCycle={currentCycle} won={won} canProceed={canProceed} isFinalCycle={isFinalCycle}
             approvalRating={approvalRating} pollError={props.pollError}
             initialPopulation={props.initialPopulation} baselinePopulation={props.baselinePopulation} finalPopulation={props.finalPopulation}
-            yAxisMax={props.yAxisMax} pressSummary={pressSummary} fromRally={paperFromRally}
+            pressSummary={pressSummary} fromRally={paperFromRally}
             onBack={() => goToPage(1)} onNavigate={handlePaperNavigate} onExit={handlePaperExit}
           />
         )}

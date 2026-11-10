@@ -277,6 +277,12 @@ export function formatLine(
     case "verdict_dwell":
       return { ts: e.ts, text: `Verdict Viewed (${fmtDur(p.dwell_ms)})`, minor: false };
 
+    // ---- The measure, explained ----
+    case "measure_explainer_opened":
+      return { ts: e.ts, text: "Measure Explainer Shown", minor: false };
+    case "measure_explainer_closed":
+      return { ts: e.ts, text: `Measure Explainer Closed (${fmtDur(p.dwell_ms)})`, minor: false };
+
     // ---- Wellbeing changes ----
     case "wellbeing_changes_opened":
       return { ts: e.ts, text: "Wellbeing Changes Shown", minor: false };

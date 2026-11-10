@@ -1,22 +1,21 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { AxisVariable, ElectionCycle, Respondent } from '../../../utils/types';
+import { ElectionCycle, Respondent } from '../../../utils/types';
 import { FRAMEWORK_RULES } from '../../../utils/frameworkRules';
 import { PM_PROFILES, getPMProfile } from '../../../utils/pmProfiles';
 import { track } from '../../../client/telemetry';
 import { useGame } from '../../../context/GameStateContext';
 import { PM_TONES } from '../../desk/deskTheme';
 import { makePoll, formatPollRange, POLL_HALF_WIDTH_FINAL, POLL_HALF_WIDTH_POLLING_DAY, WIN_THRESHOLD } from '../../../utils/polls';
-import D3Chart from '../../D3Chart';
 import PMFigure from './PMFigure';
-import { buildTermTimeline, ANALYSIS_MESSAGES, MARKER_LABELS } from './StageTermSummary';
+import { buildTermTimeline, ANALYSIS_MESSAGES } from './StageTermSummary';
 import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
 import { pickVoters, renderVoterQuote, quotedPolicies } from './StageElectorateFeedback';
 import type { PressSummary } from './StagePressConference';
 
 /** Each page of the paper is one of the old election stages, for telemetry. */
-const PAGE_STAGES = ['paper_front', 'term_summary', 'wellbeing_changes', 'electorate_feedback', 'paper_back'] as const;
+const PAGE_STAGES = ['paper_front', 'term_summary', 'wellbeing_changes', 'electorate_feedback', 'measure_explainer', 'paper_back'] as const;
 const LAST = PAGE_STAGES.length - 1;
 
 export type PaperExit = 'restart' | 'next_term' | 'finish_game' | 'lost_restart';
@@ -32,7 +31,6 @@ interface StageMorningPaperProps {
   initialPopulation: Respondent[];
   baselinePopulation: Respondent[];
   finalPopulation: Respondent[];
-  yAxisMax: number;
   pressSummary: PressSummary | null;
   /** Coming straight from the victory rally: the rally shrinks into the front-page photo. */
   fromRally: boolean;
@@ -69,7 +67,7 @@ const PHOTO = { w: 312, h: 195 };
 export default function StageMorningPaper(props: StageMorningPaperProps) {
   const {
     currentCycle, won, canProceed, isFinalCycle, approvalRating, pollError,
-    initialPopulation, baselinePopulation, finalPopulation, yAxisMax, pressSummary, fromRally, onBack, onNavigate, onExit,
+    initialPopulation, baselinePopulation, finalPopulation, pressSummary, fromRally, onBack, onNavigate, onExit,
   } = props;
 
   const cycleName = ElectionCycle[currentCycle];
@@ -108,6 +106,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
       }, 1000);
     } else {
       if (st === 2) track('wellbeing_changes_opened', { cycle: cycleName });
+      if (st === 4) track('measure_explainer_opened', { cycle: cycleName });
       if (st === 3) {
         track('electorate_feedback_opened', { cycle: cycleName });
       }
@@ -116,6 +115,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
     return () => {
       clearTimeout(timer);
       if (st === 2) track('wellbeing_changes_closed', { cycle: cycleName, dwell_ms: Date.now() - openedAt });
+      if (st === 4) track('measure_explainer_closed', { cycle: cycleName, dwell_ms: Date.now() - openedAt });
       if (st === 3) track('electorate_feedback_closed', { cycle: cycleName, dwell_ms: Date.now() - openedAt, policies_clicked: 0 }); // the bills are explained on the page now, nothing to click
     };
   }, [st, cycleName]);
@@ -173,49 +173,13 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
 
   // ── p2: how the country moved (term summary) ──
   const timelineData = useMemo(() => buildTermTimeline(finalPopulation, currentCycle), [finalPopulation, currentCycle]);
-  const safeYAxisMax = useMemo(() => {
-    let maxCount = 0;
-    timelineData.forEach(td => {
-      const turnMax = Math.max(...td.histogram.map(h => h.count));
-      if (turnMax > maxCount) maxCount = turnMax;
-    });
-    return Math.ceil(Math.max(maxCount, yAxisMax) / 10) * 10;
-  }, [timelineData, yAxisMax]);
   const startMetric = timelineData[0]?.score || 0;
   const endMetric = timelineData[timelineData.length - 1]?.score || 0;
-  const [activeTurn, setActiveTurn] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const timelineCompletedRef = useRef(false);
-
-  useEffect(() => {
-    if (!isPlaying) return;
-    if (activeTurn >= timelineData.length - 1) {
-      const t0 = setTimeout(() => setIsPlaying(false), 0);
-      if (!timelineCompletedRef.current) {
-        timelineCompletedRef.current = true;
-        track('term_summary_timeline_completed', { cycle: cycleName, was_auto: true });
-      }
-      return () => clearTimeout(t0);
-    }
-    const timer = setTimeout(() => setActiveTurn(prev => prev + 1), 1500);
-    return () => clearTimeout(timer);
-  }, [isPlaying, activeTurn, timelineData.length, cycleName]);
-
-  const handlePlayPause = () => {
-    if (activeTurn >= timelineData.length - 1) {
-      setActiveTurn(0);
-      setIsPlaying(true);
-      track('term_summary_timeline_started', { cycle: cycleName });
-    } else {
-      if (!isPlaying) track('term_summary_timeline_started', { cycle: cycleName });
-      else track('term_summary_timeline_paused', { cycle: cycleName, at_turn: activeTurn });
-      setIsPlaying(!isPlaying);
-    }
-  };
-  const activeData = timelineData[activeTurn];
-
-  // ── Glossary notes (were the floating definition cards) ──
-  const [metricNote, setMetricNote] = useState(false);
+  // Each bill's effect on the measure; the one that moved it most
+  const steps = timelineData.slice(1).map((d, i) => ({ name: d.policyName, delta: d.score - timelineData[i].score }));
+  const bestBill = steps.length ? steps.reduce((a, b) => (b.delta > a.delta ? b : a)) : null;
+  // Same height scale for every small chart
+  const histMax = Math.max(1, ...timelineData.flatMap((d) => d.histogram.map((h) => h.count)));
 
   // ── p3: who won and who lost ──
   const cohorts = useMemo(() => computeCohortBreakdown(finalPopulation, currentCycle), [finalPopulation, currentCycle]);
@@ -237,6 +201,22 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
 
   // ── Back page: next up ──
   const levelIndex = PM_PROFILES.findIndex((p) => p.cycle === currentCycle);
+  // The next candidate's campaign advert (front page strip, page 3 box); none after the last term
+  const adFor = PM_PROFILES[levelIndex + 1] ?? null;
+  const adTone = adFor ? PM_TONES[adFor.cycle] : null;
+  const adName = adFor ? adFor.name.replace(/^PM\s+/, '') : '';
+  const adQuote = adFor ? CAMPAIGN_QUOTES[adFor.cycle] : '';
+
+  // ── p5: the measure, explained ──
+  const ex = EXPLAINERS[currentCycle];
+
+  // ── Front page: what's inside ──
+  const teasers = [
+    { st: 1, kicker: 'The term in review', head: 'How the country moved', dek: `${rule.targetMetricAbbreviation} ${endMetric >= startMetric ? 'rose' : 'fell'} from ${startMetric.toFixed(2)} to ${endMetric.toFixed(2)}.${bestBill ? ` ${bestBill.name} did the most.` : ''}` },
+    { st: 2, kicker: 'Wellbeing changes', head: 'Who won and who lost', dek: `${cohorts.improved.percentage} better off, ${cohorts.declined.percentage} worse off.` },
+    { st: 3, kicker: 'Letters', head: 'What the voters say', dek: `Three voters on what ${surname}’s bills did to their lives.` },
+    { st: 4, kicker: 'Explainer', head: `How ${surname} was judged`, dek: `What ${rule.targetMetricAbbreviation} rewards, what it misses, and the press conference answers explained.` },
+  ];
   const field = PM_PROFILES.map((p, i) => {
     const t = PM_TONES[p.cycle];
     const r = FRAMEWORK_RULES[p.cycle];
@@ -328,42 +308,34 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                   {pressSummary && (
                     <div className="flex flex-col gap-1 pt-1">
                       <span className="font-display font-black text-[19px] leading-tight">{pressHeadline}</span>
-                      <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory}</p>
+                      <p className="m-0 text-[14.5px] leading-snug text-stone-800">{pressStory} <strong>The answers, explained: p5.</strong></p>
                     </div>
                   )}
                 </div>
                 <div className="flex flex-col gap-2 border-l border-stone-900 pl-3.5 min-h-0">
-                  {pressSummary && pressSummary.questions.length > 0 && (
-                    <>
-                      <span className="paper-cap" style={{ color: tone.dark }}>{surname} faces the press</span>
-                      {pressSummary.questions.map((q, i) => (
-                        <div key={i} className="flex flex-col gap-0.5 border-b border-stone-300 pb-2">
-                          <span className="text-[13.5px] leading-snug text-stone-700"><strong className="text-stone-900">{q.who}, {q.outlet},</strong> asked {q.ask.replace('the Prime Minister', surname)}</span>
-                          <span className="text-[15px] font-bold leading-snug">“{q.said}”</span>
-                          <span className="text-[13px] font-bold" style={{ color: q.correct ? '#15803d' : '#b91c1c' }}>{q.correct ? '✓ Correct · polls up' : '✗ Wrong · polls down'}</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  {/* Fills the rest of the column; the chart takes whatever height is left */}
-                  <div className="flex-1 min-h-0 border-2 border-stone-900 px-2.5 py-2 flex flex-col gap-0.5">
-                    <span className="paper-cap">The measure</span>
-                    <span className="text-[14.5px] font-bold leading-snug">{rule.targetMetricName}</span>
-                    <span className="text-[14.5px] leading-snug"><span className="whitespace-nowrap">{startMetric.toFixed(2)} → {endMetric.toFixed(2)}</span> over the term</span>
-                    <span className="text-[14.5px] leading-snug">Target: <strong>{targetScore.toFixed(2)}</strong> <span className="font-bold" style={{ color: endMetric >= targetScore ? '#15803d' : '#b91c1c' }}>{endMetric >= targetScore ? '✓' : '✗'}</span></span>
-                    {/* The measure bill by bill, against the target (same box) */}
-                    <span className="paper-cap mt-1.5 pt-1.5 border-t border-stone-400">{rule.targetMetricAbbreviation}, bill by bill</span>
-                    <MeasureChart scores={timelineData.map((d) => d.score)} target={targetScore} colour={tone.dark} />
-                  </div>
+                  <span className="paper-cap">Also inside</span>
+                  {teasers.map((t) => (
+                    <button
+                      key={t.st}
+                      type="button"
+                      onClick={() => go(t.st)}
+                      className="paper-tease text-left border-t-2 border-stone-900 px-1.5 pt-2 pb-2.5 flex flex-col gap-1"
+                    >
+                      <span className="flex justify-between items-baseline gap-2"><span className="paper-cap paper-tease-sub" style={{ color: tone.dark }}>{t.kicker}</span><span className="paper-cap">p{t.st + 1}</span></span>
+                      <span className="font-display font-black text-[20px] leading-tight">{t.head}</span>
+                      <span className="paper-tease-sub text-[14px] leading-snug text-stone-700">{t.dek}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-              {/* What's inside: a strip along the foot of the page */}
-              <div className="shrink-0 flex justify-between items-baseline gap-3 whitespace-nowrap border-t-4 border-double border-stone-900 pt-1.5">
-                <span className="paper-cap">Inside</span>
-                {[['The country moved', 2], ['Winners and losers', 3], ['Letters', 4], ['Next up', 5]].map(([t, n]) => (
-                  <span key={t} className="font-display font-bold text-[13px] leading-tight">{t} <span className="paper-cap">p{n}</span></span>
-                ))}
-              </div>
+              {/* Advertisement along the foot: the next candidate */}
+              {adFor && adTone && (
+                <div className="shrink-0 flex justify-between items-center px-3 py-1.5 text-white" style={{ background: adTone.dark }}>
+                  <span className="paper-cap opacity-75">Advertisement</span>
+                  <span className="font-display font-black text-[18px] tracking-[.04em] uppercase">{adName} · {adFor.slogan}</span>
+                  <span className="paper-cap opacity-75">Next term</span>
+                </div>
+              )}
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
           ); })()}
@@ -373,58 +345,30 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
             <div key={p.key} className={p.className} style={p.style}>
               <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">p2</span><span className="paper-cap">The term in review</span></div>
               <span className="font-display font-black text-[40px] leading-[.95]">How the country moved</span>
-              <p className="m-0 text-[15px] leading-relaxed">
-                {highlightMetric(ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, endMetric - startMetric), rule.targetMetricName, () => {
-                  track('term_summary_definition_clicked', { cycle: cycleName, metric: rule.targetMetricName });
-                  setMetricNote((v) => !v);
-                })}
-              </p>
-              <p className="m-0 -mt-1.5 text-[15px] leading-relaxed">Watch the timeline below to see how {surname}’s agenda shifted the population.</p>
-              {metricNote && (
-                <div className="border-2 px-3 py-2 text-[13px] leading-normal" style={{ borderColor: tone.dark }}>
-                  <span className="paper-cap" style={{ color: tone.dark }}>Glossary · {rule.targetMetricName}</span><br />{rule.targetMetricDescription}
-                </div>
-              )}
-              {activeData && (
-                <div className="bg-[rgba(120,90,40,.08)] px-3.5 py-3 flex flex-col gap-2">
-                  <div className="flex justify-between items-start gap-3 min-h-[54px]">
-                    <div className="flex flex-col gap-0.5 min-w-0"><span className="paper-cap text-stone-500">{activeTurn === 0 ? 'Start of term' : `Bill ${activeTurn}`}</span><span className="font-display font-black text-[20px] leading-tight">{activeData.policyName}</span></div>
-                    <div className="flex flex-col items-end gap-0.5 shrink-0"><span className="paper-cap" style={{ color: tone.dark }}>{rule.targetMetricName}</span><span className="font-display font-black text-[30px] leading-none tabular-nums">{activeData.score.toFixed(2)}</span></div>
-                  </div>
-                  <div className="h-[250px] w-full">
-                    <D3Chart
-                      hoverTrackId="term_summary"
-                      plotType="1D"
-                      chartData={[]}
-                      histogramData={activeData.histogram}
-                      xAxisType={AxisVariable.LifeSatisfaction}
-                      yAxisType={rule.yAxisType}
-                      color="#d4d4d8"
-                      visualStyle="faces"
-                      faceCols={2}
-                      yAxisMax={safeYAxisMax}
-                      markers={[{ value: activeData.score, label: `${MARKER_LABELS[currentCycle]}: ${activeData.score.toFixed(2)}`, color: rule.graphColor, dashed: false }]}
+              <p className="m-0 text-[15px] leading-relaxed">{ANALYSIS_MESSAGES[currentCycle](startMetric, endMetric, endMetric - startMetric)}</p>
+              <p className="m-0 -mt-1.5 text-[15px] leading-relaxed">Here is the country after each of {surname}’s bills, with where it started shown faintly for comparison.</p>
+              {/* The term as six small charts: start, then after each bill */}
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2.5 flex-1 min-h-0">
+                {timelineData.map((d, i) => (
+                  <div key={i} className="flex flex-col gap-1 min-h-0 border-t-2 border-stone-900 pt-1.5">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className="paper-cap text-stone-500">{i === 0 ? 'Start of term' : `After bill ${i}`}</span>
+                      <span className="font-display font-black text-[17px] tabular-nums">{d.score.toFixed(2)}</span>
+                    </div>
+                    <span className="text-[12.5px] font-bold leading-tight min-h-[2.4em]">{i === 0 ? 'Took office' : d.policyName}</span>
+                    <MiniHistogram
+                      counts={d.histogram.map((h) => h.count)}
+                      ghost={i === 0 ? null : timelineData[0].histogram.map((h) => h.count)}
+                      max={histMax}
+                      colour={tone.dark}
                     />
+                    <span className="text-[12px] font-bold tabular-nums" style={{ color: i === 0 ? '#57534e' : d.score - timelineData[i - 1].score > 0.005 ? '#1d4ed8' : d.score - timelineData[i - 1].score < -0.005 ? '#b45309' : '#57534e' }}>
+                      {i === 0 ? `${rule.targetMetricAbbreviation} at the start` : `${d.score - timelineData[i - 1].score >= 0 ? '▲ +' : '▼ −'}${Math.abs(d.score - timelineData[i - 1].score).toFixed(2)} ${rule.targetMetricAbbreviation}`}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 border-t border-[rgba(92,66,20,.25)] pt-2">
-                    <button type="button" onClick={handlePlayPause} aria-label="Play the timeline" className="w-9 h-9 rounded-full bg-stone-900 text-[#f4efe3] text-[13px] cursor-pointer shrink-0">
-                      {isPlaying ? '❚❚' : activeTurn >= timelineData.length - 1 ? '↺' : '▶'}
-                    </button>
-                    {timelineData.map((d, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { setIsPlaying(false); setActiveTurn(i); track('term_summary_timeline_jumped', { cycle: cycleName, to_turn: i }); }}
-                        className="rounded-full px-2.5 py-1 text-[12px] font-extrabold cursor-pointer"
-                        style={{ background: activeTurn === i ? tone.dark : activeTurn > i ? '#d6d3d1' : '#fffdf7', color: activeTurn === i ? '#ffffff' : '#44403c' }}
-                      >
-                        {i === 0 ? 'Start' : `Bill ${i}`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <span className="mt-auto text-[12.5px] text-stone-700">Each face is a group of citizens, placed by their life satisfaction (0–10).</span>
+                ))}
+              </div>
+              <span className="text-[12.5px] text-stone-700">Bars: how many citizens sit at each life satisfaction score (0–10). Faint outline: the start of the term.</span>
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
           ); })()}
@@ -481,10 +425,23 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                 </tbody>
               </table>
               {/* How to read it: always printed (was a "What counts as a change?" pop-up) */}
-              <div className="mt-auto border-2 px-3.5 py-2.5 text-[13px] leading-normal" style={{ borderColor: tone.dark }}>
+              <div className="border-2 px-3.5 py-2.5 text-[13px] leading-normal" style={{ borderColor: tone.dark }}>
                 <span className="paper-cap" style={{ color: tone.dark }}>What counts as a change?</span><br />“Improved” means life satisfaction rose by more than {CHANGE_THRESHOLD} points over the term; “Declined”, fell by more than {CHANGE_THRESHOLD}. Smaller movements count as “Unchanged”.
               </div>
               <span className="text-[12.5px] text-stone-700">Percentages are shares of the whole population. LS: life satisfaction (0–10); the coloured figure is that group’s average change.</span>
+              {/* Advertisement: the next candidate */}
+              {adFor && adTone && (
+                <div className="mt-auto flex gap-4 items-center px-4 py-3.5 text-white" style={{ background: adTone.dark }}>
+                  <div className="relative w-[70px] h-[86px] shrink-0 overflow-hidden" style={{ background: adTone.color }}>
+                    <div style={abs({ left: (70 - 90 * 0.75) / 2, top: 8 })}><PMFigure cycle={adFor.cycle} scale={0.75} /></div>
+                  </div>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="paper-cap opacity-75">Advertisement · paid for by the {adName.split(' ').slice(-1)[0]} campaign</span>
+                    <span className="font-display font-black text-[28px] leading-none uppercase">{adFor.slogan}</span>
+                    <span className="text-[13.5px] leading-snug opacity-90">“{adQuote}” {adName}, standing next term.</span>
+                  </div>
+                </div>
+              )}
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
           ); })()}
@@ -527,8 +484,82 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
             </div>
           ); })()}
 
-          {/* ── Back page: next up, and the way out ── */}
+          {/* ── p5: the measure, explained ── */}
           {(() => { const p = page(5); return (
+            <div key={p.key} className={p.className} style={p.style}>
+              <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">Explainer</span><span className="paper-cap">p5</span></div>
+              <span className="font-display font-black text-[38px] leading-[.95]">How {surname} was judged</span>
+              <p className="m-0 text-[15px] leading-snug">{surname}’s score was the <strong>{rule.targetMetricName}</strong>: {ex.what}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="border-t-[3px] border-[#15803d] pt-1.5 text-[13.5px] leading-snug"><span className="paper-cap text-[#15803d]">What it rewards</span><br />{ex.rewards}</div>
+                <div className="border-t-[3px] border-[#b91c1c] pt-1.5 text-[13.5px] leading-snug"><span className="paper-cap text-[#b91c1c]">What it misses</span><br />{ex.misses}</div>
+              </div>
+              {/* A worked example: three citizens, one bill */}
+              <div className="border-2 border-stone-900 px-3 py-2 flex flex-col gap-1.5">
+                <span className="paper-cap">Three citizens, one bill</span>
+                <table className="w-full border-collapse text-[14px] tabular-nums">
+                  <thead>
+                    <tr className="border-b-2 border-stone-900">
+                      <th className="w-[64px]" />
+                      {ex.before.map((_, i) => <th key={i} className="paper-cap text-center font-extrabold py-1 border-l border-stone-400">Citizen {i + 1}</th>)}
+                      <th className="paper-cap text-right font-extrabold py-1 pl-2 border-l-2 border-stone-900 capitalize">{ex.label}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-stone-400">
+                      <td className="py-1 text-[12.5px] text-stone-600">Before</td>
+                      {ex.before.map((v, i) => <td key={i} className="text-center font-bold py-1 border-l border-stone-400">{v}</td>)}
+                      <td className="text-right font-bold py-1 pl-2 border-l-2 border-stone-900">{ex.measureBefore}</td>
+                    </tr>
+                    <tr className="border-b border-stone-400">
+                      <td className="py-1 text-[12.5px] text-stone-600">After</td>
+                      {ex.after.map((v, i) => <td key={i} className="text-center font-bold py-1 border-l border-stone-400">{v}</td>)}
+                      <td className="text-right font-bold py-1 pl-2 border-l-2 border-stone-900">{ex.measureAfter}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 text-[12.5px] text-stone-600">Change</td>
+                      {ex.after.map((v, i) => {
+                        const d = v - ex.before[i];
+                        return <td key={i} className="text-center font-bold py-1 border-l border-stone-400" style={{ color: d > 0 ? '#1d4ed8' : d < 0 ? '#b45309' : '#57534e' }}>{d > 0 ? `▲ +${d}` : d < 0 ? `▼ −${-d}` : '–'}</td>;
+                      })}
+                      {(() => {
+                        const d = parseFloat(ex.measureAfter) - parseFloat(ex.measureBefore);
+                        return <td className="text-right font-bold py-1 pl-2 border-l-2 border-stone-900" style={{ color: d > 0.005 ? '#1d4ed8' : d < -0.005 ? '#b45309' : '#57534e' }}>{d > 0.005 ? `▲ +${d.toFixed(2)}` : d < -0.005 ? `▼ −${(-d).toFixed(2)}` : '–'}</td>;
+                      })()}
+                    </tr>
+                  </tbody>
+                </table>
+                <span className="text-[13px] leading-snug text-stone-700">{ex.note(surname)}</span>
+              </div>
+              {/* The press conference, explained */}
+              {pressSummary && pressSummary.questions.length > 0 && (
+                <div className="flex flex-col gap-1.5 border-t-2 border-stone-900 pt-1.5">
+                  <span className="paper-cap" style={{ color: tone.dark }}>At the press conference</span>
+                  {pressSummary.questions.map((q, i) => (
+                    <p key={i} className="m-0 text-[13.5px] leading-snug">
+                      <strong>{q.who} asked {q.ask.replace('the Prime Minister', surname)}.</strong> {surname} said “{q.said.replace(/\.$/, '')}.”{' '}
+                      {q.correct
+                        ? <span className="font-bold text-[#15803d]">✓ Correct.</span>
+                        : <><span className="font-bold text-[#b91c1c]">✗ Wrong.</span> The answer was “{q.answer.replace(/\.$/, '')}.”</>}
+                      {i === 1 && ` ${q.answer} raised ${rule.targetMetricAbbreviation} more than any other bill this term.`}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {/* The measure bill by bill, against the target (moved here from the front page) */}
+              <div className="flex-1 min-h-[120px] border-2 border-stone-900 px-2.5 py-2 flex flex-col gap-0.5">
+                <div className="flex justify-between items-baseline gap-2">
+                  <span className="paper-cap">{rule.targetMetricAbbreviation}, bill by bill</span>
+                  <span className="text-[13px]">{startMetric.toFixed(2)} → {endMetric.toFixed(2)} · Target <strong>{targetScore.toFixed(2)}</strong> <span className="font-bold" style={{ color: endMetric >= targetScore ? '#15803d' : '#b91c1c' }}>{endMetric >= targetScore ? '✓' : '✗'}</span></span>
+                </div>
+                <MeasureChart scores={timelineData.map((d) => d.score)} target={targetScore} colour={tone.dark} />
+              </div>
+              <div className="paper-dim" style={{ opacity: p.dim }} />
+            </div>
+          ); })()}
+
+          {/* ── Back page: next up, and the way out ── */}
+          {(() => { const p = page(6); return (
             <div key={p.key} className={p.className} style={p.style}>
               <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">What’s next</span><span className="paper-cap">Back page</span></div>
               <span className="font-display font-black text-[40px] leading-[.95]">
@@ -589,7 +620,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
           <span className="text-[13px] font-extrabold text-[#f5e9d6] bg-black/50 rounded-lg px-3.5 py-2">Page {st + 1} of {LAST + 1}</span>
           {st < LAST && (
             <button type="button" onClick={() => go(st + 1)} disabled={!ready} className="text-[13px] font-black text-stone-900 bg-[#d6b25e] rounded-lg px-4 py-2 cursor-pointer disabled:opacity-30 disabled:cursor-default">
-              {['Open the paper', 'Next page', 'Turn the page', 'Next page'][st]} ›
+              {['Open the paper', 'Next page', 'Turn the page', 'Next page', 'Close the paper'][st]} ›
             </button>
           )}
         </div>
@@ -611,16 +642,67 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
   );
 }
 
-/** The metric's name in the summary sentence, as a link to its glossary note. */
-function highlightMetric(text: string, metric: string, onClick: () => void): React.ReactNode {
-  const i = text.indexOf(metric);
-  if (i < 0) return <>{text} <button type="button" onClick={onClick} className="paper-link">What is {metric}?</button></>;
+/** What each measure is, what it rewards and misses, and a three-citizen example (p5). */
+const EXPLAINERS: Record<ElectionCycle, {
+  what: string; rewards: string; misses: string;
+  before: number[]; after: number[]; label: string; measureBefore: string; measureAfter: string;
+  note: (surname: string) => string;
+}> = {
+  [ElectionCycle.Benthamite]: {
+    what: 'add up everyone’s life satisfaction and divide by the number of people.',
+    rewards: 'Any gain counts the same, whoever gets it. A point for someone thriving is worth exactly as much as a point for someone struggling.',
+    misses: 'Who gains. A bill can raise the average while the worst-off fall further behind.',
+    before: [2, 6, 9], after: [1, 7, 10], label: 'average', measureBefore: '5.67', measureAfter: '6.00',
+    note: (s) => `The average went up, so ${s}’s score went up, even though the person struggling most lost a point.`,
+  },
+  [ElectionCycle.Rawlsian]: {
+    what: 'the single lowest life satisfaction anyone in the country has.',
+    rewards: 'Lifting the person at the very bottom. Nothing else moves the score.',
+    misses: 'Everyone else. Big gains for the comfortable and the thriving count for nothing.',
+    before: [2, 6, 9], after: [2, 8, 10], label: 'lowest', measureBefore: '2', measureAfter: '2',
+    note: (s) => `Two people gained, but the worst-off didn’t move, so ${s}’s score stayed at 2.`,
+  },
+  [ElectionCycle.PersonalUtility]: {
+    what: 'the average of how much each citizen values their own life satisfaction.',
+    rewards: 'Gains near the bottom of the scale. To the person getting it, a point from 3 to 4 is worth more than a point from 8 to 9.',
+    misses: 'How people would judge the country as a whole when deciding for others.',
+    before: [2, 6, 9], after: [3, 6, 8], label: 'average LS', measureBefore: '5.67', measureAfter: '5.67',
+    note: (s) => `Average life satisfaction didn’t change, but ${s}’s score rose: the point gained at the bottom is worth more than the point lost at the top.`,
+  },
+  [ElectionCycle.SocietalUtility]: {
+    what: 'the average of how each citizen judges the whole country’s spread of life satisfaction, using the values they hold when deciding for others.',
+    rewards: 'Gains for the worst-off, which count for much more than gains at the top.',
+    misses: 'Each person’s own life on its own terms: it’s about the shape of the whole country.',
+    before: [2, 6, 9], after: [3, 6, 8], label: 'average LS', measureBefore: '5.67', measureAfter: '5.67',
+    note: (s) => `Average life satisfaction didn’t change, but ${s}’s score rose: judging for others, citizens weigh the worst-off much more heavily.`,
+  },
+};
+
+/** Each candidate's line on the stump, for their advert. */
+const CAMPAIGN_QUOTES: Record<ElectionCycle, string> = {
+  [ElectionCycle.Benthamite]: 'Every citizen counts the same.',
+  [ElectionCycle.Rawlsian]: 'You judge a country by how it treats the person at the bottom.',
+  [ElectionCycle.SocietalUtility]: 'It’s not just about you, it’s about all of us.',
+  [ElectionCycle.PersonalUtility]: 'Only you know what a good life looks like for you.',
+};
+
+/** A small newspaper-style bar chart: citizens at each LS score, the start of term as a faint outline. */
+function MiniHistogram({ counts, ghost, max, colour }: { counts: number[]; ghost: number[] | null; max: number; colour: string }) {
+  const W = 180, H = 112, B = 13, bw = W / counts.length;
+  const h = (c: number) => (c / max) * (H - B - 2);
   return (
-    <>
-      {text.slice(0, i)}
-      <button type="button" onClick={onClick} className="paper-link">{metric}</button>
-      {text.slice(i + metric.length)}
-    </>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Citizens at each life satisfaction score">
+      {counts.map((c, i) => (
+        <rect key={i} x={i * bw + 1.5} y={H - B - h(c)} width={bw - 3} height={h(c)} fill={colour} opacity={0.85} />
+      ))}
+      {ghost && ghost.map((c, i) => (
+        <rect key={`g${i}`} x={i * bw + 1.5} y={H - B - h(c)} width={bw - 3} height={h(c)} fill="none" stroke="#1c1917" strokeOpacity={0.45} strokeWidth={1} strokeDasharray="2 2" />
+      ))}
+      <line x1={0} x2={W} y1={H - B} y2={H - B} stroke="#1c1917" strokeWidth={1} />
+      {[0, 5, 10].map((v) => (
+        <text key={v} x={v * bw + bw / 2} y={H - 2} textAnchor="middle" fontSize={9} fill="#44403c">{v}</text>
+      ))}
+    </svg>
   );
 }
 

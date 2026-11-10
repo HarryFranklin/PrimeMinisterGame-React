@@ -358,6 +358,16 @@ export type TelemetryEvent =
       payload: { cycle: string };
     }
 
+  // ---- The measure, explained (morning paper p5) ----
+  | {
+      event: "measure_explainer_opened";
+      payload: { cycle: string };
+    }
+  | {
+      event: "measure_explainer_closed";
+      payload: { cycle: string; dwell_ms: number };
+    }
+
   // ---- Wellbeing Changes (StagePopulationChange) ----
   | {
       event: "wellbeing_changes_opened";

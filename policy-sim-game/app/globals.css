@@ -167,3 +167,8 @@ html[data-flashes="off"] .press-flash, html[data-flashes="off"] .press-wash { di
 /* Press conference → election night: a camera flash going off */
 .election-flash { opacity: 0; animation: election-flash .34s ease-out both; }
 @keyframes election-flash { 0% { opacity: 0; transform: scale(.5); } 35% { opacity: .45; } 100% { opacity: 0; transform: scale(1.1); } }
+
+/* Front page "Also inside" snippets: black with white text on hover, like the active option */
+.paper-tease { transition: background .15s, color .15s; }
+.paper-tease:hover { background: #1c1917; color: #f4efe3; }
+.paper-tease:hover .paper-tease-sub { color: #d6d3d1 !important; }

@@ -31,7 +31,7 @@ interface StagePressConferenceProps {
 
 /** What happened at the press conference, for the morning paper. */
 export interface PressSummary {
-  questions: { who: string; outlet: string; ask: string; said: string; correct: boolean }[];
+  questions: { who: string; outlet: string; ask: string; said: string; correct: boolean; answer: string }[];
   /** Approval as the press conference began. */
   startApproval: number;
 }
@@ -273,10 +273,10 @@ function PressConferenceLive({ currentCycle, approvalRating, pollError, history,
     summarySent.current = true;
     const questions: PressSummary['questions'] = [];
     if (q1Selected !== null) {
-      questions.push({ who: pressPair.first.name, outlet: pressPair.first.outlet, ask: 'what the Prime Minister was really judged on', said: q1.options[q1Selected].text, correct: q1Selected === q1.correctIndex });
+      questions.push({ who: pressPair.first.name, outlet: pressPair.first.outlet, ask: 'what the Prime Minister was really judged on', said: q1.options[q1Selected].text, correct: q1Selected === q1.correctIndex, answer: q1.options[q1.correctIndex].text });
     }
     if (q2 && q2Selected !== null) {
-      questions.push({ who: pressPair.second.name, outlet: pressPair.second.outlet, ask: 'which bill did the most for ordinary people', said: q2.options[q2Selected].text, correct: q2Selected === q2.correctIndex });
+      questions.push({ who: pressPair.second.name, outlet: pressPair.second.outlet, ask: 'which bill did the most for ordinary people', said: q2.options[q2Selected].text, correct: q2Selected === q2.correctIndex, answer: q2.options[q2.correctIndex].text });
     }
     onSummary({ questions, startApproval });
   }, [phase]);
