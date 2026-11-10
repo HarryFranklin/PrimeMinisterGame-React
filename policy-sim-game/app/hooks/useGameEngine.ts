@@ -288,9 +288,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     return Math.round(Math.max(0, Math.min(100, base + pressConferenceModifier)) * 10) / 10;
   };
 
-    /** This term's poll error (see utils/polls.ts): fixed for the term, new when it's played again. */
+  /** This term's poll error (see utils/polls.ts): fixed for the term, new when it's played again,
+  *  and different for each participant (their study ID is part of the seed). */
   const termPollError = useMemo(
-    () => pollError(`${currentCycle}-${cycleAttempts}-${cycleMAO.toFixed(4)}`),
+    () => pollError(`${getStudyState().session?.pid ?? 'local'}-${currentCycle}-${cycleAttempts}-${cycleMAO.toFixed(4)}`),
     [currentCycle, cycleAttempts, cycleMAO],
   );
 
