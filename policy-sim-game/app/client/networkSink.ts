@@ -23,7 +23,8 @@
 //                 fullscreen_title_clicks (title screen "Go full screen" clicks),
 //                 fullscreen_at_start (already fullscreen when Start game was clicked),
 //                 fullscreen_ok (in fullscreen when the game started, either way), fullscreen_exits,
-//                 fullscreen_nudges (in-game "Go full screen" clicks), fullscreen_ms (total time in fullscreen)
+//                 fullscreen_nudges (in-game "Go full screen" clicks), fullscreen_resumes (back into
+//                 fullscreen via the pause menu's Resume), fullscreen_ms (total time in fullscreen)
 //   last:         last deliberate action (where people stopped)
 //   final:        { dwell_ms, ts }   final debrief closed
 // }
@@ -180,6 +181,7 @@ export function networkSink(entry: LoggedEvent) {
     case "fullscreen_requested":
       if (entry.payload?.source === 'start') a.flow = { ...a.flow, fullscreen_ok: !!entry.payload?.ok };
       else if (entry.payload?.source === 'title') a.flow = { ...a.flow, fullscreen_title_clicks: ((a.flow.fullscreen_title_clicks as number) ?? 0) + 1 };
+      else if (entry.payload?.source === 'resume') a.flow = { ...a.flow, fullscreen_resumes: ((a.flow.fullscreen_resumes as number) ?? 0) + 1 };
       else a.flow = { ...a.flow, fullscreen_nudges: ((a.flow.fullscreen_nudges as number) ?? 0) + 1 };
       break;
     case "fullscreen_changed":
