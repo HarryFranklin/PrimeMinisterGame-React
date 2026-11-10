@@ -111,7 +111,7 @@ export default function PressScene({ cycle, askerIndex, askerName }: PressSceneP
       <div style={abs({ left: 760, top: 402, width: 18, height: 26, borderRadius: 9, background: '#18181b', transform: 'rotate(14deg)' })} />
       <div style={abs({ left: 596, top: 474, width: 248, height: 22, background: '#2a1a10', borderRadius: 4, boxShadow: '0 4px 0 #1a0f08' })} />
       <div style={abs({ left: 614, top: 496, width: 212, height: 190, background: 'linear-gradient(90deg, #3a2414, #5a3a20 50%, #3a2414)', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 8% 100%)' })} />
-      <div style={abs({ left: 640, top: 520, width: 160, padding: '10px 6px', background: tone.dark, textAlign: 'center', boxShadow: `0 0 0 3px ${tone.light}` })}>
+      <div style={abs({ left: 640, top: 520, width: 160, padding: '10px 6px', background: tone.dark, textAlign: 'center', boxShadow: `0 0 0 3px ${tone.light}`, fontFamily: "var(--font-broadcast), Arial, sans-serif" })}>
         <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: '.08em', textTransform: 'uppercase', color: '#ffffff' }}>{profile.slogan}</div>
         <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.14em', color: 'rgba(255,255,255,.8)', marginTop: 2 }}>{pmName}</div>
       </div>

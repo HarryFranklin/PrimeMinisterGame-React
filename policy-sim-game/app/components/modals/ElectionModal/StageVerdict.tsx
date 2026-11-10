@@ -181,14 +181,14 @@ export default function StageVerdict({
   const pollRange = formatPollRange(finalPoll);
   // Rally placards: wide enough for the longest surname
   const signFont = surname.length > 6 ? 24 : 26;
-  const signW = Math.max(130, surname.length * (signFont * 0.8) + 44);
+  const signW = Math.max(130, surname.length * (signFont * 0.62) + 44);
   const shown = displayScore.toFixed(1) === '100.0' ? '100' : displayScore.toFixed(1);
   const resultColour = !isDone ? '#f8fafc' : won ? '#6ee7b7' : '#d4d4d8';
 
   // Drawn straight onto the page: inside the election window, which scales in
   // as it opens, a full-screen layer would be trapped in that window's box.
   return createPortal(
-    <div className="fixed inset-0 z-[9999] overflow-hidden text-slate-50" style={{ background: atRally ? '#0b1023' : '#0b1020' }}>
+    <div className="fixed inset-0 z-[9999] overflow-hidden text-slate-50" style={{ background: atRally ? '#0b1023' : '#0b1020', fontFamily: "var(--font-broadcast), Arial, sans-serif" }}>
       {confettiKey > 0 && <Confetti key={confettiKey} />}
       <div className="absolute left-0 top-0 origin-top-left" style={{ width: STAGE_W, height: STAGE_H, transform: `translate(${offX}px, ${offY}px) scale(${scale})` }}>
         {!atRally ? (
@@ -203,7 +203,7 @@ export default function StageVerdict({
                 <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '.06em', textTransform: 'uppercase' }}>Live</span>
               </div>
               <span style={{ fontSize: 30, fontWeight: 900, letterSpacing: '.02em', textTransform: 'uppercase' }}>Election Night</span>
-              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>Channel 6 News</span>
+              <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>Channel 6 News</span>
             </div>
             <div style={abs({ right: 40, top: 36, fontSize: 28, fontWeight: 900, color: '#cbd5e1', fontVariantNumeric: 'tabular-nums' })}>
               {isDone ? '04:12' : counting ? '01:30' : '22:00'}
@@ -223,7 +223,7 @@ export default function StageVerdict({
 
             {/* The count */}
             <div style={abs({ left: 520, top: 130, right: 80, height: 520, display: 'flex', flexDirection: 'column', gap: 16 })}>
-              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>
+              <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>
                 {isDone ? 'Result declared' : counting ? 'Counting votes' : `Polls have closed · the final poll said ${pollRange}`}
               </span>
               <motion.span
@@ -243,16 +243,16 @@ export default function StageVerdict({
 
               <div style={{ background: 'rgba(255,255,255,.06)', padding: '26px 28px 38px', display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>Final approval</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#94a3b8' }}>Final approval</span>
                   <span style={{ fontSize: 112, fontWeight: 900, lineHeight: 0.85, color: resultColour, fontVariantNumeric: 'tabular-nums' }}>{shown}%</span>
                 </div>
                 <div style={{ position: 'relative', height: 46, background: 'rgba(255,255,255,.1)', marginTop: 26 }}>
                   <div style={abs({ left: 0, top: 0, bottom: 0, width: `${Math.min(100, displayScore)}%`, background: !isDone ? tone.color : won ? '#10b981' : '#71717a' })} />
                   {/* The final poll's range, dashed */}
                   <div style={abs({ left: `${finalPoll.low}%`, width: `${finalPoll.high - finalPoll.low}%`, top: -8, bottom: -8, border: '2px dashed #fbbf24', boxSizing: 'border-box', background: 'rgba(251,191,36,.12)' })} />
-                  <span style={abs({ ...(finalPoll.low > 60 ? { left: `${finalPoll.high}%`, transform: 'translateX(-100%)' } : { left: `${finalPoll.low}%` }), top: -30, whiteSpace: 'nowrap', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#fbbf24' })}>Final poll {pollRange}</span>
+                  <span style={abs({ ...(finalPoll.low > 60 ? { left: `${finalPoll.high}%`, transform: 'translateX(-100%)' } : { left: `${finalPoll.low}%` }), top: -30, whiteSpace: 'nowrap', fontSize: 13, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: '#fbbf24' })}>Final poll {pollRange}</span>
                   <div style={abs({ left: `${WIN_THRESHOLD}%`, top: -10, bottom: -10, borderLeft: '4px solid #f8fafc' })} />
-                  <span style={abs({ left: `${WIN_THRESHOLD}%`, top: 54, transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase' })}>Required: 51.0%</span>
+                  <span style={abs({ left: `${WIN_THRESHOLD}%`, top: 54, transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase' })}>Required: 51.0%</span>
                 </div>
               </div>
 
@@ -338,14 +338,14 @@ export default function StageVerdict({
               return (
                 <div key={i} style={abs({ left: -420 + i * 100 + (i % 2) * 18, top: 700 + (i % 3) * 22, width: s, height: 400 })}>
                   {i % 4 === 1 && (
-                    <div className="rally-wave" style={abs({ left: s * 0.6, top: -110, width: 4, height: 130, background: '#cbd5e1' })}>
+                    <div className="rally-wave" style={abs({ left: s * 0.6, top: -110, width: 4, height: 110 + s * 0.9, background: '#cbd5e1' })}>
                       <div style={abs({ left: 4, top: 0, width: 70, height: 44, background: i % 2 ? tone.color : '#ffffff' })} />
                     </div>
                   )}
                   {i % 5 === 3 && (
                     /* A placard on a stick, sized to fit the name */
-                    <div className="rally-wave" style={abs({ left: s / 2 - signW / 2, top: -150, width: signW, height: 130 })}>
-                      <div style={abs({ left: signW / 2 - 2, top: 56, width: 4, height: 74, background: '#cbd5e1' })} />
+                    <div className="rally-wave" style={abs({ left: s / 2 - signW / 2, top: -150, width: signW, height: 150 + s * 0.9 })}>
+                      <div style={abs({ left: signW / 2 - 2, top: 56, width: 4, height: 94 + s * 0.9, background: '#cbd5e1' })} />
                       <div style={abs({ left: 0, top: 0, width: signW, height: 60, background: '#ffffff', color: tone.dark, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: signFont, fontWeight: 900, textTransform: 'uppercase', whiteSpace: 'nowrap' })}>
                         {surname}!
                       </div>
@@ -364,7 +364,7 @@ export default function StageVerdict({
 
             <div style={abs({ left: 28, top: 40, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,.6)', borderRadius: 6, padding: '7px 12px' })}>
               <span className="tv-blink" style={{ width: 9, height: 9, borderRadius: '50%', background: '#ef4444' }} />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase' }}>Live from the {surname} rally</span>
+              <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase' }}>Live from the {surname} rally</span>
             </div>
             <motion.div
               initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8, duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}

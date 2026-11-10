@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display, Caveat, Source_Serif_4 } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Caveat, Source_Serif_4, Barlow_Semi_Condensed } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +29,14 @@ const sourceSerif = Source_Serif_4({
   style: ["normal", "italic"],
 });
 
+// Election night and the press conference: TV captions and graphics (a news-graphics face).
+// Only up to 700: heavier asks (800/900) use the 700, which keeps it readable.
+const broadcast = Barlow_Semi_Condensed({
+  variable: "--font-broadcast",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
 const caveat = Caveat({
   variable: "--font-caveat",
   subsets: ["latin"],
@@ -48,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${sourceSerif.variable} ${caveat.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${sourceSerif.variable} ${broadcast.variable} ${caveat.variable} antialiased`}
       >
         {children}
       </body>
