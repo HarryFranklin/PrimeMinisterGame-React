@@ -280,13 +280,13 @@ export default function D3Chart({
         cols.selectAll('rect.face-bar').remove();
         cols.selectAll('rect.segment').remove();
 
-        // Block size: two to a row, filling most of the column
-        const colW = rawBw * 0.9;
-        let s = Math.max(4, (colW - BLOCK_GAP) / 2);
-        // People per block: the smallest nice number whose tallest tower fits
-        const fits = (u: number, size: number) => Math.ceil(blocksFor(yAxisMax, u) / 2) * (size + BLOCK_GAP) <= H;
-        const unit = perBlock ?? BLOCK_UNITS.find((u) => fits(u, s)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
-        while (!fits(unit, s) && s > 4) s -= 1;
+        // Block size: two to a row, at most filling the column's width. Each unit gets the
+        // biggest block whose tallest possible tower (yAxisMax) still fits the height; we take
+        // the smallest unit whose blocks stay at least 70% of full width (and 10px).
+        const sMax = Math.max(4, (rawBw * 0.9 - BLOCK_GAP) / 2);
+        const sFor = (u: number) => Math.min(sMax, H / Math.max(1, Math.ceil(blocksFor(yAxisMax, u) / 2)) - BLOCK_GAP);
+        const unit = perBlock ?? BLOCK_UNITS.find((u) => sFor(u) >= Math.max(10, sMax * 0.7)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
+        const s = Math.max(4, Math.floor(sFor(unit)));
         const pitch = s + BLOCK_GAP;
         const towerW = 2 * s + BLOCK_GAP;
         const towerX = (name: string | number) => xScale(Number(name)) - towerW / 2;
@@ -514,6 +514,17 @@ export default function D3Chart({
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues([0,1,2,3,4,5,6,7,8,9,10]) as any)
         .call(styleAxis);
+
+      // Blocks: the x-axis is a row of bins (everyone is rounded to the nearest whole point),
+      // not a continuous line - a plate under each column, no line running past 0 and 10.
+      chart.select('.axis-x').selectAll('.domain, .tick line').style('display', visualStyle === 'blocks' ? 'none' : '');
+      chart.select('.axis-x').selectAll('.bin-plate').remove();
+      if (visualStyle === 'blocks') {
+        chart.select('.axis-x').selectAll('rect.bin-plate')
+          .data(d3.range(11)).join('rect').attr('class', 'bin-plate')
+          .attr('x', (i) => xScale(i) - rawBw / 2 + 3).attr('width', Math.max(2, rawBw - 6))
+          .attr('y', 1).attr('height', 4).attr('rx', 2).attr('fill', theme === 'dark' ? '#71717a' : '#a8a29e');
+      }
 
       chart.select('.axis-y').selectAll('.custom-y-label').remove();
       chart.select('.axis-y')

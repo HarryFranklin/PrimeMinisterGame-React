@@ -32,9 +32,9 @@ interface D3ChartProps {
   color?: string;
   markers?: ChartMarker[];
   /** 'blocks': square face blocks stacked two to a row like building blocks, each a fixed
-  * number of citizens (see perBlock), with an odd block sitting centred on top. */
+   * number of citizens (see perBlock), with an odd block sitting centred on top. */
   visualStyle?: 'solid' | 'faces' | 'faces-segmented' | 'blocks';
-  /** Blocks only: citizens per block. Left out, the smallest of 1, 2, 5, 10, 20 that fits. */
+  /** Blocks only: citizens per block (shown as "million people"). Left out, the smallest of 1, 2, 5, 10, 20 that fits. */
   perBlock?: number;
   /** Blocks only: ring the lowest citizen's block (the Rawlsian floor). */
   highlightFloor?: boolean;
@@ -119,7 +119,8 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true, markerLabels = 'top', perBlock, highlightFloor = false,
+  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true, markerLabels = 'top',
+  perBlock, highlightFloor = false,
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const binHover = useRef<{ bin: string | number; count: number; at: number } | null>(null);
@@ -283,6 +284,9 @@ export default function D3Chart({
 
       dataLayer.selectAll('rect.bar').remove();
 
+      // Blocks: where each column's tower tops out, so the tooltip sits on the tower
+      const towerTop = new Map<number, number>();
+
       const cols = dataLayer
         .selectAll<SVGGElement, HistogramEntry>('g.col')
         .data(histogramData, (d: any) => d.name)
@@ -299,12 +303,16 @@ export default function D3Chart({
 
             // Map internal SVG coordinate space to absolute body coordinates
             const xPos = rect.left + window.scrollX + margin.left + xScale(Number(d.name));
-            const yPos = rect.top + window.scrollY + margin.top + yScale(clampedCount);
+            const top = visualStyle === 'blocks' ? (towerTop.get(Number(d.name)) ?? H) : yScale(clampedCount);
+            const yPos = rect.top + window.scrollY + margin.top + top;
+            // Blocks: say which scores round into this bin
+            const v = Number(d.name);
+            const range = visualStyle === 'blocks' ? ` (${v === 0 ? '0' : (v - 0.5).toFixed(1)}–${v === 10 ? '10' : (v + 0.4).toFixed(1)})` : '';
 
             tooltip.style('opacity', 1)
                    .style('left', `${xPos}px`)
                    .style('top', `${yPos}px`)
-                   .html(`<span style="color:${baseColor}">LS ${d.name}:</span> ~${d.count} million people`);
+                   .html(`<span style="color:${baseColor}">LS ${d.name}${range}:</span> ~${d.count} million people`);
         })
         .on('mouseleave', () => {
             tooltip.style('opacity', 0);
@@ -315,7 +323,7 @@ export default function D3Chart({
             }
         });
 
-            // Blocks are drawn straight into the data layer; clear them for the other styles.
+      // Blocks are drawn straight into the data layer; clear them for the other styles.
       if (visualStyle !== 'blocks') {
         dataLayer.selectAll('g.blk').remove();
         dataLayer.selectAll('.blk-anno').remove();
@@ -326,13 +334,13 @@ export default function D3Chart({
         cols.selectAll('rect.face-bar').remove();
         cols.selectAll('rect.segment').remove();
 
-        // Block size: two to a row, filling most of the column
-        const colW = rawBw * 0.9;
-        let s = Math.max(4, (colW - BLOCK_GAP) / 2);
-        // Citizens per block: the smallest nice number whose tallest tower fits
-        const fits = (u: number, size: number) => Math.ceil(blocksFor(yAxisMax, u) / 2) * (size + BLOCK_GAP) <= H;
-        const unit = perBlock ?? BLOCK_UNITS.find((u) => fits(u, s)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
-        while (!fits(unit, s) && s > 4) s -= 1;
+        // Block size: two to a row, at most filling the column's width. Each unit gets the
+        // biggest block whose tallest possible tower (yAxisMax) still fits the height; we take
+        // the smallest unit whose blocks stay at least 70% of full width (and 10px).
+        const sMax = Math.max(4, (rawBw * 0.9 - BLOCK_GAP) / 2);
+        const sFor = (u: number) => Math.min(sMax, H / Math.max(1, Math.ceil(blocksFor(yAxisMax, u) / 2)) - BLOCK_GAP);
+        const unit = perBlock ?? BLOCK_UNITS.find((u) => sFor(u) >= Math.max(10, sMax * 0.7)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
+        const s = Math.max(4, Math.floor(sFor(unit)));
         const pitch = s + BLOCK_GAP;
         const towerW = 2 * s + BLOCK_GAP;
         const towerX = (name: string | number) => xScale(Number(name)) - towerW / 2;
@@ -349,6 +357,7 @@ export default function D3Chart({
           const nG = g ? blocksFor(Math.min(g.count, yAxisMax), unit) : nC;
           const goingUp = (g?.movedUp ?? 0) >= (g?.movedDown ?? 0);
           const n = Math.max(nC, nG);
+          towerTop.set(col, H - Math.ceil(nC / 2) * pitch);
           if (floorCol < 0 && d.count > 0) floorCol = col;
           for (let k = 0; k < n; k++) {
             const p = blockPos(k, n, s);
@@ -422,7 +431,7 @@ export default function D3Chart({
         const kw = (keyText.node() as SVGTextElement | null)?.getComputedTextLength() ?? 70;
         drawBlockFace(key.append('g').attr('transform', `translate(${-kw - ks - 4},0)`), 7, ks);
 
-            } else if (visualStyle === 'faces') {
+      } else if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
         const rectW    = faceCols * faceSize;
         const xOff     = (bw - rectW) / 2;
@@ -650,8 +659,8 @@ export default function D3Chart({
       cols.append('text')
         .attr('class', 'overflow-plus')
         .attr('x', (d: any) => {
-          const rectW = visualStyle.includes('faces') ? faceCols * calcFaceSize(bw, faceCols) : bw;
           if (visualStyle === 'blocks') return xScale(Number(d.name));
+          const rectW = visualStyle.includes('faces') ? faceCols * calcFaceSize(bw, faceCols) : bw;
           const xOff = visualStyle.includes('faces') ? (bw - rectW) / 2 : 0;
           return getX(d.name) + xOff + rectW / 2;
         })
@@ -667,6 +676,17 @@ export default function D3Chart({
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisBottom(xScale).tickValues([0,1,2,3,4,5,6,7,8,9,10]) as any)
         .call(styleAxis);
+
+      // Blocks: the x-axis is a row of bins (everyone is rounded to the nearest whole point),
+      // not a continuous line - a plate under each column, no line running past 0 and 10.
+      chart.select('.axis-x').selectAll('.domain, .tick line').style('display', visualStyle === 'blocks' ? 'none' : '');
+      chart.select('.axis-x').selectAll('.bin-plate').remove();
+      if (visualStyle === 'blocks') {
+        chart.select('.axis-x').selectAll('rect.bin-plate')
+          .data(d3.range(11)).join('rect').attr('class', 'bin-plate')
+          .attr('x', (i) => xScale(i) - rawBw / 2 + 3).attr('width', Math.max(2, rawBw - 6))
+          .attr('y', 1).attr('height', 4).attr('rx', 2).attr('fill', theme === 'dark' ? '#71717a' : '#a8a29e');
+      }
 
       chart.select('.axis-y').selectAll('.custom-y-label').remove();
       chart.select('.axis-y')
