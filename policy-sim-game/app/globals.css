@@ -162,6 +162,12 @@ html[data-flashes="off"] .press-flash, html[data-flashes="off"] .press-wash { di
 @layer base {
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], select, summary, label[for], input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled), input[type="range"]:not(:disabled) { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
+  
+  /* In the game (set by GameApp): no text highlighting, no dragging pictures out.
+     Text boxes stay selectable so typing still works normally. */
+  html[data-game] body { -webkit-user-select: none; user-select: none; }
+  html[data-game] input, html[data-game] textarea, html[data-game] [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
+  html[data-game] img { -webkit-user-drag: none; }
 }
 
 /* Press conference → election night: a camera flash going off */

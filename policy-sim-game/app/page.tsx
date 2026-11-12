@@ -69,6 +69,13 @@ function GameApp() {
   const [devMode, setDevMode] = useState(false);
   const [showOptimalPath, setShowOptimalPath] = useState(false);
   const [isUnsupportedScreen, setIsUnsupportedScreen] = useState(false);
+  
+  // While the game is on screen, text can't be highlighted (like a game, not a web page).
+  // The information sheet, consent and questionnaires stay selectable.
+  useEffect(() => {
+    document.documentElement.dataset.game = "on";
+    return () => { delete document.documentElement.dataset.game; };
+  }, []);
 
   useEffect(() => {
     registerSink(networkSink);
