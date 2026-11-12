@@ -202,6 +202,22 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
   );
   const pmSurname = profile.name.split(' ').pop() || 'the Prime Minister';
 
+  // Each bill the voters name, explained once in a box under the letters (not under every letter)
+  const mentionedBills = useMemo(() => {
+    const out: { id: string; name: string; description: string }[] = [];
+    voters.forEach((vp, idx) => quotedPolicies(vp.sentiment, idx % 2 === 0).forEach((b) => { if (!out.some((o) => o.id === b.id)) out.push(b); }));
+    return out;
+  }, [voters]);
+  // Like a sub-editor fitting copy: if the letters don't fit the page, set them a little
+  // smaller (down to 78%) rather than letting the page scroll.
+  const lettersRef = useRef<HTMLDivElement>(null);
+  const [lettersFit, setLettersFit] = useState(1);
+  useLayoutEffect(() => {
+    const el = lettersRef.current;
+    if (!el) return;
+    if (el.scrollHeight > el.clientHeight + 1 && lettersFit > 0.78) setLettersFit((f) => Math.round((f - 0.04) * 100) / 100);
+  }, [lettersFit, voters, mentionedBills]);
+
   // ── Back page: next up ──
   const levelIndex = PM_PROFILES.findIndex((p) => p.cycle === currentCycle);
   // The next candidate's campaign advert (front page strip, page 3 box); none after the last term
@@ -467,8 +483,8 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
             <div key={p.key} className={p.className} style={p.style}>
               <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">p4</span><span className="paper-cap">Letters</span></div>
               <span className="font-display font-black text-[40px] leading-[.95]">What the voters say</span>
-              <p className="m-0 text-[15px] leading-relaxed">We asked voters how {surname}’s bills changed their lives. Each bill they name is explained under their letter.</p>
-              <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+              <p className="m-0 text-[15px] leading-relaxed">We asked voters how {surname}’s bills changed their lives. The bills they name are explained at the foot of this page.</p>
+                            <div ref={lettersRef} className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 {voters.map((vp, idx) => {
                   const d = vp.finalLS - vp.baselineLS;
                   // Same groups and colours as page 3: Improved / Unchanged / Declined (±0.5 LS)
@@ -477,24 +493,29 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                   return (
                     <div key={idx} className="grid grid-cols-[1fr_auto] gap-3.5 border-t-2 border-stone-900 pt-2.5 pb-2.5">
                       <div className="flex flex-col gap-1.5 min-w-0">
-                        <span className="font-semibold text-[17.5px] leading-snug whitespace-pre-wrap">
+                        <span className="font-semibold leading-snug whitespace-pre-wrap" style={{ fontSize: 17.5 * lettersFit }}>
                           “{renderVoterQuote(vp.sentiment, pmSurname, idx % 2 === 0, () => {}, () => {}, () => {}, true)}”
                         </span>
-                        <span className="text-[13.5px] font-bold">{vp.name}</span>
-                        {quotedPolicies(vp.sentiment, idx % 2 === 0).map((b) => (
-                          <span key={b.id} className="text-[12.5px] leading-snug text-stone-700 border-l-[3px] pl-2" style={{ borderColor: tone.dark }}>
-                            <strong className="text-stone-900">{b.name}:</strong> {b.description}
-                          </span>
-                        ))}
+                        <span className="font-bold" style={{ fontSize: 13.5 * lettersFit }}>{vp.name}</span>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 min-w-[96px]">
                         <span className="paper-cap text-stone-500">Life satisfaction</span>
-                        <span className="text-[16px] font-black tabular-nums" style={{ color: c }}>{vp.baselineLS.toFixed(1)} → {vp.finalLS.toFixed(1)}</span>
-                        <span className="text-[13px] font-bold" style={{ color: c }}>{d >= 0 ? '+' : '−'}{Math.abs(d).toFixed(1)} · {moved}</span>
+                        <span className="font-black tabular-nums" style={{ color: c, fontSize: 16 * lettersFit }}>{vp.baselineLS.toFixed(1)} → {vp.finalLS.toFixed(1)}</span>
+                        <span className="font-bold" style={{ color: c, fontSize: 13 * lettersFit }}>{d >= 0 ? '+' : '−'}{Math.abs(d).toFixed(1)} · {moved}</span>
                       </div>
                     </div>
                   );
                 })}
+                {mentionedBills.length > 0 && (
+                  <div className="mt-auto border-2 border-stone-900 px-3 py-2 flex flex-col gap-1.5">
+                    <span className="paper-cap">The bills they mention</span>
+                    {mentionedBills.map((b) => (
+                      <span key={b.id} className="leading-snug text-stone-700 border-l-[3px] pl-2" style={{ borderColor: tone.dark, fontSize: 12.5 * lettersFit }}>
+                        <strong className="text-stone-900">{b.name}:</strong> {b.description}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="paper-dim" style={{ opacity: p.dim }} />
             </div>
