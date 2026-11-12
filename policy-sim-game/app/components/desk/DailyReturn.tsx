@@ -70,9 +70,9 @@ export default function DailyReturn({
           color={rule.graphColor}
           markers={markers}
           hoverTrackId="population_current"
-          visualStyle="faces"
+          visualStyle="blocks"
+          highlightFloor={cycle === ElectionCycle.Rawlsian}
           yAxisMax={yAxisMax}
-          faceCols={2}
           bands={false}
           markerLabels="axis"
         />

@@ -31,7 +31,13 @@ interface D3ChartProps {
   yAxisType: AxisVariable;
   color?: string;
   markers?: ChartMarker[];
-  visualStyle?: 'solid' | 'faces' | 'faces-segmented';
+  /** 'blocks': square face blocks stacked two to a row like building blocks, each a fixed
+  * number of citizens (see perBlock), with an odd block sitting centred on top. */
+  visualStyle?: 'solid' | 'faces' | 'faces-segmented' | 'blocks';
+  /** Blocks only: citizens per block. Left out, the smallest of 1, 2, 5, 10, 20 that fits. */
+  perBlock?: number;
+  /** Blocks only: ring the lowest citizen's block (the Rawlsian floor). */
+  highlightFloor?: boolean;
   yAxisMax?: number;
   faceCols?: number;
   activePolicyRules?: any[] | null;
@@ -76,6 +82,36 @@ const getAxisLabel = (a: AxisVariable): string => {
   }
 };
 
+const BLOCK_UNITS = [1, 2, 5, 10, 20];
+const BLOCK_GAP = 2;
+
+/** Blocks needed for a column: at least one if anyone is there, so a lone citizen never vanishes. */
+const blocksFor = (count: number, unit: number) => (count > 0 ? Math.max(1, Math.round(count / unit)) : 0);
+
+/** Where block k of a tower of n sits: two to a row from the bottom; an odd top block is centred. */
+function blockPos(k: number, n: number, s: number) {
+  const row = Math.floor(k / 2);
+  const alone = k === n - 1 && n % 2 === 1;
+  return { row, x: alone ? (s + BLOCK_GAP) / 2 : (k % 2) * (s + BLOCK_GAP) };
+}
+
+/** A square face: colour from red (LS 0) to green (LS 10); frown, flat or smile. */
+function drawBlockFace(g: d3.Selection<SVGGElement, any, any, any>, ls: number, s: number) {
+  const fill = d3.interpolateRdYlGn(ls / 10);
+  const ink = ls <= 1 || ls >= 9 ? '#ffffff' : '#1c1917';
+  g.append('rect').attr('class', 'blk-body').attr('width', s).attr('height', s).attr('rx', Math.max(2, s * 0.16))
+    .attr('fill', fill).attr('stroke', 'rgba(0,0,0,.22)').attr('stroke-width', 1);
+  const r = Math.max(1, s * 0.075);
+  g.append('circle').attr('cx', s * 0.31).attr('cy', s * 0.36).attr('r', r).attr('fill', ink);
+  g.append('circle').attr('cx', s * 0.69).attr('cy', s * 0.36).attr('r', r).attr('fill', ink);
+  const y = s * 0.64, x1 = s * 0.3, x2 = s * 0.7, bend = s * 0.12;
+  const d = ls <= 3 ? `M ${x1} ${y + bend * 0.6} Q ${s / 2} ${y - bend} ${x2} ${y + bend * 0.6}`
+    : ls <= 6 ? `M ${x1} ${y} L ${x2} ${y}`
+    : `M ${x1} ${y - bend * 0.4} Q ${s / 2} ${y + bend * 1.2} ${x2} ${y - bend * 0.4}`;
+  g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', ink)
+    .attr('stroke-width', Math.max(1, s * 0.09)).attr('stroke-linecap', 'round');
+}
+
 function calcFaceSize(bw: number, cols: number) {
   return bw / Math.max(1, cols);
 }
@@ -83,7 +119,7 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true, markerLabels = 'top',
+  activePolicyRules = null, theme = 'light', hoverTrackId, ghostHistogramData = null, bands = true, markerLabels = 'top', perBlock, highlightFloor = false,
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const binHover = useRef<{ bin: string | number; count: number; at: number } | null>(null);
@@ -279,7 +315,114 @@ export default function D3Chart({
             }
         });
 
-      if (visualStyle === 'faces') {
+            // Blocks are drawn straight into the data layer; clear them for the other styles.
+      if (visualStyle !== 'blocks') {
+        dataLayer.selectAll('g.blk').remove();
+        dataLayer.selectAll('.blk-anno').remove();
+        cols.selectAll('rect.hit').remove();
+      }
+
+      if (visualStyle === 'blocks') {
+        cols.selectAll('rect.face-bar').remove();
+        cols.selectAll('rect.segment').remove();
+
+        // Block size: two to a row, filling most of the column
+        const colW = rawBw * 0.9;
+        let s = Math.max(4, (colW - BLOCK_GAP) / 2);
+        // Citizens per block: the smallest nice number whose tallest tower fits
+        const fits = (u: number, size: number) => Math.ceil(blocksFor(yAxisMax, u) / 2) * (size + BLOCK_GAP) <= H;
+        const unit = perBlock ?? BLOCK_UNITS.find((u) => fits(u, s)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
+        while (!fits(unit, s) && s > 4) s -= 1;
+        const pitch = s + BLOCK_GAP;
+        const towerW = 2 * s + BLOCK_GAP;
+        const towerX = (name: string | number) => xScale(Number(name)) - towerW / 2;
+
+        // Every block in every column: solid, or (with a bill open) arriving / leaving
+        type Blk = { key: string; col: number; ls: number; x: number; y: number; state: 'solid' | 'arrive' | 'leave'; goingUp: boolean };
+        const blocks: Blk[] = [];
+        const tops: { col: number; top: number; delta: number; goingUp: boolean; leaving: boolean }[] = [];
+        let floorCol = -1;
+        histogramData.forEach((d) => {
+          const col = Number(d.name);
+          const g = ghostHistogramData?.find((x) => Number(x.name) === col);
+          const nC = blocksFor(Math.min(d.count, yAxisMax), unit);
+          const nG = g ? blocksFor(Math.min(g.count, yAxisMax), unit) : nC;
+          const goingUp = (g?.movedUp ?? 0) >= (g?.movedDown ?? 0);
+          const n = Math.max(nC, nG);
+          if (floorCol < 0 && d.count > 0) floorCol = col;
+          for (let k = 0; k < n; k++) {
+            const p = blockPos(k, n, s);
+            blocks.push({
+              key: `${col}-${k}`, col, ls: col, goingUp,
+              x: towerX(col) + p.x, y: H - (p.row + 1) * pitch + BLOCK_GAP,
+              state: k < Math.min(nC, nG) ? 'solid' : nG > nC ? 'arrive' : 'leave',
+            });
+          }
+          if (g && g.count !== d.count) {
+            tops.push({ col, top: H - Math.ceil(n / 2) * pitch, delta: g.count - d.count, goingUp, leaving: g.count < d.count });
+          }
+        });
+
+        const speed = isHistUpdate ? 700 : 0;
+        dataLayer.selectAll<SVGGElement, Blk>('g.blk')
+          .data(blocks, (b) => b.key)
+          .join(
+            (enter) => enter.append('g').attr('class', 'blk').style('pointer-events', 'none')
+              .attr('transform', (b) => `translate(${b.x},${b.y - 24})`).attr('opacity', 0)
+              .each(function (b) { drawBlockFace(d3.select(this), b.ls, s); }),
+            (update) => update.each(function (b) {
+              // Size changed (resize): redraw the face
+              const g = d3.select(this);
+              if (Number(g.select('rect.blk-body').attr('width')) !== s) { g.selectAll('*').remove(); drawBlockFace(g, b.ls, s); }
+            }),
+            (exit) => exit.transition().duration(300).attr('opacity', 0).remove(),
+          )
+          .each(function (b) {
+            d3.select(this).select('rect.blk-body')
+              .attr('stroke', b.state === 'arrive' ? '#1c1917' : b.state === 'leave' ? (b.goingUp ? '#1d4ed8' : '#b45309') : 'rgba(0,0,0,.22)')
+              .attr('stroke-width', b.state === 'solid' ? 1 : 1.75)
+              .attr('stroke-dasharray', b.state === 'arrive' ? '4,2' : b.state === 'leave' ? '2,2' : 'none');
+          })
+          .transition().duration((b) => (b.state === 'solid' ? speed : 250)).ease(d3.easeCubicOut)
+          .attr('transform', (b) => `translate(${b.x},${b.y})`)
+          .attr('opacity', (b) => (b.state === 'leave' ? 0.3 : b.state === 'arrive' ? 0.6 : 1));
+
+        // Hover target for each column (blocks themselves ignore the pointer)
+        cols.selectAll<SVGRectElement, HistogramEntry>('rect.hit')
+          .data((d: any) => [d])
+          .join('rect').attr('class', 'hit')
+          .attr('x', (d: any) => xScale(Number(d.name)) - rawBw / 2).attr('width', rawBw)
+          .attr('y', 0).attr('height', H).attr('fill', 'transparent');
+
+        // Change counts above the towers, the floor ring, and the key
+        dataLayer.selectAll('.blk-anno').remove();
+        const anno = dataLayer.append('g').attr('class', 'blk-anno').style('pointer-events', 'none');
+        tops.forEach((t) => {
+          const n = Math.abs(t.delta);
+          anno.append('text')
+            .attr('x', xScale(t.col)).attr('y', t.top - 5)
+            .attr('text-anchor', 'middle').attr('font-size', '12px').attr('font-weight', '900')
+            .attr('stroke', 'white').attr('stroke-width', 3).style('paint-order', 'stroke')
+            .attr('fill', !t.leaving ? '#1c1917' : t.goingUp ? '#1d4ed8' : '#b45309')
+            .text(!t.leaving ? `+${n}` : t.goingUp ? `${n}→` : `←${n}`);
+        });
+        if (highlightFloor && floorCol >= 0) {
+          const nAtFloor = blocks.filter((b) => b.col === floorCol).length;
+          const p = blockPos(0, nAtFloor, s);
+          anno.append('rect')
+            .attr('x', towerX(floorCol) + p.x - 2.5).attr('y', H - pitch + BLOCK_GAP - 2.5)
+            .attr('width', s + 5).attr('height', s + 5).attr('rx', Math.max(3, s * 0.2))
+            .attr('fill', 'none').attr('stroke', '#2563eb').attr('stroke-width', 2.5);
+        }
+        const key = anno.append('g').attr('transform', `translate(${W},${-margin.top + 4})`);
+        const ks = 13;
+        const keyText = key.append('text').attr('x', 0).attr('y', ks - 2).attr('text-anchor', 'end')
+          .attr('font-size', '11px').attr('font-weight', '700').attr('fill', labelFg)
+          .text(`= ${unit} million people`);
+        const kw = (keyText.node() as SVGTextElement | null)?.getComputedTextLength() ?? 70;
+        drawBlockFace(key.append('g').attr('transform', `translate(${-kw - ks - 4},0)`), 7, ks);
+
+            } else if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
         const rectW    = faceCols * faceSize;
         const xOff     = (bw - rectW) / 2;
@@ -508,6 +651,7 @@ export default function D3Chart({
         .attr('class', 'overflow-plus')
         .attr('x', (d: any) => {
           const rectW = visualStyle.includes('faces') ? faceCols * calcFaceSize(bw, faceCols) : bw;
+          if (visualStyle === 'blocks') return xScale(Number(d.name));
           const xOff = visualStyle.includes('faces') ? (bw - rectW) / 2 : 0;
           return getX(d.name) + xOff + rectW / 2;
         })
@@ -529,6 +673,9 @@ export default function D3Chart({
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => '') as any)
         .call(styleAxis);
+
+      // Blocks carry their own key ("= 5 citizens"), so no y-axis
+      chart.select('.axis-y').style('display', visualStyle === 'blocks' ? 'none' : '');
 
       // Re-add the Axis Labels
       chart.select('.axis-y').append('text')
@@ -629,7 +776,7 @@ export default function D3Chart({
         .attr('cy', (d: any) => yScale(d.y))
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, ghostJson, bands, markerLabels, visualStyle, dims, faceCols, theme]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, ghostJson, bands, markerLabels, visualStyle, dims, faceCols, theme, perBlock, highlightFloor]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }

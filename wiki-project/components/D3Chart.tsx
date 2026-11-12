@@ -26,7 +26,11 @@ interface D3ChartProps {
   yAxisType: AxisVariable;
   color?: string;
   markers?: ChartMarker[];
-  visualStyle?: 'solid' | 'faces' | 'faces-segmented';
+  /** 'blocks': square face blocks stacked two to a row like building blocks, each a fixed
+   * number of people, with an odd block sitting centred on top (same as the game). */
+  visualStyle?: 'solid' | 'faces' | 'faces-segmented' | 'blocks';
+  /** Blocks only: people per block (shown as "million people"). Left out, the smallest of 1, 2, 5, 10, 20 that fits. */
+  perBlock?: number;
   yAxisMax?: number;
   faceCols?: number;
   activePolicyRules?: any[] | null;
@@ -72,6 +76,36 @@ const getAxisLabel = (a: AxisVariable): string => {
   }
 };
 
+const BLOCK_UNITS = [1, 2, 5, 10, 20];
+const BLOCK_GAP = 2;
+
+/** Blocks needed for a column: at least one if anyone is there, so a lone citizen never vanishes. */
+const blocksFor = (count: number, unit: number) => (count > 0 ? Math.max(1, Math.round(count / unit)) : 0);
+
+/** Where block k of a tower of n sits: two to a row from the bottom; an odd top block is centred. */
+function blockPos(k: number, n: number, s: number) {
+  const row = Math.floor(k / 2);
+  const alone = k === n - 1 && n % 2 === 1;
+  return { row, x: alone ? (s + BLOCK_GAP) / 2 : (k % 2) * (s + BLOCK_GAP) };
+}
+
+/** A square face: colour from red (LS 0) to green (LS 10); frown, flat or smile. */
+function drawBlockFace(g: d3.Selection<SVGGElement, any, any, any>, ls: number, s: number) {
+  const fill = d3.interpolateRdYlGn(ls / 10);
+  const ink = ls <= 1 || ls >= 9 ? '#ffffff' : '#1c1917';
+  g.append('rect').attr('class', 'blk-body').attr('width', s).attr('height', s).attr('rx', Math.max(2, s * 0.16))
+    .attr('fill', fill).attr('stroke', 'rgba(0,0,0,.22)').attr('stroke-width', 1);
+  const r = Math.max(1, s * 0.075);
+  g.append('circle').attr('cx', s * 0.31).attr('cy', s * 0.36).attr('r', r).attr('fill', ink);
+  g.append('circle').attr('cx', s * 0.69).attr('cy', s * 0.36).attr('r', r).attr('fill', ink);
+  const y = s * 0.64, x1 = s * 0.3, x2 = s * 0.7, bend = s * 0.12;
+  const d = ls <= 3 ? `M ${x1} ${y + bend * 0.6} Q ${s / 2} ${y - bend} ${x2} ${y + bend * 0.6}`
+    : ls <= 6 ? `M ${x1} ${y} L ${x2} ${y}`
+    : `M ${x1} ${y - bend * 0.4} Q ${s / 2} ${y + bend * 1.2} ${x2} ${y - bend * 0.4}`;
+  g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', ink)
+    .attr('stroke-width', Math.max(1, s * 0.09)).attr('stroke-linecap', 'round');
+}
+
 function calcFaceSize(bw: number, cols: number) {
   return bw / Math.max(1, cols);
 }
@@ -79,7 +113,7 @@ function calcFaceSize(bw: number, cols: number) {
 export default function D3Chart({
   plotType, chartData, histogramData, xAxisType, yAxisType, color,
   markers, yAxisMax = 80, visualStyle = 'faces', faceCols = 2,
-  activePolicyRules = null, theme = 'light',
+  activePolicyRules = null, theme = 'light', perBlock,
 }: D3ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef       = useRef<SVGSVGElement>(null);
@@ -236,7 +270,66 @@ export default function D3Chart({
         });
         if (!ENABLE_TOOLTIPS) cols.style('cursor', null).on('mouseenter', null).on('mouseleave', null);
 
-      if (visualStyle === 'faces') {
+      // Blocks are drawn straight into the data layer; clear them for the other styles.
+      if (visualStyle !== 'blocks') {
+        dataLayer.selectAll('g.blk').remove();
+        dataLayer.selectAll('.blk-anno').remove();
+      }
+
+      if (visualStyle === 'blocks') {
+        cols.selectAll('rect.face-bar').remove();
+        cols.selectAll('rect.segment').remove();
+
+        // Block size: two to a row, filling most of the column
+        const colW = rawBw * 0.9;
+        let s = Math.max(4, (colW - BLOCK_GAP) / 2);
+        // People per block: the smallest nice number whose tallest tower fits
+        const fits = (u: number, size: number) => Math.ceil(blocksFor(yAxisMax, u) / 2) * (size + BLOCK_GAP) <= H;
+        const unit = perBlock ?? BLOCK_UNITS.find((u) => fits(u, s)) ?? BLOCK_UNITS[BLOCK_UNITS.length - 1];
+        while (!fits(unit, s) && s > 4) s -= 1;
+        const pitch = s + BLOCK_GAP;
+        const towerW = 2 * s + BLOCK_GAP;
+        const towerX = (name: string | number) => xScale(Number(name)) - towerW / 2;
+
+        type Blk = { key: string; ls: number; x: number; y: number };
+        const blocks: Blk[] = [];
+        histogramData.forEach((d) => {
+          const col = Number(d.name);
+          const n = blocksFor(Math.min(d.count, yAxisMax), unit);
+          for (let k = 0; k < n; k++) {
+            const p = blockPos(k, n, s);
+            blocks.push({ key: `${col}-${k}`, ls: col, x: towerX(col) + p.x, y: H - (p.row + 1) * pitch + BLOCK_GAP });
+          }
+        });
+
+        dataLayer.selectAll<SVGGElement, Blk>('g.blk')
+          .data(blocks, (b) => b.key)
+          .join(
+            (enter) => enter.append('g').attr('class', 'blk').style('pointer-events', 'none')
+              .attr('transform', (b) => `translate(${b.x},${b.y - 24})`).attr('opacity', 0)
+              .each(function (b) { drawBlockFace(d3.select(this), b.ls, s); }),
+            (update) => update.each(function (b) {
+              const g = d3.select(this);
+              if (Number(g.select('rect.blk-body').attr('width')) !== s) { g.selectAll('*').remove(); drawBlockFace(g, b.ls, s); }
+            }),
+            (exit) => exit.transition().duration(300).attr('opacity', 0).remove(),
+          )
+          .transition().duration(700).ease(d3.easeCubicOut)
+          .attr('transform', (b) => `translate(${b.x},${b.y})`)
+          .attr('opacity', 1);
+
+        // The key
+        dataLayer.selectAll('.blk-anno').remove();
+        const key = dataLayer.append('g').attr('class', 'blk-anno').style('pointer-events', 'none')
+          .attr('transform', `translate(${W},${-margin.top + 4})`);
+        const ks = 13;
+        const keyText = key.append('text').attr('x', 0).attr('y', ks - 2).attr('text-anchor', 'end')
+          .attr('font-size', '11px').attr('font-weight', '700').attr('fill', labelFg)
+          .text(`= ${unit} million people`);
+        const kw = (keyText.node() as SVGTextElement | null)?.getComputedTextLength() ?? 70;
+        drawBlockFace(key.append('g').attr('transform', `translate(${-kw - ks - 4},0)`), 7, ks);
+
+      } else if (visualStyle === 'faces') {
         const faceSize = calcFaceSize(bw, faceCols);
         const rectW    = faceCols * faceSize;
         const xOff     = (bw - rectW) / 2;
@@ -404,6 +497,7 @@ export default function D3Chart({
       cols.append('text')
         .attr('class', 'overflow-plus')
         .attr('x', (d: any) => {
+          if (visualStyle === 'blocks') return xScale(Number(d.name));
           const rectW = visualStyle.includes('faces') ? faceCols * calcFaceSize(bw, faceCols) : bw;
           const xOff = visualStyle.includes('faces') ? (bw - rectW) / 2 : 0;
           return getX(d.name) + xOff + rectW / 2;
@@ -426,6 +520,9 @@ export default function D3Chart({
         .transition().duration(dims.width ? 0 : 500)
         .call(d3.axisLeft(yScale).ticks(5).tickFormat(() => '') as any)
         .call(styleAxis);
+
+      // Blocks carry their own key ("= 1 million people"), so no y-axis
+      chart.select('.axis-y').style('display', visualStyle === 'blocks' ? 'none' : '');
 
       // Re-add the Axis Labels
       chart.select('.axis-y').append('text')
@@ -507,7 +604,7 @@ export default function D3Chart({
         .attr('r', 5).style('fill', baseColor).style('opacity', 0.7);
     }
 
-  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols, theme]);
+  }, [plotType, chartData, histogramData, xAxisType, yAxisType, color, markersJson, rulesJson, visualStyle, dims, faceCols, theme, perBlock]);
 
   return <div ref={containerRef} className="w-full h-full relative"><svg ref={svgRef} /></div>;
 }

@@ -16,7 +16,7 @@ const Container = ({ children }: { children: React.ReactNode }) => (
 const ChartBox = ({ title, children, desc }: { title: string, children: React.ReactNode, desc: string }) => (
   <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xl flex flex-col">
     <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-100 mb-4">{title}</h4>
-    <div className="h-64 w-full relative min-h-0">
+    <div className="h-80 w-full relative min-h-0">
       {children}
     </div>
     <p className="mt-4 text-xs text-zinc-400 text-center">{desc}</p>
@@ -54,8 +54,8 @@ export function DistributionMeanDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#3b82f6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={30}
           theme="dark"
           markers={[{ value: 5.5, label: 'Mean: 5.5', color: '#fbbf24', dashed: true }]}
@@ -69,8 +69,8 @@ export function DistributionMeanDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#3b82f6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={30}
           theme="dark"
           markers={[{ value: 5.5, label: 'Mean: 5.5', color: '#fbbf24', dashed: true }]}
@@ -106,8 +106,8 @@ export function DistributionFloorDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#10b981"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={40}
           theme="dark"
           markers={[
@@ -124,8 +124,8 @@ export function DistributionFloorDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#10b981"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={40}
           theme="dark"
           markers={[
@@ -163,8 +163,8 @@ export function DistributionDispersionDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#8b5cf6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={35}
           theme="dark"
           markers={[
@@ -182,8 +182,8 @@ export function DistributionDispersionDiagram() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#8b5cf6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={35}
           theme="dark"
           markers={[
@@ -220,8 +220,8 @@ export function BenthamiteMeanShift() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#3b82f6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={30}
           theme="dark"
           markers={[{ value: meanBefore, label: `Mean: ${meanBefore.toFixed(2)}`, color: '#fbbf24', dashed: true }]}
@@ -236,8 +236,8 @@ export function BenthamiteMeanShift() {
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={AxisVariable.LifeSatisfaction}
           color="#3b82f6"
-          visualStyle="faces"
-          faceCols={1}
+          visualStyle="blocks"
+          perBlock={1}
           yAxisMax={30}
           theme="dark"
           markers={[
@@ -278,8 +278,8 @@ function PolicyGrid({ title, titleClass, color, markerColor, panels }: {
                 xAxisType={AxisVariable.LifeSatisfaction}
                 yAxisType={AxisVariable.LifeSatisfaction}
                 color={color}
-                visualStyle="faces"
-                faceCols={1}
+                visualStyle="blocks"
+                perBlock={1}
                 yAxisMax={25}
                 theme="dark"
                 markers={[{ value: p.marker.value, label: p.marker.label, color: markerColor, dashed: true }]}

@@ -253,7 +253,7 @@ export default function AcademicDebriefOverlay() {
                       <h3 className="text-sm font-black text-zinc-200 uppercase tracking-widest text-center mb-2">{soc.label}</h3>
                       <div className="relative h-[200px]">
                         <div className={`w-full h-full pointer-events-none transition-opacity duration-500 ${guess ? 'opacity-20' : 'opacity-100'}`}>
-                          <D3Chart plotType="1D" chartData={[]} histogramData={soc.data} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='faces' yAxisMax={yAxisMax} faceCols={1} theme="dark"/>
+                          <D3Chart plotType="1D" chartData={[]} histogramData={soc.data} xAxisType={AxisVariable.LifeSatisfaction} yAxisType={AxisVariable.LifeSatisfaction} color="#ec4899" visualStyle='blocks' yAxisMax={yAxisMax} theme="dark"/>
                         </div>
                         {guess && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in zoom-in duration-300"><span className="text-xs font-bold text-pink-400 uppercase tracking-widest mb-1">Average LS</span><strong className="text-5xl font-black text-pink-300">5.0</strong></div>}
                       </div>
