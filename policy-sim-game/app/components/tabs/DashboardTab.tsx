@@ -339,16 +339,19 @@ export default function DashboardTab() {
                 </div>
               ) : (
                 <>
-                  {/* Underneath the paper: an empty flap, or "sent" once signed */}
+                  {/* Underneath the paper: an empty flap. Its hint stays hidden from the
+                      signature until the new day has settled, so nothing flickers on the
+                      flap while the bill becomes law and the calendar turns. */}
                   <div className="absolute inset-0 border-[3px] border-dashed border-[rgba(92,66,20,.35)] flex flex-col items-center justify-center gap-2 text-center px-10 text-[#5c4214]">
-                    <span className="font-display font-black text-[clamp(22px,2vw,28px)]">
-                      {signedId ? "Sent to Parliament ✓" : "Four bills in the tray"}
-                    </span>
-                    <span className="text-[14px] leading-relaxed">
-                      {signedId
-                        ? "It becomes law now. Its effects show tomorrow."
-                        : "Pull one out to read it. It lands here, and its effect shows on the country."}
-                    </span>
+                    <div
+                      className="flex flex-col items-center gap-2 transition-opacity duration-500"
+                      style={{ opacity: signingId || signedId || isEnacting || dayCard ? 0 : 1 }}
+                    >
+                      <span className="font-display font-black text-[clamp(22px,2vw,28px)]">Four bills in the tray</span>
+                      <span className="text-[14px] leading-relaxed">
+                        Pull one out to read it. It lands here, and its effect shows on the country.
+                      </span>
+                    </div>
                   </div>
 
                   <AnimatePresence>
