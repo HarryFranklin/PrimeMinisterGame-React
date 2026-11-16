@@ -135,7 +135,7 @@ export const REVEAL_TEXT = {
   },
   bridge: {
     title: 'What this means for Level 4:',
-    body: 'Level 3 judged you by how the public values other people’s lives. Level 4 judges you by how people value their own, which gives the worst-off less extra weight. You’ll face the same policies, through a different lens.',
+    body: 'Level 3 judged you by how the public values other people’s lives. Level 4 judges you by how people value their own, which gives the worst-off less extra weight. You’ll be offered the same set of bills as in Level 3, judged through a different lens.',
   },
   chart: {
     title: (from: number, to: number) => `How many points is lifting one person from LS ${from} to LS ${to} worth?`,
