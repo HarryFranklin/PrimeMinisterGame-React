@@ -321,7 +321,7 @@ export default function DashboardTab() {
             {/* Right flap: the bill, the Deputy PM's note, or the term's bills */}
             <div className="relative min-h-0 min-w-0">
               {isParliamentDissolved ? (
-                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-auto rotate-[.4deg]">
+                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-hidden rotate-[.4deg]">
                   <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Parliament is dissolved</span>
                   <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Signed into law this term</span>
                   <span className="text-[13px] text-stone-600">

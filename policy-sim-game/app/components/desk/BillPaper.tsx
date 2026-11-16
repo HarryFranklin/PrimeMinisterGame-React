@@ -61,7 +61,7 @@ export default function BillPaper({ policy, billNumber, population, pmName, sign
       </div>
 
       <h2 className="font-display font-black text-[clamp(24px,2.3vw,36px)] leading-[1.05] text-[#2a1f0e] m-0">{policy.policyName}</h2>
-      <p className="text-[15px] leading-relaxed text-stone-700 m-0">{policy.description}</p>
+      <p className="text-[clamp(13px,1.05vw,15px)] leading-relaxed text-stone-700 m-0">{policy.description}</p>
 
       <div className="flex flex-col gap-1">
         <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">Overall</span>
@@ -69,10 +69,10 @@ export default function BillPaper({ policy, billNumber, population, pmName, sign
         <div className="flex justify-between text-[10px] font-bold text-stone-500"><span>0</span><span>5</span><span>10</span></div>
       </div>
 
-      <div className="flex flex-col gap-1.5 min-h-0 overflow-y-auto">
+      <div className="flex flex-col gap-[clamp(2px,0.4vw,6px)] min-h-0 overflow-y-auto">
         <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#7c5a1d]">In numbers</span>
         {policy.specificRules.map((r, i) => (
-          <span key={i} className="text-[13px] text-stone-700 leading-snug">
+          <span key={i} className="text-[clamp(12px,0.92vw,13px)] text-stone-700 leading-snug">
             <strong style={{ color: r.impact > 0 ? '#1d4ed8' : '#b45309' }}>{r.impact > 0 ? '▲' : '▼'}</strong>{' '}
             {ruleCoverageText(r, population)} · {r.note}
           </span>

@@ -74,7 +74,7 @@ export default function SignedBills({ bills, hoveredId, metricAbbreviation, colo
               finishHover(hoverStart);
               clearTimer.current = setTimeout(() => { clearTimer.current = null; onHover(null, null); }, CLEAR_DELAY_MS);
             }}
-            className="relative flex-1 min-h-[88px] grid grid-cols-[52px_1fr_auto] gap-3 items-center bg-[#fffdf7] rounded-[3px] px-3 py-2.5 cursor-default border-l-4 shadow-[0_2px_6px_rgba(60,40,10,.15)]"
+            className="relative flex-1 min-h-0 grid grid-cols-[52px_1fr_auto] gap-3 items-center bg-[#fffdf7] rounded-[3px] px-3 py-2.5 cursor-default border-l-4 shadow-[0_2px_6px_rgba(60,40,10,.15)]"
             style={{ borderLeftColor: on ? color : '#e7dcc0' }}
           >
             {/* Little calendar page: the day it was signed */}
@@ -85,7 +85,7 @@ export default function SignedBills({ bills, hoveredId, metricAbbreviation, colo
 
             <div className="min-w-0 flex flex-col gap-1">
               <span className="font-display font-black text-[16px] leading-tight text-[#2a1f0e] truncate">{bill.name}</span>
-              {bill.description && <span className="text-[11.5px] leading-snug text-stone-600 line-clamp-4">{bill.description}</span>}
+              {bill.description && <span className="text-[11.5px] leading-snug text-stone-600 line-clamp-3">{bill.description}</span>}
               <OverallBar directions={bill.directions} height={8} />
             </div>
 
