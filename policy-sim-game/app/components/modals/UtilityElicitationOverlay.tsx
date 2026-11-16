@@ -74,8 +74,7 @@ export default function UtilityElicitationOverlay() {
   // Refreshed after the last answer but before the block was marked done.
   useEffect(() => {
     if (state && stage === 'gambles' && orderIndex === -1 && !state.completed) {
-      if (block === 'personal') setStage('reveal');
-      else finish(state);
+      setStage('reveal');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, stage, orderIndex]);
@@ -101,11 +100,8 @@ export default function UtilityElicitationOverlay() {
       track('elicitation_gamble_completed', {
         block, point, order_index: orderIndex, loss_risk: updated.lossRisk ?? 0,
       });
-      // The personal block ends on the reveal; the social block goes straight to Level 3.
-      if (orderIndex === state.order.length - 1) {
-        if (block === 'personal') setStage('reveal');
-        else finish(next);
-      }
+      // Both blocks end on a reveal of the player's answers.
+      if (orderIndex === state.order.length - 1) setStage('reveal');
     }
   };
 
@@ -159,8 +155,9 @@ export default function UtilityElicitationOverlay() {
 
             {stage === 'reveal' && (
                 <RevealScreen
+                  block={block}
                   social={chainedCurve(elicitation.social.records)}
-                  personal={chainedCurve(state.records)}
+                  personal={block === 'personal' ? chainedCurve(state.records) : null}
                   onContinue={() => finish(state)}
                 />
               )}

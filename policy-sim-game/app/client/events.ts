@@ -622,14 +622,16 @@ export type TelemetryEvent =
       payload: { cycle: string; turn: number };
     }
 
-    // ---- Reveal (end of the personal block) ----
+    // ---- Reveal (end of each gamble block) ----
   | {
       event: "elicitation_reveal_opened";
-      payload: { social_attitude: string | null; personal_attitude: string | null; direction: string | null };
+      // block 'social': shown after the Level 3 gambles; direction is then the
+      // player's social curve against the public's ('higher' = more cautious).
+      payload: { block: "social" | "personal"; social_attitude: string | null; personal_attitude: string | null; direction: string | null };
     }
     
-  | { event: "elicitation_reveal_step_selected"; payload: { from: number; to: number } }
-  | { event: "elicitation_reveal_closed"; payload: { dwell_ms: number; steps_viewed: number } }
+  | { event: "elicitation_reveal_step_selected"; payload: { block: "social" | "personal"; from: number; to: number } }
+  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number; steps_viewed: number } }
 
   // ---- Post-game ----
   | {
