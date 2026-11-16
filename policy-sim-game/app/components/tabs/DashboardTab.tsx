@@ -25,8 +25,9 @@ import { useTooltipTelemetry } from "../../client/hooks";
  *  - An open case folder: the country on graph paper on the left flap; the
  *    open bill (or the Deputy PM's note) on the right flap.
  *  - The in-tray: today's four bills as files, each with its paper sticking out.
- * A turn: pull a bill's paper out (its effect is ghosted on the chart) → Sign
- * (pen writes the signature, the paper slides away) → Continue (enacts it).
+ * A turn: pull a bill's paper out (its effect is previewed on the chart) → Sign
+ * (pen writes the signature, the paper slides away) → it is enacted straight away.
+ * Continue is only used at the end of the term (to the press conference).
  */
 export default function DashboardTab() {
   const {
@@ -58,6 +59,8 @@ export default function DashboardTab() {
   const signingId = sign.day === dayKey ? sign.signing : null;
   const signedId = sign.day === dayKey ? sign.signed : null;
   const signTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a signature finishes: the bill is then enacted without a Continue click.
+  const enactWhenSigned = useRef(false);
 
   // New-day card: a calendar page that drops onto the desk after Continue.
   const [dayCard, setDayCard] = useState<{ from: number; to: number | null; key: number } | null>(null);
@@ -157,6 +160,7 @@ export default function DashboardTab() {
     const day = dayKey;
     setSign({ day, signing: id, signed: null });
     signTimer.current = setTimeout(() => {
+      enactWhenSigned.current = true;
       setSign((s) => (s.day === day ? { day, signing: null, signed: id } : s));
     }, SIGN_SEQUENCE_MS);
   };
@@ -182,6 +186,15 @@ export default function DashboardTab() {
       dayTimers.current.push(setTimeout(() => setDayCard((c) => (c?.key === key ? null : c)), 2700));
     }
   };
+
+  // Signing is enough: once the signature is done, the bill is enacted (no extra Continue click).
+  useEffect(() => {
+    if (continueState === "ready" && enactWhenSigned.current) {
+      enactWhenSigned.current = false;
+      onContinue();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [continueState]);
 
   const status = termStatus(turnMetricScore, startScore, targetScore, currentTurn, TURNS_PER_CYCLE);
   
@@ -314,7 +327,7 @@ export default function DashboardTab() {
                     </span>
                     <span className="text-[14px] leading-relaxed">
                       {signedId
-                        ? "It becomes law when you press Continue. Its effects show tomorrow."
+                        ? "It becomes law now. Its effects show tomorrow."
                         : "Pull one out to read it. It lands here, and its effect shows on the country."}
                     </span>
                   </div>
