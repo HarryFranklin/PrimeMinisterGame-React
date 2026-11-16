@@ -46,6 +46,8 @@ export default function DashboardTab() {
 
   const [hoveredEnactedId, setHoveredEnactedId] = useState<string | null>(null);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
+  // Bill preview: "Compare with today" (off: the predicted country, played column by column)
+  const [compareWithToday, setCompareWithToday] = useState(false);
   const { trackHover } = useTooltipTelemetry();
 
   // Signing: `signingId` while the pen writes and the paper slides away;
@@ -194,7 +196,22 @@ export default function DashboardTab() {
     ? hoveredHistoryTurn !== null
       ? `Before and after: ${hoveredEnacted?.policyName ?? "this bill"}`
       : "The country on polling day"
-    : "The country today";
+    : billOpen
+      ? `Previewing: ${selectedPolicy!.policyName}`
+      : "The country today";
+
+  // Bill preview, column by column: step k = the people starting in columns 0..k-1 have moved
+  const flowSteps = useMemo(() => {
+    if (!billOpen) return null;
+    const bin = (ls: number) => Math.min(10, Math.max(0, Math.round(ls)));
+    const from = population.map((r) => bin(r.currentLS));
+    const to = previewPopulation.map((r) => bin(r.currentLS));
+    return Array.from({ length: 12 }, (_, k) => {
+      const counts = Array<number>(11).fill(0);
+      from.forEach((f, i) => { counts[f < k ? to[i] : f] += 1; });
+      return counts.map((count, name) => ({ name, count }));
+    });
+  }, [billOpen, population, previewPopulation]);
 
   return (
     <div className="desk-wood -m-4 h-[calc(100%+2rem)] flex flex-col relative overflow-hidden">
@@ -254,6 +271,13 @@ export default function DashboardTab() {
                 population={population}
                 isUtilityCycle={isUtilityCycle}
                 activeRules={billOpen ? selectedPolicy!.specificRules : isParliamentDissolved && hoveredEnacted ? hoveredEnacted.specificRules : null}
+                previewing={billOpen}
+                flowSteps={flowSteps}
+                compare={compareWithToday}
+                onCompareChange={(on) => {
+                  setCompareWithToday(on);
+                  if (selectedPolicy) track("preview_compare_toggled", { on, policy_id: selectedPolicy.id, turn: currentTurn });
+                }}
                 emptyHint={
                   isParliamentDissolved
                     ? "Hover over a bill on the right to see what it did."

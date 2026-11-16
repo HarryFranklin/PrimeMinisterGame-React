@@ -204,6 +204,11 @@ export type TelemetryEvent =
       payload: { chart?: string; bin: number; count: number; dwell_ms: number };
     }
   | {
+      /** The "Compare with today" box on the bill preview was ticked or unticked. */
+      event: "preview_compare_toggled";
+      payload: { on: boolean; policy_id: string; turn: number };
+    }
+  | {
       /** Hovered one entry of the enacted-policies history for at least 250 ms. */
       event: "enacted_policy_hovered";
       payload: { index: number; policy_id: string | null; enacted_turn: number; dwell_ms: number };

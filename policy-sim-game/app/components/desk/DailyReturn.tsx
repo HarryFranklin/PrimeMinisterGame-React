@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AxisVariable, ElectionCycle, PolicyRule, Respondent } from '../../utils/types';
 import { FrameworkRule } from '../../utils/frameworkRules';
 import D3Chart, { ChartMarker } from '../D3Chart';
@@ -22,7 +22,19 @@ interface DailyReturnProps {
   /** The open bill's rules: strips under the chart (and colours on the +1 bars). */
   activeRules: PolicyRule[] | null;
   emptyHint: string;
+  /** A bill is open: the chart shows the country if it were signed. */
+  previewing: boolean;
+  /** Previewing: the counts after moving the people in columns 0..k-1 (k = 0..11),
+   * so the preview can play column by column from LS 0 upwards. */
+  flowSteps: HistogramBin[][] | null;
+  /** Previewing: show today's country with the arrivals/leavers overlaid instead. */
+  compare: boolean;
+  onCompareChange: (on: boolean) => void;
 }
+
+/** Time before the first column moves, and between columns. */
+const FLOW_START_MS = 350;
+const FLOW_STEP_MS = 450;
 
 /**
  * The country, clipped to the left flap of the folder: one face per group of
@@ -31,8 +43,29 @@ interface DailyReturnProps {
  */
 export default function DailyReturn({
   cycle, rule, title, histogramData, ghostHistogramData, markers, yAxisMax,
-  population, isUtilityCycle, activeRules, emptyHint,
+  population, isUtilityCycle, activeRules, emptyHint, previewing, flowSteps, compare, onCompareChange,
 }: DailyReturnProps) {
+  // Play the preview: column 0's people move, then column 1's, … up to 10.
+  const [step, setStep] = useState(0);
+  const flowKey = flowSteps ? JSON.stringify(flowSteps[flowSteps.length - 1]) : '';
+  useEffect(() => {
+    if (!flowSteps || compare) return;
+    setStep(0);
+    const beats: number[] = [];
+    for (let k = 0; k < flowSteps.length - 1; k++) {
+      if (JSON.stringify(flowSteps[k]) !== JSON.stringify(flowSteps[k + 1])) beats.push(k + 1);
+    }
+    const last = flowSteps.length - 1;
+    const timers = beats.map((k, i) => setTimeout(() => setStep(k), FLOW_START_MS + i * FLOW_STEP_MS));
+    timers.push(setTimeout(() => setStep(last), FLOW_START_MS + beats.length * FLOW_STEP_MS));
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowKey, compare]);
+
+  const animated = previewing && !!flowSteps && !compare;
+  const shownHistogram = animated ? flowSteps![Math.min(step, flowSteps!.length - 1)] : histogramData;
+  const shownGhost = previewing ? (compare ? ghostHistogramData : null) : ghostHistogramData;
+
   return (
     <div className="desk-graph relative h-full flex flex-col gap-1.5 px-4 pt-3 pb-3 shadow-[0_4px_10px_rgba(60,40,10,.25)] -rotate-[.4deg]">
       {/* Paperclip */}
@@ -43,8 +76,24 @@ export default function DailyReturn({
         <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#5c4214]">{rule.graphTitle}</span>
       </div>
       <div className="flex justify-between items-baseline gap-3">
-        <span className="font-display font-black text-[clamp(18px,1.7vw,24px)] text-[#2a1f0e]">{title}</span>
-        {ghostHistogramData && (
+        <span className="font-display font-black text-[clamp(18px,1.7vw,24px)] text-[#2a1f0e] min-w-0 truncate">{title}</span>
+        {previewing && (
+          <label className="shrink-0 flex items-center gap-1.5 text-[12px] font-bold text-stone-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={compare}
+              onChange={(e) => onCompareChange(e.target.checked)}
+              className="w-3.5 h-3.5 accent-[#3f2a14] cursor-pointer"
+            />
+            Compare with today
+          </label>
+        )}
+      </div>
+      <div className="flex justify-end -mt-1 min-h-[30px]">
+        {animated && (
+          <span className="text-[11px] text-stone-600 text-right leading-snug">If you sign it: people move from LS 0 upwards</span>
+        )}
+        {shownGhost && (
           <span className="text-[11px] text-stone-600 text-right leading-snug flex flex-col">
             <span>Dashed: would arrive</span>
             <span>
@@ -63,8 +112,8 @@ export default function DailyReturn({
         <D3Chart
           plotType="1D"
           chartData={[]}
-          histogramData={histogramData}
-          ghostHistogramData={ghostHistogramData}
+          histogramData={shownHistogram}
+          ghostHistogramData={shownGhost}
           xAxisType={AxisVariable.LifeSatisfaction}
           yAxisType={rule.yAxisType}
           color={rule.graphColor}

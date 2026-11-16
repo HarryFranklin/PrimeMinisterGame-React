@@ -373,18 +373,43 @@ export default function D3Chart({
         });
 
         const speed = isHistUpdate ? 700 : 0;
+
+        // People moving: a block that leaves one column while one appears in another
+        // flies across (changing colour on the way), rather than fading out and in.
+        const FLY = 450;
+        const oldBlocks = dataLayer.selectAll<SVGGElement, Blk>('g.blk').data();
+        const oldKeys = new Set(oldBlocks.map((b) => b.key));
+        const newKeys = new Set(blocks.map((b) => b.key));
+        const leaving = oldBlocks.filter((b) => !newKeys.has(b.key)).sort((a, b) => a.col - b.col || a.y - b.y);
+        const arriving = blocks.filter((b) => !oldKeys.has(b.key)).sort((a, b) => a.col - b.col || b.y - a.y);
+        const flyTo = new Map<string, Blk>();
+        const landing = new Set<string>();
+        if (isHistUpdate && oldBlocks.length > 0) {
+          leaving.forEach((b, i) => { const t = arriving[i]; if (t) { flyTo.set(b.key, t); landing.add(t.key); } });
+        }
+
         dataLayer.selectAll<SVGGElement, Blk>('g.blk')
           .data(blocks, (b) => b.key)
           .join(
             (enter) => enter.append('g').attr('class', 'blk').style('pointer-events', 'none')
-              .attr('transform', (b) => `translate(${b.x},${b.y - 24})`).attr('opacity', 0)
+              .attr('transform', (b) => (landing.has(b.key) ? `translate(${b.x},${b.y})` : `translate(${b.x},${b.y - 24})`)).attr('opacity', 0)
               .each(function (b) { drawBlockFace(d3.select(this), b.ls, s); }),
             (update) => update.each(function (b) {
               // Size changed (resize): redraw the face
               const g = d3.select(this);
               if (Number(g.select('rect.blk-body').attr('width')) !== s) { g.selectAll('*').remove(); drawBlockFace(g, b.ls, s); }
             }),
-            (exit) => exit.transition().duration(300).attr('opacity', 0).remove(),
+            (exit) => {
+              exit.attr('class', 'blk-gone');
+              exit.filter((b) => flyTo.has(b.key)).raise().each(function (b) {
+                const t = flyTo.get(b.key)!;
+                const g = d3.select(this);
+                g.transition().duration(FLY).ease(d3.easeCubicInOut).attr('transform', `translate(${t.x},${t.y})`).attr('opacity', 1).remove();
+                g.select('rect.blk-body').transition().duration(FLY).attr('fill', d3.interpolateRdYlGn(t.ls / 10));
+              });
+              exit.filter((b) => !flyTo.has(b.key)).transition().duration(300).attr('opacity', 0).remove();
+              return exit;
+            },
           )
           .each(function (b) {
             d3.select(this).select('rect.blk-body')
@@ -392,7 +417,9 @@ export default function D3Chart({
               .attr('stroke-width', b.state === 'solid' ? 1 : 1.75)
               .attr('stroke-dasharray', b.state === 'arrive' ? '4,2' : b.state === 'leave' ? '2,2' : 'none');
           })
-          .transition().duration((b) => (b.state === 'solid' ? speed : 250)).ease(d3.easeCubicOut)
+          .transition()
+          .delay((b) => (landing.has(b.key) ? FLY : 0))
+          .duration((b) => (landing.has(b.key) ? 0 : b.state === 'solid' ? speed : 250)).ease(d3.easeCubicOut)
           .attr('transform', (b) => `translate(${b.x},${b.y})`)
           .attr('opacity', (b) => (b.state === 'leave' ? 0.3 : b.state === 'arrive' ? 0.6 : 1));
 
