@@ -16,7 +16,7 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.6 (29 Oct 2026, draft)';
+export const QUESTIONNAIRE_VERSION = 'q-0.7 (16 Nov 2026, pilot)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -531,7 +531,7 @@ export const POSTTEST: Page[] = [
       {
         id: 'lo2_1',
         type: 'multi',
-        prompt: 'Select all that are true about the Benthamite approach:',
+        prompt: 'Select all that are true about the Benthamite approach (NALS):',
         options: opts(
           'Maximises the total life satisfaction gained across everyone',
           'Aims to make everyone’s outcome as equal as possible',
@@ -542,7 +542,7 @@ export const POSTTEST: Page[] = [
       {
         id: 'lo2_2',
         type: 'multi',
-        prompt: 'Select all that are true about the Rawlsian approach:',
+        prompt: 'Select all that are true about the Rawlsian approach (MWB):',
         options: opts(
           'Treats a 1-point gain as equally valuable, whoever receives it',
           'Maximises the total life satisfaction gained across everyone',
@@ -556,8 +556,8 @@ export const POSTTEST: Page[] = [
         type: 'grid',
         prompt: 'Given these 3 societies, which would be classed as the better one under each approach?',
         rows: [
-          { value: 'benthamite', label: 'Under Benthamite logic' },
-          { value: 'rawlsian', label: 'Under Rawlsian logic' },
+          { value: 'benthamite', label: 'Under the Benthamite approach (NALS)' },
+          { value: 'rawlsian', label: 'Under the Rawlsian approach (MWB)' },
         ],
         options: SOCIETIES_ABC,
       },
@@ -597,8 +597,8 @@ export const POSTTEST: Page[] = [
         type: 'grid',
         prompt: 'Which system is…',
         rows: [
-          { value: 'benthamite', label: 'Benthamite' },
-          { value: 'rawlsian', label: 'Rawlsian' },
+          { value: 'benthamite', label: 'Benthamite (NALS)' },
+          { value: 'rawlsian', label: 'Rawlsian (MWB)' },
           { value: 'between', label: 'Somewhere in between' },
         ],
         options: [
@@ -634,13 +634,13 @@ export const POSTTEST: Page[] = [
       {
         id: 'lo4_1b_personal',
         type: 'single',
-        prompt: 'If a government chose policies based on **personal utility**, the value of each person’s gain would come from…',
+        prompt: 'If a government chose policies based on **personal utility** (NPS), the value of each person’s gain would come from…',
         options: UTILITY_SOURCES,
       },
       {
         id: 'lo4_1b_social',
         type: 'single',
-        prompt: 'If a government chose policies based on **social utility**, the value of each person’s gain would come from…',
+        prompt: 'If a government chose policies based on **social utility** (NFI), the value of each person’s gain would come from…',
         options: UTILITY_SOURCES,
       },
       {
@@ -663,23 +663,24 @@ export const POSTTEST: Page[] = [
       {
         type: 'info',
         text:
-          'The table below shows two policies, and how much each person’s 1-point gain is worth under personal and social utility. Policy A raises 5 people by 1 point, from 6 to 7. Policy B raises 1 person by 1 point, from 2 to 3.',
+          'Two policies each raise people by 1 point. The table shows how much each person’s 1-point gain is worth under personal and social utility. A policy’s total value is the value of each person’s gain, added up across everyone it raises.',
       },
       {
         type: 'table',
-        columns: ['Policy', 'People raised', 'Each person goes from…', 'Personal value per person', 'Social value per person'],
+        columns: ['', 'Policy A', 'Policy B'],
         rows: [
-          ['A', '5', '6 to 7', '60', '10'],
-          ['B', '1', '2 to 3', '100', '100'],
+          ['Who it raises', '5 people, each from 6 to 7', '1 person, from 2 to 3'],
+          ['Personal utility (NPS): value of each person’s gain', '60', '100'],
+          ['Social utility (NFI): value of each person’s gain', '10', '100'],
         ],
       },
       {
         id: 'lo4_4',
         type: 'grid',
-        prompt: 'Which policy does each approach favour?',
+        prompt: 'Which policy has the higher total value under each approach?',
         rows: [
-          { value: 'personal', label: 'Personal utility favours…' },
-          { value: 'social', label: 'Social utility favours…' },
+          { value: 'personal', label: 'Personal utility (NPS)' },
+          { value: 'social', label: 'Social utility (NFI)' },
         ],
         options: [
           { value: 'A', label: 'Policy A' },
@@ -697,8 +698,8 @@ export const POSTTEST: Page[] = [
           { value: 'c', label: 'It always maximises total life satisfaction, whoever gains' },
         ],
         options: [
-          { value: 'personal', label: 'Personal utility' },
-          { value: 'social', label: 'Social utility' },
+          { value: 'personal', label: 'Personal utility (NPS)' },
+          { value: 'social', label: 'Social utility (NFI)' },
           { value: 'neither', label: 'Neither' },
         ],
       },

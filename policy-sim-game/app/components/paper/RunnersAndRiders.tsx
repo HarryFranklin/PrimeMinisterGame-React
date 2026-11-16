@@ -25,12 +25,13 @@ export interface RunnerEntry {
   onReplay?: () => void;
 }
 
-/** What each measure means, in a sentence or two. */
-export const JUDGED: Record<ElectionCycle, { on: string; blurb: string }> = {
-  [ElectionCycle.Benthamite]: { on: 'the national average', blurb: 'Adds up everyone’s life satisfaction and divides by the number of people. A point for someone thriving counts the same as a point for someone struggling.' },
-  [ElectionCycle.Rawlsian]: { on: 'the single worst-off person', blurb: 'Only the lowest score in the country counts. Make everyone else happier and, if the bottom doesn’t move, her number won’t either.' },
-  [ElectionCycle.SocietalUtility]: { on: 'fairness for others', blurb: 'Scores the country on how citizens judge its whole spread of life satisfaction when deciding for others.' },
-  [ElectionCycle.PersonalUtility]: { on: 'own lives', blurb: 'Each citizen values their own life by their own standards. What one person prizes, another may not care about.' },
+/** What each measure means, in a sentence or two, and the name of the approach it belongs to
+ * (the same names the wiki and the post-test use). */
+export const JUDGED: Record<ElectionCycle, { on: string; approach: string; approachLine: string; blurb: string }> = {
+  [ElectionCycle.Benthamite]: { on: 'the national average', approach: 'The Benthamite approach', approachLine: 'This is the Benthamite approach: every point of life satisfaction counts the same, whoever gains it.', blurb: 'Adds up everyone’s life satisfaction and divides by the number of people. A point for someone thriving counts the same as a point for someone struggling.' },
+  [ElectionCycle.Rawlsian]: { on: 'the single worst-off person', approach: 'The Rawlsian approach', approachLine: 'This is the Rawlsian approach: a country is only as good as its worst-off person.', blurb: 'Only the lowest score in the country counts. Make everyone else happier and, if the bottom doesn’t move, her number won’t either.' },
+  [ElectionCycle.SocietalUtility]: { on: 'social utility (fairness for others)', approach: 'Social utility', approachLine: 'This is social utility: what a gain is worth, judged the way citizens judge it when deciding for others.', blurb: 'Scores the country on how citizens judge its whole spread of life satisfaction when deciding for others.' },
+  [ElectionCycle.PersonalUtility]: { on: 'personal utility (own lives)', approach: 'Personal utility', approachLine: 'This is personal utility: what a gain is worth to the person who gets it, judged by their own standards.', blurb: 'Each citizen values their own life by their own standards. What one person prizes, another may not care about.' },
 };
 
 const lsCounts = (pop: Respondent[]) => Array.from({ length: 11 }, (_, i) => pop.filter((r) => Math.round(r.currentLS) === i).length);
