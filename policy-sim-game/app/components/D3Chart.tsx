@@ -131,6 +131,8 @@ export default function D3Chart({
   const prevY        = useRef<AxisVariable | null>(null);
   
   const prevHistData = useRef<string>('');
+  // Blocks: last block size and plot size, to spot a resize mid-animation
+  const prevBlockGeom = useRef<string>('');
   const prevChartData = useRef<string>('');
   const prevMarkerData = useRef<string>('');
   
@@ -375,7 +377,18 @@ export default function D3Chart({
           }
         });
 
-        const speed = isHistUpdate ? 700 : 0;
+        // The chart was resized (e.g. the panel made room for a bill's rules): stop
+        // any blocks still flying or sliding, since they're heading for positions on
+        // the old size, and snap everything to its place on the new one.
+        const geom = `${s}|${W}|${H}`;
+        const resized = prevBlockGeom.current !== '' && prevBlockGeom.current !== geom;
+        prevBlockGeom.current = geom;
+        if (resized) {
+          dataLayer.selectAll('g.blk-gone').interrupt().remove();
+          dataLayer.selectAll('g.blk').interrupt();
+        }
+        const animate = isHistUpdate && !resized;
+        const speed = animate ? 700 : 0;
 
         // People moving: a block that leaves one column while one appears in another
         // flies across (changing colour on the way), rather than fading out and in.
@@ -388,7 +401,7 @@ export default function D3Chart({
         const arriving = blocks.filter((b) => !oldKeys.has(b.key)).sort((a, b) => a.col - b.col || b.y - a.y);
         const flyTo = new Map<string, Blk>();
         const landing = new Set<string>();
-        if (isHistUpdate && oldBlocks.length > 0) {
+        if (animate && oldBlocks.length > 0) {
           leaving.forEach((b, i) => { const t = arriving[i]; if (t) { flyTo.set(b.key, t); landing.add(t.key); } });
         }
 
