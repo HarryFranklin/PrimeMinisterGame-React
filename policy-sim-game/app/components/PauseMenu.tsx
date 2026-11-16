@@ -255,12 +255,6 @@ export default function PauseMenu() {
                         onChange={(v) => changeOption('textSpeed', v)}
                       />
                       <Toggle
-                        label="Sound"
-                        value={options.sound}
-                        choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}
-                        onChange={(v) => changeOption('sound', v)}
-                      />
-                      <Toggle
                         label="Camera flashes"
                         value={options.flashes}
                         choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}

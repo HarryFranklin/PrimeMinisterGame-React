@@ -38,7 +38,7 @@ export type TelemetryEvent =
 
       event: "title_start_clicked";
       /** already_fullscreen: they used the title screen's "Go full screen" before Start game */
-      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string; already_fullscreen: boolean };
+      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; flashes: string; already_fullscreen: boolean };
     }
   /** Fullscreen: requested by the title screen's "Go full screen" (title), "Start game" (start, only
   *  if not already fullscreen), the in-game "Go full screen" (nudge) or Resume (resume); every switch in/out. */

@@ -169,7 +169,6 @@ export function networkSink(entry: LoggedEvent) {
         // otherwise the 'start' request (logged just after this) sets it.
         ...(entry.payload?.already_fullscreen ? { fullscreen_ok: true } : {}),
         option_textSpeed: entry.payload?.text_speed ?? null,
-        option_sound: entry.payload?.sound ?? null,
         option_flashes: entry.payload?.flashes ?? null,
         game_started_at: entry.ts,
       };
