@@ -20,7 +20,7 @@ import { IMPACT_COLORS } from '../utils/uiHelpers';
  */
 
 /** Must match the 1D histogram in D3Chart (margin.left / margin.right). */
-const CHART_MARGIN = { left: 45, right: 15 };
+const CHART_MARGIN = { left: 20, right: 15 };
 /** Matches the chart wrapper's p-2. */
 const CARD_PADDING_PX = 8;
 const LEVELS = Array.from({ length: 11 }, (_, i) => i);

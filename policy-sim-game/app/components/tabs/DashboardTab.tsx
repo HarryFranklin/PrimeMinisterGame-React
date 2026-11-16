@@ -210,10 +210,10 @@ export default function DashboardTab() {
   const hoveredEnacted = hoveredEnactedId ? availablePolicies.find((p) => p.id === hoveredEnactedId) : null;
   const chartTitle = isParliamentDissolved
     ? hoveredHistoryTurn !== null
-      ? `Before and after: ${hoveredEnacted?.policyName ?? "this bill"}`
+      ? `Before and after:\n${hoveredEnacted?.policyName ?? " this bill"}`
       : "The country on polling day"
     : billOpen
-      ? `Previewing: ${selectedPolicy!.policyName}`
+      ? `Previewing:\n${selectedPolicy!.policyName}`
       : "The country today";
 
   // Bill preview. PREVIEW_ALL_AT_ONCE: everyone moves to the new shape in one go.
@@ -289,7 +289,7 @@ export default function DashboardTab() {
             CABINET · {isParliamentDissolved ? "END OF TERM" : `DAY ${currentTurn}`}
           </div>
 
-          <div className="absolute inset-0 grid grid-cols-2 gap-[4%] p-[22px]">
+          <div className="absolute inset-0 grid grid-cols-[1.15fr_1fr] gap-[4%] p-[22px]">
             {/* Left flap: the country */}
             <div className="relative min-h-0 min-w-0" onMouseEnter={() => track("graph_hovered", { chart_context: "dashboard", turn: currentTurn })}>
               <DailyReturn

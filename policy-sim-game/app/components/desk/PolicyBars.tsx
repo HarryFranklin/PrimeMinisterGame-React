@@ -9,7 +9,7 @@ const NONE = 'rgba(120,95,50,.12)';
 
 /** Must match the 1D histogram in D3Chart (margin.left / margin.right),
  * so each strip cell sits exactly under its column of faces. */
-export const CHART_MARGIN = { left: 45, right: 15 };
+export const CHART_MARGIN = { left: 20, right: 15 };
 
 /**
  * A policy's overall effect on one 0–10 bar: blue where it lifts people,

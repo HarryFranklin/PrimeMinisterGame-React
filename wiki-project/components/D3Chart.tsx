@@ -146,7 +146,8 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 25, right: 15, bottom: 40, left: 45 };
+    // Blocks have no y-axis, so they don't need its 45px gutter on the left
+    const margin = { top: 25, right: 15, bottom: 40, left: visualStyle === 'blocks' ? 20 : 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
     const baseColor = color || '#ec4899';

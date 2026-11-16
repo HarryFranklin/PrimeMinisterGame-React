@@ -85,7 +85,9 @@ export default function DailyReturn({
         <span className="text-[10px] font-extrabold tracking-[.14em] uppercase text-[#5c4214]">{rule.graphTitle}</span>
       </div>
       <div className="flex justify-between items-baseline gap-3">
-        <span className="font-display font-black text-[clamp(18px,1.7vw,24px)] text-[#2a1f0e] min-w-0 truncate">{title}</span>
+        {/* Two lines kept for the title ("Previewing:" then the bill's name), so the
+            chart doesn't jump down when a bill is opened */}
+        <span className="font-display font-black text-[clamp(18px,1.7vw,24px)] leading-tight text-[#2a1f0e] min-w-0 whitespace-pre-line min-h-[2lh]">{title}</span>
         {previewing && (
           <label className="shrink-0 flex items-center gap-1.5 text-[12px] font-bold text-stone-700 cursor-pointer select-none">
             <input

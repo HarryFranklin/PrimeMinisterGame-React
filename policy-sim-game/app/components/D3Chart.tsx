@@ -161,7 +161,9 @@ export default function D3Chart({
     if (!containerRef.current || !svgRef.current) return;
     
     // 'axis' marker tags need a row under the tick labels.
-    const margin = { top: 25, right: 15, bottom: markerLabels === 'axis' ? 74 : 52, left: 45 };
+    // Blocks have no y-axis, so they don't need its 45px gutter on the left
+    // (keep CHART_MARGIN in desk/PolicyBars.tsx and PointsStrip.tsx in step).
+    const margin = { top: 25, right: 15, bottom: markerLabels === 'axis' ? 74 : 52, left: visualStyle === 'blocks' ? 20 : 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
 
