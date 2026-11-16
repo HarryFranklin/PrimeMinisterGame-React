@@ -376,7 +376,8 @@ export default function D3Chart({
 
         // People moving: a block that leaves one column while one appears in another
         // flies across (changing colour on the way), rather than fading out and in.
-        const FLY = 450;
+        // Kept shorter than DailyReturn's FLOW_STEP_MS so flights don't overlap.
+        const FLY = 550;
         const oldBlocks = dataLayer.selectAll<SVGGElement, Blk>('g.blk').data();
         const oldKeys = new Set(oldBlocks.map((b) => b.key));
         const newKeys = new Set(blocks.map((b) => b.key));
@@ -407,7 +408,7 @@ export default function D3Chart({
                 g.transition().duration(FLY).ease(d3.easeCubicInOut).attr('transform', `translate(${t.x},${t.y})`).attr('opacity', 1).remove();
                 g.select('rect.blk-body').transition().duration(FLY).attr('fill', d3.interpolateRdYlGn(t.ls / 10));
               });
-              exit.filter((b) => !flyTo.has(b.key)).transition().duration(300).attr('opacity', 0).remove();
+              exit.filter((b) => !flyTo.has(b.key)).transition().duration(flyTo.size ? FLY : 300).attr('opacity', 0).remove();
               return exit;
             },
           )
@@ -419,7 +420,9 @@ export default function D3Chart({
           })
           .transition()
           .delay((b) => (landing.has(b.key) ? FLY : 0))
-          .duration((b) => (landing.has(b.key) ? 0 : b.state === 'solid' ? speed : 250)).ease(d3.easeCubicOut)
+          // While people are moving, blocks that shuffle within a tower move at the
+          // same pace as the flights, so nothing is still sliding when the next step starts.
+          .duration((b) => (landing.has(b.key) ? 0 : b.state === 'solid' ? (flyTo.size ? FLY : speed) : 250)).ease(d3.easeCubicOut)
           .attr('transform', (b) => `translate(${b.x},${b.y})`)
           .attr('opacity', (b) => (b.state === 'leave' ? 0.3 : b.state === 'arrive' ? 0.6 : 1));
 

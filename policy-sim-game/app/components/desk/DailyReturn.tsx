@@ -32,9 +32,11 @@ interface DailyReturnProps {
   onCompareChange: (on: boolean) => void;
 }
 
-/** Time before the first column moves, and between columns. */
-const FLOW_START_MS = 350;
-const FLOW_STEP_MS = 450;
+/** Time before the first move, and between moves (column by column only). A step
+ * is a little longer than D3Chart's block flight (FLY), so each move lands
+ * before the next sets off. */
+const FLOW_START_MS = 250;
+const FLOW_STEP_MS = 600;
 
 /**
  * The country, clipped to the left flap of the folder: one face per group of
@@ -45,12 +47,15 @@ export default function DailyReturn({
   cycle, rule, title, histogramData, ghostHistogramData, markers, yAxisMax,
   population, isUtilityCycle, activeRules, emptyHint, previewing, flowSteps, compare, onCompareChange,
 }: DailyReturnProps) {
-  // Play the preview: column 0's people move, then column 1's, … up to 10.
-  const [step, setStep] = useState(0);
+  // Play the preview (all at once, or column by column: set in DashboardTab).
+  // The step is tied to the bill it was played for, so a newly opened bill
+  // always starts from today's shape instead of flashing the last bill's end.
   const flowKey = flowSteps ? JSON.stringify(flowSteps[flowSteps.length - 1]) : '';
+  const [played, setPlayed] = useState({ key: '', step: 0 });
+  const step = played.key === flowKey ? played.step : 0;
+  const setStep = (k: number) => setPlayed({ key: flowKey, step: k });
   useEffect(() => {
     if (!flowSteps || compare) return;
-    setStep(0);
     const beats: number[] = [];
     for (let k = 0; k < flowSteps.length - 1; k++) {
       if (JSON.stringify(flowSteps[k]) !== JSON.stringify(flowSteps[k + 1])) beats.push(k + 1);
@@ -58,7 +63,11 @@ export default function DailyReturn({
     const last = flowSteps.length - 1;
     const timers = beats.map((k, i) => setTimeout(() => setStep(k), FLOW_START_MS + i * FLOW_STEP_MS));
     timers.push(setTimeout(() => setStep(last), FLOW_START_MS + beats.length * FLOW_STEP_MS));
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      timers.forEach(clearTimeout);
+      // Reopening the same bill (or unticking Compare) replays from the start
+      setPlayed({ key: '', step: 0 });
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowKey, compare]);
 
@@ -91,7 +100,7 @@ export default function DailyReturn({
       </div>
       <div className="flex justify-end -mt-1 min-h-[30px]">
         {animated && (
-          <span className="text-[11px] text-stone-600 text-right leading-snug">If you sign it: people move from LS 0 upwards</span>
+          <span className="text-[11px] text-stone-600 text-right leading-snug">If you sign it: who moves, and where</span>
         )}
         {shownGhost && (
           <span className="text-[11px] text-stone-600 text-right leading-snug flex flex-col">

@@ -29,6 +29,9 @@ import { useTooltipTelemetry } from "../../client/hooks";
  * (pen writes the signature, the paper slides away) → it is enacted straight away.
  * Continue is only used at the end of the term (to the press conference).
  */
+/** Bill preview: true = everyone moves to the new shape at once; false = column by column. */
+const PREVIEW_ALL_AT_ONCE = true;
+
 export default function DashboardTab() {
   const {
     currentCycle, currentTurn, currentHistogramData,
@@ -213,17 +216,33 @@ export default function DashboardTab() {
       ? `Previewing: ${selectedPolicy!.policyName}`
       : "The country today";
 
-  // Bill preview, column by column: step k = the people starting in columns 0..k-1 have moved
+  // Bill preview. PREVIEW_ALL_AT_ONCE: everyone moves to the new shape in one go.
+  // Otherwise one column's movers at a time: people moving up go first, from
+  // the top column down; then people moving down, from the bottom column up. That
+  // way no column gains people and then loses some straight after (e.g. LS 1's
+  // people landing on LS 2 just before LS 2's own people leave).
   const flowSteps = useMemo(() => {
     if (!billOpen) return null;
     const bin = (ls: number) => Math.min(10, Math.max(0, Math.round(ls)));
     const from = population.map((r) => bin(r.currentLS));
     const to = previewPopulation.map((r) => bin(r.currentLS));
-    return Array.from({ length: 12 }, (_, k) => {
+    const where = [...from];
+    const snapshot = () => {
       const counts = Array<number>(11).fill(0);
-      from.forEach((f, i) => { counts[f < k ? to[i] : f] += 1; });
+      where.forEach((c) => { counts[c] += 1; });
       return counts.map((count, name) => ({ name, count }));
-    });
+    };
+    const steps = [snapshot()];
+    const moveColumn = (col: number, up: boolean) => {
+      let moved = false;
+      from.forEach((f, i) => {
+        if (f === col && (up ? to[i] > f : to[i] < f)) { where[i] = to[i]; moved = true; }
+      });
+      if (moved) steps.push(snapshot());
+    };
+    for (let col = 10; col >= 0; col--) moveColumn(col, true);
+    for (let col = 0; col <= 10; col++) moveColumn(col, false);
+    return PREVIEW_ALL_AT_ONCE ? [steps[0], steps[steps.length - 1]] : steps;
   }, [billOpen, population, previewPopulation]);
 
   return (
