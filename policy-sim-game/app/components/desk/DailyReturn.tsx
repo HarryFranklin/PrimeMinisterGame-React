@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AxisVariable, ElectionCycle, PolicyRule, Respondent } from '../../utils/types';
 import { FrameworkRule } from '../../utils/frameworkRules';
 import D3Chart, { ChartMarker } from '../D3Chart';
@@ -36,6 +36,12 @@ interface DailyReturnProps {
  * is a little longer than D3Chart's block flight (FLY), so each move lands
  * before the next sets off. */
 const FLOW_START_MS = 250;
+/** Fitting a bill's rule strips (see below): each step is [strip density, the
+ * chart's share of the panel's height]. Strips and chart take turns giving up
+ * space, so bars stay readable and the chart keeps most of its height. */
+const FIT_STEPS: [number, string][] = [
+  [0, '54%'], [1, '54%'], [1, '48%'], [2, '48%'], [2, '43%'], [3, '43%'], [3, '38%'], [3, '33%'],
+];
 const FLOW_STEP_MS = 600;
 
 /**
@@ -70,6 +76,26 @@ export default function DailyReturn({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowKey, compare]);
+
+  // The rule strips fit the space below the chart: if a bill's rules would
+  // overflow (Levels 3/4 also show the +1 strip), step to a tighter layout
+  // before the browser paints, rather than showing a scroll bar (FIT_STEPS).
+  const stripsRef = useRef<HTMLDivElement>(null);
+  const rulesKey = activeRules ? activeRules.map((r) => `${r.note}|${r.impact}|${r.minLS}|${r.maxLS}`).join(';') : '';
+  const [fit, setFit] = useState({ key: '', level: 0 });
+  const level = fit.key === rulesKey ? fit.level : 0;
+  const [density, chartHeight] = FIT_STEPS[Math.min(level, FIT_STEPS.length - 1)];
+  useLayoutEffect(() => {
+    const el = stripsRef.current;
+    if (!el || !activeRules || level >= FIT_STEPS.length - 1) return;
+    if (el.scrollHeight > el.clientHeight + 2) setFit({ key: rulesKey, level: level + 1 });
+  });
+  useEffect(() => {
+    // A resize can give more (or less) room: fit again from the loosest layout
+    const refit = () => setFit({ key: '', level: 0 });
+    window.addEventListener('resize', refit);
+    return () => window.removeEventListener('resize', refit);
+  }, []);
 
   const animated = previewing && !!flowSteps && !compare;
   const shownHistogram = animated ? flowSteps![Math.min(step, flowSteps!.length - 1)] : histogramData;
@@ -116,7 +142,8 @@ export default function DailyReturn({
 
       {/* Fixed height: the chart never moves, however many rules the open bill has */}
       <div
-        className="h-[54%] shrink-0 min-h-[180px] p-2 relative"
+        className="shrink-0 min-h-[150px] p-2 relative"
+        style={{ height: chartHeight }}
         data-telemetry-id="population_graph_current"
         data-telemetry-type="graph"
       >
@@ -148,9 +175,9 @@ export default function DailyReturn({
         />
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col pt-1">
+      <div ref={stripsRef} className="flex-1 min-h-0 overflow-hidden flex flex-col pt-1">
         {activeRules ? (
-          <PolicyStrips rules={activeRules} padX={CHART_PAD} />
+          <PolicyStrips rules={activeRules} padX={CHART_PAD} density={density} />
         ) : (
           <div className="flex-1 border-2 border-dashed border-[rgba(92,66,20,.3)] rounded-lg px-4 py-3 text-[13px] text-stone-500 text-center flex items-center justify-center">
             {emptyHint}
