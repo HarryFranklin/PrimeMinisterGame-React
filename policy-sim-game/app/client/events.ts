@@ -182,7 +182,8 @@ export type TelemetryEvent =
         policy_id: string;
         turn: number;
         dwell_ms: number;
-        resulting_action: "dismissed" | "picked_same_policy" | "picked_other_policy";
+        // "enacted": the bill was signed (logged as the signature finishes, before the day ends)
+        resulting_action: "dismissed" | "picked_same_policy" | "picked_other_policy" | "enacted";
       };
     }
 

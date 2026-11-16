@@ -179,6 +179,16 @@ export default function DashboardTab() {
   const onContinue = () => {
     if (continueState === "press") handleFaceElectorate();
     else if (continueState === "ready") {
+      // The bill being read is closed by signing it: log that now, on today's turn,
+      // so its reading time counts for this day (not the next one, as "dismissed").
+      const readingId = prevDetailsPolicyId.current;
+      if (readingId) {
+        track("view_details_closed", {
+          policy_id: readingId, turn: currentTurn,
+          dwell_ms: stopTimer(`view_details_${readingId}`), resulting_action: "enacted",
+        });
+        prevDetailsPolicyId.current = null;
+      }
       handleApplyPolicy();
       // The bill becomes law (~0.8 s), then tomorrow's page drops in while the
       // country updates and the new files are dealt. `day: null` = polling day.
