@@ -10,6 +10,7 @@ import StageMorningPaper, { type PaperExit } from './ElectionModal/StageMorningP
 import ElectionNightTransition, { type NightTransitionKind } from './ElectionModal/ElectionNightTransition';
 import { flashesAllowed, applyFlashSetting } from '../../utils/gameOptions';
 import PMIdentityBanner from '../PMIdentityBanner';
+import { MAX_ATTEMPTS } from '../../utils/points';
 
 interface ElectionModalProps {
   currentMetricScore: number;
@@ -29,7 +30,7 @@ interface ElectionModalProps {
 }
 
 export default function ElectionModal(props: ElectionModalProps) {
-  const { currentCycle, approvalRating, cycleAttempts, onReset, onRequestDebrief, onAnswerPressQuestion } = props;
+  const { currentCycle, approvalRating, cycleAttempts, onRequestDebrief, onAnswerPressQuestion } = props;
   const [page, setPage] = useState(0);
   const [pageReady, setPageReady] = useState(false);
   // Once you leave the press conference it has been held: coming Back must not hold (and score) it again.
@@ -53,7 +54,9 @@ export default function ElectionModal(props: ElectionModalProps) {
   
   const isFinalCycle = currentCycle === ElectionCycle.PersonalUtility;
   
-  let canProceed = won || cycleAttempts >= 3;
+  // Every term can be played once more, won or lost; the better score counts.
+  // Moving on is always allowed.
+  const canRetry = cycleAttempts < MAX_ATTEMPTS;
   const totalPages = 3;
 
   // We removed all track('cycle_ended', ...) calls from these handlers.
@@ -84,11 +87,6 @@ export default function ElectionModal(props: ElectionModalProps) {
   const handleFinishGame = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
     trackExit('finish_game', timing);
     onRequestDebrief('complete', 'win');
-  };
-
-  const handleLostFinal = (timing?: { msOnStage: number; msAfterUnlock: number | null }) => {
-    trackExit('lost_restart', timing);
-    onReset("lose");
   };
 
   // Telemetry: every Continue/Back between the stages, with time on the stage
@@ -148,8 +146,7 @@ export default function ElectionModal(props: ElectionModalProps) {
 
   const handlePaperExit = (action: PaperExit, msOnStage: number, msAfterUnlock: number | null) => {
     const timing = { msOnStage, msAfterUnlock };
-    if (action === 'lost_restart') handleLostFinal(timing);
-    else if (action === 'restart') handleRestartTerm(timing);
+    if (action === 'restart') handleRestartTerm(timing);
     else if (action === 'finish_game') handleFinishGame(timing);
     else handleProceedNextTerm(timing);
   };
@@ -194,7 +191,7 @@ export default function ElectionModal(props: ElectionModalProps) {
         )}
         {page === 2 && (
           <StageMorningPaper
-            currentCycle={currentCycle} won={won} canProceed={canProceed} isFinalCycle={isFinalCycle}
+            currentCycle={currentCycle} won={won} canRetry={canRetry} isFinalCycle={isFinalCycle}
             approvalRating={approvalRating} pollError={props.pollError}
             initialPopulation={props.initialPopulation} baselinePopulation={props.baselinePopulation} finalPopulation={props.finalPopulation}
             pressSummary={pressSummary} fromRally={paperFromRally}
@@ -223,12 +220,10 @@ export default function ElectionModal(props: ElectionModalProps) {
           </button>
         ) : (
           <div className="flex gap-3 animate-in fade-in slide-in-from-right-4">
-            {!canProceed ? (
-              <button onClick={() => handleLostFinal()} className="px-6 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow-md cursor-pointer">Election Lost - Restart Term</button>
-            ) : (
-              <>
-                <button onClick={() => handleRestartTerm()} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
-                
+                {canRetry && (
+                  <button onClick={() => handleRestartTerm()} className="px-4 py-2.5 bg-zinc-100 text-zinc-700 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors cursor-pointer">Restart Term</button>
+                )}
+
                 {!isFinalCycle && (
                   <button 
                     onClick={() => handleProceedNextTerm()} 
@@ -248,8 +243,6 @@ export default function ElectionModal(props: ElectionModalProps) {
                     Finish Game
                   </button>
                 )}
-              </>
-            )}
           </div>
         )}
       </div>

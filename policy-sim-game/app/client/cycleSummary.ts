@@ -124,6 +124,15 @@ export interface CycleSummary {
 
   approval_start: number | null;
   approval_final: number | null;
+  /** Term points for this attempt (utils/points.ts), and whether it counted
+   * (after a retry, only the better attempt counts). */
+  points_total: number | null;
+  points_approval: number | null;
+  points_reelected: number | null;
+  points_perfect: number | null;
+  points_press: number | null;
+  points_press_bonus: number | null;
+  points_counted: boolean | null;
   /** this term's win threshold, best possible score and difficulty scalar */
   target_score: number | null;
   max_score: number | null;
@@ -434,6 +443,9 @@ function buildScreens(events: LoggedEvent[], t0: number): Record<string, number 
     paper_back_ms: stageMs("paper_back"),
     pauses: all("pause_closed").length,
     pause_ms: sum(all("pause_closed").map((e) => num(e.payload?.dwell_ms) ?? 0)),
+    // Tab switched away during this term: how often, and for how long in total
+    tab_hidden_count: all("tab_visibility_changed").filter((e) => e.payload?.state === "hidden").length,
+    tab_hidden_ms: sum(all("tab_visibility_changed").map((e) => num(e.payload?.hidden_ms) ?? 0)),
     election_back_clicks: nav.filter((e) => e.payload?.direction === "back").length,
     election_exit_action: p(exit, "action"),
 
@@ -471,6 +483,8 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
   const turns = buildTurnSummaries(events);
   const screens = buildScreens(events, first.ts);
   const ended = findLast(events, "cycle_ended");
+  // Term points (utils/points.ts), sent with cycle_ended
+  const pts = (ended?.payload?.points ?? null) as Record<string, unknown> | null;
   const won = ended && typeof ended.payload?.won === "boolean" ? (ended.payload.won as boolean) : verdict ? !!verdict.payload?.won : null;
   const rated = turns.filter((t) => t.enacted_rank !== null);
   const withPick = turns.filter((t) => t.enacted_was_first_pick !== null);
@@ -530,6 +544,16 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
 
     approval_start: num(turnStarted[0]?.payload?.approval),
     approval_final: num(ended?.payload?.approval) ?? num(verdict?.payload?.approval_rating),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(() => { const pts = ended?.payload?.points as any; return {
+    points_total: num(pts?.total),
+    points_approval: num(pts?.approval),
+    points_reelected: num(pts?.reelected),
+    points_perfect: num(pts?.perfect),
+    points_press: num(pts?.press),
+    points_press_bonus: num(pts?.pressBonus),
+    points_counted: typeof ended?.payload?.points_counted === 'boolean' ? ended.payload.points_counted as boolean : null,
+    }; })(),
     target_score: num(turnStarted[0]?.payload?.target_score),
     max_score: num(turnStarted[0]?.payload?.max_score),
     win_scalar: num(turnStarted[0]?.payload?.win_scalar),

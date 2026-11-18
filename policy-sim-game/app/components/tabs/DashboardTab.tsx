@@ -38,7 +38,7 @@ export default function DashboardTab() {
     selectedPolicy, turnMetricScore, currentDeck, setSelectedPolicy, handleApplyPolicy,
     turnApprovalRating: approvalRating, cycleMAO, isAgendaUnlocked, yAxisMax, isEnacting,
     population, previewPopulation, isParliamentDissolved, history, handleFaceElectorate,
-    lastTurnSummary, clearLastTurnSummary, TURNS_PER_CYCLE, termPollError, approvalForScore,
+    lastTurnSummary, clearLastTurnSummary, TURNS_PER_CYCLE, termPollError, approvalForScore, cycleAttempts,
   } = useGame();
 
   const rule = FRAMEWORK_RULES[currentCycle];
@@ -56,8 +56,10 @@ export default function DashboardTab() {
 
   // Signing: `signingId` while the pen writes and the paper slides away;
   // `signedId` once it has gone (Continue then enacts it).
-  // Both belong to one day only: a new day (or term) starts with a clear desk.
-  const dayKey = `${currentCycle}-${currentTurn}`;
+  // Both belong to one day only: a new day (or term, or retry of the term)
+  // starts with a clear desk. Without the attempt, a retry's last day would
+  // still show the first attempt's last bill as signed, and lock the desk.
+  const dayKey = `${currentCycle}-${cycleAttempts}-${currentTurn}`;
   const [sign, setSign] = useState<{ day: string; signing: string | null; signed: string | null }>({ day: "", signing: null, signed: null });
   const signingId = sign.day === dayKey ? sign.signing : null;
   const signedId = sign.day === dayKey ? sign.signed : null;
@@ -220,7 +222,7 @@ export default function DashboardTab() {
   const hoveredEnacted = hoveredEnactedId ? availablePolicies.find((p) => p.id === hoveredEnactedId) : null;
   const chartTitle = isParliamentDissolved
     ? hoveredHistoryTurn !== null
-      ? `Before and after:\n${hoveredEnacted?.policyName ?? " this bill"}`
+      ? `Before and after:\n${hoveredEnacted?.policyName ?? "this bill"}`
       : "The country on polling day"
     : billOpen
       ? `Previewing:\n${selectedPolicy!.policyName}`
@@ -331,7 +333,7 @@ export default function DashboardTab() {
             {/* Right flap: the bill, the Deputy PM's note, or the term's bills */}
             <div className="relative min-h-0 min-w-0">
               {isParliamentDissolved ? (
-                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-hidden rotate-[.4deg]">
+                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-hidden rotate-[.4deg]">
                   <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Parliament is dissolved</span>
                   <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Signed into law this term</span>
                   <span className="text-[13px] text-stone-600">

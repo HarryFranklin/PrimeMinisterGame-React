@@ -670,6 +670,10 @@ export type TelemetryEvent =
         /** Which button ended it: Restart Term, Proceed to Next Term, Finish Game. */
         exit?: "restart" | "next_term" | "finish_game";
         approval?: number;
+        /** This attempt's term points (utils/points.ts). */
+        points?: { approval: number; reelected: number; perfect: number; press: number; pressBonus: number; total: number };
+        /** Whether this attempt is the one that counts (the better of two after a retry). */
+        points_counted?: boolean;
       };
     }
 

@@ -10,6 +10,7 @@ import { SavingIndicator } from '../../client/SavingIndicator';
 import { track } from '../../client/telemetry';
 import RunnersAndRiders, { type RunnerEntry } from '../paper/RunnersAndRiders';
 import CommencingTerm, { COMMENCING_MS } from '../CommencingTerm';
+import { termPoints } from '../../utils/points';
 
 /**
  * The level select: The Daily Ledger's back cover, "Runners and riders", lying on the desk.
@@ -79,10 +80,12 @@ export default function LevelSelectTab() {
     const run = completedRuns.find((c) => c.cycle === p.cycle);
     if (run) {
       const won = run.approvalRating >= WIN_THRESHOLD;
+      // No replay from here: each term's one retry is offered on the morning
+      // paper straight after it, and the better score counts.
       return {
         cycle: p.cycle, status: won ? 'won' : 'lost', population: run.finalPopulation,
         result: `${won ? 'Won' : 'Lost'} · ${r.targetMetricAbbreviation} ${run.finalScore.toFixed(2)} vs target ${run.targetScore.toFixed(2)}`,
-        onReplay: () => handleStartLevel(p.cycle),
+        points: run.points?.total ?? termPoints(run.approvalRating, 0).total,
       };
     }
     if (i === unlockedIndex) {
@@ -112,6 +115,7 @@ export default function LevelSelectTab() {
           <RunnersAndRiders
             entries={entries}
             resultsSoFar={unlockedIndex}
+            score={completedRuns.reduce((s, run) => s + (run.points?.total ?? termPoints(run.approvalRating, 0).total), 0)}
             footer={unlockedIndex >= 4 ? (
               <button
                 type="button"

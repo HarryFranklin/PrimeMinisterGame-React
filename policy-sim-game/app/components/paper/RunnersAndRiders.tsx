@@ -4,6 +4,7 @@ import { PM_PROFILES } from '../../utils/pmProfiles';
 import { PM_TONES } from '../desk/deskTheme';
 import PMFigure from '../modals/ElectionModal/PMFigure';
 import MiniHistogram from './MiniHistogram';
+import { formatPoints } from '../../utils/points';
 
 /**
  * The back cover of The Daily Ledger: "Runners and riders", the level select.
@@ -21,8 +22,12 @@ export interface RunnerEntry {
   population?: Respondent[];
   /** The big button on the next (or retry) candidate. */
   action?: { label: string; onClick: () => void; disabled?: boolean };
-  /** "Replay" on a played term. */
+  /** The optional retry on a played term (one per term, win or lose). */
   onReplay?: () => void;
+  /** Label for that button, e.g. "Try again ↺". */
+  replayLabel?: string;
+  /** Term points (the better attempt after a retry). */
+  points?: number;
 }
 
 /** What each measure means, in a sentence or two, and the name of the approach it belongs to
@@ -38,17 +43,23 @@ const lsCounts = (pop: Respondent[]) => Array.from({ length: 11 }, (_, i) => pop
 
 const abs = (s: React.CSSProperties): React.CSSProperties => ({ position: 'absolute', ...s });
 
-export default function RunnersAndRiders({ entries, resultsSoFar, footer }: { entries: RunnerEntry[]; resultsSoFar: number; footer?: React.ReactNode }) {
+export default function RunnersAndRiders({ entries, resultsSoFar, footer, score, note }: {
+  entries: RunnerEntry[]; resultsSoFar: number; footer?: React.ReactNode;
+  /** Total points so far (shown in the masthead). */
+  score?: number;
+  /** Replaces the standfirst under the headline, e.g. this term's points breakdown. */
+  note?: React.ReactNode;
+}) {
   return (
     <>
       <div className="shrink-0 flex justify-between items-end border-b-4 border-double border-stone-900 pb-1.5">
         <span className="paper-cap">Back page</span>
         <span className="font-display font-black italic text-[30px] leading-none tracking-tight">The Daily Ledger</span>
-        <span className="paper-cap">Results so far: {resultsSoFar} of 4</span>
+        <span className="paper-cap">Results so far: {resultsSoFar} of 4{score !== undefined ? ` · Score ${formatPoints(score)}` : ''}</span>
       </div>
       <div className="shrink-0 flex flex-col gap-0.5">
         <span className="font-display font-black text-[40px] leading-none">Runners and riders</span>
-        <span className="font-display italic font-bold text-[13px] text-stone-600">Four candidates, four ways of keeping score. Whoever wins, the country gets judged differently.</span>
+        <span className="font-display italic font-bold text-[13px] text-stone-600">{note ?? 'Four candidates, four ways of keeping score. Whoever wins, the country gets judged differently.'}</span>
       </div>
       <div className="grid grid-cols-2 grid-rows-2 flex-1 min-h-0 border-t border-stone-900">
         {entries.map((e, i) => <RunnerCard key={e.cycle} entry={e} index={i} />)}
@@ -96,11 +107,11 @@ function RunnerCard({ entry, index }: { entry: RunnerEntry; index: number }) {
             )}
             <div className="mt-auto border-2 border-stone-900 px-2.5 py-1.5 flex justify-between items-center gap-2">
               <div className="flex flex-col min-w-0">
-                <span className="paper-cap">Your term</span>
+                <span className="paper-cap">Your term{entry.points !== undefined ? ` · ${formatPoints(entry.points)} points` : ''}</span>
                 <span className="text-[12px] font-bold leading-snug">{entry.result}</span>
               </div>
               {entry.onReplay && (
-                <button type="button" onClick={entry.onReplay} className="paper-btn shrink-0 text-[12px] font-bold underline px-1.5 py-1">Replay</button>
+                <button type="button" onClick={entry.onReplay} className="paper-btn shrink-0 text-[12px] font-bold underline px-1.5 py-1">{entry.replayLabel ?? 'Replay'}</button>
               )}
             </div>
           </>

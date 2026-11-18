@@ -144,6 +144,17 @@ for (const r of rows) {
     for (const term of ['Benthamite', 'Rawlsian', 'SocietalUtility', 'PersonalUtility']) {
       p[`game_${term}_attempts`] = all.filter((a) => a.cycle === term).length;
     }
+    // Term points (from 18 Nov 2026): per term, the better of its attempts counts
+    // (points_counted); the game score is their sum. Blank for older sessions.
+    let score = '';
+    for (const term of ['Benthamite', 'Rawlsian', 'SocietalUtility', 'PersonalUtility']) {
+      const scored = all.filter((a) => a.cycle === term && typeof a.points_total === 'number');
+      const counted = scored.find((a) => a.points_counted === true) ?? null;
+      const best = counted ?? scored.reduce((b, a) => (b === null || a.points_total > b.points_total ? a : b), null);
+      p[`game_${term}_points`] = best ? best.points_total : '';
+      if (best) score = (score === '' ? 0 : score) + best.points_total;
+    }
+    p.game_score = score;
     p.game_page_loads = act?.loads?.length ?? '';
     // Start menu and "Game complete!" screen (loading_ms, title_ms, about/options use, option choices, …)
     for (const [k, v] of Object.entries(act?.flow ?? {})) p[`game_${k}`] = /_at$/.test(k) ? iso(v) : flat(v);

@@ -10,6 +10,8 @@ import { useGame } from '../../context/GameStateContext';
 import { useTypewriter } from '../../hooks/useTypewriter';
 import { track } from '../../client/telemetry';
 import { useTypewriterTelemetry, useDwellTimer } from '../../client/hooks';
+import { WIN_THRESHOLD } from '../../utils/polls';
+import { formatPoints } from '../../utils/points';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
@@ -46,7 +48,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
   const judged = JUDGED[currentCycle];
   const term = PM_PROFILES.findIndex((p) => p.cycle === currentCycle) + 1;
   const name = profile.name.replace(/^PM\s+/, '');
-  const { cycleAttempts } = useGame();
+  const { cycleAttempts, previousAttempt } = useGame();
 
   const [open, setOpen] = useState(false);
   const [showDefinition, setShowDefinition] = useState(false);
@@ -190,7 +192,15 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
                 )}
               </div>
 
-              <p className="m-0 text-[18px] leading-relaxed whitespace-pre-wrap min-h-[300px]">{displayedText}</p>
+              {/* On the retry: how the first attempt went, and what this measure rewards */}
+              {isRetryingTerm && previousAttempt && (
+                <div className="border-2 border-dashed px-3 py-2 text-[14px] leading-snug bg-white/40" style={{ borderColor: tone.dark }}>
+                  <b>Last time:</b> {previousAttempt.approvalRating >= WIN_THRESHOLD ? 're-elected' : 'voted out'} on {previousAttempt.approvalRating.toFixed(1)}%
+                  {previousAttempt.points ? ` (${formatPoints(previousAttempt.points.total)} points)` : ''}. Remember: {judged.blurb} Before you sign, preview each bill and check how far {rule.targetMetricAbbreviation} moves. Your better score counts.
+                </div>
+              )}
+
+              <p className={`m-0 text-[18px] leading-relaxed whitespace-pre-wrap ${isRetryingTerm ? 'min-h-[200px]' : 'min-h-[300px]'}`}>{displayedText}</p>
 
               <div className="mt-auto flex items-end justify-between gap-3">
                 {isRetryingTerm ? (

@@ -16,18 +16,19 @@ import { buildTermTimeline, ANALYSIS_MESSAGES } from './StageTermSummary';
 import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
 import { pickVoters, renderVoterQuote, quotedPolicies } from './StageElectorateFeedback';
 import type { PressSummary } from './StagePressConference';
+import { formatPoints, pointsBreakdown, termPoints } from '../../../utils/points';
 
 /** Each page of the paper is one of the old election stages, for telemetry. */
 const PAGE_STAGES = ['paper_front', 'term_summary', 'wellbeing_changes', 'electorate_feedback', 'measure_explainer', 'paper_back'] as const;
 const LAST = PAGE_STAGES.length - 1;
 
-export type PaperExit = 'restart' | 'next_term' | 'finish_game' | 'lost_restart';
+export type PaperExit = 'restart' | 'next_term' | 'finish_game';
 
 interface StageMorningPaperProps {
   currentCycle: ElectionCycle;
   won: boolean;
-  /** False after a loss that must be replayed (fewer than 3 attempts). */
-  canProceed: boolean;
+  /** True while this term's one optional retry is still unused (win or lose). */
+  canRetry: boolean;
   isFinalCycle: boolean;
   approvalRating: number;
   pollError: number;
@@ -69,14 +70,19 @@ const PHOTO = { w: 312, h: 195 };
  */
 export default function StageMorningPaper(props: StageMorningPaperProps) {
   const {
-    currentCycle, won, canProceed, isFinalCycle, approvalRating, pollError,
+    currentCycle, won, canRetry, isFinalCycle, approvalRating, pollError,
     initialPopulation, baselinePopulation, finalPopulation, pressSummary, fromRally, onBack, onNavigate, onExit,
   } = props;
 
   const cycleName = ElectionCycle[currentCycle];
   const rule = FRAMEWORK_RULES[currentCycle];
   // The term's target, worked out as the desk shows it
-  const { cycleMAO, completedRuns } = useGame();
+  const { cycleMAO, completedRuns, currentTermPoints, previousAttempt } = useGame();
+  // Points: older saves have runs without points, worked out from approval alone
+  const runPoints = (run: { approvalRating: number; points?: { total: number } }) => run.points?.total ?? termPoints(run.approvalRating, 0).total;
+  // After a retry, the better attempt counts
+  const bestThisTerm = Math.max(currentTermPoints.total, previousAttempt ? runPoints(previousAttempt) : 0);
+  const scoreSoFar = completedRuns.filter((r) => r.cycle !== currentCycle).reduce((s, r) => s + runPoints(r), 0) + bestThisTerm;
   const targetScore = cycleMAO * rule.winThresholdScalar;
   const profile = getPMProfile(currentCycle);
   const tone = PM_TONES[currentCycle];
@@ -245,16 +251,20 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
       return {
         cycle: p.cycle, status: runWon ? 'won' : 'lost', population: run?.finalPopulation,
         result: run ? `${runWon ? 'Won' : 'Lost'} · ${r.targetMetricAbbreviation} ${run.finalScore.toFixed(2)} vs target ${run.targetScore.toFixed(2)}` : 'Played',
+        points: run ? runPoints(run) : undefined,
       };
     }
     if (i === levelIndex) {
-      if (!canProceed) return { cycle: p.cycle, status: 'retry', action: { label: 'Try the term again ↺', onClick: () => exit('lost_restart') } };
+      // One optional retry per term, won or lost; the better score counts
       return {
-        cycle: p.cycle, status: won ? 'won' : 'lost', population: finalPopulation, onReplay: () => exit('restart'),
+        cycle: p.cycle, status: won ? 'won' : 'lost', population: finalPopulation,
+        onReplay: canRetry ? () => exit('restart') : undefined,
+        replayLabel: won ? 'Replay ↺' : 'Try again ↺',
+        points: currentTermPoints.total,
         result: won ? `Re-elected on ${approvalRating.toFixed(1)}% · ${r.targetMetricAbbreviation} ${endMetric.toFixed(2)} vs target ${targetScore.toFixed(2)}` : `Voted out on ${approvalRating.toFixed(1)}%`,
       };
     }
-    if (i === levelIndex + 1 && canProceed) {
+    if (i === levelIndex + 1) {
       return {
         cycle: p.cycle, status: 'next',
         action: { label: `Start term ${i + 1} ▶`, disabled: !ready, onClick: () => { setPendingStart(p.cycle); exit('next_term'); } },
@@ -601,8 +611,14 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
             <div key={p.key} className={p.className} style={p.style}>
               <RunnersAndRiders
                 entries={runners}
-                resultsSoFar={levelIndex + (canProceed ? 1 : 0)}
-                footer={isFinalCycle && canProceed ? (
+                resultsSoFar={levelIndex + 1}
+                score={scoreSoFar}
+                note={
+                  `This term: ${pointsBreakdown(currentTermPoints)}.` +
+                  (previousAttempt ? ` Your first attempt scored ${formatPoints(runPoints(previousAttempt))}; the better one counts.`
+                    : canRetry ? ` You can play this term once more: the better score counts.` : '')
+                }
+                footer={isFinalCycle ? (
                   <button
                     type="button"
                     onClick={() => exit('finish_game')}

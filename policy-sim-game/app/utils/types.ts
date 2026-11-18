@@ -1,3 +1,4 @@
+import type { TermPoints } from './points';
 export enum AxisVariable {
   LifeSatisfaction,
   PersonalUtility,
@@ -73,6 +74,12 @@ export interface CompletedRun {
   targetScore: number;
   approvalRating: number;
   enactedLegislation: TurnHistory[];
+  /** Term points for this run (utils/points.ts). Missing in saves from before points existed. */
+  points?: TermPoints;
+  /** Which attempt this run was (1, or 2 after a retry). */
+  attempt?: number;
+  /** Attempts played at this term in all. */
+  attempts?: number;
 }
 
 export enum GamePhase {

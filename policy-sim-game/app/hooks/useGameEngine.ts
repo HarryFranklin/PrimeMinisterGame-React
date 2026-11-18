@@ -12,6 +12,7 @@ import { DifficultyEngine } from '../utils/DifficultyEngine';
 import { track, setParticipantData, setContext, startLevelAttempt, startTimer, stopTimer } from '../client/telemetry';
 import { ElicitationState, GambleBlock, createElicitationState, ELICITATION_ENABLED } from '../utils/ElicitationEngine';
 import { getStudyState } from '@study';
+import { termPoints } from '../utils/points';
 
 const TURNS_PER_CYCLE = 5;
 
@@ -73,6 +74,11 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const [isEnacting, setIsEnacting] = useState(false);
   const [lastTurnSummary, setLastTurnSummary] = useState<{ policyName: string; scoreBefore: number; scoreAfter: number; turn: number } | null>(null);
   const [pressConferenceModifier, setPressConferenceModifier] = useState(0);
+  /** Press conference answers right this term (for term points). */
+  const [pressCorrect, setPressCorrect] = useState(0);
+  /** A term's first attempt, kept while its optional retry is played: the
+   * better of the two attempts is the one that counts (utils/points.ts). */
+  const [retryStash, setRetryStash] = useState<Partial<Record<ElectionCycle, CompletedRun>>>({});
   const [isParliamentDissolved, setIsParliamentDissolved] = useState(false);
   const [history, setHistory] = useState<TurnHistory[]>([]);
   const [cycleSchedule, setCycleSchedule] = useState<Policy[][]>([]);
@@ -119,6 +125,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setYAxisMax(100);
     setLastTurnSummary(null);
     setPressConferenceModifier(0);
+    setPressCorrect(0);
     resetDpmConsulted();
     
     setPopulation(freshPop);
@@ -165,6 +172,9 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setWinScalars(parsed.winScalars || {});
     setPlayerLS(parsed.playerLS ?? null);
     setElicitation(parsed.elicitation ?? null);
+    setPressConferenceModifier(parsed.pressConferenceModifier ?? 0);
+    setPressCorrect(parsed.pressCorrect ?? 0);
+    setRetryStash(parsed.retryStash ?? {});
 }, []);
 
   const handleSaveError = useCallback(() => {
@@ -239,11 +249,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     currentTurn, currentCycle, cycleAttempts, history,
     cycleSchedule, cycleMAO, currentDeck, optimalPath,
     isParliamentDissolved, gamePhase, completedRuns, hasSeenUtilityIntervention,
-    participantId, difficultySeed, winScalars, playerLS, elicitation
+    participantId, difficultySeed, winScalars, playerLS, elicitation,
+    pressConferenceModifier, pressCorrect, retryStash
   }), [population, initialPopulation, baselinePopulation, currentTurn, currentCycle, 
     cycleAttempts, history, cycleSchedule, cycleMAO, currentDeck, optimalPath, isParliamentDissolved, 
     gamePhase, completedRuns, hasSeenUtilityIntervention, participantId, difficultySeed, winScalars,
-    playerLS, elicitation]);
+    playerLS, elicitation, pressConferenceModifier, pressCorrect, retryStash]);
 
   const { wipeSave } = useSaveGame(gameStateSnapshot, handleSaveLoad, handleSaveError);
 
@@ -308,6 +319,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const applyPressConferenceDelta = useCallback((delta: number) => {
     setPressConferenceModifier(prev => prev + delta);
+    // A right answer raises approval (StagePressConference's SCORE_DELTA)
+    if (delta > 0) setPressCorrect(prev => prev + 1);
   }, []);
 
   const handleNavigateToPolicy = useCallback(() => {
@@ -427,17 +440,36 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setGamePhase(GamePhase.Election);
   }, [isParliamentDissolved]);
 
+  /** This attempt's result, as kept on the level select. */
+  const buildRun = useCallback((): CompletedRun => ({
+    cycle: currentCycle,
+    // Level select and the final debrief only need each citizen's final LS and
+    // utilities, so the turn-by-turn ledger is dropped (~240 KB per term in
+    // the browser save).
+    finalPopulation: population.map(p => ({ ...p, historicalLedger: [] })),
+    finalScore: turnMetricScore,
+    targetScore: cycleMAO * winScalars[currentCycle],
+    approvalRating: turnApprovalRating,
+    enactedLegislation: [...history],
+    points: termPoints(turnApprovalRating, pressCorrect),
+    attempt: cycleAttempts,
+  }), [currentCycle, population, turnMetricScore, cycleMAO, winScalars, turnApprovalRating, history, pressCorrect, cycleAttempts]);
+
+  /** The optional retry (one per term, win or lose): the first attempt is kept
+   * so the better of the two can count. */
   const handleResetCycle = useCallback((outcome: "win" | "lose" = "lose") => {
-    // Determine the exact outcome. If they ran out of retries (>=3), it's a final loss.
-    const cycleOutcome = outcome === 'win' ? 'won' : (cycleAttempts >= 3 ? 'lost_final' : 'lost_retry');
-    
+    const run = buildRun();
+    setRetryStash(prev => ({ ...prev, [currentCycle]: run }));
+
     // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
     track("cycle_ended", { 
       cycle: ElectionCycle[currentCycle], 
-      outcome: cycleOutcome,
+      outcome: outcome === 'win' ? 'won' : 'lost_retry',
       won: turnApprovalRating >= 51,
       exit: "restart",
       approval: Math.round(turnApprovalRating * 10) / 10,
+      points: run.points,
+      points_counted: false,
     });
 
     track("level_attempt_ended", {
@@ -449,7 +481,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     wipeSave();
     startCycle(currentCycle);
     setCycleAttempts(prev => prev + 1);
-  }, [currentCycle, currentTurn, cycleAttempts, wipeSave, startCycle, turnApprovalRating]);
+  }, [currentCycle, currentTurn, cycleAttempts, wipeSave, startCycle, turnApprovalRating, buildRun]);
 
   const jumpToCycle = (cycle: ElectionCycle) => {
     wipeSave();
@@ -542,10 +574,14 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
 
   const handleCompleteTerm = useCallback(() => {
     const targetScore = cycleMAO * winScalars[currentCycle];
+    const run = buildRun();
+    // After a retry, the better of the two attempts counts
+    const first = retryStash[currentCycle];
+    const best = first?.points && run.points && first.points.total > run.points.total ? first : run;
 
-    // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded
-    // Proceeding is also allowed after losing a third time, so the outcome
-    // comes from the verdict (approval >= 51%, as on the Election screen).
+    // Fire the cycle_ended telemetry ONLY once the cycle is truly concluded.
+    // Moving on after a loss is allowed, so the outcome comes from the verdict
+    // (approval >= 51%, as on the Election screen).
     const wonTerm = turnApprovalRating >= 51;
     track("cycle_ended", { 
       cycle: ElectionCycle[currentCycle], 
@@ -553,6 +589,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       won: wonTerm,
       exit: currentCycle === ElectionCycle.PersonalUtility ? "finish_game" : "next_term",
       approval: Math.round(turnApprovalRating * 10) / 10,
+      points: run.points,
+      points_counted: best === run,
     });
 
     track("level_completed", {
@@ -562,43 +600,47 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       final_score: turnMetricScore,
     });
 
-    const run: CompletedRun = {
-      cycle: currentCycle,
-      // Level select and the final debrief only need each citizen's final LS and
-      // utilities, so the turn-by-turn ledger is dropped (~240 KB per term in
-      // the browser save).
-      finalPopulation: population.map(p => ({ ...p, historicalLedger: [] })),
-      finalScore: turnMetricScore,
-      targetScore,
-      approvalRating: turnApprovalRating,
-      enactedLegislation: [...history]
-    };
-
+    const counted: CompletedRun = { ...best, attempts: cycleAttempts };
     setCompletedRuns(prev => {
       const clone = [...prev];
       const idx = clone.findIndex(r => r.cycle === currentCycle);
       if (idx >= 0) {
-        clone[idx] = run;
+        clone[idx] = counted;
       } else {
-        clone.push(run);
+        clone.push(counted);
       }
       return clone;
     });
+    setRetryStash(prev => {
+      const next = { ...prev };
+      delete next[currentCycle];
+      return next;
+    });
 
     setGamePhase(GamePhase.LevelSelect);
-  }, [currentCycle, population, turnMetricScore, cycleMAO, turnApprovalRating, history, currentTurn, winScalars]);
+  }, [currentCycle, turnMetricScore, cycleMAO, turnApprovalRating, currentTurn, winScalars, buildRun, retryStash]);
 
   // Which button sent the player to the end-of-term debrief (Restart Term or
   // Proceed/Finish). Kept in localStorage too, so Continue still works after a
   // refresh on the debrief screen. (Previously this ran inside a state updater,
   // which React may call twice - restarting the term twice.)
+  /** Every term's first attempt ends with the academic debrief, won or lost,
+   * so everyone gets the same teaching. A retry's end skips it (already seen). */
   const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
+    if (cycleAttempts > 1) {
+      if (type === 'restart') handleResetCycle(outcome);
+      else handleCompleteTerm();
+      return;
+    }
     try { localStorage.setItem(PENDING_DEBRIEF_KEY, JSON.stringify({ type, outcome })); } catch { /* ignore */ }
     setGamePhase(GamePhase.AcademicDebrief);
-  }, []);
+  }, [cycleAttempts, handleResetCycle, handleCompleteTerm]);
 
   const resolvingDebrief = useRef(false);
   const resolveAcademicDebrief = useCallback(() => {
+    // Only from the debrief itself: a second click while it fades out must not
+    // end the term again (it would restart or complete the next attempt).
+    if (gamePhase !== GamePhase.AcademicDebrief) return;
     if (resolvingDebrief.current) return;
     resolvingDebrief.current = true;
     setTimeout(() => { resolvingDebrief.current = false; }, 1000);
@@ -606,13 +648,12 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     try { pending = JSON.parse(localStorage.getItem(PENDING_DEBRIEF_KEY) || 'null'); } catch { /* ignore */ }
     try { localStorage.removeItem(PENDING_DEBRIEF_KEY); } catch { /* ignore */ }
     if (!pending) {
-      // Lost (e.g. storage blocked): same rule as the Election screen.
-      const won = turnApprovalRating >= 51;
-      pending = won || cycleAttempts >= 3 ? { type: 'complete', outcome: 'win' } : { type: 'restart', outcome: 'lose' };
+      // Lost (e.g. storage blocked): move on, the safe choice.
+      pending = { type: 'complete', outcome: turnApprovalRating >= 51 ? 'win' : 'lose' };
     }
     if (pending.type === 'restart') handleResetCycle(pending.outcome);
     else handleCompleteTerm();
-  }, [handleResetCycle, handleCompleteTerm, turnApprovalRating, cycleAttempts]);
+  }, [handleResetCycle, handleCompleteTerm, turnApprovalRating, gamePhase]);
 
   const currentChartData = useMemo(() => {
     if (population.length === 0) return [];
@@ -647,6 +688,8 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleCompleteTerm, setCurrentTurn, handleNavigateToPolicy,
     handleBriefingAcknowledged,
     startLevel, levelOpensWithIntermission,
+    previousAttempt: retryStash[currentCycle] ?? null,
+    currentTermPoints: termPoints(turnApprovalRating, pressCorrect),
     gamePhase, setGamePhase, isAgendaUnlocked, yAxisMax,
     TURNS_PER_CYCLE,
     completedRuns,
