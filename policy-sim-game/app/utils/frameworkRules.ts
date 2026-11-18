@@ -66,6 +66,6 @@ export const FRAMEWORK_RULES: Record<ElectionCycle, FrameworkRule> = {
     yAxisType: AxisVariable.SocietalFairness,
     graphColor: CYCLE_COLORS[ElectionCycle.SocietalUtility],
     winThresholdScalar: 0.9775,
-    briefingText: "Your citizens have told us how they would judge outcomes when deciding for others. Each of them now judges the whole country that way. Lifting the worst-off counts for much more than adding to those already doing well. Social utility reflects what people endorse when they are responsible for others.",
+    briefingText: "Your citizens have told us how they would judge outcomes when deciding for others. Social utility measures this. Each of them now judges the whole country that way. Lifting the worst-off counts for more, but helping those already doing well counts for something too.",
   },
 };

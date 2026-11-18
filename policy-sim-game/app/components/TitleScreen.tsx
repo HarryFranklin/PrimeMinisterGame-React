@@ -23,8 +23,8 @@ import { PM_TONES } from './desk/deskTheme';
  *   title_screen_shown, title_panel_opened / title_panel_closed {panel, dwell_ms},
  *   title_option_changed {option, value}, title_start_clicked {ms_on_title, …}
  *
- * Options are saved and tracked (utils/gameOptions.ts). Text speed and sound are
- * placeholders for now; "Camera flashes" turns off the press conference flashes
+ * Options are saved and tracked (utils/gameOptions.ts). Text speed sets how fast
+ * letters and memos type out; "Camera flashes" turns off the press conference flashes
  * and the flash into election night (also off if the device asks for reduced motion).
  */
 
@@ -127,7 +127,6 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
       about_opens: opened.current.about,
       options_opens: opened.current.options,
       text_speed: options.textSpeed,
-      sound: options.sound,
       flashes: options.flashes,
       already_fullscreen: alreadyFullscreen,
     });
@@ -233,12 +232,6 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
                       value={options.textSpeed}
                       choices={[{ value: 'normal', label: 'Normal' }, { value: 'fast', label: 'Fast' }, { value: 'instant', label: 'Instant' }]}
                       onChange={(v) => changeOption('textSpeed', v)}
-                    />
-                    <Choice
-                      label="Sound"
-                      value={options.sound}
-                      choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}
-                      onChange={(v) => changeOption('sound', v)}
                     />
                     <Choice
                       label="Camera flashes"

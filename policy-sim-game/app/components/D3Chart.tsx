@@ -98,7 +98,8 @@ function blockPos(k: number, n: number, s: number) {
 /** A square face: colour from red (LS 0) to green (LS 10); frown, flat or smile. */
 function drawBlockFace(g: d3.Selection<SVGGElement, any, any, any>, ls: number, s: number) {
   const fill = d3.interpolateRdYlGn(ls / 10);
-  const ink = ls <= 1 || ls >= 9 ? '#ffffff' : '#1c1917';
+  // One ink for every face, so a block changing colour as it moves keeps its face
+  const ink = '#1c1917';
   g.append('rect').attr('class', 'blk-body').attr('width', s).attr('height', s).attr('rx', Math.max(2, s * 0.16))
     .attr('fill', fill).attr('stroke', 'rgba(0,0,0,.22)').attr('stroke-width', 1);
   const r = Math.max(1, s * 0.075);
@@ -130,6 +131,8 @@ export default function D3Chart({
   const prevY        = useRef<AxisVariable | null>(null);
   
   const prevHistData = useRef<string>('');
+  // Blocks: last block size and plot size, to spot a resize mid-animation
+  const prevBlockGeom = useRef<string>('');
   const prevChartData = useRef<string>('');
   const prevMarkerData = useRef<string>('');
   
@@ -160,7 +163,9 @@ export default function D3Chart({
     if (!containerRef.current || !svgRef.current) return;
     
     // 'axis' marker tags need a row under the tick labels.
-    const margin = { top: 25, right: 15, bottom: markerLabels === 'axis' ? 74 : 52, left: 45 };
+    // Blocks have no y-axis, so they don't need its 45px gutter on the left
+    // (keep CHART_MARGIN in desk/PolicyBars.tsx and PointsStrip.tsx in step).
+    const margin = { top: 25, right: 15, bottom: markerLabels === 'axis' ? 74 : 52, left: visualStyle === 'blocks' ? 20 : 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
 
@@ -372,19 +377,56 @@ export default function D3Chart({
           }
         });
 
-        const speed = isHistUpdate ? 700 : 0;
+        // The chart was resized (e.g. the panel made room for a bill's rules): stop
+        // any blocks still flying or sliding, since they're heading for positions on
+        // the old size, and snap everything to its place on the new one.
+        const geom = `${s}|${W}|${H}`;
+        const resized = prevBlockGeom.current !== '' && prevBlockGeom.current !== geom;
+        prevBlockGeom.current = geom;
+        if (resized) {
+          dataLayer.selectAll('g.blk-gone').interrupt().remove();
+          dataLayer.selectAll('g.blk').interrupt();
+        }
+        const animate = isHistUpdate && !resized;
+        const speed = animate ? 700 : 0;
+
+        // People moving: a block that leaves one column while one appears in another
+        // flies across (changing colour on the way), rather than fading out and in.
+        // Kept shorter than DailyReturn's FLOW_STEP_MS so flights don't overlap.
+        const FLY = 550;
+        const oldBlocks = dataLayer.selectAll<SVGGElement, Blk>('g.blk').data();
+        const oldKeys = new Set(oldBlocks.map((b) => b.key));
+        const newKeys = new Set(blocks.map((b) => b.key));
+        const leaving = oldBlocks.filter((b) => !newKeys.has(b.key)).sort((a, b) => a.col - b.col || a.y - b.y);
+        const arriving = blocks.filter((b) => !oldKeys.has(b.key)).sort((a, b) => a.col - b.col || b.y - a.y);
+        const flyTo = new Map<string, Blk>();
+        const landing = new Set<string>();
+        if (animate && oldBlocks.length > 0) {
+          leaving.forEach((b, i) => { const t = arriving[i]; if (t) { flyTo.set(b.key, t); landing.add(t.key); } });
+        }
+
         dataLayer.selectAll<SVGGElement, Blk>('g.blk')
           .data(blocks, (b) => b.key)
           .join(
             (enter) => enter.append('g').attr('class', 'blk').style('pointer-events', 'none')
-              .attr('transform', (b) => `translate(${b.x},${b.y - 24})`).attr('opacity', 0)
+              .attr('transform', (b) => (landing.has(b.key) ? `translate(${b.x},${b.y})` : `translate(${b.x},${b.y - 24})`)).attr('opacity', 0)
               .each(function (b) { drawBlockFace(d3.select(this), b.ls, s); }),
             (update) => update.each(function (b) {
               // Size changed (resize): redraw the face
               const g = d3.select(this);
               if (Number(g.select('rect.blk-body').attr('width')) !== s) { g.selectAll('*').remove(); drawBlockFace(g, b.ls, s); }
             }),
-            (exit) => exit.transition().duration(300).attr('opacity', 0).remove(),
+            (exit) => {
+              exit.attr('class', 'blk-gone');
+              exit.filter((b) => flyTo.has(b.key)).raise().each(function (b) {
+                const t = flyTo.get(b.key)!;
+                const g = d3.select(this);
+                g.transition().duration(FLY).ease(d3.easeCubicInOut).attr('transform', `translate(${t.x},${t.y})`).attr('opacity', 1).remove();
+                g.select('rect.blk-body').transition().duration(FLY).attr('fill', d3.interpolateRdYlGn(t.ls / 10));
+              });
+              exit.filter((b) => !flyTo.has(b.key)).transition().duration(flyTo.size ? FLY : 300).attr('opacity', 0).remove();
+              return exit;
+            },
           )
           .each(function (b) {
             d3.select(this).select('rect.blk-body')
@@ -392,7 +434,11 @@ export default function D3Chart({
               .attr('stroke-width', b.state === 'solid' ? 1 : 1.75)
               .attr('stroke-dasharray', b.state === 'arrive' ? '4,2' : b.state === 'leave' ? '2,2' : 'none');
           })
-          .transition().duration((b) => (b.state === 'solid' ? speed : 250)).ease(d3.easeCubicOut)
+          .transition()
+          .delay((b) => (landing.has(b.key) ? FLY : 0))
+          // While people are moving, blocks that shuffle within a tower move at the
+          // same pace as the flights, so nothing is still sliding when the next step starts.
+          .duration((b) => (landing.has(b.key) ? 0 : b.state === 'solid' ? (flyTo.size ? FLY : speed) : 250)).ease(d3.easeCubicOut)
           .attr('transform', (b) => `translate(${b.x},${b.y})`)
           .attr('opacity', (b) => (b.state === 'leave' ? 0.3 : b.state === 'arrive' ? 0.6 : 1));
 

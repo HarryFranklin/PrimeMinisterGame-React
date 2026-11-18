@@ -38,7 +38,7 @@ export type TelemetryEvent =
 
       event: "title_start_clicked";
       /** already_fullscreen: they used the title screen's "Go full screen" before Start game */
-      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; sound: string; flashes: string; already_fullscreen: boolean };
+      payload: { ms_on_title: number; about_opens: number; options_opens: number; text_speed: string; flashes: string; already_fullscreen: boolean };
     }
   /** Fullscreen: requested by the title screen's "Go full screen" (title), "Start game" (start, only
   *  if not already fullscreen), the in-game "Go full screen" (nudge) or Resume (resume); every switch in/out. */
@@ -182,7 +182,8 @@ export type TelemetryEvent =
         policy_id: string;
         turn: number;
         dwell_ms: number;
-        resulting_action: "dismissed" | "picked_same_policy" | "picked_other_policy";
+        // "enacted": the bill was signed (logged as the signature finishes, before the day ends)
+        resulting_action: "dismissed" | "picked_same_policy" | "picked_other_policy" | "enacted";
       };
     }
 
@@ -202,6 +203,11 @@ export type TelemetryEvent =
       /** Hovered one bar of the life-satisfaction histogram for at least 250 ms. */
       event: "chart_bin_hovered";
       payload: { chart?: string; bin: number; count: number; dwell_ms: number };
+    }
+  | {
+      /** The "Compare with today" box on the bill preview was ticked or unticked. */
+      event: "preview_compare_toggled";
+      payload: { on: boolean; policy_id: string; turn: number };
     }
   | {
       /** Hovered one entry of the enacted-policies history for at least 250 ms. */
@@ -617,14 +623,16 @@ export type TelemetryEvent =
       payload: { cycle: string; turn: number };
     }
 
-    // ---- Reveal (end of the personal block) ----
+    // ---- Reveal (end of each gamble block) ----
   | {
       event: "elicitation_reveal_opened";
-      payload: { social_attitude: string | null; personal_attitude: string | null; direction: string | null };
+      // block 'social': shown after the Level 3 gambles; direction is then the
+      // player's social curve against the public's ('higher' = more cautious).
+      payload: { block: "social" | "personal"; social_attitude: string | null; personal_attitude: string | null; direction: string | null };
     }
     
-  | { event: "elicitation_reveal_step_selected"; payload: { from: number; to: number } }
-  | { event: "elicitation_reveal_closed"; payload: { dwell_ms: number; steps_viewed: number } }
+  | { event: "elicitation_reveal_step_selected"; payload: { block: "social" | "personal"; from: number; to: number } }
+  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number; steps_viewed: number } }
 
   // ---- Post-game ----
   | {

@@ -35,7 +35,7 @@ const getViewH = () => window.innerHeight;
 const STEPS = [
   { head: 'Read the bills', body: 'Open each bill in the in-tray. The chart shows who gains and who loses, and what it would do to your measure.' },
   { head: 'Sign one', body: 'Sign the bill you think does most for what you’re judged on. You can put a bill back before you sign.' },
-  { head: 'Continue', body: 'Move on to the next day. The country changes, and the polls update overnight.' },
+  { head: 'Next day', body: 'Signing ends the day. The bill becomes law, the country changes, and the polls update overnight.' },
 ];
 
 type Tab = 'term' | 'options';
@@ -253,12 +253,6 @@ export default function PauseMenu() {
                         value={options.textSpeed}
                         choices={[{ value: 'normal', label: 'Normal' }, { value: 'fast', label: 'Fast' }, { value: 'instant', label: 'Instant' }]}
                         onChange={(v) => changeOption('textSpeed', v)}
-                      />
-                      <Toggle
-                        label="Sound"
-                        value={options.sound}
-                        choices={[{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]}
-                        onChange={(v) => changeOption('sound', v)}
                       />
                       <Toggle
                         label="Camera flashes"

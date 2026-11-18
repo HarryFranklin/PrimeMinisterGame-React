@@ -103,6 +103,26 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
   },
 };
 
+/** End of the social block (before Level 3): the player's answers for
+ * others, next to the public's. Chart labels are shared with REVEAL_TEXT. */
+export const SOCIAL_REVEAL_TEXT = {
+  kicker: 'Your answers',
+  title: 'What your choices reveal',
+  /** The player's social curve compared with the public's (compareCurves(player, public)). */
+  vsPublicLabel: 'Compared with the public',
+  vsPublic: {
+    higher: 'you were more cautious than most people are when deciding for others.',
+    lower: 'you were more willing to take a chance than most people are when deciding for others.',
+    none: 'you answered much as most people do when deciding for others.',
+    mixed: 'it depended on where the group started: you were more cautious than most people at some levels and less at others.',
+  },
+  bridge: {
+    title: 'What this means for Level 3:',
+    body: 'Your citizens answered the same briefings. Level 3 judges you by social utility (NFI): the value they put on each person’s gain, worked out from those answers. The Public bars show their average. A rise near the bottom of the scale counts for more than the same rise near the top.',
+  },
+  button: 'Begin Level 3',
+};
+
 /** End of the personal block: what the player's answers show. */
 export const REVEAL_TEXT = {
   kicker: 'Your answers',
@@ -135,7 +155,7 @@ export const REVEAL_TEXT = {
   },
   bridge: {
     title: 'What this means for Level 4:',
-    body: 'Level 3 judged you by how the public values other people’s lives. Level 4 judges you by how people value their own, which gives the worst-off less extra weight. You’ll face the same policies, through a different lens.',
+    body: 'Level 3 judged you by how the public values other people’s lives. Level 4 judges you by how people value their own, which gives the worst-off less extra weight. You’ll be offered the same set of bills as in Level 3, judged through a different lens.',
   },
   chart: {
     title: (from: number, to: number) => `How many points is lifting one person from LS ${from} to LS ${to} worth?`,
@@ -143,8 +163,11 @@ export const REVEAL_TEXT = {
     self: 'Deciding for yourself',
     public: 'Public',
     you: 'You',
-    equalLine: 'If every point counted the same (Level 1)',
-    note: 'These values come from the risks accepted in the gambles. Taller bar: that rise counts for more. Try the other steps to see how the value of a rise changes further up the scale.',
+    /** Under each group's name: which level scores the public's answers. */
+    othersScored: 'The public’s answers set Level 3’s score: social utility (NFI)',
+    selfScored: 'The public’s answers set Level 4’s score: personal utility (NPS)',
+    equalLine: 'Dashed line: if every point counted the same (Level 1)',
+    note: 'These values come from the risks accepted in the gambles. Longer bar: that rise counts for more. Try the other steps to see how the value of a rise changes further up the scale.',
   },
   button: 'Begin Level 4',
 };

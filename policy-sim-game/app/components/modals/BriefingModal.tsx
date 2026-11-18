@@ -182,6 +182,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
                     {rule.targetMetricAbbreviation} · what’s that?
                   </button>
                 </div>
+                <span className="text-[14px] leading-snug text-stone-700">{judged.approachLine}</span>
                 {showDefinition && (
                   <div className="border-l-4 pl-2.5 py-1 text-[14px] leading-snug bg-white/40" style={{ borderColor: tone.dark }}>
                     <b>{rule.targetMetricName} ({rule.targetMetricAbbreviation}).</b> {rule.targetMetricDescription}

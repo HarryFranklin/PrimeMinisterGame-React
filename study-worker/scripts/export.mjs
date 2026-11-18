@@ -79,7 +79,9 @@ function confidenceChange(pre, post) {
 const participants = [], attempts = [], turns = [], views = [], events = [];
 for (const r of rows) {
   const pis = parse(r.pis), consent = parse(r.consent), pre = parse(r.pretest), post = parse(r.posttest), act = parse(r.activity);
-  const base = { pid: r.pid, mode: r.mode, condition: r.condition };
+  // label: for pilot/test, the STUDY_ID given in the /start link (e.g. P01), so a session can be
+  // matched to your notes. (For live participants study_id is Prolific's study ID, not a label.)
+  const base = { pid: r.pid, label: r.mode === 'live' ? '' : (r.study_id ?? ''), mode: r.mode, condition: r.condition };
   participants.push({
     ...base,
     created: iso(r.created_at), last_seen: iso(r.last_seen_at), stage: r.stage,

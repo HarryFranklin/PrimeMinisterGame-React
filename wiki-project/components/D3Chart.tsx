@@ -92,7 +92,8 @@ function blockPos(k: number, n: number, s: number) {
 /** A square face: colour from red (LS 0) to green (LS 10); frown, flat or smile. */
 function drawBlockFace(g: d3.Selection<SVGGElement, any, any, any>, ls: number, s: number) {
   const fill = d3.interpolateRdYlGn(ls / 10);
-  const ink = ls <= 1 || ls >= 9 ? '#ffffff' : '#1c1917';
+  // One ink for every face, so a block changing colour as it moves keeps its face
+  const ink = '#1c1917';
   g.append('rect').attr('class', 'blk-body').attr('width', s).attr('height', s).attr('rx', Math.max(2, s * 0.16))
     .attr('fill', fill).attr('stroke', 'rgba(0,0,0,.22)').attr('stroke-width', 1);
   const r = Math.max(1, s * 0.075);
@@ -145,7 +146,8 @@ export default function D3Chart({
   useEffect(() => {
     if (!containerRef.current || !svgRef.current) return;
 
-    const margin = { top: 25, right: 15, bottom: 40, left: 45 };
+    // Blocks have no y-axis, so they don't need its 45px gutter on the left
+    const margin = { top: 25, right: 15, bottom: 40, left: visualStyle === 'blocks' ? 20 : 45 };
     const W = Math.max(0, containerRef.current.clientWidth  - margin.left - margin.right);
     const H = Math.max(0, containerRef.current.clientHeight - margin.top  - margin.bottom);
     const baseColor = color || '#ec4899';

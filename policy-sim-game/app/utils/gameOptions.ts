@@ -1,11 +1,12 @@
 /**
  * The player's options from the title screen (saved in this browser).
- * Text speed and sound are placeholders for now; camera flashes is live.
+ * Text speed sets how fast letters and memos type out (hooks/useTypewriter.ts);
+ * camera flashes are below. (There is no sound in the game.)
  */
 export const OPTIONS_KEY = 'game_options_v1';
 
-export type Options = { textSpeed: 'normal' | 'fast' | 'instant'; sound: 'on' | 'off'; flashes: 'on' | 'off' };
-export const DEFAULT_OPTIONS: Options = { textSpeed: 'normal', sound: 'on', flashes: 'on' };
+export type Options = { textSpeed: 'normal' | 'fast' | 'instant'; flashes: 'on' | 'off' };
+export const DEFAULT_OPTIONS: Options = { textSpeed: 'normal', flashes: 'on' };
 
 export function loadOptions(): Options {
   try {

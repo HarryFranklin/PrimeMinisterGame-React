@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ElectionCycle, AxisVariable } from '../../utils/types';
 import { WelfareMetrics } from '../../utils/WelfareMetrics';
+import { MetricsEngine } from '../../utils/MetricsEngine';
 import D3Chart from '../D3Chart';
 import { track } from '../../client/telemetry';
 import { useGame } from '../../context/GameStateContext';
@@ -70,7 +71,7 @@ const GuessQuestion = ({
 );
 
 export default function AcademicDebriefOverlay() {
-  const { currentCycle, population: finalPopulation, yAxisMax, resolveAcademicDebrief } = useGame();
+  const { currentCycle, population: finalPopulation, yAxisMax, resolveAcademicDebrief, completedRuns } = useGame();
 
   const [revealedBenthamA, setRevealedBenthamA] = useState(false);
   const [revealedBenthamB, setRevealedBenthamB] = useState(false);
@@ -206,18 +207,19 @@ export default function AcademicDebriefOverlay() {
     return bestCitizen;
   }, [finalPopulation]);
 
-  const avgPU = useMemo(() => finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.getUtilityForPerson(p.currentLS, p.personalUtilities), 0) / finalPopulation.length, [finalPopulation]);
-  const avgSU = useMemo(() => {
-    const allLS = finalPopulation.map((p: any) => p.currentLS);
-    return finalPopulation.reduce((sum: number, p: any) => sum + WelfareMetrics.evaluateDistribution(allLS, p.societalUtilities), 0) / finalPopulation.length;
-  }, [finalPopulation]);
+  // Level 4 debrief: this term's country, scored by both utility measures, on the
+  // same scale as the game's scores (the back page shows the NPS one).
+  const avgPU = useMemo(() => MetricsEngine.getMetricScore(finalPopulation, ElectionCycle.PersonalUtility), [finalPopulation]);
+  const avgSU = useMemo(() => MetricsEngine.getMetricScore(finalPopulation, ElectionCycle.SocietalUtility), [finalPopulation]);
+  // The player's actual Level 3 result, for reference
+  const term3Run = completedRuns.find((r) => r.cycle === ElectionCycle.SocietalUtility);
 
   const getDpmMessage = () => {
     switch (currentCycle) {
       case ElectionCycle.Benthamite: return "We hit our happiness targets, but relying purely on averages can mask real suffering.\nLook at the two societies below and answer the question underneath.";
       case ElectionCycle.Rawlsian: return "We protected the vulnerable, but at a cost: only the worst-off counted, so even large gains for everyone else were worth nothing to our score.\nHere are two real citizens from our population. Imagine each one gains exactly one point. Whose gain would matter more to them?";
       case ElectionCycle.SocietalUtility: return "This term, citizens judged the country as they would when responsible for others.\nNext, each citizen will judge only by how they value their own life.";
-      case ElectionCycle.PersonalUtility: return "You governed the same policies under two lenses.\nLet's compare how your performance is judged when citizens decide for others versus for themselves.";
+      case ElectionCycle.PersonalUtility: return "Levels 3 and 4 offered you the same set of bills, judged through two different lenses.\nHere is the country you left this term, scored both ways: as citizens judge it for others, and as they judge it for themselves.";
     }
   };
 
@@ -368,11 +370,14 @@ export default function AcademicDebriefOverlay() {
                   onClick={() => { setRevealedSU(true); markInteraction('societal_utility'); }}
                   className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedSU ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40 hover:border-emerald-500/40 hover:bg-emerald-500/5'}`}
                 >
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400/70 mb-2 text-center">Term 3: Societal Utility</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-emerald-400/70 mb-2 text-center">This country, judged by social utility (NFI)</h3>
                   <div className={`transition-all duration-500 flex flex-col h-full ${revealedSU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                     <div className="text-center mb-4 mt-2">
-                      <span className="text-xs uppercase font-bold text-emerald-400/70 block mb-1">Average Evaluation</span>
+                      <span className="text-xs uppercase font-bold text-emerald-400/70 block mb-1">NFI</span>
                       <strong className="text-4xl font-black text-emerald-300">{avgSU.toFixed(2)}</strong>
+                      {term3Run && (
+                        <span className="text-xs text-zinc-400 block mt-1">Your own Level 3 term finished on NFI {term3Run.finalScore.toFixed(2)} (target {term3Run.targetScore.toFixed(2)})</span>
+                      )}
                     </div>
                     <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
                       <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens judge the country as they would when responsible for others.</p>
@@ -386,11 +391,12 @@ export default function AcademicDebriefOverlay() {
                   onClick={() => { setRevealedPU(true); markInteraction('personal_utility'); }}
                   className={`rounded-xl border transition-all p-5 flex flex-col relative overflow-hidden cursor-pointer ${revealedPU ? 'border-zinc-600 bg-zinc-800/60' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-600 hover:bg-zinc-800/40'}`}
                 >
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Term 4: Personal Utility</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">This country, judged by personal utility (NPS)</h3>
                   <div className={`transition-all duration-500 flex flex-col h-full ${revealedPU ? 'opacity-100 transform-none' : 'opacity-0 translate-y-4 hidden'}`}>
                     <div className="text-center mb-4 mt-2">
-                      <span className="text-xs uppercase font-bold text-zinc-500 block mb-1">Average Evaluation</span>
+                      <span className="text-xs uppercase font-bold text-zinc-500 block mb-1">NPS</span>
                       <strong className="text-4xl font-black text-zinc-200">{avgPU.toFixed(2)}</strong>
+                      <span className="text-xs text-zinc-400 block mt-1">The score you were judged on this term</span>
                     </div>
                     <div className="flex-1 text-xs md:text-sm text-zinc-400 space-y-3 overflow-y-auto pr-1">
                       <p><strong className="text-zinc-300">The Mechanic:</strong> Citizens judge only by how they value their own life.</p>
@@ -402,6 +408,7 @@ export default function AcademicDebriefOverlay() {
 
                 {revealedPU && revealedSU && (
                   <motion.div layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.5, ease: 'easeOut' }} className="col-span-1 md:col-span-2 overflow-hidden">
+                    <p className="text-xs text-zinc-400 mb-3 text-center">The two measures use different scales, so compare what each one rewards rather than the two numbers.</p>
                     <Note label="The Final Mandate" tone="zinc">
                       {'"You have seen how the same society can be judged completely differently depending on the metrics we use to measure success. You have navigated four different political philosophies.\nIt is time for your final verdict.'}
                     </Note>

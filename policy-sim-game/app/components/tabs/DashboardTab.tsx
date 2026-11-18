@@ -25,9 +25,13 @@ import { useTooltipTelemetry } from "../../client/hooks";
  *  - An open case folder: the country on graph paper on the left flap; the
  *    open bill (or the Deputy PM's note) on the right flap.
  *  - The in-tray: today's four bills as files, each with its paper sticking out.
- * A turn: pull a bill's paper out (its effect is ghosted on the chart) → Sign
- * (pen writes the signature, the paper slides away) → Continue (enacts it).
+ * A turn: pull a bill's paper out (its effect is previewed on the chart) → Sign
+ * (pen writes the signature, the paper slides away) → it is enacted straight away.
+ * Continue is only used at the end of the term (to the press conference).
  */
+/** Bill preview: true = everyone moves to the new shape at once; false = column by column. */
+const PREVIEW_ALL_AT_ONCE = true;
+
 export default function DashboardTab() {
   const {
     currentCycle, currentTurn, currentHistogramData,
@@ -46,6 +50,8 @@ export default function DashboardTab() {
 
   const [hoveredEnactedId, setHoveredEnactedId] = useState<string | null>(null);
   const [hoveredHistoryTurn, setHoveredHistoryTurn] = useState<number | null>(null);
+  // Bill preview: "Compare with today" (off: the predicted country, played column by column)
+  const [compareWithToday, setCompareWithToday] = useState(false);
   const { trackHover } = useTooltipTelemetry();
 
   // Signing: `signingId` while the pen writes and the paper slides away;
@@ -56,6 +62,8 @@ export default function DashboardTab() {
   const signingId = sign.day === dayKey ? sign.signing : null;
   const signedId = sign.day === dayKey ? sign.signed : null;
   const signTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a signature finishes: the bill is then enacted without a Continue click.
+  const enactWhenSigned = useRef(false);
 
   // New-day card: a calendar page that drops onto the desk after Continue.
   const [dayCard, setDayCard] = useState<{ from: number; to: number | null; key: number } | null>(null);
@@ -155,6 +163,7 @@ export default function DashboardTab() {
     const day = dayKey;
     setSign({ day, signing: id, signed: null });
     signTimer.current = setTimeout(() => {
+      enactWhenSigned.current = true;
       setSign((s) => (s.day === day ? { day, signing: null, signed: id } : s));
     }, SIGN_SEQUENCE_MS);
   };
@@ -170,6 +179,16 @@ export default function DashboardTab() {
   const onContinue = () => {
     if (continueState === "press") handleFaceElectorate();
     else if (continueState === "ready") {
+      // The bill being read is closed by signing it: log that now, on today's turn,
+      // so its reading time counts for this day (not the next one, as "dismissed").
+      const readingId = prevDetailsPolicyId.current;
+      if (readingId) {
+        track("view_details_closed", {
+          policy_id: readingId, turn: currentTurn,
+          dwell_ms: stopTimer(`view_details_${readingId}`), resulting_action: "enacted",
+        });
+        prevDetailsPolicyId.current = null;
+      }
       handleApplyPolicy();
       // The bill becomes law (~0.8 s), then tomorrow's page drops in while the
       // country updates and the new files are dealt. `day: null` = polling day.
@@ -180,6 +199,15 @@ export default function DashboardTab() {
       dayTimers.current.push(setTimeout(() => setDayCard((c) => (c?.key === key ? null : c)), 2700));
     }
   };
+
+  // Signing is enough: once the signature is done, the bill is enacted (no extra Continue click).
+  useEffect(() => {
+    if (continueState === "ready" && enactWhenSigned.current) {
+      enactWhenSigned.current = false;
+      onContinue();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [continueState]);
 
   const status = termStatus(turnMetricScore, startScore, targetScore, currentTurn, TURNS_PER_CYCLE);
   
@@ -192,9 +220,40 @@ export default function DashboardTab() {
   const hoveredEnacted = hoveredEnactedId ? availablePolicies.find((p) => p.id === hoveredEnactedId) : null;
   const chartTitle = isParliamentDissolved
     ? hoveredHistoryTurn !== null
-      ? `Before and after: ${hoveredEnacted?.policyName ?? "this bill"}`
+      ? `Before and after:\n${hoveredEnacted?.policyName ?? " this bill"}`
       : "The country on polling day"
-    : "The country today";
+    : billOpen
+      ? `Previewing:\n${selectedPolicy!.policyName}`
+      : "The country today";
+
+  // Bill preview. PREVIEW_ALL_AT_ONCE: everyone moves to the new shape in one go.
+  // Otherwise one column's movers at a time: people moving up go first, from
+  // the top column down; then people moving down, from the bottom column up. That
+  // way no column gains people and then loses some straight after (e.g. LS 1's
+  // people landing on LS 2 just before LS 2's own people leave).
+  const flowSteps = useMemo(() => {
+    if (!billOpen) return null;
+    const bin = (ls: number) => Math.min(10, Math.max(0, Math.round(ls)));
+    const from = population.map((r) => bin(r.currentLS));
+    const to = previewPopulation.map((r) => bin(r.currentLS));
+    const where = [...from];
+    const snapshot = () => {
+      const counts = Array<number>(11).fill(0);
+      where.forEach((c) => { counts[c] += 1; });
+      return counts.map((count, name) => ({ name, count }));
+    };
+    const steps = [snapshot()];
+    const moveColumn = (col: number, up: boolean) => {
+      let moved = false;
+      from.forEach((f, i) => {
+        if (f === col && (up ? to[i] > f : to[i] < f)) { where[i] = to[i]; moved = true; }
+      });
+      if (moved) steps.push(snapshot());
+    };
+    for (let col = 10; col >= 0; col--) moveColumn(col, true);
+    for (let col = 0; col <= 10; col++) moveColumn(col, false);
+    return PREVIEW_ALL_AT_ONCE ? [steps[0], steps[steps.length - 1]] : steps;
+  }, [billOpen, population, previewPopulation]);
 
   return (
     <div className="desk-wood -m-4 h-[calc(100%+2rem)] flex flex-col relative overflow-hidden">
@@ -240,7 +299,7 @@ export default function DashboardTab() {
             CABINET · {isParliamentDissolved ? "END OF TERM" : `DAY ${currentTurn}`}
           </div>
 
-          <div className="absolute inset-0 grid grid-cols-2 gap-[4%] p-[22px]">
+          <div className="absolute inset-0 grid grid-cols-[1.15fr_1fr] gap-[4%] p-[22px]">
             {/* Left flap: the country */}
             <div className="relative min-h-0 min-w-0" onMouseEnter={() => track("graph_hovered", { chart_context: "dashboard", turn: currentTurn })}>
               <DailyReturn
@@ -254,6 +313,13 @@ export default function DashboardTab() {
                 population={population}
                 isUtilityCycle={isUtilityCycle}
                 activeRules={billOpen ? selectedPolicy!.specificRules : isParliamentDissolved && hoveredEnacted ? hoveredEnacted.specificRules : null}
+                previewing={billOpen}
+                flowSteps={flowSteps}
+                compare={compareWithToday}
+                onCompareChange={(on) => {
+                  setCompareWithToday(on);
+                  if (selectedPolicy) track("preview_compare_toggled", { on, policy_id: selectedPolicy.id, turn: currentTurn });
+                }}
                 emptyHint={
                   isParliamentDissolved
                     ? "Hover over a bill on the right to see what it did."
@@ -265,7 +331,7 @@ export default function DashboardTab() {
             {/* Right flap: the bill, the Deputy PM's note, or the term's bills */}
             <div className="relative min-h-0 min-w-0">
               {isParliamentDissolved ? (
-                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-auto rotate-[.4deg]">
+                <div className="desk-paper absolute inset-0 shadow-[0_6px_14px_rgba(0,0,0,.2)] pl-14 pr-6 py-5 flex flex-col gap-3 overflow-y-hidden rotate-[.4deg]">
                   <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.dark }}>Parliament is dissolved</span>
                   <span className="font-display font-black text-[clamp(22px,2vw,30px)] leading-tight text-[#2a1f0e]">Signed into law this term</span>
                   <span className="text-[13px] text-stone-600">
@@ -283,16 +349,19 @@ export default function DashboardTab() {
                 </div>
               ) : (
                 <>
-                  {/* Underneath the paper: an empty flap, or "sent" once signed */}
+                  {/* Underneath the paper: an empty flap. Its hint stays hidden from the
+                      signature until the new day has settled, so nothing flickers on the
+                      flap while the bill becomes law and the calendar turns. */}
                   <div className="absolute inset-0 border-[3px] border-dashed border-[rgba(92,66,20,.35)] flex flex-col items-center justify-center gap-2 text-center px-10 text-[#5c4214]">
-                    <span className="font-display font-black text-[clamp(22px,2vw,28px)]">
-                      {signedId ? "Sent to Parliament ✓" : "Four bills in the tray"}
-                    </span>
-                    <span className="text-[14px] leading-relaxed">
-                      {signedId
-                        ? "It becomes law when you press Continue. Its effects show tomorrow."
-                        : "Pull one out to read it. It lands here, and its effect shows on the country."}
-                    </span>
+                    <div
+                      className="flex flex-col items-center gap-2 transition-opacity duration-500"
+                      style={{ opacity: signingId || signedId || isEnacting || dayCard ? 0 : 1 }}
+                    >
+                      <span className="font-display font-black text-[clamp(22px,2vw,28px)]">Four bills in the tray</span>
+                      <span className="text-[14px] leading-relaxed">
+                        Pull one out to read it. It lands here, and its effect shows on the country.
+                      </span>
+                    </div>
                   </div>
 
                   <AnimatePresence>

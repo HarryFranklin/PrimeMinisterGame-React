@@ -30,7 +30,7 @@ interface DeskTopBarProps {
 }
 
 const CONTINUE_TEXT: Record<ContinueState, { label: string; sub: string }> = {
-  locked: { label: 'Continue ▶', sub: 'sign a bill first' },
+  locked: { label: 'Sign a bill', sub: 'the day ends when you sign' },
   ready: { label: 'Continue ▶', sub: 'to tomorrow' },
   busy: { label: 'Enacting…', sub: 'the bill becomes law' },
   press: { label: 'Press conference ▶', sub: 'the term is over' },

@@ -139,6 +139,8 @@ export interface CycleSummary {
   pct_turns_enacted_first_pick: number | null;
   mean_enacted_rank: number | null;
   chart_bin_hovers: number;
+  /** Times "Compare with today" was ticked on a bill preview. */
+  preview_compare_on: number;
   enacted_history_hovers: number;
   enacted_history_hover_ms: number;
   /** enacted-policy hovers after the last turn (the end-of-term review) */
@@ -540,6 +542,7 @@ export function buildCycleSummary(attemptId: string, outcome?: CycleSummary["out
     pct_turns_enacted_first_pick: withPick.length ? Math.round((withPick.filter((t) => t.enacted_was_first_pick).length / withPick.length) * 100) : null,
     mean_enacted_rank: rated.length ? Math.round((sum(rated.map((t) => t.enacted_rank!)) / rated.length) * 100) / 100 : null,
     chart_bin_hovers: events.filter((e) => e.event === "chart_bin_hovered").length,
+    preview_compare_on: events.filter((e) => e.event === "preview_compare_toggled" && (e.payload as { on?: boolean } | undefined)?.on === true).length,
     enacted_history_hovers: historyHovers.length,
     enacted_history_hover_ms: sum(historyHovers.map((e) => num(e.payload?.dwell_ms) ?? 0)),
     enacted_history_hovers_after_final_turn: lastTurnTs === null ? 0 : historyHovers.filter((e) => e.ts > lastTurnTs).length,

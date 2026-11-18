@@ -10,7 +10,7 @@ import { PM_TONES } from '../../desk/deskTheme';
 import { makePoll, formatPollRange, POLL_HALF_WIDTH_FINAL, POLL_HALF_WIDTH_POLLING_DAY, WIN_THRESHOLD } from '../../../utils/polls';
 import PMFigure from './PMFigure';
 import MiniHistogram from '../../paper/MiniHistogram';
-import RunnersAndRiders, { type RunnerEntry } from '../../paper/RunnersAndRiders';
+import RunnersAndRiders, { JUDGED, type RunnerEntry } from '../../paper/RunnersAndRiders';
 import { setPendingStart } from '../../../utils/pendingStart';
 import { buildTermTimeline, ANALYSIS_MESSAGES } from './StageTermSummary';
 import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
@@ -525,6 +525,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
           {(() => { const p = page(5); return (
             <div key={p.key} className={p.className} style={p.style}>
               <div className="flex justify-between border-b-2 border-stone-900 pb-1"><span className="paper-cap">Explainer</span><span className="paper-cap">p5</span></div>
+              <span className="paper-cap" style={{ color: tone.dark }}>{JUDGED[currentCycle].approach}</span>
               <span className="font-display font-black text-[38px] leading-[.95]">How {surname} was judged</span>
               <p className="m-0 text-[15px] leading-snug">{surname}’s score was the <strong>{rule.targetMetricName}</strong>: {ex.what}</p>
               <div className="grid grid-cols-2 gap-3">
