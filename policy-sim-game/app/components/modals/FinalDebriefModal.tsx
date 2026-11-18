@@ -14,11 +14,11 @@ import { useDwellTimer } from '../../client/hooks';
 
 const CONFETTI_COLORS = [...Object.values(CYCLE_COLORS), '#f59e0b'];
 
-// Multi-directional confetti for the final win state
+// Multi-directional confetti for the final win state. The random paths are
+// worked out once per burst: re-rolling them on every render (e.g. when the
+// player changes the lens) made the pieces jump mid-flight.
 const OmniConfetti = ({ triggerKey }: { triggerKey: number }) => {
-  return (
-    <div key={triggerKey} className="fixed inset-0 overflow-hidden pointer-events-none z-[9999]">
-      {Array.from({ length: 200 }).map((_, i) => {
+  const pieces = useMemo(() => Array.from({ length: 200 }).map((_, i) => {
         const side = i % 4; // 0: top, 1: bottom, 2: left, 3: right
         const randomX = Math.random() * 100;
         const randomY = Math.random() * 100;
@@ -39,13 +39,19 @@ const OmniConfetti = ({ triggerKey }: { triggerKey: number }) => {
           initial = { left: '110%', top: `${randomY}vh` };
           animate = { left: '-10%', top: `${randomY + (Math.random() * 20 - 10)}vh`, rotate: 720 };
         }
+        return { initial, animate, duration: 3 + Math.random() * 4, delay: Math.random() * 0.5 };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }), [triggerKey]);
 
+  return (
+    <div key={triggerKey} className="fixed inset-0 overflow-hidden pointer-events-none z-[9999]">
+      {pieces.map((p, i) => {
         return (
           <motion.div
             key={i}
-            initial={{ ...initial, opacity: 1 }}
-            animate={{ ...animate, opacity: [1, 1, 0] }}
-            transition={{ duration: 3 + Math.random() * 4, ease: 'easeOut', delay: Math.random() * 0.5 }}
+            initial={{ ...p.initial, opacity: 1 }}
+            animate={{ ...p.animate, opacity: [1, 1, 0] }}
+            transition={{ duration: p.duration, ease: 'easeOut', delay: p.delay }}
             className="absolute w-3 h-3"
             style={{
               backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],

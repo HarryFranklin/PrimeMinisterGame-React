@@ -231,6 +231,7 @@ export default function UtilityInterventionOverlay() {
           </h1>
           <p className="text-lg text-zinc-400 leading-relaxed">
             The public no longer judges you on raw numbers; from now on it&apos;s about <strong>scoring what matters more</strong>.
+            That is <strong className="text-zinc-200">utility</strong>: the value of a 1-point gain in life satisfaction, which depends on where the person starts.
             A one-point rise in life satisfaction means something completely different depending on where someone started - profound for someone who's struggling, barely noticeable for someone who's already thriving.
             Explore the curve below, then pick citizens to see how the exact same <strong className="text-zinc-200">+1 Life Satisfaction</strong> boost affects different citizens.
           </p>
@@ -352,14 +353,14 @@ export default function UtilityInterventionOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-wrap items-end justify-end gap-4 pb-6"
+          className="flex flex-col items-end gap-4 pb-6"
         >
           {askedSource && (
             <motion.div
               id="utility-source-answer"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mr-auto max-w-xl rounded-xl border border-pink-500/40 bg-pink-500/10 p-5 text-zinc-200 leading-relaxed"
+              className="w-full rounded-xl border border-pink-500/40 bg-pink-500/10 p-5 text-zinc-200 leading-relaxed"
             >
               <p className="font-black text-white mb-1">Excellent question!</p>
               <p className="text-sm">
