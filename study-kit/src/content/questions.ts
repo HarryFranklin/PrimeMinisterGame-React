@@ -16,7 +16,8 @@
 
 import charts from './charts.json';
 
-export const QUESTIONNAIRE_VERSION = 'q-0.7 (16 Nov 2026, pilot)';
+// Every change between versions is listed in /study-kit/QUESTIONNAIRE-CHANGES.md.
+export const QUESTIONNAIRE_VERSION = 'q-0.8 (18 Nov 2026, pilot)';
 
 export type Condition = 'game' | 'wiki';
 export type Phase = 'pre' | 'post';
@@ -427,7 +428,7 @@ export const PRETEST: Page[] = [
     content: [
       { type: 'charts', charts: ['pre_A', 'pre_B'] },
       { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_AB },
-      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_AB },
+      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor? (The floor is the lowest life satisfaction score that anyone in the society has.)', options: SOCIETIES_AB },
       { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_AB },
     ],
   },
@@ -440,7 +441,7 @@ export const PRETEST: Page[] = [
         id: 'bi1',
         type: 'single',
         prompt:
-          'A policy could raise one person’s life satisfaction by exactly one point. Should that gain count for more if the person starts at 2/10 than if they start at 8/10?',
+          'A policy could raise one person’s life satisfaction by exactly one point. When a government weighs up its policies, should that gain count for more if the person starts at 2/10 than if they start at 8/10?',
         options: opts('Yes, it should count for more', 'No, it should count the same', 'It should count for less', 'Not sure'),
       },
       { type: 'info', text: '- **Society X:** all 10 people are at 6/10.\n- **Society Y:** 9 people are at 8/10 and 1 person is at 2/10.' },
@@ -469,7 +470,7 @@ export const PRETEST: Page[] = [
       {
         id: 'gaming_frequency',
         type: 'single',
-        prompt: 'How often do you play video games?',
+        prompt: 'How often do you play video games (including games on a phone or tablet)?',
         options: [
           { value: 'never', label: 'Never' },
           { value: 'rarely', label: 'Rarely' },
@@ -520,7 +521,7 @@ export const POSTTEST: Page[] = [
     content: [
       { type: 'charts', charts: ['post_1', 'post_2'] },
       { id: 'lo1_1', type: 'single', prompt: 'Which society has the higher average (mean) life satisfaction?', options: SOCIETIES_12 },
-      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor (lowest life satisfaction present)?', options: SOCIETIES_12 },
+      { id: 'lo1_2', type: 'single', prompt: 'Which society has the higher floor? (The floor is the lowest life satisfaction score that anyone in the society has.)', options: SOCIETIES_12 },
       { id: 'lo1_3', type: 'single', prompt: 'Which society has the larger spread (more inequality)?', options: SOCIETIES_12 },
     ],
   },
@@ -554,7 +555,7 @@ export const POSTTEST: Page[] = [
       {
         id: 'lo2_3',
         type: 'grid',
-        prompt: 'Given these 3 societies, which would be classed as the better one under each approach?',
+        prompt: 'Which of these 3 societies would each approach rank as the best?',
         rows: [
           { value: 'benthamite', label: 'Under the Benthamite approach (NALS)' },
           { value: 'rawlsian', label: 'Under the Rawlsian approach (MWB)' },
@@ -687,7 +688,7 @@ export const POSTTEST: Page[] = [
           { value: 'B', label: 'Policy B' },
         ],
       },
-      { id: 'lo4_4c', type: 'text', multiline: true, prompt: 'Why do they diverge?' },
+      { id: 'lo4_4c', type: 'text', multiline: true, required: false, prompt: 'Why do they diverge?' },
       {
         id: 'lo4_5',
         type: 'grid',
@@ -722,7 +723,7 @@ export const POSTTEST: Page[] = [
           'Another way (e.g. Benthamite, Rawlsian, or other)'
         ),
       },
-      { id: 'om1_explain', type: 'text', multiline: true, prompt: 'Please explain your answer.' },
+      { id: 'om1_explain', type: 'text', multiline: true, required: false, prompt: 'Please explain your answer.' },
       {
         id: 'om2',
         type: 'single',
