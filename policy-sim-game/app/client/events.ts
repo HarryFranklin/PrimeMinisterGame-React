@@ -175,6 +175,9 @@ export type TelemetryEvent =
       event: "policy_card_selected";
       payload: { turn: number; level_id: string; policy_id: string | null; action: "picked" | "deselected" };
     }
+  // Tab switched away (hidden) or back (visible). hidden_ms: how long it was away (on "visible").
+  // Inside a term it lands in that attempt's timeline (screens.tab_hidden_*); flow keeps session totals.
+  | { event: "tab_visibility_changed"; payload: { state: "hidden" | "visible"; hidden_ms: number | null } }
   | { event: "view_details_opened"; payload: { policy_id: string; turn: number } }
   | {
       event: "view_details_closed";
@@ -555,7 +558,10 @@ export type TelemetryEvent =
         block: "social" | "personal";
         player_ls: number | null;
         loss_risks: Record<string, number | null>;
-        utilities: Record<string, number> | null;
+        /** Ladder step where option B was accepted ("1 in 10"), or "never". */
+        accepted_at: string | null;
+        /** Worth of the rise 4->6 with the rise 2->4 worth 1 (from loss_risks). */
+        rise_worth: number | null;
         undo_count: number;
         dwell_ms: number;
       };
@@ -628,11 +634,13 @@ export type TelemetryEvent =
       event: "elicitation_reveal_opened";
       // block 'social': shown after the Level 3 gambles; direction is then the
       // player's social curve against the public's ('higher' = more cautious).
-      payload: { block: "social" | "personal"; social_attitude: string | null; personal_attitude: string | null; direction: string | null };
+      // block 'personal': direction is the player's answer for themselves against
+      // their answer for others ('lower' = less cautious for themselves).
+      payload: { block: "social" | "personal"; social_accepted_at: string | null; personal_accepted_at: string | null; direction: string | null };
     }
     
   | { event: "elicitation_reveal_step_selected"; payload: { block: "social" | "personal"; from: number; to: number } }
-  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number; steps_viewed: number } }
+  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number } }
 
   // ---- Post-game ----
   | {

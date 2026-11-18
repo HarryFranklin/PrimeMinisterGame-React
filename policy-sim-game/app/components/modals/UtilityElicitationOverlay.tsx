@@ -6,7 +6,7 @@ import GambleScreen, { SLIDE } from '../elicitation/GambleScreen';
 import { PERSONAL_INTRO_CARD, SOCIAL_INTRO_CARD } from '../elicitation/elicitationText';
 import {
   BlockState, GambleBlock, GambleChoice, LADDER,
-  applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
+  acceptedIndex, acceptedLabel, applyChoice, blockStarted, canUndo, currentGambleIndex, nextRiskIndex, riseWorth, undoLastChoice,
 } from '../../utils/ElicitationEngine';
 import { ElectionCycle } from '../../utils/types';
 import RevealScreen from '../elicitation/RevealScreen';
@@ -62,12 +62,14 @@ export default function UtilityElicitationOverlay() {
   const finish = (s: BlockState) => {
     if (finished.current) return;
     finished.current = true;
-    const curve = chainedCurve(s.records);
+    const record = s.records[s.order[0]];
+    const accepted = acceptedIndex(record);
     track('elicitation_completed', {
       block,
       player_ls: playerLS,
       loss_risks: Object.fromEntries(s.order.map((p) => [String(p), s.records[p].lossRisk])),
-      utilities: curve ? Object.fromEntries(curve.map((c) => [String(c.ls), c.u])) : null,
+      accepted_at: accepted === null ? null : acceptedLabel(accepted),
+      rise_worth: record.lossRisk === null ? null : riseWorth(record.lossRisk),
       undo_count: s.undoCount,
       dwell_ms: s.startedAt !== null ? Date.now() - s.startedAt : 0,
     });
@@ -160,8 +162,8 @@ export default function UtilityElicitationOverlay() {
             {stage === 'reveal' && (
                 <RevealScreen
                   block={block}
-                  social={chainedCurve(elicitation.social.records)}
-                  personal={block === 'personal' ? chainedCurve(state.records) : null}
+                  social={acceptedIndex(elicitation.social.records[elicitation.social.order[0]])}
+                  personal={block === 'personal' ? acceptedIndex(state.records[state.order[0]]) : null}
                   onContinue={() => finish(state)}
                 />
               )}

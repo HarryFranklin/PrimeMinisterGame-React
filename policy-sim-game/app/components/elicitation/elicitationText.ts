@@ -9,11 +9,11 @@ import { GambleBlock, lossOutcome, winOutcome } from '../../utils/ElicitationEng
 
 /** Opens the social block (before Level 3), after the utility intro. */
 export const SOCIAL_INTRO_CARD = {
-  kicker: 'Advisers’ briefings',
-  title: 'Three decisions for your citizens',
+  kicker: 'Adviser’s briefing',
+  title: 'A decision for your citizens',
   body:
-    'Before your next term, your advisers will bring you three briefings. Each one asks you to choose between a sure outcome and a gamble for a group of citizens. There are no right or wrong answers: choose what you think is best for them.',
-  button: 'Read the first briefing',
+    'Before your next term, your Chief Wellbeing Adviser brings you one decision: a sure outcome or a gamble, for a group of citizens. If you turn the gamble down, the odds will improve until you would take it. There are no right or wrong answers: choose what you think is best for them.',
+  button: 'Read the briefing',
 };
 
 /** Opens the personal block (before Level 4). */
@@ -21,7 +21,7 @@ export const PERSONAL_INTRO_CARD = {
   kicker: 'Out of office',
   title: 'Step out of the PM role',
   body:
-    'These three questions are about you and your own life, not the country. There are no right or wrong answers: choose what you would genuinely do.',
+    'This decision is about you and your own life, not the country. If you turn the risky option down, the odds will improve until you would take it. There are no right or wrong answers: choose what you would genuinely do.',
   button: 'Start',
 };
 
@@ -33,7 +33,7 @@ export const GAMBLE_UI = {
   choose: 'Choose',
   certain: 'Certain',
   equal: 'Both options seem equally good',
-  squaresNote: 'Each square is 100 people.',
+  squaresNote: (n: string) => `Each square is ${n} people.`,
 };
 
 interface BlockText {
@@ -56,7 +56,7 @@ interface BlockText {
 
 export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
   social: {
-    progress: (n, total) => `Briefing ${n} of ${total}`,
+    progress: (n, total) => (total > 1 ? `Briefing ${n} of ${total}` : 'Your briefing'),
     scenario: (x) =>
       'Briefing from your Chief Wellbeing Adviser.\n\n' +
       `A large group of citizens all rate their life satisfaction as ${x} out of 10. ` +
@@ -80,7 +80,7 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
     followUp: 'You chose Policy A. Now suppose Policy B harmed fewer people:',
   },
   personal: {
-    progress: (n, total) => `Personal decision ${n} of ${total}`,
+    progress: (n, total) => (total > 1 ? `Personal decision ${n} of ${total}` : 'Your decision'),
     scenario: (x) =>
       `Imagine your life satisfaction is ${x} out of 10.\n\n` +
       'All your life, you have had a health condition you were born with, which restricts your life somewhat. Your doctor says you must choose between two treatments.',
@@ -103,71 +103,66 @@ export const BLOCK_TEXT: Record<GambleBlock, BlockText> = {
   },
 };
 
-/** End of the social block (before Level 3): the player's answers for
- * others, next to the public's. Chart labels are shared with REVEAL_TEXT. */
-export const SOCIAL_REVEAL_TEXT = {
-  kicker: 'Your answers',
-  title: 'What your choices reveal',
-  /** The player's social curve compared with the public's (compareCurves(player, public)). */
+/** Lines describing one answer. `at` is the ladder label ("1 in 10"). */
+interface AnswerLines {
+  label: string;
+  first: string;
+  at: (at: string) => string;
+  never: string;
+}
+
+/** End of each block: what the player's single answer shows, next to the
+ * public's. The ladder chart shows where each option B was accepted. */
+export const REVEAL_TEXT = {
+  kicker: 'Your answer',
+  title: 'What your choice reveals',
+  social: {
+    label: 'Deciding for your citizens',
+    first: 'you backed Policy B straight away, at 1 in 2: a rise counted for at least as much to you as an equal fall.',
+    at: (at: string) => `you only backed Policy B once the risk was down to ${at}. A fall from 4 to 2 counted for more, in your eyes, than an equal rise from 4 to 6.`,
+    never: 'you never backed Policy B, even at 1 in 1,000,000: protecting people from a fall mattered far more to you than lifting others up.',
+  } as AnswerLines,
+  personal: {
+    label: 'Deciding for yourself',
+    first: 'you chose Treatment B straight away, at 1 in 2.',
+    at: (at: string) => `you chose Treatment B once the risk was down to ${at}.`,
+    never: 'you never chose Treatment B, even at 1 in 1,000,000.',
+  } as AnswerLines,
+  /** Social reveal: the player's answer for others against the public's. */
   vsPublicLabel: 'Compared with the public',
   vsPublic: {
-    higher: 'you were more cautious than most people are when deciding for others.',
-    lower: 'you were more willing to take a chance than most people are when deciding for others.',
-    none: 'you answered much as most people do when deciding for others.',
-    mixed: 'it depended on where the group started: you were more cautious than most people at some levels and less at others.',
+    higher: (pub: string) => `you were more cautious than most people, who back Policy B at ${pub}.`,
+    lower: (pub: string) => `you were more willing to take a chance than most people, who wait until ${pub}.`,
+    none: (pub: string) => `you answered like most people, who also back Policy B at ${pub}.`,
   },
-  bridge: {
-    title: 'What this means for Level 3:',
-    body: 'Your citizens answered the same briefings. Level 3 judges you by social utility (NFI): the value they put on each person’s gain, worked out from those answers. The Public bars show their average. A rise near the bottom of the scale counts for more than the same rise near the top.',
-  },
-  button: 'Begin Level 3',
-};
-
-/** End of the personal block: what the player's answers show. */
-export const REVEAL_TEXT = {
-  kicker: 'Your answers',
-  title: 'What your choices reveal',
-  socialLabel: 'Deciding for your citizens',
-  personalLabel: 'Deciding for yourself',
-  /** How the player treated risk in the social block. */
-  social: {
-    averse: 'you were cautious. You only backed Policy B when few people would fall: a drop counted for more, in your eyes, than an equal rise.',
-    neutral: 'you weighed rises and falls about equally. You backed Policy B once the odds were close to even.',
-    seeking: 'you were willing to gamble. You backed Policy B even when many people would fall: a rise counted for at least as much as an equal drop.',
-  },
-  /** Personal block compared with the social block (compareCurves(personal, social)). */
+  /** Personal reveal: the answer for yourself against the answer for others. */
   comparison: {
-    lower: 'you were more willing to take a chance than you were for them.',
-    higher: 'you were more cautious than you were for them.',
-    none: 'you answered in much the same way as you did for them.',
-    mixed: 'it depended on where you started: you were more cautious at some levels and less at others.',
+    lower: 'That is less cautious than you were for your citizens.',
+    higher: 'That is more cautious than you were for your citizens.',
+    none: 'That is the same as you chose for your citizens.',
   },
-  // The public's answers are more cautious for others than for themselves
-  // (7.2 vs 5.5 points at LS 4), i.e. direction 'lower'.
-  publicMatch: {
-    title: 'You’re not alone.',
-    body: 'Most people are more cautious with other people’s lives than with their own.',
-  },
-  publicOther: {
-    title: 'How this compares:',
-    body: 'most people are more cautious with other people’s lives than with their own.',
-    opposite: 'that’s less common. Most people are more cautious with other people’s lives than with their own.',
-  },
-  bridge: {
-    title: 'What this means for Level 4:',
-    body: 'Level 3 judged you by how the public values other people’s lives. Level 4 judges you by how people value their own, which gives the worst-off less extra weight. You’ll be offered the same set of bills as in Level 3, judged through a different lens.',
-  },
+  publicMatch: { title: 'You’re not alone.' },
+  publicOther: { title: 'How this compares:' },
+  /** The public's pattern, from their answers (self vs others). */
+  publicPattern: (self: string, others: string) =>
+    `Most people would take a ${self} risk for themselves, but want it down to ${others} before taking it for others. People are more cautious with other people’s lives than with their own.`,
   chart: {
-    title: (from: number, to: number) => `How many points is lifting one person from LS ${from} to LS ${to} worth?`,
-    others: 'Deciding for others',
-    self: 'Deciding for yourself',
-    public: 'Public',
-    you: 'You',
-    /** Under each group's name: which level scores the public's answers. */
-    othersScored: 'The public’s answers set Level 3’s score: social utility (NFI)',
-    selfScored: 'The public’s answers set Level 4’s score: personal utility (NPS)',
-    equalLine: 'Dashed line: if every point counted the same (Level 1)',
-    note: 'These values come from the risks accepted in the gambles. Longer bar: that rise counts for more. Try the other steps to see how the value of a rise changes further up the scale.',
+    title: 'Where each gamble was accepted',
+    never: 'Never',
+    youOthers: 'You, for others',
+    publicOthers: 'Most people, for others',
+    youSelf: 'You, for yourself',
+    publicSelf: 'Most people, for yourself',
+    note: 'Further down the ladder = more cautious. The more cautious people are, the more a gain near the bottom of the scale counts compared with the same gain further up.',
   },
-  button: 'Begin Level 4',
+  socialBridge: {
+    title: 'What this means for Level 3:',
+    body: 'Level 3 judges you by social utility (NFI), worked out from the answers your citizens gave to this same briefing. Because most people are cautious when deciding for others, a rise near the bottom of the scale counts for much more than the same rise near the top.',
+    button: 'Begin Level 3',
+  },
+  personalBridge: {
+    title: 'What this means for Level 4:',
+    body: 'Level 3 judged you by how cautious people are with other people’s lives. Level 4 judges you by how people value their own lives: personal utility (NPS). People take more risk for themselves, so the worst-off get less extra weight than in Level 3. You’ll be offered the same set of bills, judged through a different lens.',
+    button: 'Begin Level 4',
+  },
 };

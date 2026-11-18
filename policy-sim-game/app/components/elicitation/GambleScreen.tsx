@@ -18,8 +18,9 @@ export const SLIDE = {
 };
 
 /** Down to 1 in 100: 100 dots with the failures highlighted (Cooper used
- * pictograms too). Rarer risks: squares of 100 people each, with the one
- * square holding the single failure outlined. */
+ * pictograms too). Rarer risks: squares of 100 people each (10,000 each below
+ * 1 in 10,000, so 1 in 1,000,000 is still 100 squares), with the one square
+ * holding the single failure outlined. */
 function OddsGrid({ risk }: { risk: number }) {
   if (risk >= 1 / 100) {
     const failures = Math.max(1, Math.round(risk * 100));
@@ -37,7 +38,8 @@ function OddsGrid({ risk }: { risk: number }) {
     );
   }
 
-  const squares = Math.round(1 / risk / 100);
+  const perSquare = risk >= 1 / 10000 ? 100 : 10000;
+  const squares = Math.round(1 / risk / perSquare);
   const cols = squares >= 100 ? 20 : 10;
   const failAt = Math.floor(squares / 2);
   return (
@@ -63,7 +65,7 @@ function OddsGrid({ risk }: { risk: number }) {
           </span>
         ))}
       </div>
-      <span className="text-[11px] text-zinc-500 text-center">{GAMBLE_UI.squaresNote}</span>
+      <span className="text-[11px] text-zinc-500 text-center">{GAMBLE_UI.squaresNote(perSquare.toLocaleString('en-GB'))}</span>
     </div>
   );
 }
@@ -160,11 +162,13 @@ export default function GambleScreen({
         ) : <span />}
         <div className="flex items-center gap-3">
           <span className="text-xs font-bold text-pink-400">{t.progress(orderIndex + 1, total)}</span>
-          <div className="flex gap-1">
-            {Array.from({ length: total }, (_, i) => (
-              <span key={i} className={`h-1.5 w-6 rounded-full ${i <= orderIndex ? 'bg-pink-500' : 'bg-zinc-700'}`} />
-            ))}
-          </div>
+          {total > 1 && (
+            <div className="flex gap-1">
+              {Array.from({ length: total }, (_, i) => (
+                <span key={i} className={`h-1.5 w-6 rounded-full ${i <= orderIndex ? 'bg-pink-500' : 'bg-zinc-700'}`} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -100,6 +100,9 @@ for (const r of rows) {
     game_attempts: r.condition === 'game' ? (act?.attempts?.length ?? 0) : '',
     wiki_pages_completed: r.condition === 'wiki' ? Object.keys(act?.completed_pages ?? {}).length : '',
     wiki_finish: r.condition === 'wiki' ? (act?.completion?.outcome ?? '') : '',
+    // Tab switched away / browser minimised during the game or wiki (both arms)
+    tab_hidden_count: (r.condition === 'game' ? act?.flow?.tab_hidden_count : act?.tabs?.hidden_count) ?? (act ? 0 : ''),
+    tab_hidden_ms: (r.condition === 'game' ? act?.flow?.tab_hidden_ms : act?.tabs?.hidden_ms) ?? (act ? 0 : ''),
     last_event: act?.last?.event ?? '',
     answer_key: KEY.version,
     ...scorePhase('pre', pre?.answers),
@@ -117,6 +120,13 @@ for (const r of rows) {
     for (const block of ['social', 'personal']) {
       for (const [ls, u] of Object.entries(el[block]?.utilities ?? {})) p[`elic_${block}_u${ls}`] = u;
       for (const [pt, risk] of Object.entries(el[block]?.loss_risks ?? {})) p[`elic_${block}_risk${pt}`] = risk;
+      // One-gamble version (from 18 Nov 2026): the ladder step where option B
+      // was accepted ("1 in 10", or "never"), and what that makes the rise 4->6
+      // worth with the rise 2->4 worth 1.
+      if (el[block] && 'accepted_at' in el[block]) {
+        p[`elic_${block}_accepted_at`] = el[block].accepted_at ?? '';
+        p[`elic_${block}_rise_worth`] = el[block].rise_worth ?? '';
+      }
       p[`elic_${block}_ms`] = el[block]?.dwell_ms ?? '';
     }
     // Difficulty per term (random-walk calibration) and the player's path.
