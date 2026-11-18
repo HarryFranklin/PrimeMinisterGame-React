@@ -133,6 +133,9 @@ export default function D3Chart({
   const prevHistData = useRef<string>('');
   // Blocks: last block size and plot size, to spot a resize mid-animation
   const prevBlockGeom = useRef<string>('');
+  /** Real head-count per column at the last draw (blocks style), so people moving
+   * into or out of a column above the y-axis cap can be shown going into its "+". */
+  const prevColCounts = useRef<Map<number, number>>(new Map());
   const prevChartData = useRef<string>('');
   const prevMarkerData = useRef<string>('');
   
@@ -401,15 +404,43 @@ export default function D3Chart({
         const arriving = blocks.filter((b) => !oldKeys.has(b.key)).sort((a, b) => a.col - b.col || b.y - a.y);
         const flyTo = new Map<string, Blk>();
         const landing = new Set<string>();
+        // Columns above the y-axis cap keep the same number of blocks however many
+        // people join or leave them. People moving into one fly to the top of its
+        // tower (by the "+") and fade there; people leaving one fly out from there.
+        // Without this they'd vanish into it, then reappear when it drops below the cap.
+        const intoOverflow = new Map<string, { x: number; y: number }>();
+        const fromOverflow = new Map<string, { x: number; y: number }>();
+        const newCounts = new Map(histogramData.map((d) => [Number(d.name), d.count] as [number, number]));
+        const topOf = (col: number) => {
+          const tower = blocks.filter((b) => b.col === col);
+          if (!tower.length) return { x: towerX(col), y: 0 };
+          const top = tower.reduce((a, b) => (b.y < a.y ? b : a));
+          return { x: top.x, y: top.y };
+        };
         if (animate && oldBlocks.length > 0) {
           leaving.forEach((b, i) => { const t = arriving[i]; if (t) { flyTo.set(b.key, t); landing.add(t.key); } });
+          const gained: number[] = [];
+          const lost: number[] = [];
+          newCounts.forEach((n, col) => {
+            const was = prevColCounts.current.get(col) ?? 0;
+            if (n > yAxisMax && n > was) gained.push(col);
+            if (was > yAxisMax && n < was) lost.push(col);
+          });
+          const nearest = (cols: number[], col: number) => cols.reduce((a, c) => (Math.abs(c - col) < Math.abs(a - col) ? c : a));
+          if (gained.length) leaving.slice(arriving.length).forEach((b) => intoOverflow.set(b.key, topOf(nearest(gained, b.col))));
+          if (lost.length) arriving.slice(leaving.length).forEach((b) => fromOverflow.set(b.key, topOf(nearest(lost, b.col))));
         }
+        prevColCounts.current = newCounts;
 
         dataLayer.selectAll<SVGGElement, Blk>('g.blk')
           .data(blocks, (b) => b.key)
           .join(
             (enter) => enter.append('g').attr('class', 'blk').style('pointer-events', 'none')
-              .attr('transform', (b) => (landing.has(b.key) ? `translate(${b.x},${b.y})` : `translate(${b.x},${b.y - 24})`)).attr('opacity', 0)
+              .attr('transform', (b) => {
+                const from = fromOverflow.get(b.key);
+                return from ? `translate(${from.x},${from.y})` : landing.has(b.key) ? `translate(${b.x},${b.y})` : `translate(${b.x},${b.y - 24})`;
+              })
+              .attr('opacity', (b) => (fromOverflow.has(b.key) ? 1 : 0))
               .each(function (b) { drawBlockFace(d3.select(this), b.ls, s); }),
             (update) => update.each(function (b) {
               // Size changed (resize): redraw the face
@@ -424,7 +455,13 @@ export default function D3Chart({
                 g.transition().duration(FLY).ease(d3.easeCubicInOut).attr('transform', `translate(${t.x},${t.y})`).attr('opacity', 1).remove();
                 g.select('rect.blk-body').transition().duration(FLY).attr('fill', d3.interpolateRdYlGn(t.ls / 10));
               });
-              exit.filter((b) => !flyTo.has(b.key)).transition().duration(flyTo.size ? FLY : 300).attr('opacity', 0).remove();
+              exit.filter((b) => intoOverflow.has(b.key)).raise().each(function (b) {
+                const t = intoOverflow.get(b.key)!;
+                d3.select(this).transition().duration(FLY).ease(d3.easeCubicInOut)
+                  .attr('transform', `translate(${t.x},${t.y})`)
+                  .transition().duration(200).attr('opacity', 0).remove();
+              });
+              exit.filter((b) => !flyTo.has(b.key) && !intoOverflow.has(b.key)).transition().duration(flyTo.size ? FLY : 300).attr('opacity', 0).remove();
               return exit;
             },
           )
@@ -438,7 +475,7 @@ export default function D3Chart({
           .delay((b) => (landing.has(b.key) ? FLY : 0))
           // While people are moving, blocks that shuffle within a tower move at the
           // same pace as the flights, so nothing is still sliding when the next step starts.
-          .duration((b) => (landing.has(b.key) ? 0 : b.state === 'solid' ? (flyTo.size ? FLY : speed) : 250)).ease(d3.easeCubicOut)
+          .duration((b) => (landing.has(b.key) ? 0 : fromOverflow.has(b.key) ? FLY : b.state === 'solid' ? (flyTo.size ? FLY : speed) : 250)).ease(d3.easeCubicOut)
           .attr('transform', (b) => `translate(${b.x},${b.y})`)
           .attr('opacity', (b) => (b.state === 'leave' ? 0.3 : b.state === 'arrive' ? 0.6 : 1));
 
