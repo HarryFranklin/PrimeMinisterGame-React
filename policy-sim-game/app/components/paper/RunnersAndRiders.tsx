@@ -25,12 +25,13 @@ export interface RunnerEntry {
   onReplay?: () => void;
 }
 
-/** What each measure means, in a sentence or two. */
-export const JUDGED: Record<ElectionCycle, { on: string; blurb: string }> = {
-  [ElectionCycle.Benthamite]: { on: 'the national average', blurb: 'Adds up everyone’s life satisfaction and divides by the number of people. A point for someone thriving counts the same as a point for someone struggling.' },
-  [ElectionCycle.Rawlsian]: { on: 'the single worst-off person', blurb: 'Only the lowest score in the country counts. Make everyone else happier and, if the bottom doesn’t move, her number won’t either.' },
-  [ElectionCycle.SocietalUtility]: { on: 'fairness for others', blurb: 'Scores the country on how citizens judge its whole spread of life satisfaction when deciding for others.' },
-  [ElectionCycle.PersonalUtility]: { on: 'own lives', blurb: 'Each citizen values their own life by their own standards. What one person prizes, another may not care about.' },
+/** What each measure means, in a sentence or two, and the name of the approach it belongs to
+ * (the same names the wiki and the post-test use). */
+export const JUDGED: Record<ElectionCycle, { on: string; approach: string; approachLine: string; blurb: string }> = {
+  [ElectionCycle.Benthamite]: { on: 'the national average', approach: 'The Benthamite approach', approachLine: 'This is the Benthamite approach: every point of life satisfaction counts the same, whoever gains it.', blurb: 'Adds up everyone’s life satisfaction and divides by the number of people. A point for someone thriving counts the same as a point for someone struggling.' },
+  [ElectionCycle.Rawlsian]: { on: 'the single worst-off person', approach: 'The Rawlsian approach', approachLine: 'This is the Rawlsian approach: a country is only as good as its worst-off person.', blurb: 'Only the lowest score in the country counts. Make everyone else happier and, if the bottom doesn’t move, her number won’t either.' },
+  [ElectionCycle.SocietalUtility]: { on: 'social utility (fairness for others)', approach: 'Social utility', approachLine: 'This is social utility: what a gain is worth, judged the way citizens judge it when deciding for others.', blurb: 'Scores the country on how citizens judge its whole spread of life satisfaction when deciding for others.' },
+  [ElectionCycle.PersonalUtility]: { on: 'personal utility (own lives)', approach: 'Personal utility', approachLine: 'This is personal utility: what a gain is worth to the person who gets it, judged by their own standards.', blurb: 'Each citizen values their own life by their own standards. What one person prizes, another may not care about.' },
 };
 
 const lsCounts = (pop: Respondent[]) => Array.from({ length: 11 }, (_, i) => pop.filter((r) => Math.round(r.currentLS) === i).length);
@@ -71,8 +72,10 @@ function RunnerCard({ entry, index }: { entry: RunnerEntry; index: number }) {
   return (
     <div className="relative overflow-hidden" style={{ borderLeft: index % 2 ? '1px solid #1c1917' : undefined, borderTop: index > 1 ? '1px solid #1c1917' : undefined }}>
       <div className="absolute inset-0 flex flex-col gap-1 px-3 py-2" style={{ filter: locked ? 'blur(7px) grayscale(.6)' : undefined }} aria-hidden={locked}>
-        {/* Campaign photo: arms up only once re-elected */}
-        <div className="relative h-[96px] shrink-0 overflow-hidden" style={{ background: `linear-gradient(180deg, ${tone.color}, ${tone.dark})`, filter: status === 'lost' ? 'grayscale(.7)' : 'saturate(.8) sepia(.1)' }}>
+        {/* Campaign photo: arms up only once re-elected. It gives up height first
+            when a played term's results need the room (e.g. with the final-debrief
+            button below the grid), so the "Your term" box is never cut off. */}
+        <div className="relative h-[96px] min-h-[64px] shrink overflow-hidden" style={{ background: `linear-gradient(180deg, ${tone.color}, ${tone.dark})`, filter: status === 'lost' ? 'grayscale(.7)' : 'saturate(.8) sepia(.1)' }}>
           <div className="absolute inset-0 bg-[repeating-linear-gradient(-45deg,rgba(255,255,255,.07)_0_10px,transparent_10px_20px)]" />
           <span className="absolute left-2 top-2 text-[10px] font-black text-white bg-black/25 px-1.5 py-0.5 rounded">{status === 'won' ? 'Victory rally' : status === 'lost' ? 'Leaving No. 10' : 'On the campaign trail'}</span>
           <div style={abs({ left: '50%', top: 20, marginLeft: -(90 * figScale) / 2 })}>
