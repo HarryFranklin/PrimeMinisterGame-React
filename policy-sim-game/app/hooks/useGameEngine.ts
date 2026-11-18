@@ -262,8 +262,10 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
   const currentHistogramData = useMemo(() => generateHistogramData(population), [population, generateHistogramData]);
   const previewHistogramData = useMemo(() => generateHistogramData(previewPopulation), [previewPopulation, generateHistogramData]);
 
+  // The y-axis grows to fit the previewed bill too, so a column never runs past
+  // the top while a bill is previewed or enacted (people would vanish into it).
   useEffect(() => {
-    const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), 0);
+    const maxCurrent = Math.max(...currentHistogramData.map(d => d.count), ...previewHistogramData.map(d => d.count), 0);
     setYAxisMax(prev => {
       const targetMax = Math.max(100, Math.ceil(maxCurrent / 20) * 20);
       if (targetMax > prev) {
@@ -271,7 +273,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
       }
       return prev;
     });
-  }, [currentHistogramData]);
+  }, [currentHistogramData, previewHistogramData]);
 
   const initialMetricScore = useMemo(() => MetricsEngine.getMetricScore(initialPopulation, currentCycle), [initialPopulation, currentCycle]);
   const turnMetricScore = useMemo(() => MetricsEngine.getMetricScore(population, currentCycle), [population, currentCycle]);
