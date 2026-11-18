@@ -9,6 +9,7 @@ import { takePendingStart } from '../../utils/pendingStart';
 import { SavingIndicator } from '../../client/SavingIndicator';
 import { track } from '../../client/telemetry';
 import RunnersAndRiders, { type RunnerEntry } from '../paper/RunnersAndRiders';
+import CommencingTerm, { COMMENCING_MS } from '../CommencingTerm';
 
 /**
  * The level select: The Daily Ledger's back cover, "Runners and riders", lying on the desk.
@@ -19,7 +20,7 @@ const STAGE_W = 1440;
 const STAGE_H = 900;
 
 export default function LevelSelectTab() {
-  const { completedRuns, startLevel, setGamePhase } = useGame();
+  const { completedRuns, startLevel, setGamePhase, levelOpensWithIntermission } = useGame();
   const unlockedIndex = completedRuns.length;
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -49,10 +50,15 @@ export default function LevelSelectTab() {
       dwell_ms: Date.now() - arrivedAt.current,
       opened_details: false,
     });
+    // Levels 3 and 4 open with the gambles first; "Commencing Term" plays at their end.
+    if (levelOpensWithIntermission(cycle)) {
+      startLevel(cycle);
+      return;
+    }
     setIsTransitioning(true);
     setTimeout(() => {
       startLevel(cycle);
-    }, 4000);
+    }, COMMENCING_MS);
   };
 
   useEffect(() => {
@@ -120,27 +126,7 @@ export default function LevelSelectTab() {
       </div>
 
       <AnimatePresence>
-        {isTransitioning && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col items-center justify-center pointer-events-auto"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 1.2 }}
-              className="flex flex-col items-center gap-6"
-            >
-              <div className="w-12 h-12 border-4 border-zinc-800 border-t-pink-600 rounded-full animate-spin" />
-              <h2 className="text-zinc-400 font-bold uppercase tracking-widest text-sm animate-pulse">
-                Commencing Term
-              </h2>
-            </motion.div>
-          </motion.div>
-        )}
+        {isTransitioning && <CommencingTerm />}
       </AnimatePresence>
     </div>
   );

@@ -10,6 +10,7 @@ import {
 } from '../../utils/ElicitationEngine';
 import { ElectionCycle } from '../../utils/types';
 import RevealScreen from '../elicitation/RevealScreen';
+import CommencingTerm, { COMMENCING_MS } from '../CommencingTerm';
 
 type Stage = 'intro' | 'gambles' | 'reveal';
 
@@ -41,6 +42,8 @@ export default function UtilityElicitationOverlay() {
   const [stage, setStage] = useState<Stage>(() =>
     elicitation && blockStarted(elicitation[block]) ? 'gambles' : 'intro');
   const finished = useRef(false);
+  /** The block is done: "Commencing Term" plays, then the level starts. */
+  const [commencing, setCommencing] = useState(false);
   // 1 = forwards (new gamble slides in from the right), -1 = back.
   const direction = useRef(1);
 
@@ -68,14 +71,14 @@ export default function UtilityElicitationOverlay() {
       undo_count: s.undoCount,
       dwell_ms: s.startedAt !== null ? Date.now() - s.startedAt : 0,
     });
-    completeElicitation(block);
+    setCommencing(true);
+    setTimeout(() => completeElicitation(block), COMMENCING_MS);
   };
 
   // Refreshed after the last answer but before the block was marked done.
   useEffect(() => {
     if (state && stage === 'gambles' && orderIndex === -1 && !state.completed) {
-      if (block === 'personal') setStage('reveal');
-      else finish(state);
+      setStage('reveal');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, stage, orderIndex]);
@@ -101,11 +104,8 @@ export default function UtilityElicitationOverlay() {
       track('elicitation_gamble_completed', {
         block, point, order_index: orderIndex, loss_risk: updated.lossRisk ?? 0,
       });
-      // The personal block ends on the reveal; the social block goes straight to Level 3.
-      if (orderIndex === state.order.length - 1) {
-        if (block === 'personal') setStage('reveal');
-        else finish(next);
-      }
+      // Both blocks end on a reveal of the player's answers.
+      if (orderIndex === state.order.length - 1) setStage('reveal');
     }
   };
 
@@ -159,8 +159,9 @@ export default function UtilityElicitationOverlay() {
 
             {stage === 'reveal' && (
                 <RevealScreen
+                  block={block}
                   social={chainedCurve(elicitation.social.records)}
-                  personal={chainedCurve(state.records)}
+                  personal={block === 'personal' ? chainedCurve(state.records) : null}
                   onContinue={() => finish(state)}
                 />
               )}
@@ -168,6 +169,7 @@ export default function UtilityElicitationOverlay() {
           </motion.div>
         </AnimatePresence>
       </div>
+      <AnimatePresence>{commencing && <CommencingTerm />}</AnimatePresence>
     </motion.div>
   );
 }
