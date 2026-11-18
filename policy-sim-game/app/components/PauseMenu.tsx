@@ -6,6 +6,7 @@ import { ElectionCycle, GamePhase } from '../utils/types';
 import { FRAMEWORK_RULES } from '../utils/frameworkRules';
 import { getPMProfile } from '../utils/pmProfiles';
 import { PM_TONES } from './desk/deskTheme';
+import { OPEN_PAUSE_EVENT } from './desk/DeskTopBar';
 import { JUDGED } from './paper/RunnersAndRiders';
 import { OPTIONS_KEY, DEFAULT_OPTIONS, loadOptions, applyFlashSetting, type Options } from '../utils/gameOptions';
 import { safeSetItem } from '@study';
@@ -92,6 +93,14 @@ export default function PauseMenu() {
     track('pause_closed', { cycle: cycleName, turn: currentTurn, dwell_ms: Date.now() - openedAt.current, via, tab });
     setOpen(false);
   }, [cycleName, currentTurn, tab]);
+
+  // The "Reminder" on the desk's top bar opens the menu on "Your term"
+  useEffect(() => {
+    if (!active) return;
+    const onOpen = (e: Event) => { if (!open) show(String((e as CustomEvent).detail ?? 'event')); };
+    window.addEventListener(OPEN_PAUSE_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_PAUSE_EVENT, onOpen);
+  }, [active, open, show]);
 
   // Esc toggles the menu during a term
   useEffect(() => {
@@ -224,6 +233,7 @@ export default function PauseMenu() {
                           <span className="paper-cap" style={{ color: tone.dark }}>{name} is judged on</span>
                           <span className="font-display font-black text-[26px] leading-[1.05]">{rule.targetMetricName} ({rule.targetMetricAbbreviation})</span>
                           <span className="text-[15px] leading-snug">{JUDGED[currentCycle].blurb}</span>
+                          <span className="text-[15px] leading-snug font-bold">{JUDGED[currentCycle].approachLine}</span>
                         </div>
                         <div className="flex flex-col items-end gap-1 min-w-[150px]">
                           <span className="paper-cap text-stone-500">Now</span>

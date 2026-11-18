@@ -4,10 +4,14 @@ import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { PM_PROFILES } from '../../utils/pmProfiles';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { PM_TONES, SHOW_EXACT_SCORE, TermStatus } from './deskTheme';
+import { JUDGED } from '../paper/RunnersAndRiders';
 import { makePoll, pollHalfWidth, formatPollRange, pollBarPercent, POLL_STATUS_COLOURS, WIN_THRESHOLD } from '../../utils/polls';
 
 /** How long the poll takes to move to a new day's figure. */
 const POLL_MOVE_MS = 2200;
+
+/** Window event that opens the pause menu (detail: what opened it, for telemetry). */
+export const OPEN_PAUSE_EVENT = 'pm:open-pause';
 
 export type ContinueState = 'locked' | 'ready' | 'busy' | 'press';
 
@@ -78,10 +82,16 @@ export default function DeskTopBar({
         <span className="text-[10px] font-extrabold tracking-[.2em] uppercase text-[#5c4214]">“{profile?.slogan}”</span>
       </div>
 
-      {/* What you're judged on, and how it's going */}
-      <div className="flex flex-col gap-1 min-w-0">
-        <span className="text-[10px] font-extrabold tracking-[.14em] uppercase" style={{ color: tone.light }}>
-          Judged on · {rule.targetMetricAbbreviation}
+      {/* What you're judged on, and how it's going. Click: the pause menu's
+          "Your term" page, as a reminder of what this measure rewards. */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent(OPEN_PAUSE_EVENT, { detail: 'measure_reminder' }))}
+        title="Remind me what I'm judged on"
+        className="flex flex-col gap-1 min-w-0 text-left rounded-md px-2 py-1 -mx-2 hover:bg-white/10 cursor-pointer"
+      >
+        <span className="text-[10px] font-extrabold tracking-[.14em] uppercase truncate" style={{ color: tone.light }}>
+          {JUDGED[cycle].approach} · {rule.targetMetricAbbreviation} · <span className="underline">Reminder ⓘ</span>
         </span>
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-[15px] font-extrabold truncate">{rule.targetMetricName}</span>
@@ -99,7 +109,7 @@ export default function DeskTopBar({
             {rule.targetMetricAbbreviation} {score.toFixed(2)} now · target {target.toFixed(2)}
           </span>
         )}
-      </div>
+      </button>
 
       {/* Polls: a range around the real approval, never the exact number */}
       <div className="flex flex-col gap-1 shrink-0 w-[clamp(190px,17vw,260px)]">

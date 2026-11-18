@@ -202,7 +202,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
                     Skip briefing
                   </button>
                 ) : <span />}
-                <span className="paper-cap text-stone-500">{!open || isTyping ? 'Click to finish reading' : 'Click to begin the term ▸'}</span>
+                <span className="paper-cap text-stone-500">{!open || isTyping ? 'Click to show it all ⏭' : 'Click to begin the term ▸'}</span>
               </div>
             </motion.div>
       </div>

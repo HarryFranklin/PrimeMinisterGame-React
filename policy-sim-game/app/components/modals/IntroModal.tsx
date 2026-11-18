@@ -144,7 +144,7 @@ export default function IntroModal({ onAcknowledge }: IntroModalProps) {
                 <span className="paper-cap text-[#b91c1c] border-2 border-[#b91c1c] px-2 py-0.5">Welcome pack</span>
               </div>
               <p className="m-0 text-[20px] leading-relaxed whitespace-pre-wrap min-h-[400px]">{displayedText}</p>
-              <span className="mt-auto self-end paper-cap text-stone-500">{isTyping ? 'Click to finish reading' : 'Click to put it aside ▸'}</span>
+              <span className="mt-auto self-end paper-cap text-stone-500">{isTyping ? 'Click to show it all ⏭' : 'Click to put it aside ▸'}</span>
             </motion.div>
           )}
         </AnimatePresence>
