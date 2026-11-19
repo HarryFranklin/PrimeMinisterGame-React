@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { motion } from 'framer-motion';
-import { ElectionCycle } from '../../utils/types';
+import { ElectionCycle, type CompletedRun, type TurnHistory } from '../../utils/types';
 import { FRAMEWORK_RULES } from '../../utils/frameworkRules';
 import { getPMProfile, PM_PROFILES } from '../../utils/pmProfiles';
 import { PM_TONES } from '../desk/deskTheme';
@@ -11,7 +11,6 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 import { track } from '../../client/telemetry';
 import { useTypewriterTelemetry, useDwellTimer } from '../../client/hooks';
 import { WIN_THRESHOLD } from '../../utils/polls';
-import { formatPoints, SHOW_POINTS } from '../../utils/points';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
@@ -29,6 +28,35 @@ interface BriefingModalProps {
  * briefing_text_skipped, briefing_proceeded.
  */
 const TYPE_SPEED = 25;
+
+/** Retry memo: one practical tip per measure. */
+const RETRY_TIPS: Record<ElectionCycle, string> = {
+  [ElectionCycle.Benthamite]: 'Every point counts the same, whoever gets it. Look for the bill that moves the most people up, by the most, and the fewest down.',
+  [ElectionCycle.Rawlsian]: 'Only the lowest score counts. Watch the faces furthest to the left: a bill that lifts them beats anything for everyone else, and one that pushes anyone lower costs you.',
+  [ElectionCycle.SocietalUtility]: 'A point near the bottom counts far more than a point near the top. Lifting people out of the low scores beats bigger gains for people already doing well.',
+  [ElectionCycle.PersonalUtility]: 'A point near the bottom still counts for more, but less so than last term. A big lift for many people in the middle can now be worth it.',
+};
+
+/** The retry memo: how the first attempt went, what this measure rewards, a
+ * tip, and the best and worst bills of the first attempt. */
+function retryMemo(cycle: ElectionCycle, run: CompletedRun, abbr: string): string {
+  const metricOf = (h: TurnHistory) => h.metricScore ?? h.lsAverage;
+  const days = run.enactedLegislation
+    .filter((h) => h.enactedPolicyName && h.enactedPolicyId)
+    .map((h) => {
+      const prev = run.enactedLegislation.find((x) => x.turn === h.turn - 1);
+      return { name: h.enactedPolicyName as string, delta: prev ? metricOf(h) - metricOf(prev) : 0 };
+    });
+  const fmt = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(2)} ${abbr}`;
+  let billsLine = '';
+  if (days.length > 1) {
+    const best = days.reduce((a, b) => (b.delta > a.delta ? b : a));
+    const worst = days.reduce((a, b) => (b.delta < a.delta ? b : a));
+    billsLine = `\n\nLast time, your best bill was ${best.name} (${fmt(best.delta)}) and your weakest was ${worst.name} (${fmt(worst.delta)}).`;
+  }
+  const result = run.approvalRating >= WIN_THRESHOLD ? 're-elected' : 'voted out';
+  return `Dear PM,\n\nLast time you were ${result} on ${run.approvalRating.toFixed(1)}%. The better of your two terms is the one that counts.\n\n${RETRY_TIPS[cycle]} Before you sign a bill, preview it and watch who moves, and where.${billsLine}`;
+}
 // So the click that finishes the text can't also put the memo aside
 const PROCEED_DELAY_MS = 400;
 
@@ -59,7 +87,10 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
   const cycleKey = ElectionCycle[currentCycle];
 
   // The office name is on the letterhead now, so the typed text starts at "Dear PM"
-  const briefingText = `Dear PM,\n\nI know you are very busy, so I'll get right to it.\n\n${rule.briefingText}`;
+  // On a retry the memo is about the first attempt instead of the full briefing
+  const briefingText = isRetryingTerm && previousAttempt
+    ? retryMemo(currentCycle, previousAttempt, rule.targetMetricAbbreviation)
+    : `Dear PM,\n\nI know you are very busy, so I'll get right to it.\n\n${rule.briefingText}`;
   const tw = useTypewriterTelemetry(briefingText);
   const dwell = useDwellTimer();
   const { displayedText, isTyping, isComplete, skip } = useTypewriter(briefingText, TYPE_SPEED, open);
@@ -192,15 +223,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
                 )}
               </div>
 
-              {/* On the retry: how the first attempt went, and what this measure rewards */}
-              {isRetryingTerm && previousAttempt && (
-                <div className="border-2 border-dashed px-3 py-2 text-[14px] leading-snug bg-white/40" style={{ borderColor: tone.dark }}>
-                  <b>Last time:</b> {previousAttempt.approvalRating >= WIN_THRESHOLD ? 're-elected' : 'voted out'} on {previousAttempt.approvalRating.toFixed(1)}%
-                  {SHOW_POINTS && previousAttempt.points ? ` (${formatPoints(previousAttempt.points.total)} points)` : ''}. Remember: {judged.blurb} Before you sign, preview each bill and check how far {rule.targetMetricAbbreviation} moves. {SHOW_POINTS ? 'Your better score counts.' : 'Your better result counts.'}
-                </div>
-              )}
-
-              <p className={`m-0 text-[18px] leading-relaxed whitespace-pre-wrap ${isRetryingTerm ? 'min-h-[200px]' : 'min-h-[300px]'}`}>{displayedText}</p>
+              <p className="m-0 text-[18px] leading-relaxed whitespace-pre-wrap min-h-[300px]">{displayedText}</p>
 
               <div className="mt-auto flex items-end justify-between gap-3">
                 {isRetryingTerm ? (

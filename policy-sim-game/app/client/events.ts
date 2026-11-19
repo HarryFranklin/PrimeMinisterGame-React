@@ -32,6 +32,9 @@ export type TelemetryEvent =
   | { event: "title_option_changed"; payload: { option: string; value: string } }
   // ---- Pause menu (Esc during a term: "Parliament in recess") ----
   | { event: "pause_opened"; payload: { cycle: string; turn: number; via: string } }
+  // The "Objective" card beside the nameplate on the desk's top bar
+  | { event: "objective_opened"; payload: { cycle: string; turn: number } }
+  | { event: "objective_closed"; payload: { cycle: string; turn: number; dwell_ms: number } }
   | { event: "pause_closed"; payload: { cycle: string; turn: number; dwell_ms: number; via: string; tab: string } }
   | { event: "pause_option_changed"; payload: { option: string; value: string } }
   | {

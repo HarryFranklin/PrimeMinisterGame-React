@@ -202,6 +202,9 @@ export default function TitleScreen({ onStart }: { onStart?: () => void }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/45"
+              // The shadow carries the dimming past the stage's edges, so the
+              // letterbox either side is dimmed too when not in fullscreen
+              style={{ boxShadow: '0 0 0 4000px rgba(0,0,0,.45)' }}
               onClick={closePanel}
             >
               <motion.div

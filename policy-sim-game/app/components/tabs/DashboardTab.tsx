@@ -7,7 +7,6 @@ import { ElectionCycle, Policy } from "../../utils/types";
 import { availablePolicies } from "../../data/policies";
 import { PM_PROFILES } from "../../utils/pmProfiles";
 import { useDashboardHistograms } from "../../hooks/useDashboardHistograms";
-import TurnSummaryToast from "../TurnSummaryToast";
 import SignedBills, { SignedBill } from "../desk/SignedBills";
 import DeskTopBar, { ContinueState } from "../desk/DeskTopBar";
 import DailyReturn from "../desk/DailyReturn";
@@ -59,6 +58,15 @@ export default function DashboardTab() {
   // Both belong to one day only: a new day (or term, or retry of the term)
   // starts with a clear desk. Without the attempt, a retry's last day would
   // still show the first attempt's last bill as signed, and lock the desk.
+  // The stamp on the measure (top bar) shows for a few seconds after signing
+  const clearSummaryRef = useRef(clearLastTurnSummary);
+  clearSummaryRef.current = clearLastTurnSummary;
+  useEffect(() => {
+    if (!lastTurnSummary) return;
+    const t = setTimeout(() => clearSummaryRef.current(), 3400);
+    return () => clearTimeout(t);
+  }, [lastTurnSummary]);
+
   const dayKey = `${currentCycle}-${cycleAttempts}-${currentTurn}`;
   const [sign, setSign] = useState<{ day: string; signing: string | null; signed: string | null }>({ day: "", signing: null, signed: null });
   const signingId = sign.day === dayKey ? sign.signing : null;
@@ -259,25 +267,6 @@ export default function DashboardTab() {
 
   return (
     <div className="desk-wood -m-4 h-[calc(100%+2rem)] flex flex-col relative overflow-hidden">
-      {/* Just under the top bar, so it never covers it */}
-      <div className="absolute left-0 right-0 top-[78px] z-[80] pointer-events-none">
-        <TurnSummaryToast
-          summary={lastTurnSummary}
-          accentColor={rule.graphColor}
-          metricAbbreviation={rule.targetMetricAbbreviation}
-          onDismiss={clearLastTurnSummary}
-          onInteract={(type) => {
-            if (lastTurnSummary) {
-              track("policy_impact_popup_interacted", {
-                policy_id: selectedPolicy?.id ?? lastTurnSummary.policyName,
-                turn: lastTurnSummary.turn,
-                interaction_type: type,
-              });
-            }
-          }}
-        />
-      </div>
-
       <DeskTopBar
         cycle={currentCycle}
         turn={currentTurn}
@@ -291,6 +280,7 @@ export default function DashboardTab() {
         status={status}
         continueState={continueState}
         onContinue={onContinue}
+        lastChange={lastTurnSummary ? { delta: lastTurnSummary.scoreAfter - lastTurnSummary.scoreBefore, key: lastTurnSummary.turn } : null}
       />
 
       <div className="flex-1 min-h-0 flex gap-5 p-5">
