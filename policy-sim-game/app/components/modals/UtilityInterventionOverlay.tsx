@@ -364,7 +364,7 @@ export default function UtilityInterventionOverlay() {
             >
               <p className="font-black text-white mb-1">Excellent question!</p>
               <p className="text-sm">
-                We got these values by asking citizens a question like the one your adviser is about to bring you: a choice between a sure outcome and a gamble.
+                We got these values by asking citizens questions like the ones your advisers are about to bring you: a choice between a sure outcome and a gamble.
                 How much risk people will accept tells us how much each step up in life satisfaction is worth to them.
               </p>
             </motion.div>

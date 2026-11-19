@@ -9,8 +9,7 @@ import { takePendingStart } from '../../utils/pendingStart';
 import { SavingIndicator } from '../../client/SavingIndicator';
 import { track } from '../../client/telemetry';
 import RunnersAndRiders, { type RunnerEntry } from '../paper/RunnersAndRiders';
-import CommencingTerm, { COMMENCING_MS } from '../CommencingTerm';
-import { termPoints } from '../../utils/points';
+import { termPoints, SHOW_POINTS } from '../../utils/points';
 
 /**
  * The level select: The Daily Ledger's back cover, "Runners and riders", lying on the desk.
@@ -21,7 +20,7 @@ const STAGE_W = 1440;
 const STAGE_H = 900;
 
 export default function LevelSelectTab() {
-  const { completedRuns, startLevel, setGamePhase, levelOpensWithIntermission } = useGame();
+  const { completedRuns, startLevel, setGamePhase } = useGame();
   const unlockedIndex = completedRuns.length;
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -51,15 +50,10 @@ export default function LevelSelectTab() {
       dwell_ms: Date.now() - arrivedAt.current,
       opened_details: false,
     });
-    // Levels 3 and 4 open with the gambles first; "Commencing Term" plays at their end.
-    if (levelOpensWithIntermission(cycle)) {
-      startLevel(cycle);
-      return;
-    }
     setIsTransitioning(true);
     setTimeout(() => {
       startLevel(cycle);
-    }, COMMENCING_MS);
+    }, 4000);
   };
 
   useEffect(() => {
@@ -85,7 +79,7 @@ export default function LevelSelectTab() {
       return {
         cycle: p.cycle, status: won ? 'won' : 'lost', population: run.finalPopulation,
         result: `${won ? 'Won' : 'Lost'} · ${r.targetMetricAbbreviation} ${run.finalScore.toFixed(2)} vs target ${run.targetScore.toFixed(2)}`,
-        points: run.points?.total ?? termPoints(run.approvalRating, 0).total,
+        points: SHOW_POINTS ? run.points?.total ?? termPoints(run.approvalRating, 0).total : undefined,
       };
     }
     if (i === unlockedIndex) {
@@ -115,7 +109,7 @@ export default function LevelSelectTab() {
           <RunnersAndRiders
             entries={entries}
             resultsSoFar={unlockedIndex}
-            score={completedRuns.reduce((s, run) => s + (run.points?.total ?? termPoints(run.approvalRating, 0).total), 0)}
+            score={SHOW_POINTS ? completedRuns.reduce((s, run) => s + (run.points?.total ?? termPoints(run.approvalRating, 0).total), 0) : undefined}
             footer={unlockedIndex >= 4 ? (
               <button
                 type="button"
@@ -130,7 +124,27 @@ export default function LevelSelectTab() {
       </div>
 
       <AnimatePresence>
-        {isTransitioning && <CommencingTerm />}
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="fixed inset-0 z-[9999] bg-zinc-950 flex flex-col items-center justify-center pointer-events-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.6, duration: 1.2 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <div className="w-12 h-12 border-4 border-zinc-800 border-t-pink-600 rounded-full animate-spin" />
+              <h2 className="text-zinc-400 font-bold uppercase tracking-widest text-sm animate-pulse">
+                Commencing Term
+              </h2>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

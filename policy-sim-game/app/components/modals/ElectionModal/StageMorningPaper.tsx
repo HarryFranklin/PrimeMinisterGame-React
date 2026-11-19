@@ -16,7 +16,7 @@ import { buildTermTimeline, ANALYSIS_MESSAGES } from './StageTermSummary';
 import { computeCohortBreakdown, CHANGE_THRESHOLD } from './StagePopulationChange';
 import { pickVoters, renderVoterQuote, quotedPolicies } from './StageElectorateFeedback';
 import type { PressSummary } from './StagePressConference';
-import { formatPoints, pointsBreakdown, termPoints } from '../../../utils/points';
+import { formatPoints, pointsBreakdown, termPoints, SHOW_POINTS } from '../../../utils/points';
 
 /** Each page of the paper is one of the old election stages, for telemetry. */
 const PAGE_STAGES = ['paper_front', 'term_summary', 'wellbeing_changes', 'electorate_feedback', 'measure_explainer', 'paper_back'] as const;
@@ -251,7 +251,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
       return {
         cycle: p.cycle, status: runWon ? 'won' : 'lost', population: run?.finalPopulation,
         result: run ? `${runWon ? 'Won' : 'Lost'} · ${r.targetMetricAbbreviation} ${run.finalScore.toFixed(2)} vs target ${run.targetScore.toFixed(2)}` : 'Played',
-        points: run ? runPoints(run) : undefined,
+        points: run && SHOW_POINTS ? runPoints(run) : undefined,
       };
     }
     if (i === levelIndex) {
@@ -260,7 +260,7 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
         cycle: p.cycle, status: won ? 'won' : 'lost', population: finalPopulation,
         onReplay: canRetry ? () => exit('restart') : undefined,
         replayLabel: won ? 'Replay ↺' : 'Try again ↺',
-        points: currentTermPoints.total,
+        points: SHOW_POINTS ? currentTermPoints.total : undefined,
         result: won ? `Re-elected on ${approvalRating.toFixed(1)}% · ${r.targetMetricAbbreviation} ${endMetric.toFixed(2)} vs target ${targetScore.toFixed(2)}` : `Voted out on ${approvalRating.toFixed(1)}%`,
       };
     }
@@ -612,12 +612,13 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
               <RunnersAndRiders
                 entries={runners}
                 resultsSoFar={levelIndex + 1}
-                score={scoreSoFar}
-                note={
-                  `This term: ${pointsBreakdown(currentTermPoints)}.` +
-                  (previousAttempt ? ` Your first attempt scored ${formatPoints(runPoints(previousAttempt))}; the better one counts.`
-                    : canRetry ? ` You can play this term once more: the better score counts.` : '')
-                }
+                score={SHOW_POINTS ? scoreSoFar : undefined}
+                note={SHOW_POINTS
+                  ? `This term: ${pointsBreakdown(currentTermPoints)}.` +
+                    (previousAttempt ? ` Your first attempt scored ${formatPoints(runPoints(previousAttempt))}; the better one counts.`
+                      : canRetry ? ` You can play this term once more: the better score counts.` : '')
+                  : previousAttempt ? 'This was your second go at this term; the better of the two results counts.'
+                    : canRetry ? 'You can play this term once more if you like (the better result counts), or carry on to the next.' : undefined}
                 footer={isFinalCycle ? (
                   <button
                     type="button"

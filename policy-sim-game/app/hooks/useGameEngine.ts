@@ -489,18 +489,6 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     setCycleAttempts(1);
   };
 
-  /** True when starting this level first opens the utility intro or a gamble
-   * block (Levels 3 and 4), rather than the term itself. The level select then
-   * skips its "Commencing Term" fade; the gambles play it at their end instead. */
-  const levelOpensWithIntermission = useCallback((cycle: ElectionCycle) => {
-    if (playerLS === null) return false;
-    if (cycle === ElectionCycle.SocietalUtility && !hasSeenUtilityIntervention) return true;
-    const block: GambleBlock | null =
-      cycle === ElectionCycle.SocietalUtility ? 'social'
-        : cycle === ElectionCycle.PersonalUtility ? 'personal' : null;
-    return ELICITATION_ENABLED && block !== null && !elicitation?.[block].completed;
-  }, [playerLS, hasSeenUtilityIntervention, elicitation]);
-
     const startLevel = useCallback((cycle: ElectionCycle) => {
 
     // Ask the player's own LS once, after their first "Begin Term".
@@ -687,7 +675,7 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     currentChartData, previewChartData, currentHistogramData, previewHistogramData,
     handleApplyPolicy, handleResetCycle, jumpToCycle, handleCompleteTerm, setCurrentTurn, handleNavigateToPolicy,
     handleBriefingAcknowledged,
-    startLevel, levelOpensWithIntermission,
+    startLevel,
     previousAttempt: retryStash[currentCycle] ?? null,
     currentTermPoints: termPoints(turnApprovalRating, pressCorrect),
     gamePhase, setGamePhase, isAgendaUnlocked, yAxisMax,

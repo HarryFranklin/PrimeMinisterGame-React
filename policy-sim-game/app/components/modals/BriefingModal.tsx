@@ -11,7 +11,7 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 import { track } from '../../client/telemetry';
 import { useTypewriterTelemetry, useDwellTimer } from '../../client/hooks';
 import { WIN_THRESHOLD } from '../../utils/polls';
-import { formatPoints } from '../../utils/points';
+import { formatPoints, SHOW_POINTS } from '../../utils/points';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
@@ -196,7 +196,7 @@ export default function BriefingModal({ currentCycle, onAcknowledge }: BriefingM
               {isRetryingTerm && previousAttempt && (
                 <div className="border-2 border-dashed px-3 py-2 text-[14px] leading-snug bg-white/40" style={{ borderColor: tone.dark }}>
                   <b>Last time:</b> {previousAttempt.approvalRating >= WIN_THRESHOLD ? 're-elected' : 'voted out'} on {previousAttempt.approvalRating.toFixed(1)}%
-                  {previousAttempt.points ? ` (${formatPoints(previousAttempt.points.total)} points)` : ''}. Remember: {judged.blurb} Before you sign, preview each bill and check how far {rule.targetMetricAbbreviation} moves. Your better score counts.
+                  {SHOW_POINTS && previousAttempt.points ? ` (${formatPoints(previousAttempt.points.total)} points)` : ''}. Remember: {judged.blurb} Before you sign, preview each bill and check how far {rule.targetMetricAbbreviation} moves. {SHOW_POINTS ? 'Your better score counts.' : 'Your better result counts.'}
                 </div>
               )}
 

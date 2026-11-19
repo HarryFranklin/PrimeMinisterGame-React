@@ -6,11 +6,10 @@ import GambleScreen, { SLIDE } from '../elicitation/GambleScreen';
 import { PERSONAL_INTRO_CARD, SOCIAL_INTRO_CARD } from '../elicitation/elicitationText';
 import {
   BlockState, GambleBlock, GambleChoice, LADDER,
-  acceptedIndex, acceptedLabel, applyChoice, blockStarted, canUndo, currentGambleIndex, nextRiskIndex, riseWorth, undoLastChoice,
+  applyChoice, blockStarted, canUndo, chainedCurve, currentGambleIndex, nextRiskIndex, undoLastChoice,
 } from '../../utils/ElicitationEngine';
 import { ElectionCycle } from '../../utils/types';
 import RevealScreen from '../elicitation/RevealScreen';
-import CommencingTerm, { COMMENCING_MS } from '../CommencingTerm';
 
 type Stage = 'intro' | 'gambles' | 'reveal';
 
@@ -42,8 +41,6 @@ export default function UtilityElicitationOverlay() {
   const [stage, setStage] = useState<Stage>(() =>
     elicitation && blockStarted(elicitation[block]) ? 'gambles' : 'intro');
   const finished = useRef(false);
-  /** The block is done: "Commencing Term" plays, then the level starts. */
-  const [commencing, setCommencing] = useState(false);
   // 1 = forwards (new gamble slides in from the right), -1 = back.
   const direction = useRef(1);
 
@@ -62,19 +59,16 @@ export default function UtilityElicitationOverlay() {
   const finish = (s: BlockState) => {
     if (finished.current) return;
     finished.current = true;
-    const record = s.records[s.order[0]];
-    const accepted = acceptedIndex(record);
+    const curve = chainedCurve(s.records);
     track('elicitation_completed', {
       block,
       player_ls: playerLS,
       loss_risks: Object.fromEntries(s.order.map((p) => [String(p), s.records[p].lossRisk])),
-      accepted_at: accepted === null ? null : acceptedLabel(accepted),
-      rise_worth: record.lossRisk === null ? null : riseWorth(record.lossRisk),
+      utilities: curve ? Object.fromEntries(curve.map((c) => [String(c.ls), c.u])) : null,
       undo_count: s.undoCount,
       dwell_ms: s.startedAt !== null ? Date.now() - s.startedAt : 0,
     });
-    setCommencing(true);
-    setTimeout(() => completeElicitation(block), COMMENCING_MS);
+    completeElicitation(block);
   };
 
   // Refreshed after the last answer but before the block was marked done.
@@ -162,8 +156,8 @@ export default function UtilityElicitationOverlay() {
             {stage === 'reveal' && (
                 <RevealScreen
                   block={block}
-                  social={acceptedIndex(elicitation.social.records[elicitation.social.order[0]])}
-                  personal={block === 'personal' ? acceptedIndex(state.records[state.order[0]]) : null}
+                  social={chainedCurve(elicitation.social.records)}
+                  personal={block === 'personal' ? chainedCurve(state.records) : null}
                   onContinue={() => finish(state)}
                 />
               )}
@@ -171,7 +165,6 @@ export default function UtilityElicitationOverlay() {
           </motion.div>
         </AnimatePresence>
       </div>
-      <AnimatePresence>{commencing && <CommencingTerm />}</AnimatePresence>
     </motion.div>
   );
 }

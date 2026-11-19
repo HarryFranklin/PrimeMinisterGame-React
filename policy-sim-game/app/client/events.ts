@@ -558,10 +558,7 @@ export type TelemetryEvent =
         block: "social" | "personal";
         player_ls: number | null;
         loss_risks: Record<string, number | null>;
-        /** Ladder step where option B was accepted ("1 in 10"), or "never". */
-        accepted_at: string | null;
-        /** Worth of the rise 4->6 with the rise 2->4 worth 1 (from loss_risks). */
-        rise_worth: number | null;
+        utilities: Record<string, number> | null;
         undo_count: number;
         dwell_ms: number;
       };
@@ -634,13 +631,11 @@ export type TelemetryEvent =
       event: "elicitation_reveal_opened";
       // block 'social': shown after the Level 3 gambles; direction is then the
       // player's social curve against the public's ('higher' = more cautious).
-      // block 'personal': direction is the player's answer for themselves against
-      // their answer for others ('lower' = less cautious for themselves).
-      payload: { block: "social" | "personal"; social_accepted_at: string | null; personal_accepted_at: string | null; direction: string | null };
+      payload: { block: "social" | "personal"; social_attitude: string | null; personal_attitude: string | null; direction: string | null };
     }
     
   | { event: "elicitation_reveal_step_selected"; payload: { block: "social" | "personal"; from: number; to: number } }
-  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number } }
+  | { event: "elicitation_reveal_closed"; payload: { block: "social" | "personal"; dwell_ms: number; steps_viewed: number } }
 
   // ---- Post-game ----
   | {

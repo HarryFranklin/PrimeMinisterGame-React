@@ -20,6 +20,11 @@ export const POINTS = {
   bothPressAnswers: 500,
 } as const;
 
+/** Show points to the player (back page, level select, retry briefing).
+ * Off for piloting: points are still worked out and saved in telemetry, and
+ * decide which attempt counts after a retry. */
+export const SHOW_POINTS = false;
+
 /** Questions asked at each press conference. */
 export const PRESS_QUESTIONS = 2;
 
