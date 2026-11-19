@@ -617,8 +617,8 @@ export default function StageMorningPaper(props: StageMorningPaperProps) {
                   ? `This term: ${pointsBreakdown(currentTermPoints)}.` +
                     (previousAttempt ? ` Your first attempt scored ${formatPoints(runPoints(previousAttempt))}; the better one counts.`
                       : canRetry ? ` You can play this term once more: the better score counts.` : '')
-                  : previousAttempt ? 'This was your second go at this term; the better of the two results counts.'
-                    : canRetry ? 'You can play this term once more if you like (the better result counts), or carry on to the next.' : undefined}
+                  : previousAttempt ? 'This was your second go at this term.'
+                    : canRetry ? 'You can play this term once more if you like, or carry on to the next.' : undefined}
                 footer={isFinalCycle ? (
                   <button
                     type="button"

@@ -11,6 +11,7 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 import { track } from '../../client/telemetry';
 import { useTypewriterTelemetry, useDwellTimer } from '../../client/hooks';
 import { WIN_THRESHOLD } from '../../utils/polls';
+import { SHOW_POINTS } from '../../utils/points';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
@@ -55,7 +56,9 @@ function retryMemo(cycle: ElectionCycle, run: CompletedRun, abbr: string): strin
     billsLine = `\n\nLast time, your best bill was ${best.name} (${fmt(best.delta)}) and your weakest was ${worst.name} (${fmt(worst.delta)}).`;
   }
   const result = run.approvalRating >= WIN_THRESHOLD ? 're-elected' : 'voted out';
-  return `Dear PM,\n\nLast time you were ${result} on ${run.approvalRating.toFixed(1)}%. The better of your two terms is the one that counts.\n\n${RETRY_TIPS[cycle]} Before you sign a bill, preview it and watch who moves, and where.${billsLine}`;
+  // "Counts" only means something to the player when points are shown
+  const counts = SHOW_POINTS ? ' The better of your two terms is the one that counts.' : '';
+  return `Dear PM,\n\nLast time you were ${result} on ${run.approvalRating.toFixed(1)}%.${counts}\n\n${RETRY_TIPS[cycle]} Before you sign a bill, preview it and watch who moves, and where.${billsLine}`;
 }
 // So the click that finishes the text can't also put the memo aside
 const PROCEED_DELAY_MS = 400;
