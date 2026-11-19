@@ -618,23 +618,23 @@ export function useGameEngine(setActiveTab?: (tab: any) => void) {
     });
 
     setGamePhase(GamePhase.LevelSelect);
-  }, [currentCycle, turnMetricScore, cycleMAO, turnApprovalRating, currentTurn, winScalars, buildRun, retryStash]);
+  }, [currentCycle, turnMetricScore, cycleMAO, turnApprovalRating, currentTurn, winScalars, buildRun, retryStash, cycleAttempts]);
 
   // Which button sent the player to the end-of-term debrief (Restart Term or
   // Proceed/Finish). Kept in localStorage too, so Continue still works after a
   // refresh on the debrief screen. (Previously this ran inside a state updater,
   // which React may call twice - restarting the term twice.)
-  /** Every term's first attempt ends with the academic debrief, won or lost,
-   * so everyone gets the same teaching. A retry's end skips it (already seen). */
+  /** The academic debrief comes once per term, when the player moves on to
+   * the next term (won or lost, so everyone gets the same teaching). Choosing
+   * the retry goes straight back into the term: no debrief yet. */
   const requestAcademicDebrief = useCallback((type: 'restart' | 'complete', outcome: 'win' | 'lose') => {
-    if (cycleAttempts > 1) {
-      if (type === 'restart') handleResetCycle(outcome);
-      else handleCompleteTerm();
+    if (type === 'restart') {
+      handleResetCycle(outcome);
       return;
     }
     try { localStorage.setItem(PENDING_DEBRIEF_KEY, JSON.stringify({ type, outcome })); } catch { /* ignore */ }
     setGamePhase(GamePhase.AcademicDebrief);
-  }, [cycleAttempts, handleResetCycle, handleCompleteTerm]);
+  }, [handleResetCycle, handleCompleteTerm]);
 
   const resolvingDebrief = useRef(false);
   const resolveAcademicDebrief = useCallback(() => {
