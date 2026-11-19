@@ -20,6 +20,10 @@ export const POINTS = {
   bothPressAnswers: 500,
 } as const;
 
+/** Show points to the player (back page, level select, retry memo). The
+ * pilot build (main) sets this to false. */
+export const SHOW_POINTS = true;
+
 /** Questions asked at each press conference. */
 export const PRESS_QUESTIONS = 2;
 

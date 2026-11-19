@@ -11,6 +11,7 @@ import { useTypewriter } from '../../hooks/useTypewriter';
 import { track } from '../../client/telemetry';
 import { useTypewriterTelemetry, useDwellTimer } from '../../client/hooks';
 import { WIN_THRESHOLD } from '../../utils/polls';
+import { SHOW_POINTS } from '../../utils/points';
 
 interface BriefingModalProps {
   currentCycle: ElectionCycle;
